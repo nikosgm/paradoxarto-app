@@ -2202,7 +2202,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06e-v113';
+const APP_VER = '2026-11-06f-v114';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7901,7 +7901,7 @@ document.head.appendChild(st);
         {ic:'🩺', t:'Κατάσταση συστημάτων', on:go("pdxHealth()")},
         adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:go("pdxAutoApprove()")},
         adm && {ic:'🔐', t:'Κωδικοί του bot', on:go("pdxDo('cred')")},
-        adm && {ic:'🖥', t:'Υπολογιστές bot (ονόματα)', on:go("pdxBotsPage()")},
+        adm && {ic:'🖥', t:'Υπολογιστές bot (ενεργοί / ονόματα)', on:go("pdxBotsPage()")},
         adm && {ic:'⬇️', t:'Κατέβασμα / ενημέρωση bot', on:go("pdxBotDownload()")}
       ]);
       if(adm) h += iosGroup('Χρήστες', [{ic:'👥', t:'Χρήστες', v: window.__pdxPendingUsers ? window.__pdxPendingUsers+' νέοι' : '', on:go("pdxDo('users')")}]);
@@ -12307,26 +12307,37 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // ⚙️ (διαχειριστής) ονόματα υπολογιστών: ποιος είναι ο Γωνιακός / Μεσαίος / Πόρτα
   window.pdxBotsPage = async function(){
     const N = Object.assign({}, await pdxBotNames(true)); let bots = null, msg = '';
+    let OFF = {}; try{ const o = await sb6.from('oncall_config').select('value').eq('key','bot_off').maybeSingle(); OFF = Object.assign({}, (o.data && o.data.value) || {}); }catch(e){}
     const NAMES = ['Γωνιακός','Μεσαίος','Πόρτα'];
     const pg = iosPage('Υπολογιστές bot', 'Πίσω', ()=>{
       if(!bots) return '<div style="padding:20px;color:#64748B">Ρωτάω τους υπολογιστές…</div>';
-      const ids = [...new Set(bots.map(b=>b.bot).concat(Object.keys(N)))];
+      const ids = [...new Set(bots.map(b=>b.bot).concat(Object.keys(N), Object.keys(OFF)))];
       let h = '<div class="ios-f" style="margin:0 0 10px">Πατήστε «👋» → εμφανίζεται μήνυμα στην οθόνη εκείνου του υπολογιστή. Μετά διαλέξτε το όνομά του.</div>';
       ids.forEach(id=>{ const b = bots.find(x=>x.bot===id);
         h += '<div style="background:#fff;border:1px solid #E5E9EF;border-radius:12px;padding:10px 12px;margin-bottom:8px">'
           + '<div style="display:flex;gap:8px;align-items:center"><b style="flex:1">'+(N[id]?esc(N[id]):'Χωρίς όνομα')+' <span style="color:#94A3B8;font-weight:400">· '+esc(id.slice(-5))+'</span></b>'
           + '<span style="font-size:12.5px;color:'+(b?'#15803D':'#94A3B8')+'">'+(b?('● ενεργός · v'+esc(b.v||'')+(b.cur?' · δουλεύει':'')):'○ δεν απαντά')+'</span>'
           + (b?'<button data-who="'+esc(id)+'" style="border:0;background:#EEF2F6;border-radius:10px;padding:7px 10px">👋</button>':'')+'</div>'
-          + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+esc(nm)+'" data-id="'+esc(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:6px 11px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+esc(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+esc(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div></div>'; });
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+esc(nm)+'" data-id="'+esc(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:6px 11px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+esc(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+esc(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div>'
+          + '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:9px;border-top:1px solid #EEF2F6"><span style="flex:1;font-size:14px">'+(OFF[id]?'⏸ <b style="color:#B91C1C">Απενεργοποιημένο</b> — δεν παίρνει εργασίες':'▶︎ <b style="color:#15803D">Ενεργό</b> — παίρνει εργασίες')+'</span>'
+          + '<button data-off="'+esc(id)+'" style="border:0;border-radius:10px;padding:8px 12px;font-weight:600;min-height:40px;background:'+(OFF[id]?'#15803D':'#FEE2E2')+';color:'+(OFF[id]?'#fff':'#B91C1C')+'">'+(OFF[id]?'Ενεργοποίηση':'Απενεργοποίηση')+'</button></div></div>'; });
       return h + (msg?'<div style="color:#B91C1C">'+esc(msg)+'</div>':'');
     });
     pg.el.addEventListener('click', async e=>{
       const w = e.target.closest('[data-who]'); if(w){ const id = w.dataset.who; await sb6.from('oncall_jobs').insert({name_key:'zzz_who', name:'👋 '+id.slice(-5), room:null, kind:'botwho', payload:{only:id, label:N[id]||'', quiet:1}, status:'new'}); window.pdxToast('👋 Δείτε την οθόνη του υπολογιστή'); return; }
+      const ob = e.target.closest('[data-off]'); if(ob){ const id = ob.dataset.off, nm = N[id] || id.slice(-5), turnOff = !OFF[id];
+        if(turnOff && !confirm('Απενεργοποίηση του bot στον υπολογιστή «'+nm+'»;\nΔεν θα παίρνει εργασίες ούτε αυτόματες αναζητήσεις (μόνο τελειώνει εγκρίσεις φορμών που άνοιξε ήδη). Τις κάνουν οι άλλοι υπολογιστές.')) return;
+        if(turnOff && ids_on_after(id) === 0 && !confirm('ΠΡΟΣΟΧΗ: δεν θα μείνει κανένας ενεργός υπολογιστής — καμία εργασία δεν θα εκτελείται. Συνέχεια;')) return;
+        const nx = Object.assign({}, OFF); if(turnOff) nx[id] = true; else delete nx[id];
+        const r = await sb6.from('oncall_config').upsert({key:'bot_off', value:nx, updated_at:new Date().toISOString()}, {onConflict:'key'});
+        if(r.error) msg = 'Δεν αποθηκεύτηκε: '+r.error.message; else { OFF = nx; msg = ''; if(window.toast) toast(turnOff ? '⏸ Απενεργοποιήθηκε («'+nm+'») — ισχύει σε ≤1′' : '▶︎ Ενεργοποιήθηκε («'+nm+'») — ισχύει σε ≤1′'); }
+        pg.redraw(); return; }
       const b = e.target.closest('[data-nm]'); if(b){ const id = b.dataset.id, nm = b.dataset.nm;
         Object.keys(N).forEach(k=>{ if(nm && N[k]===nm) delete N[k]; }); if(nm) N[id] = nm; else delete N[id];
         const r = await sb6.from('oncall_config').upsert({key:'bot_names', value:N, updated_at:new Date().toISOString()}, {onConflict:'key'});
         msg = r.error ? 'Δεν αποθηκεύτηκε: '+r.error.message : ''; window.__pdxBN = Object.assign({}, N); pg.redraw(); }
     });
+    const ids_on_after = id=>{ const all = [...new Set((bots||[]).map(b=>b.bot).concat(Object.keys(N)))]; return all.filter(x=>x!==id && !OFF[x]).length; };
     bots = await pdxBotPing(2500); pg.redraw();
   };
   // 📦 κατάλογος του φύλλου παραγγελίας (για τα πακέτα): ό,τι μπορεί να διαλέξει κανείς εδώ — αγαπημένα, πακέτα κλινικής, 5 απεικονιστικά, Medilabi
