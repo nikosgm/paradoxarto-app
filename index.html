@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06o-v123';
+const APP_VER = '2026-11-06p-v124';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -18868,8 +18868,8 @@ window.histUploadOpen = function(){
       'Η αφαίρεση σταματά τη συσκευή από τα νέα κλειδιά. Αν χαθεί ή κλαπεί συσκευή, πες το, για να αλλάξει το κλειδί κλινικής (αλλαγή κλειδιού: επόμενη φάση).');
     const rec = S.rows.find(r=>r.kind==='recovery'), bot = S.rows.find(r=>r.kind==='bot');
     const bots = S.rows.filter(r=>r.kind==='bot');
-    if(bots.length) h += iosGroup('Υπολογιστές του bot · '+bots.length, bots.map(r=>({ic:'🖥', t:E(r.label||'Υπολογιστής'), sub:'αποτύπωμα '+E(r.fp||'—')+' · '+(r.wrapped?'✓ έχει κλειδί & κωδικούς':'⏳ περιμένει (στέλνονται αυτόματα από τον κεντρικό)'),
-      raw: adm ? '<button onclick="event.stopPropagation();pdxCKdo(\'remove\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#B42318;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px">Αφαίρεση</button>' : ''})),
+    if(bots.length) h += iosGroup('Υπολογιστές του bot · '+bots.length, bots.map(r=>({ic:'🖥', t:E(r.label||'Υπολογιστής'), sub:'αποτύπωμα '+E(r.fp||'—')+' · '+(r.wrapped?'✓ έχει κλειδί & κωδικούς':'⏳ περιμένει'),
+      raw: adm ? (!r.wrapped && has && r.pub ? '<button onclick="event.stopPropagation();pdxCKdo(\'botok\',\''+r.id+'\')" style="border:0;background:#34C759;color:#fff;border-radius:9px;padding:7px 11px;font-weight:700;font-size:14px;margin-right:6px">Έγκριση</button>' : '')+'<button onclick="event.stopPropagation();pdxCKdo(\'remove\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#B42318;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px">Αφαίρεση</button>' : ''})),
       'Νέος υπολογιστής με το bot (συνδεδεμένος ως διαχειριστής) παίρνει αυτόματα, κρυπτογραφημένα, τους κωδικούς και το κλειδί από τον κεντρικό. Αφαίρεση = δεν παίρνει τίποτα πια.');
     h += iosGroup('Ανάκτηση & bot', [
       {ic:'🧾', t:'Κωδικός ανάκτησης', sub: rec ? 'δημιουργήθηκε '+dt(rec.approved_at||rec.created_at) : 'δεν υπάρχει', on: has&&adm ? "pdxCKdo('newrec')" : '', v: has&&adm ? 'Νέος' : ''},
@@ -18907,6 +18907,12 @@ window.histUploadOpen = function(){
         if(r.botMsg !== 'ok') toast('Το κλειδί δημιουργήθηκε. Bot: '+r.botMsg+' — δώσ\' το αργότερα από αυτή τη σελίδα.');
       }
       else if(what==='request'){ await requestApproval(); toast('Η συσκευή περιμένει έγκριση'); }
+      else if(what==='botok'){   // 6/11: έγκριση bot απευθείας από έμπιστη συσκευή (όχι μόνο «από τον κεντρικό»)
+        const r = S.rows.find(x=>x.id===id && x.kind==='bot'); if(!r || !r.pub || !S.raw) throw new Error('δεν υπάρχει κλειδί σε αυτή τη συσκευή ή στο bot');
+        const fp = await fpOf(r.pub); if(r.fp && r.fp!==fp) throw new Error('το αποτύπωμα δεν ταιριάζει');
+        const x = await sb6.from('oncall_keys').update({kid:S.kid, wrapped: await wrapFor(r.pub, S.raw), approved_by: await uid(), approved_at:new Date().toISOString()}).eq('id', id);
+        if(x.error) throw new Error(x.error.message); toast('✓ Εγκρίθηκε το bot '+String(r.label||'').slice(-5));
+      }
       else if(what==='reset'){
         if(!confirm('Νέα έγγραφη αυτής της συσκευής;\n\nΤο παλιό της κλειδί δεν ανοίγει. Θα φτιαχτεί νέο και θα χρειαστεί έγκριση από άλλη έμπιστη συσκευή ή ο κωδικός ανάκτησης.')) return;
         if(S.me){ try{ await sb6.from('oncall_keys').delete().eq('id', S.me.id); }catch(e){} }
