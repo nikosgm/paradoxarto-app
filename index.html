@@ -2202,7 +2202,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06g-v115';
+const APP_VER = '2026-11-06h-v116';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12308,7 +12308,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxBotsPage = async function(){
     const N = Object.assign({}, await pdxBotNames(true)); let bots = null, msg = '';
     let OFF = {}; try{ const o = await sb6.from('oncall_config').select('value').eq('key','bot_off').maybeSingle(); OFF = Object.assign({}, (o.data && o.data.value) || {}); }catch(e){}
-    const NAMES = ['Γωνιακός','Μεσαίος','Πόρτα'];
+    const NAMES = ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'];
     const pg = iosPage('Υπολογιστές bot', 'Πίσω', ()=>{
       if(!bots) return '<div style="padding:20px;color:#64748B">Ρωτάω τους υπολογιστές…</div>';
       const ids = [...new Set(bots.map(b=>b.bot).concat(Object.keys(N), Object.keys(OFF)))];
