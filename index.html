@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z9-v138';
+const APP_VER = '2026-11-06z10-v139';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7792,7 +7792,7 @@ document.head.appendChild(st);
   };
   window.pdxBotLog = function(cat0){
     const KN = {order:'🧾 Παραγγελία εξετάσεων', rx:'💊 Συνταγή', rxname:'💊 Συνταγή', consult:'📞 Κλήση για εκτίμηση', discharge:'📄 Εξιτήριο', comorb:'🩺 Συννοσηρότητες', ehrdx:'🩺 Διαγνώσεις ΑΗΦΥ', ehrlabs:'🧪 Εργαστηριακά ΑΗΦΥ', medlabs:'🧪 Εργαστηριακά Medilabi', evoradimg:'🩻 Απεικονιστικά', imgget:'🩻 Απεικονιστικά', bxscan:'🔬 Βιοψίες', clinicview:'🏥 Λίστα κλινικής', ehrdocs:'📁 Έγγραφα ΑΗΦΥ'};
-    const SK = /^(orderprep|botwho|bxfind|bxget|srcprobe|imgmap|fsls|fsfind|botcfg|emrmap|medbxprobe|evoradprobe|evoradsrc|evoradfind|findpacs|emrmedmap|medqprobe|medcat|emrlistprobe|emrnetprobe|selftest|logins|imgdir|ptprep)$/;
+    const SK = /^(orderprep|botwho|bxfind|bxget|srcprobe|imgmap|fsls|fsfind|botcfg|emrmap|medbxprobe|evoradprobe|evoradsrc|evoradfind|findpacs|emrmedmap|medqprobe|medcat|medcat2|emrlistprobe|emrnetprobe|selftest|logins|imgdir|ptprep)$/;
     const SN = {done:['✅','#15803D'], approved:['✅','#15803D'], failed:['⚠️','#B91C1C'], cancelled:['✕','#64748B'], dismissed:['✕','#64748B'], running:['⚙️','#1D4E80'], new:['⏳','#92400E'], seen:['⏳','#92400E'], review:['👀','#92400E'], approve:['⏳','#92400E']};
     let rows = null, err = '', mineOnly = false, cat = cat0 || 'all', openId = 0;
     const HK = 'pdx_botlog_hidden'; let hidden = {}; try{ hidden = JSON.parse(localStorage.getItem(HK)||'{}'); }catch(e){}
@@ -12425,7 +12425,24 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // ===== 🧾 ΝΕΟ φύλλο παραγγελίας: όλος ο κατάλογος του Medilabi (εργαστηριακές + απεικονιστικές), αναζήτηση, κατηγορίες,
   // ⭐ αγαπημένα κλινικής, 📦 πακέτα, 🕘 πρόσφατα του ασθενή. Κατάλογος = τελευταίο job «medcat» του bot (cache στη συσκευή).
   let medCat = null;
+  // 📚 6/11: κατάλογος ΑΚΡΙΒΩΣ όπως στο Medilabi, ανά τμήμα (job «medcat2»). Ίδιο όνομα σε 2+ τμήματα (π.χ. INR) → «ΟΝΟΜΑ @@ ΤΜΗΜΑ»,
+  // ώστε το bot να το διαλέξει μέσα στο σωστό τμήμα. Χωρίς δικά μας ονόματα.
+  let medCats = null;
+  // ομαδοποίηση ανά ΤΜΗΜΑ (πρώτο επίπεδο του Medilabi)· κλειδί με τη διαδρομή «ΤΜΗΜΑ › ΥΠΟΚΑΤΗΓΟΡΙΑ» όταν το όνομα υπάρχει αλλού
+  const medCatsBuild = cats=>{ const P = c=>c.path||c.lab, cnt = {}; cats.forEach(c=>new Set(c.tests||[]).forEach(t=>{ cnt[t] = (cnt[t]||0)+1; }));
+    const out = [], by = {}; cats.filter(c=>c && c.lab && (c.tests||[]).length).forEach(c=>{ const dep = c.dep||c.lab; let g = by[dep]; if(!g){ g = by[dep] = {lab:dep, keys:[]}; out.push(g); }
+      [...new Set(c.tests)].forEach(t=>{ const k = cnt[t]>1 ? t+' @@ '+P(c) : t; if(g.keys.indexOf(k)<0) g.keys.push(k); }); });
+    return out; };
+  window.pdxMedCats = async function(force){
+    if(!force && medCats) return medCats;
+    try{ const c = JSON.parse(localStorage.getItem('pdx_medcat2')||'null'); if(c && c.cats && c.cats.length){ medCats = medCatsBuild(c.cats); if(!force && Date.now()-(c.at||0) < 6*3600e3) return medCats; } }catch(e){}
+    try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','medcat2').eq('status','done').order('id',{ascending:false}).limit(1);
+      const cs = r.data && r.data[0] && r.data[0].payload && r.data[0].payload.result && r.data[0].payload.result.cats;
+      if(Array.isArray(cs) && cs.length){ medCats = medCatsBuild(cs); try{ localStorage.setItem('pdx_medcat2', JSON.stringify({at:Date.now(), cats:cs.map(c=>({lab:c.lab, dep:c.dep, path:c.path, tests:c.tests}))})); }catch(e){} } }catch(e){}
+    return medCats || [];
+  };
   window.pdxMedCatalog = async function(force){
+    const C2 = await pdxMedCats(force); if(C2.length){ const a = [].concat(...C2.map(c=>c.keys)); medCat = a.filter((t,i)=>a.indexOf(t)===i); return medCat; }
     if(!force && medCat) return medCat;
     try{ const c = JSON.parse(localStorage.getItem('pdx_medcat')||'null'); if(c && c.tests && c.tests.length){ medCat = c.tests; if(!force && Date.now()-(c.at||0) < 6*3600e3) return medCat; } }catch(e){}
     try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','medcat').eq('status','done').order('id',{ascending:false}).limit(1);
@@ -12437,9 +12454,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const OCAT = [['fav','⭐ Αγαπημένα'],['rec','🕘 Πρόσφατα'],['hem','🩸 Αιματολογικό'],['lab','🧪 Αίμα'],['ur','🦠 Ούρα · καλλιέργειες'],['img','🩻 Απεικονιστικά'],['all','📋 Όλα']];
   // 🩻 Απεικονιστικά της κλινικής: ΜΟΝΟ αυτά (εντολή χρήστη 04/11). Όνομα από τον κατάλογο του Medilabi όταν υπάρχει, αλλιώς όρος αναζήτησης για το bot.
   const IMG_FIX = [[/^Α\/Α ΘΩΡΑΚΟΣ F$/,'Α/Α ΘΩΡΑΚΟΣ F','Ακτινογραφία θώρακος'],[/^Α\/Α ΚΟΙΛΙΑΣ F$/,'Α/Α ΚΟΙΛΙΑΣ F','Ακτινογραφία κοιλίας'],[/^Α\/Α .*Ν\.?Ο\.?Κ/,'Α/Α ΝΟΚ','Ακτινογραφία ΝΟΚ'],[/ΑΞΟΝΙΚ.*ΑΝΩ.*ΚΑΤΩ.*ΚΟΙΛ|CT.*ΑΝΩ.*ΚΑΤΩ.*ΚΟΙΛ/,'ΑΞΟΝΙΚΗ ΑΝΩ ΚΑΤΩ ΚΟΙΛΙΑΣ','Αξονική άνω-κάτω κοιλίας'],[/ΑΞΟΝΙΚ.*ΟΠΙΣΘΟΠΕΡΙΤ|CT.*ΟΠΙΣΘΟΠΕΡΙΤ/,'ΑΞΟΝΙΚΗ ΟΠΙΣΘΟΠΕΡΙΤΟΝΑΙΟΥ','Αξονική οπισθοπεριτοναίου']];
-  const imgList = cat=>IMG_FIX.map(([re,def])=>{ const U = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); const hit = (cat||[]).find(t=>re.test(U(t))); return hit || def; });
-  const isImgAny = t=>{ const u = String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); return /^Α\/Α|ΑΚΤΙΝΟΓΡ|ΑΚΤΙΝΟΣΚ|^XR\b|^CT\b|ΑΞΟΝΙΚ|ΥΠΕΡΗΧ|^U\/?S\b|TRIPLEX|DOPPLER|MRI|ΜΑΓΝΗΤ|ΣΠΙΝΘΗΡ|SPECT/.test(u); };
-  const ocatOf = t=>{ const u = String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+  const imgList = cat=>IMG_FIX.map(([re,def])=>{ const U = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); const hit = (cat||[]).find(t=>re.test(U(t))); return hit || ''; }).filter(Boolean);   // 6/11: ΠΟΤΕ δικά μας ονόματα — μόνο ό,τι υπάρχει στο Medilabi
+  const IMG_LAB = /ΑΚΤΙΝ|ΑΞΟΝΙΚ|ΤΟΜΟΓΡΑΦ|ΥΠΕΡΗΧ|ΜΑΓΝΗΤ|ΜΑΣΤΟΓΡΑΦ|ΑΠΕΙΚΟΝ|ΡΑΔΙΟΛΟΓ|\bCT\b|\bMRI\b|TRIPLEX|DOPPLER/;
+  const isImgAny = t=>{ const sp = String(t||'').split(/\s*@@\s*/); if(sp[1] && IMG_LAB.test(String(sp[1]).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase())) return true; const u = String(sp[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); return /^Α\/Α|ΑΚΤΙΝΟΓΡ|ΑΚΤΙΝΟΣΚ|^XR\b|^CT\b|ΑΞΟΝΙΚ|ΥΠΕΡΗΧ|^U\/?S\b|TRIPLEX|DOPPLER|MRI|ΜΑΓΝΗΤ|ΣΠΙΝΘΗΡ|SPECT/.test(u); };
+  const tLbl = t=>String(t||'').replace(/\s*@@\s*/,' · ');
+  const ocatOf = t=>{ const u = String(t||'').split(/\s*@@\s*/)[0].normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
     if(/^Α\/Α|ΑΚΤΙΝΟΓΡ|ΑΚΤΙΝΟΣΚ|^XR\b/.test(u)) return 'xr'; if(/^CT\b|ΑΞΟΝΙΚ/.test(u)) return 'ct'; if(/ΥΠΕΡΗΧ|^U\/?S\b|TRIPLEX|DOPPLER/.test(u)) return 'us'; if(/MRI|ΜΑΓΝΗΤ/.test(u)) return 'mri';
     if(/ΚΑΛΛΙΕΡΓ|ΟΥΡΩΝ|\bΟΥΡΑ|ΑΝΤΙΒΙΟΓΡ|ΚΟΠΡΑΝ/.test(u)) return 'ur';
     if(/\bINR\b|^PT\b|PT%|\(PT\)|ΠΡΟΘΡΟΜΒΙΝ|APTT|ΙΝΩΔΟΓΟΝ|D-?DIMER|ΑΙΜΟΔΙΑΓΡ|ΔΙΚΤΥΟΕΡΥΘΡ|ΤΑΧΥΤΗΤΑ ΚΑΘΙΖ|ΤΚΕ\b/.test(u)) return 'hem';   // INR: και οι δύο επιλογές του Medilabi εδώ (6/11)
@@ -12719,9 +12738,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]) delete BN[id]; }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
     const PR = Object.entries(BN).sort((a,b)=>['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(b[1]));
     if(st.pat && !BN[st.pat]) st.pat = '';
-    const IMGS = imgList(cat);
+    const CATS = await pdxMedCats();
+    const IMGS = CATS.length ? [].concat(...CATS.filter(c=>IMG_LAB.test(nrm(c.lab).toUpperCase()) || c.keys.some(isImgAny) && c.keys.every(isImgAny)).map(c=>c.keys)) : imgList(cat);
     // άλλα απεικονιστικά του καταλόγου ΔΕΝ εμφανίζονται (μόνο τα 5 της κλινικής)
-    const all = ()=>{ const a = fav.concat(...P.packs.map(x=>x.tests||[]), rec, IMGS, cat.filter(t=>!isImgAny(t))); return a.filter((t,i)=>t && a.indexOf(t)===i); };
+    const all = ()=>{ const a = CATS.length ? fav.concat(...P.packs.map(x=>x.tests||[]), rec, cat) : fav.concat(...P.packs.map(x=>x.tests||[]), rec, IMGS, cat.filter(t=>!isImgAny(t))); return a.filter((t,i)=>t && a.indexOf(t)===i); };
     let ov = document.getElementById('pdxOrdOv'); if(ov) ov.remove();
     ov = document.createElement('div'); ov.id='pdxOrdOv';
     ov.style.cssText='position:fixed;inset:0;z-index:9650;background:rgba(15,25,35,.45);display:flex;align-items:flex-end;justify-content:center;font-family:-apple-system,"Segoe UI",Roboto,sans-serif';
@@ -12732,6 +12752,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(q) return all().filter(t=>nrm(t).indexOf(q)>=0).slice(0,80);
       if(st.tab==='fav') return fav; if(st.tab==='rec') return rec; if(st.tab==='all') return all().slice(0,400);
       if(st.tab==='img') return IMGS;
+      if(/^L\d+$/.test(st.tab)){ const c = CATS[+st.tab.slice(1)]; return c ? c.keys : []; }
       return cat.filter(t=>!isImgAny(t) && ocatOf(t)===st.tab).slice(0,300);
     };
     // ασθενής σε δική του γραμμή κάτω από τον τίτλο (στα 375/390 χανόταν): «ΕΠΩΝΥΜΟ Όνομα · θάλαμος-κλίνη»
@@ -12752,17 +12773,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div style="padding:14px 16px 8px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🧾 Παραγγελία</b>'+(window.pdxPacksApply?'<button data-pdxpk style="border:0;background:#EEF2F6;border-radius:12px;padding:0 12px;min-height:44px;font-size:14px;font-weight:700;white-space:nowrap">📦 Πακέτα</button>':'')+'<button data-x aria-label="Κλείσιμο" style="border:0;background:#EEF2F6;border-radius:12px;min-width:44px;min-height:44px;font-size:16px">✕</button></div>'
         + '<div class="pdx-ordpt" style="font-size:14.5px;color:#475569;margin-top:2px;line-height:1.3">'+ordPt()+'</div>'
         + '<input data-q type="search" autocomplete="off" placeholder="🔎 Αναζήτηση σε όλο το Medilabi (π.χ. θωρ, CRP, ΝΟΚ)…" value="'+E(st.q)+'" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:16px;padding:10px 12px;border:1.5px solid #CBD5E1;border-radius:12px">'
-        + (st.q?'':'<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px">'+OCAT.filter(c=>c[0]!=='rec'||rec.length).filter(c=>['fav','rec','all','img'].indexOf(c[0])>=0||cat.some(t=>ocatOf(t)===c[0])).map(c=>'<button data-tab="'+c[0]+'" style="flex:none;'+C+(st.tab===c[0]?CON:'')+'">'+E(c[1])+'</button>').join('')+'</div>')
+        + (st.q?'':'<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px">'+(CATS.length ? [['fav','⭐ Αγαπημένα']].concat(rec.length?[['rec','🕘 Πρόσφατα']]:[], CATS.map((c,i)=>['L'+i, (IMG_LAB.test(nrm(c.lab).toUpperCase())?'🩻 ':'')+c.lab+' ('+c.keys.length+')']), [['all','📋 Όλα']]) : OCAT.filter(c=>c[0]!=='rec'||rec.length).filter(c=>['fav','rec','all','img'].indexOf(c[0])>=0||cat.some(t=>ocatOf(t)===c[0]))).map(c=>'<button data-tab="'+c[0]+'" style="flex:none;'+C+(st.tab===c[0]?CON:'')+'">'+E(c[1])+'</button>').join('')+'</div>')
         + '</div><div data-scroll style="flex:1;overflow:auto;padding:0 16px">';
       {
         const L = list();
         if(st.tab==='fav' && !st.q && favEdit) h += '<div style="font-size:12.5px;color:#64748B;padding:8px 0 2px">Πάτα το ⭐ μιας εξέτασης για να μπει/βγει από τα αγαπημένα (για όλη την κλινική).</div>';
         if(!cat.length && ['xr','ct','us','mri','all','lab','ur'].indexOf(st.tab)>=0 && !st.q) h += '<div style="color:#64748B;font-size:13.5px;padding:8px 0">Ο κατάλογος του Medilabi δεν έχει έρθει ακόμα από το bot.</div>';
         h += L.map(t=>{ const on = st.sel.indexOf(t)>=0, isFav = fav.indexOf(t)>=0;
-          return '<div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF1F4"><button data-t="'+E(t)+'" style="flex:1;min-width:0;text-align:left;border:0;background:none;padding:11px 0;font-size:15px;color:#1F2933"><span style="display:inline-block;width:22px;height:22px;border-radius:7px;vertical-align:-5px;margin-right:9px;border:2px solid var(--mp,#1D4E80);background:'+(on?'var(--mp,#1D4E80)':'#fff')+';color:#fff;text-align:center;line-height:19px;font-size:15px">'+(on?'✓':'')+'</span>'+E(t)+'</button>'+(favEdit ? '<button data-fav="'+E(t)+'" aria-label="'+(isFav?'Αφαίρεση από':'Προσθήκη στα')+' αγαπημένα" style="flex:none;border:0;background:none;min-width:44px;min-height:44px;font-size:17px;opacity:'+(isFav?1:.25)+'">⭐</button>' : '<span style="font-size:15px;opacity:'+(isFav?1:.18)+'">⭐</span>')+'</div>'; }).join('') || '<div style="color:#64748B;padding:10px 0">Καμία εξέταση'+(st.q?' για «'+E(st.q)+'»':'')+'.</div>';
+          return '<div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF1F4"><button data-t="'+E(t)+'" style="flex:1;min-width:0;text-align:left;border:0;background:none;padding:11px 0;font-size:15px;color:#1F2933"><span style="display:inline-block;width:22px;height:22px;border-radius:7px;vertical-align:-5px;margin-right:9px;border:2px solid var(--mp,#1D4E80);background:'+(on?'var(--mp,#1D4E80)':'#fff')+';color:#fff;text-align:center;line-height:19px;font-size:15px">'+(on?'✓':'')+'</span>'+E(tLbl(t))+'</button>'+(favEdit ? '<button data-fav="'+E(t)+'" aria-label="'+(isFav?'Αφαίρεση από':'Προσθήκη στα')+' αγαπημένα" style="flex:none;border:0;background:none;min-width:44px;min-height:44px;font-size:17px;opacity:'+(isFav?1:.25)+'">⭐</button>' : '<span style="font-size:15px;opacity:'+(isFav?1:.18)+'">⭐</span>')+'</div>'; }).join('') || '<div style="color:#64748B;padding:10px 0">Καμία εξέταση'+(st.q?' για «'+E(st.q)+'»':'')+'.</div>';
       }
       h += '</div><div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid #EEF1F4;background:#FAFBFC;border-radius:0 0 0 0">'
-        + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(t)+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
+        + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+'<span style="width:6px"></span>'+['Ρουτίνας','Επείγον'].map(w=>'<button data-u="'+w+'" style="'+C+(st.urg===w?(w==='Επείγον'?';background:#B42318;border-color:#B42318;color:#fff':CON):'')+'">'+w+'</button>').join('')+'</div>'
         + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" style="'+C+(st.pat===id?CON:'')+'">'+E(nm)+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button></div>' : '')
         + '<input data-note placeholder="Σημείωση (προαιρετικά)" value="'+E(st.note)+'" style="width:100%;box-sizing:border-box;margin-top:8px;font-size:16px;padding:9px 11px;border:1.5px solid #D5DCE3;border-radius:12px">'
