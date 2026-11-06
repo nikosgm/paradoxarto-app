@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06w-v127';
+const APP_VER = '2026-11-06x-v128';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7350,6 +7350,7 @@ document.head.appendChild(st);
     ]);
     h += grp('Για πολλούς', [
       ['☑','Εκκρεμότητα σε πολλούς','', "pdxDo('bulk')"],
+      bot && ['🧾','Παραγγελία σε πολλούς','ίδιες εξετάσεις σε όλους', "pdxOrderBulk()"],
       adm && ['📅','Εισαγωγές & ΑΜ από ΝΠΣ','', "pdxDo('admits')"],
       (bot || att) && ['🌤','Ουρολογικό Ημέρας','ασθενείς & μαζικά εξιτήρια', "pdxDayUnit()"]
     ]);
@@ -9464,6 +9465,27 @@ document.head.appendChild(st);
         if(bot && window.pdxBotSend) keys.forEach(kk=>pdxBotSend(kk, 'order', {tests:[txt.replace(/\s*(αύριο|σήμερα).*$/i,'')], packs:[], when: when==='tm'||when==='d2' ? 'Αύριο πρωί' : 'Τώρα', urgency:'Ρουτίνας', note:''}));
         ov.remove(); render(); showToast('✓ '+txt+(keys.length>1?' · σε '+keys.length+' ασθενείς':'')+(dt?' · '+remLabel(dt):''));
       }
+    });
+  };
+  // 🧾 6/11: ΜΑΖΙΚΗ ΠΑΡΑΓΓΕΛΙΑ — διάλεξε ασθενείς → το ίδιο φύλλο παραγγελίας → μία παραγγελία ανά ασθενή στο bot
+  window.pdxOrderBulk = function(){
+    if(!(window.pdxIsBotUser && pdxIsBotUser())){ toast('🤖 Μόνο για ενεργούς γιατρούς'); return; }
+    const all = entries(true).filter(x=>x.d && x.d.name), sel = new Set();
+    let ov = document.getElementById('obOv'); if(ov) ov.remove(); ov = document.createElement('div'); ov.id = 'obOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(15,25,35,.4);display:flex;align-items:flex-end;justify-content:center;color-scheme:light';
+    const pill = (attr, t)=>'<button '+attr+' style="border:0;border-radius:10px;padding:8px 10px;font-size:14px;font-weight:700;margin:0 6px 7px 0;background:#EEF2F6;color:#334155">'+t+'</button>';
+    const draw = ()=>{ ov.innerHTML = '<div style="background:#fff;color:#1F2933;width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto">'
+      +'<div style="display:flex;align-items:center"><b style="font-size:18px;flex:1">🧾 Μαζική παραγγελία</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:7px 12px">Κλείσιμο</button></div>'
+      +'<div class="mtp-h" style="font-size:13px;font-weight:700;color:#6B7686;margin:14px 0 8px">Σε ποιους · '+sel.size+'</div>'+pill('data-p="post"','Χειρουργημένοι (0–1 ΜΤΧ)')+pill('data-p="mine"','Οι θάλαμοί μου')+pill('data-p="all"','Όλοι')+pill('data-p="none"','Κανένας')
+      +'<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">'+all.map(x=>{ const on = sel.has(String(x.k)), bed = String(x.k).indexOf('extra')===0 ? 'Εκτός' : x.k;
+        return '<button data-k="'+esc(x.k)+'" style="display:flex;gap:10px;align-items:center;text-align:left;border-radius:12px;padding:10px 12px;font-size:15px;border:1.5px solid '+(on?'var(--mp,#1D4E80)':'#DCE2E8')+';background:'+(on?'#EAF1F8':'#fff')+';color:#1F2933"><span style="width:22px;height:22px;border-radius:6px;flex:none;display:grid;place-items:center;font-weight:800;color:#fff;background:'+(on?'var(--mp,#1D4E80)':'#fff')+';border:2px solid '+(on?'var(--mp,#1D4E80)':'#A9B6C4')+'">'+(on?'✓':'')+'</span><b style="min-width:52px">'+esc(bed)+'</b><span style="flex:1">'+esc(x.d.name)+'</span><small style="color:#64748B">'+esc(x.d.pod?'ΜΤΧ '+x.d.pod:'')+'</small></button>'; }).join('')+'</div>'
+      +'<button data-ok style="width:100%;border:0;background:'+(sel.size?'var(--mp,#1D4E80)':'#A9B6C4')+';color:#fff;border-radius:14px;padding:14px;font-size:16px;font-weight:800;margin-top:12px">Συνέχεια: εξετάσεις για '+sel.size+' ασθενείς ›</button></div>'; };
+    draw(); document.body.appendChild(ov);
+    ov.addEventListener('click', e=>{
+      if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
+      const pp = e.target.closest('[data-p]'); if(pp){ const v = pp.dataset.p; sel.clear(); all.forEach(x=>{ const ok = v==='all' || (v==='post' && /^\d+$/.test(String(x.d.pod||'').trim()) && +x.d.pod<=1) || (v==='mine' && (!(window.pdxMine && pdxMine.on) || (window.pdxMineKeep ? pdxMineKeep(x) : true))); if(ok) sel.add(String(x.k)); }); return draw(); }
+      const kb = e.target.closest('[data-k]'); if(kb){ const v = kb.dataset.k; if(sel.has(v)) sel.delete(v); else sel.add(v); return draw(); }
+      if(e.target.closest('[data-ok]')){ if(!sel.size) return; const ks = [...sel]; ov.remove(); if(ks.length===1) return pdxOrderSheet(ks[0]); return pdxOrderSheet(ks[0], {multi: ks}); }
     });
   };
   // Δ: μαζικά σε πολλούς ασθενείς (από το ☰)
@@ -12627,7 +12649,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       return cat.filter(t=>!isImgAny(t) && ocatOf(t)===st.tab).slice(0,300);
     };
     // ασθενής σε δική του γραμμή κάτω από τον τίτλο (στα 375/390 χανόταν): «ΕΠΩΝΥΜΟ Όνομα · θάλαμος-κλίνη»
-    const ordPt = ()=>{ const w = String(d.name||'').trim().split(/\s+/), sn = w.shift()||'', fn = w.join(' ').toLowerCase().replace(/(^|[\s-])(\S)/g,(m,a,c)=>a+c.toUpperCase());
+    const MULTI = pre && Array.isArray(pre.multi) && pre.multi.length > 1 ? pre.multi.filter(x=>recOf(x)) : null;
+    const ordPt = ()=>MULTI ? '<b style="color:inherit;font-weight:800">'+MULTI.length+' ασθενείς</b> · '+E(MULTI.map(x=>{ const r = recOf(x); return (/^\d+-\d+$/.test(String(x)) ? x+' ' : '')+String(r.name||'').split(/\s+/)[0]; }).join(', ')) : ordPt1();
+    const ordPt1 = ()=>{ const w = String(d.name||'').trim().split(/\s+/), sn = w.shift()||'', fn = w.join(' ').toLowerCase().replace(/(^|[\s-])(\S)/g,(m,a,c)=>a+c.toUpperCase());
       const bed = /^\d+-\d+$/.test(String(k)) ? String(k) : (d.assignedWard ? 'Εκτός θαλάμου · '+d.assignedWard : 'Εκτός θαλάμου');
       return '<b style="color:inherit;font-weight:800">'+E(sn)+'</b>'+(fn?' '+E(fn):'')+' · '+E(bed); };
     // ⭐ αγαπημένες εξετάσεις (όλη η κλινική): αλλάζουν ΕΔΩ, με το αστεράκι κάθε γραμμής (αντί για το παλιό ⚙︎ φύλλο)
@@ -12681,12 +12705,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(!st.sel.length && !st.pks.length){ st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
         const pks = st.pks.map(i=>P.packs[i]).filter(Boolean);
         // 🛡 προστασία από διπλή παραγγελία: ίδια εξέταση για τον ίδιο ασθενή τις τελευταίες 12 ώρες (σταλμένη ή καταχωρημένη)
-        try{ const since = new Date(Date.now()-12*3600e3).toISOString();
+        if(!MULTI) try{ const since = new Date(Date.now()-12*3600e3).toISOString();
           const r = await sb6.from('oncall_jobs').select('id,status,payload,created_at').eq('kind','order').eq('name_key', nrm(d.name)).gte('created_at', since).in('status',['new','seen','running','review','approve','approved','done']).order('id',{ascending:false}).limit(10);
           const dup = []; (r.data||[]).forEach(j=>((j.payload||{}).tests||[]).forEach(t=>{ if(st.sel.indexOf(t)>=0 && !dup.some(x=>x.t===t)) dup.push({t, at:new Date(j.created_at), st:j.status}); }));
           if(dup.length && !st.dupOk){ st.dupOk = true; st.msg = '⚠ Ήδη παραγγέλθηκαν τις τελευταίες 12 ώρες: '+dup.map(x=>x.t+' ('+String(x.at.getHours()).padStart(2,'0')+':'+String(x.at.getMinutes()).padStart(2,'0')+(x.st==='approved'?', καταχωρημένη':'')+')').join(', ')+'. Πάτα ξανά «Αποστολή» αν τις θέλεις πάλι.'; return draw(); }
         }catch(e){}
-        const ok = await send(k,'order',Object.assign({tests:st.sel.slice(), packs:pks.map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:st.when, urgency:st.urg, note:(st.note||'').trim()}, st.pat ? {printAt:st.pat, printName:BN[st.pat]||''} : {}));
+        const PL = Object.assign({tests:st.sel.slice(), packs:pks.map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:st.when, urgency:st.urg, note:(st.note||'').trim()}, st.pat ? {printAt:st.pat, printName:BN[st.pat]||''} : {});
+        if(MULTI){ let n = 0; for(const kk of MULTI){ if(await send(kk,'order',Object.assign({}, PL, {quiet:true, bulk:MULTI.length}))) n++; }
+          ov.remove(); toast('🧾 Στάλθηκαν '+n+'/'+MULTI.length+' παραγγελίες στο bot'); return; }
+        const ok = await send(k,'order',PL);
         if(ok) ov.remove();
       }
     });
