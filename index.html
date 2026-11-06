@@ -1567,6 +1567,8 @@ window.onerror = function(msg, src, line, col, err){
 };
 </script>
 <script>
+// 6/11: καθολικό esc (η σελίδα «Υπολογιστές bot» και το «Ουρολογικό Ημέρας» είναι σε κλειστό scope χωρίς δικό τους)
+window.esc = window.esc || function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 // Simple access code — change this to whatever you want. This is only a
 // basic deterrent (visible in page source to anyone who looks), not real
 // security — don't rely on it for genuinely sensitive access control.
@@ -2202,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06k-v119';
+const APP_VER = '2026-11-06l-v120';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
