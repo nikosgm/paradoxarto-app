@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06r-v126';
+const APP_VER = '2026-11-06w-v127';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -6797,6 +6797,15 @@ document.head.appendChild(st);
   #mobView .mtp-row.done .mtp-cb{background:var(--mp,#1D4E80);border-color:var(--mp,#1D4E80)}
   #mobView .mtp-row.done .mtp-cb::after{content:"✓";color:#fff;font-size:15px;font-weight:800;position:absolute;inset:0;display:grid;place-items:center}
   #mobView .mtp-tx{flex:1;min-width:0;font-size:17px;line-height:1.35;color:#17212B}
+  #mobView .mtp-h.late{color:#B42318}
+  #mobView .mtp-rem.late{color:#B42318;background:#FEE4E2}
+  #mobView .mtp-who{font-size:12.5px;font-weight:700;color:var(--mp,#1D4E80);margin-bottom:2px;cursor:pointer}
+  #mobView .mtp-tip{font-size:13px;color:#6B7686;margin:2px 4px 4px}
+  #mobView .tsw{position:relative;background:#fff}
+  #mobView .tsw-bg{position:absolute;top:0;bottom:0;display:none;align-items:center;padding:0 14px;font-weight:800;font-size:14px;color:#fff;pointer-events:none;width:200px}
+  #mobView .tsw-bg.l{right:100%;justify-content:flex-end;background:#15803D}
+  #mobView .tsw-bg.r{left:100%;background:#B26A00}
+  #mobView .tsw.sw-l .tsw-bg.l,#mobView .tsw.sw-r .tsw-bg.r{display:flex}
   #mobView .mtp-rem{display:inline-flex;align-items:center;gap:6px;margin-top:5px;font-size:13px;font-weight:700;color:#B26A00;background:#FFF3DF;border-radius:99px;padding:3px 9px}
   #mobView .mtp-rem i{font-style:normal;opacity:.6;padding-left:2px}
   #mobView .mtp-bl{flex:none;border:0;background:none;font-size:17px;opacity:.35;padding:2px 2px 0}
@@ -6927,7 +6936,9 @@ document.head.appendChild(st);
   const todos = d=>String(d.instructions||'').split('\n').map(l=>l.trim()).filter(Boolean);
   function lbl(e){ return (e.room==='Έξτρα'?'Εκτός θαλάμου':e.room)+(e.bed?'-'+e.bed:'')+(e.d.name?' · '+e.d.name:''); }
   function save(k){ const isExtra=k.indexOf('extra')===0; try{ const r0=rec(k); if(r0) r0.touchedAt=Date.now(); saveEntryToStorage(k,isExtra,rec(k),true); }catch(e){ console.error(e); } }
-  function setTodos(k, lines){ const d=rec(k); d.instructions=lines.join('\n'); if(lines.length) d.instructionsStaleCount=0; save(k); }
+  function setTodos(k, lines){ const d=rec(k); d.instructions=lines.join('\n'); if(lines.length) d.instructionsStaleCount=0;
+    { const M = d.todoMeta || {}, now = Date.now(), nx = {}; lines.forEach(l=>{ const b = String(l).replace(/ ⏰ \d\d\/\d\d \d\d:\d\d$/,''); nx[b] = M[b] || {at: now}; }); if(Object.keys(nx).length) d.todoMeta = nx; else delete d.todoMeta; }
+    save(k); }
   const podTxt = p=>p?('POD '+esc(p)):'';
   function podFmt(p){ // αριθμός -> προθεμα (X2)· κείμενο (π.χ. Προς Χ/Ο) -> όπως είναι ή όπως ορίζει ο πίνακας podMap
     if(!p) return '';
@@ -7236,6 +7247,13 @@ document.head.appendChild(st);
   #mobView .mhdr span.r{background:#FDECEA;color:#B42318}
   #mobView .mact{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px;margin:10px 12px 0;padding-bottom:2px}
   #mobView .mact::-webkit-scrollbar{display:none}
+  #mobView .ptab{position:relative;display:flex;align-items:center;margin:8px 0 2px}
+  #mobView .ptab-s{display:flex;gap:7px;overflow-x:auto;padding:2px 12px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scroll-padding-inline:12px;flex:1;min-width:0}
+  #mobView .ptab-s::-webkit-scrollbar{display:none}
+  #mobView .ptab-s button{flex:none;scroll-snap-align:start;display:flex;align-items:center;gap:6px;white-space:nowrap;border:0;border-radius:999px;background:#fff;color:var(--mp,#1D4E80);font-weight:700;font-size:14px;padding:9px 14px;min-height:40px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  #mobView .ptab-s button i{font-style:normal;font-size:16px}
+  #mobView .ptab-a{display:none;flex:none;width:34px;height:34px;border-radius:17px;border:0;background:#fff;color:var(--mp,#1D4E80);font-size:22px;font-weight:700;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer}
+  @media (hover:hover) and (pointer:fine){ #mobView .ptab-a{display:block} #mobView .ptab-a.l{margin-left:6px} #mobView .ptab-a.r{margin-right:6px} #mobView .ptab-s{padding:2px 6px 4px} }
   #mobView .mact button{display:flex;flex-direction:row;justify-content:center;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden;border:0;border-radius:14px;background:#fff;color:var(--mp,#1D4E80);font-weight:800;font-size:12.5px;padding:8px 8px;box-shadow:0 1px 3px rgba(30,70,110,.07)}
   #mobView .mact button i{font-style:normal;font-size:18px}
   #mobView.desk{display:grid!important;grid-template-columns:minmax(380px,440px) 1fr;padding-bottom:0!important;overflow:hidden!important}
@@ -8267,7 +8285,9 @@ document.head.appendChild(st);
     if(nDc) ch.push('<span class="nv-ch">'+nDc+' '+(nDc===1?'εξιτήριο':'εξιτήρια')+'</span>');
     if(nOr) ch.push('<span class="nv-ch">'+nOr+' χειρουργείο</span>');
     if(nA) ch.push('<button class="nv-ch w'+(qf==='att'?' on':'')+'" onclick="mobQF(\'att\')">'+nA+' '+(nA===1?'χρειάζεται':'χρειάζονται')+' προσοχή</button>');
-    if(qf!=='all' && qf!=='att') ch.push('<button class="nv-ch on" onclick="mobQF(\''+qf+'\')">✕ φίλτρο</button>');
+    { const nT = all.reduce((a,e)=>a+todos(e.d).length,0), nL = all.reduce((a,e)=>a+todos(e.d).filter(l=>{ const w = todoWhen(l); return w && w < new Date(); }).length,0);
+      if(nT) ch.push('<button class="nv-ch'+(nL?' w':'')+(qf==='todos'?' on':'')+'" onclick="mobQF(\'todos\')">☑ '+nT+' εκκρεμότητ'+(nT===1?'α':'ες')+(nL?' · '+nL+' αργούν':'')+'</button>'); }
+    if(qf!=='all' && qf!=='att' && qf!=='todos') ch.push('<button class="nv-ch on" onclick="mobQF(\''+qf+'\')">✕ φίλτρο</button>');
     if(ch.length) h += '<div class="nv-chs">'+ch.join('')+'</div>';
     return h + '</div>';
   }
@@ -8283,7 +8303,7 @@ document.head.appendChild(st);
     let h = '<div class="mtop"><div style="display:flex;align-items:center;gap:10px">'+(NUI()?'<button onclick="pdxCmd()" style="font-size:18px;padding:5px 10px" title="Τι θέλεις να κάνεις;">🔎</button>':'<button onclick="mobDrawerOpen()" style="font-size:20px;padding:5px 11px">☰</button>')+'<div>'+esc(L().title)+'<br><span style="font-weight:400;font-size:12.5px;opacity:.85">'+all.length+' ασθενείς</span></div></div><span class="mtb"><button onclick="mobNewChoice()" title="Νέος ασθενής">➕</button> <button onclick="labInboxOpen()" title="Εισερχόμενα εργαστηριακά">📋</button> <button onclick="labsFullOpen()" title="Εργαστηριακά">🧪</button> <button onclick="mobFull()">'+(deskMode?'⬅ Κλασικός πίνακας':esc(String(L().full||'').replace(/\s*προβολή/i,'')||'Πλήρης'))+'</button></span></div>';
     h += filterBar();
     if(VM()!=='classic'){   // ✨ νέα εμφάνιση (όπως το σχέδιο): χωρίς κόκκινες μπάρες· προσοχή = κουμπί-φίλτρο + πορτοκαλί περίγραμμα
-      h = nvHeader(all, es) + (showF ? filterBar() : '') + nvBody(es);
+      h = nvHeader(all, es) + (showF ? filterBar() : '') + (qf==='todos' ? todoBoard(es) : nvBody(es));
       h += '<div id="mNoRes" class="msec" style="display:none">Δεν βρέθηκε ασθενής.</div>';
       if(!es.length) h += '<div class="msec">'+((fRooms.size||fTher.size||qf!=='all')?'Κανένας ασθενής με τα επιλεγμένα φίλτρα.':'Κανένας ασθενής.')+'</div>';
       return h + '<div style="height:96px"></div>' + nvTabs();
@@ -8524,6 +8544,67 @@ document.head.appendChild(st);
       return '<div class="mtp-row"><button class="mtp-cb" onclick="this.parentNode.classList.add(\'done\');setTimeout(()=>mobDone(\''+esc(k)+'\','+i+'),260)" aria-label="Ολοκληρώθηκε"></button><div class="mtp-tx"><div>'+esc(txt)+'</div>'+rem+'</div>'+(m?'':'<button class="mtp-bl" onclick="mobRowRem(\''+esc(k)+'\','+i+')" aria-label="Υπενθύμιση">🔔</button>')+'</div>'; }).join('')+'</div>';
   }
   // Εκκρεμότητες του ασθενή: περιεχόμενο της καρτέλας «Εκκρεμότητες» της οθόνης ασθενή (πρώην ξεχωριστή σελίδα, χωρίς πλωτή μπάρα/FAB)
+  // ⏱ 6/11: χρονολόγιο βάρδιας — ώρα από την υπενθύμιση (⏰ ΗΗ/ΜΜ ωω:λλ) → Αργούν · Επόμενες 2 ώρες · Σήμερα · Αύριο · Αργότερα · Χωρίς ώρα
+  function todoWhen(l){ const m = String(l).match(/ ⏰ (\d\d)\/(\d\d) (\d\d):(\d\d)$/); if(!m) return null; const n = new Date(); let d = new Date(n.getFullYear(), +m[2]-1, +m[1], +m[3], +m[4]); if(d - n > 200*864e5) d.setFullYear(d.getFullYear()-1); else if(n - d > 200*864e5) d.setFullYear(d.getFullYear()+1); return d; }
+  function todoBuckets(items){
+    const now = new Date(), t0 = new Date(now); t0.setHours(0,0,0,0); const t1 = new Date(t0.getTime()+864e5), t2 = new Date(t0.getTime()+2*864e5);
+    const G = [['late','⚠ Έχουν αργήσει'],['soon','Επόμενες 2 ώρες'],['today','Σήμερα'],['tom','Αύριο'],['later','Αργότερα'],['none','Χωρίς ώρα']].map(([id,t])=>({id,t,items:[]}));
+    items.forEach(x=>{ const w = todoWhen(x.l); x.w = w; const id = !w ? 'none' : w < now ? 'late' : w - now <= 2*3600e3 ? 'soon' : w < t1 ? 'today' : w < t2 ? 'tom' : 'later'; G.find(g=>g.id===id).items.push(x); });
+    G.forEach(g=>g.items.sort((a,b)=>(a.w||0)-(b.w||0)));
+    return G.filter(g=>g.items.length);
+  }
+  const hmT = w=>p2(w.getHours())+':'+p2(w.getMinutes());
+  function mtpRowsIdx(items, board){
+    return '<div class="mtp-list">'+items.map(x=>{ const txt = x.l.replace(REM_RE,''), d = board ? rec(x.k) : null, ek = esc(x.k);
+      const late = x.w && x.w < new Date();
+      const tm = x.w ? '<span class="mtp-rem'+(late?' late':'')+'" onclick="event.stopPropagation();mobRowRem(\''+ek+'\','+x.i+')">⏰ '+(x.w.toDateString()===new Date().toDateString() ? hmT(x.w) : p2(x.w.getDate())+'/'+p2(x.w.getMonth()+1)+' '+hmT(x.w))+'<i onclick="event.stopPropagation();mobRowRemClear(\''+ek+'\','+x.i+')">✕</i></span>' : '';
+      const who = board ? '<div class="mtp-who" onclick="mobTodoPage(\''+ek+'\')">'+esc(x.lbl||'')+'</div>' : '';
+      return '<div class="mtp-row tsw" data-k="'+ek+'" data-i="'+x.i+'" data-noswipe><span class="tsw-bg l">✓ Έγινε</span><span class="tsw-bg r">Αύριο 08:00 ⏭</span><button class="mtp-cb" onclick="this.parentNode.classList.add(\'done\');setTimeout(()=>mobDone(\''+ek+'\','+x.i+'),260)" aria-label="Ολοκληρώθηκε"></button><div class="mtp-tx">'+who+'<div>'+esc(txt)+'</div>'+tm+'</div>'+(x.w?'':'<button class="mtp-bl" onclick="mobRowRem(\''+ek+'\','+x.i+')" aria-label="Υπενθύμιση">🔔</button>')+'</div>'; }).join('')+'</div>';
+  }
+  // 📋 Πίνακας κλινικής: όλες οι εκκρεμότητες όλων των ασθενών, σε χρονολόγιο (φίλτρο «Εκκρεμότητες»)
+  function todoBoard(es){
+    const items = []; es.forEach(e=>todos(e.d).forEach((l,i)=>items.push({k:e.k, i, l, lbl:(String(e.k).indexOf('extra')===0 ? (e.room&&e.room!=='Έξτρα'?e.room:'Εκτός') : e.room+(e.bed?'-'+e.bed:''))+' · '+(e.d.name||'—')})));
+    setTimeout(()=>window.pdxTodoAuto && pdxTodoAuto(), 0);
+    let h = '<div class="mtp mtp-board"><div class="mtp-tip">Σύρε δεξιά = <b>έγινε</b> · αριστερά = <b>αύριο 08:00</b> · πάτα το κρεβάτι για τον ασθενή</div>';
+    if(!items.length) return h + '<div class="mtp-empty"><span>✓</span>Καμία ανοιχτή εκκρεμότητα</div></div>';
+    todoBuckets(items).forEach(g=>{ h += '<div class="mtp-h'+(g.id==='late'?' late':'')+'">'+g.t+' <b>'+g.items.length+'</b></div>' + mtpRowsIdx(g.items, true); });
+    const A = window.__todoAutoLog || []; if(A.length) h += '<div class="mtp-h">Έκλεισαν αυτόματα (ήρθαν αποτελέσματα)</div><div class="mtp-list">'+A.slice(-6).reverse().map(a=>'<div class="mtp-row done" style="opacity:.6;transform:none"><span class="mtp-cb"></span><div class="mtp-tx"><div class="mtp-who">'+esc(a.lbl)+'</div><div>'+esc(a.line)+'</div></div></div>').join('')+'</div>';
+    return h + '</div>';
+  }
+  window.pdxTodoPostpone = function(k, i){
+    const d = rec(k); if(!d) return; const t = todos(d); if(t[i]==null) return;
+    const w = new Date(); w.setDate(w.getDate()+1); w.setHours(8,0,0,0);
+    t[i] = t[i].replace(REM_RE,'')+' ⏰ '+p2(w.getDate())+'/'+p2(w.getMonth()+1)+' 08:00'; setTodos(k, t); render(); showToast('⏭ Αύριο 08:00: '+t[i].replace(REM_RE,''));
+  };
+  // 🧪 αυτόματο κλείσιμο: εκκρεμότητα εξέτασης (γενική, ουρία, κρεατινίνη, CRP, INR…) κλείνει μόνη της όταν έρθει νεότερο αποτέλεσμα για τον ασθενή
+  window.pdxTodoAuto = function(){
+    if(window.__todoAutoBusy || Date.now()-(window.__todoAutoAt||0) < 20000) return; window.__todoAutoBusy = true; window.__todoAutoAt = Date.now();
+    try{
+      const LR = /γενικ[ηή] αίματος|ουρ[ιί]α|κρεατιν|\bk\b|κάλιο|νάτριο|\bna\b|\bcrp\b|\binr\b|aptt|ηλεκτρολ|αιματοκρ|\bht\b|\bhct\b/i;
+      let changed = 0;
+      entries(true).forEach(e=>{ const d = e.d, T = todos(d); if(!T.length) return;
+        let last = 0; const LH = d.labTime || {}; Object.keys(LH).forEach(dt=>Object.values(LH[dt]||{}).forEach(tm=>{ const x = Date.parse(dt+'T'+(tm||'07:00')); if(x > last) last = x; }));
+        try{ const W = window.pdxLabLatestAt ? pdxLabLatestAt(d) : 0; if(W > last) last = W; }catch(x){}
+        if(!last) return;
+        const M = d.todoMeta || {}, keep = [], gone = [];
+        T.forEach(l=>{ const b = l.replace(REM_RE,''), m = M[b]; if(m && m.at && LR.test(b) && !/καλλιέργ|ούρων|ουρων/i.test(b) && last > m.at + 5*60000) gone.push(b); else keep.push(l); });
+        if(gone.length){ setTodos(e.k, keep); changed += gone.length; window.__todoAutoLog = (window.__todoAutoLog||[]).concat(gone.map(line=>({line, lbl:(e.room||'')+(e.bed?'-'+e.bed:'')+' · '+(d.name||''), at:Date.now()}))); }
+      });
+      if(changed){ showToast('🧪 Έκλεισαν αυτόματα '+changed+(changed>1?' εκκρεμότητες':' εκκρεμότητα')+' — ήρθαν αποτελέσματα'); render(); }
+    }catch(e){} finally{ window.__todoAutoBusy = false; }
+  };
+  // σύρσιμο γραμμής: δεξιά = έγινε, αριστερά = αύριο 08:00
+  // ποντίκι: η ροδέλα κυλά οριζόντια τη μπάρα Ενεργειών
+  if(!window.__ptabWheel){ window.__ptabWheel = true; document.addEventListener('wheel', e=>{ const b = e.target.closest && e.target.closest('.ptab-s'); if(!b || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; b.scrollLeft += e.deltaY; e.preventDefault(); }, {passive:false}); }
+  if(!window.__tswOn){ window.__tswOn = true; let row = null, sx = 0, sy = 0, dx = 0, on = false;
+    document.addEventListener('touchstart', e=>{ row = e.target.closest && e.target.closest('.tsw'); if(!row || e.target.closest('button,.mtp-rem')) { row = null; return; } const t = e.touches[0]; sx = t.clientX; sy = t.clientY; dx = 0; on = false; }, {passive:true});
+    document.addEventListener('touchmove', e=>{ if(!row) return; const t = e.touches[0]; const ddx = t.clientX - sx, ddy = t.clientY - sy;
+      if(!on){ if(Math.abs(ddx) > 12 && Math.abs(ddx) > Math.abs(ddy)*1.5) on = true; else if(Math.abs(ddy) > 12){ row = null; return; } else return; }
+      dx = ddx; row.style.transition = 'none'; row.style.transform = 'translateX('+dx+'px)'; row.classList.toggle('sw-l', dx > 0); row.classList.toggle('sw-r', dx < 0); }, {passive:true});
+    document.addEventListener('touchend', ()=>{ if(!row) return; const r = row; row = null; r.style.transition = 'transform .2s';
+      if(on && Math.abs(dx) > 90){ const k = r.dataset.k, i = +r.dataset.i; r.style.transform = 'translateX('+(dx>0?'110%':'-110%')+')'; setTimeout(()=>{ if(dx > 0) mobDone(k, i); else pdxTodoPostpone(k, i); }, 180); }
+      else { r.style.transform = ''; setTimeout(()=>r.classList.remove('sw-l','sw-r'), 200); } }, {passive:true});
+  }
   function todoBody(k){
     const d = rec(k); if(!d) return '';
     const T = todos(d);
@@ -8532,9 +8613,9 @@ document.head.appendChild(st);
     h += '<div class="mtp-new"><input id="mobNewTodo" placeholder="Νέα εκκρεμότητα…" enterkeyhint="done" autocomplete="off"><button class="bell" onclick="mobRemToggle()" id="mobBell" title="Υπενθύμιση">🔔</button><button class="add" onclick="mobAddTodo(\''+esc(k)+'\')">＋</button></div>'+remRow();
     h += window.pdxTodoExtras ? pdxTodoExtras(k) : '';
     // ανοιχτές
-    h += '<div class="mtp-h">Ανοιχτές'+(T.length?' <b>'+T.length+'</b>':'')+'</div>';
     if(T.length){
-      h += mtpRows(k,T);
+      setTimeout(()=>window.pdxTodoAuto && pdxTodoAuto(), 0);
+      todoBuckets(T.map((l,i)=>({k, i, l}))).forEach(g=>{ h += '<div class="mtp-h'+(g.id==='late'?' late':'')+'">'+g.t+' <b>'+g.items.length+'</b></div>' + mtpRowsIdx(g.items); });
     } else h += '<div class="mtp-empty"><span>✓</span>Καμία ανοιχτή εκκρεμότητα</div>';
     // γρήγορη προσθήκη: ανά κατηγορία, σε μία σειρά που σύρεται
     h += '<div class="mtp-h">Γρήγορη προσθήκη</div><div class="mtp-qa">'+qiGroups().map(g=>'<div class="mtp-cat"><span>'+esc(g.cat)+'</span><div>'+g.items.map(q=>'<button onclick="mobQuick(\''+esc(k)+'\',\''+esc(q.label)+'\')">'+esc(q.label)+(q.sub?' <small>▾</small>':'')+'</button>').join('')+'</div></div>').join('')+'</div>';
@@ -8678,6 +8759,19 @@ document.head.appendChild(st);
   window.mobTakeScroll=function(k){ const r=window.__dret; window.__dret=null; return (r && r.k===k && Date.now()-r.t<15*60000) ? r.y : 0; };
   // «Εκκρεμότητες» ασθενή = η καρτέλα της οθόνης ασθενή (η παλιά ξεχωριστή σελίδα καταργήθηκε)
   window.mobTodoPage=function(k){ if(openKey!==k) mobOpen(k); window.__tp=false; window.__ptTab={k:k, t:'todo'}; render(); view.scrollTop=0; };
+  // 6/11: ⚡ Ενέργειες σε οριζόντια μπάρα κάτω από τις καρτέλες (κινητό: σύρσιμο · υπολογιστής: βελάκια ‹ ›)
+  const PTA_SHORT = {labs:'Εξετάσεις', ahfylabs:'ΑΗΦΥ', dcx:'Εξιτήριο', order:'Παραγγελία', rx:'Συνταγή', consult:'Εκτίμηση', comorb:'Συννοσηρότ.', ct:'Απεικονίσεις', ref:'Παραπεμπτικό'};
+  function ptActBar(k, d){
+    if(MOB_CFG.actionRow===false) return '';
+    const xk = esc(k), bot = window.pdxIsBotUser && window.pdxIsBotUser(), warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
+    const L0 = (window.pdxBotActions ? pdxBotActions() : []).filter(a=>a && a.id!=='labs' && a.id!=='ahfylabs' && (bot || a.id==='ct'));
+    const ord = ['order','rx','consult','dcx','comorb','ct','ref']; L0.sort((a,b)=>{ const i=ord.indexOf(a.id), j=ord.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
+    const it = (ic, t, act, dot)=>'<button onclick="'+act+'"><i>'+ic+'</i>'+t+(dot?' <b style="color:#F79009">●</b>':'')+'</button>';
+    let h = it('🧪', 'Εξετάσεις', "mobAct('"+xk+"','labs')", warn);
+    L0.forEach(a=>{ h += a.id==='ct' && window.pdxCtOpen ? it('🩻', 'Απεικονίσεις', "pdxCtOpen('"+xk+"')") : it(esc(a.icon||'🤖'), esc(PTA_SHORT[a.id]||a.label||a.id), "mobAct('"+xk+"','"+esc(a.id)+"')"); });
+    h += it('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + it('⋯', 'Όλες', "mobActions('"+xk+"')");
+    return '<div class="ptab"><button class="ptab-a l" aria-label="Προηγούμενες" onclick="this.parentNode.querySelector(\'.ptab-s\').scrollBy({left:-260,behavior:\'smooth\'})">‹</button><div class="ptab-s">'+h+'</div><button class="ptab-a r" aria-label="Επόμενες" onclick="this.parentNode.querySelector(\'.ptab-s\').scrollBy({left:260,behavior:\'smooth\'})">›</button></div>';
+  }
   // κρίσιμα στοιχεία κάτω από το όνομα: αλλεργία, αντιπηκτικά, συννοσηρότητες (πάτημα → η αντίστοιχη ενότητα)
   function hdrChips(k, d){
     const c = [];
@@ -8814,6 +8908,7 @@ document.head.appendChild(st);
     const tab = (window.__ptTab && window.__ptTab.k===k) ? window.__ptTab.t : 'today', nT = todos(d).length, hpd = !!(window.HIST_PEND && window.HIST_PEND[k]);
     const tb = (id, full, short)=>'<button role="tab" aria-selected="'+(tab===id)+'" data-pttab="'+id+'" class="'+(tab===id?'on':'')+'" onclick="mobPtTab(\''+xk+'\',\''+id+'\')"><span class="lf">'+full+'</span><span class="ls">'+(short||full)+'</span></button>';
     h += '<div class="ptseg" role="tablist">'+tb('today','Σήμερα')+tb('todo','Εκκρεμότητες'+(nT?' ('+nT+')':''),'Εκκρεμότ.'+(nT?' ('+nT+')':''))+tb('hist','Ιστορικό'+(hpd?' ●':''))+'</div>';
+    h += ptActBar(k, d);
     const HIST = ['history','allergy','anticoag','onc','misc'], SKIP = ['surgery','catheters','todos'];
     const secs = (pick)=>{ addC.length = 0; let o = ''; (MOB_CFG.sections||[]).forEach(k2=>{ if(!S[k2] || SKIP.indexOf(k2)>=0 || !pick(k2)) return; if(OPT.indexOf(k2)>=0 && EMP[k2] && EMP[k2]() && CH[k2]){ addC.push(CH[k2]); return; } o += (k2==='today' ? S[k2]().replace('Σήμερα (πάτα για αλλαγή)','Καταχώριση σήμερα') : S[k2]()); });
       if(addC.length) o += '<div class="msec madd2"><h3>Προσθήκη</h3><div class="maddc">'+addC.map(c=>'<button onclick="qeOpenSheet(\''+xk+'\',\''+esc(c[0])+'\',true)">＋ '+esc(c[1])+'</button>').join('')+'</div></div>';
@@ -12376,11 +12471,27 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
             + ok(b.incog, 'Δικό του παράθυρο', 'κλειστό')
             + ok(!OFF[id], OFF[id] ? 'Απενεργοποιημένο — δεν παίρνει εργασίες' : 'Ενεργό — παίρνει εργασίες')
             + '</div>';
+          const y = b.sys; if(y && y.ram > 0){
+            const used = Math.max(0, Math.min(100, Math.round(100*(1 - y.free/y.ram)))), cpu = Math.max(0, Math.min(100, +y.cpu||0)), col = v=>v>=90?'#B91C1C':v>=75?'#B45309':'#15803D';
+            const bar = (lbl, v, txt)=>'<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0"><span style="width:44px;color:#475569">'+lbl+'</span><span style="flex:1;height:9px;border-radius:5px;background:#E5E9EF;overflow:hidden"><span style="display:block;height:100%;width:'+v+'%;background:'+col(v)+'"></span></span><span style="min-width:96px;text-align:right;color:#334155">'+txt+'</span></div>';
+            const dk = y.dfree >= 0 && y.dtot > 0 ? Math.round(100*(1 - y.dfree/y.dtot)) : -1;
+            h += '<div style="margin-top:8px;border-top:1px solid #EEF1F4;padding-top:6px"><div style="font-size:12.5px;font-weight:700;color:#475569">🖥 Υγεία υπολογιστή <span style="font-weight:400;color:#94A3B8">· μέτρηση πριν '+ago(y.at)+'</span></div>'
+              + bar('CPU', cpu, cpu+'%' + (y.cores?' · '+y.cores+' πυρ.':''))
+              + bar('RAM', used, (y.free/1024).toFixed(1)+' / '+(y.ram/1024).toFixed(1)+' GB ελ.')
+              + (dk >= 0 ? bar('Δίσκος', dk, y.dfree+' GB ελεύθ.') : '')
+              + '<div style="font-size:12.5px;color:#475569">Chrome: '+(y.cr ? y.cr.n+' διεργασίες · '+(y.cr.mb/1024).toFixed(1)+' GB' : '—')+' · ανοιχτός '+(y.upH>=48 ? Math.round(y.upH/24)+' ημέρες' : (y.upH||0)+' ώρες')+(y.upH>=24*7?' <b style="color:#B45309">(θέλει επανεκκίνηση Windows)</b>':'')+'</div>'
+              + (y.reboot ? '<div style="font-size:12.5px;color:#B45309;font-weight:700">⚠ Τα Windows περιμένουν επανεκκίνηση για ενημερώσεις</div>' : '')
+              + (y.net ? '<div style="font-size:12.5px;color:#475569;margin-top:3px">🌐 '+Object.keys(y.net).map(n=>{ const v = y.net[n]; return E2(n)+' <b style="color:'+(v<0?'#B91C1C':v>1500?'#B45309':'#15803D')+'">'+(v<0?'χωρίς απάντηση':v+'ms')+'</b>'; }).join(' · ')+'</div>' : '')
+              + (y.cv ? '<div style="font-size:12px;color:#94A3B8">Chrome '+E2(y.cv)+'</div>' : '')
+              + (y.pa4 ? '<div style="font-size:12.5px;color:'+(y.pa4.ok?'#15803D':'#B91C1C')+'">🖨 τελευταία εκτύπωση A4 πριν '+ago(y.pa4.at)+': '+(y.pa4.ok?'✓ '+E2(y.pa4.printer):'✗ '+E2(y.pa4.err))+'</div>' : '')
+              + (y.top && y.top.length ? '<details style="font-size:12.5px;margin-top:4px"><summary style="color:#1D4E80;font-weight:600">Τι τρώει μνήμη</summary>'+y.top.map(t=>'<div style="display:flex;justify-content:space-between;padding:2px 0"><span>'+E2(t.p)+'</span><span>'+(t.mb>=1024?(t.mb/1024).toFixed(1)+' GB':t.mb+' MB')+'</span></div>').join('')+'</details>' : '')
+              + '</div>';
+          }
         }
         h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
-          + btn('who', id, '👋 Ποιος;') + btn('selftest', id, '🩺 Έλεγχος') + btn('appreload', id, '🔄 Παραδόχαρτο') + btn('emrrelog', id, '🔐 ΝΠΣ ξανά') + btn('update', id, '⬆ Ενημέρωση') + btn('restart', id, '♻ Επανεκκίνηση')
+          + btn('who', id, '👋 Ποιος;') + btn('sys', id, '📊 Μέτρηση') + btn('tidy', id, '🧹 Καθάρισμα') + btn('printers', id, '🖨 Εκτυπωτές') + btn('eptest', id, '💊 Τεστ e-prescription') + btn('selftest', id, '🩺 Έλεγχος') + btn('appreload', id, '🔄 Παραδόχαρτο') + btn('emrrelog', id, '🔐 ΝΠΣ ξανά') + btn('update', id, '⬆ Ενημέρωση') + btn('restart', id, '♻ Επανεκκίνηση')
           + '<button data-off="'+E2(id)+'" style="border:0;border-radius:10px;padding:8px 10px;font-weight:600;min-height:38px;background:'+(OFF[id]?'#15803D':'#FEE2E2')+';color:'+(OFF[id]?'#fff':'#B91C1C')+'">'+(OFF[id]?'▶ Ενεργοποίηση':'⏸ Απενεργοποίηση')+'</button></div>'
-          + (busyIds[id] ? '<div style="font-size:13px;color:#1D4E80;margin-top:6px">'+E2(busyIds[id])+'</div>' : '')
+          + (busyIds[id] ? '<div style="font-size:13px;color:#1D4E80;margin-top:6px;white-space:pre-line">'+E2(busyIds[id])+'</div>' : '')
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+E2(nm)+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+E2(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+E2(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div>'
           + '</div>'; });
       h += '<div class="ios-h">Λογαριασμοί ΝΠΣ για τις εργασίες (σειρά προτίμησης)</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:10px 14px"><input data-pref value="'+E2(PREF.join(', '))+'" placeholder="CHTHEODOROLEAS, ADAMAKIS" style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px"><button data-act="pref" data-id="" style="margin-top:8px;width:100%;height:42px;border:0;border-radius:10px;background:#1D4E80;color:#fff;font-weight:600">Αποθήκευση</button><div class="ios-f" style="margin:6px 0 0">Ο KDOUROUMIS μένει για το Ουρολογικό Ημέρας. Αλλαγή ισχύει σε ≤5′, όταν το bot είναι ελεύθερο.</div></div>';
@@ -12390,10 +12501,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       busyIds[id] = '⏳ '+label+'…'; pg.redraw();
       let jid = 0; try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctl', name:label+' '+id.slice(-5), room:null, kind, payload:Object.assign({only:id, quiet:1}, payload||{}), status:'new'}).select('id').single(); if(r.error) throw r.error; jid = r.data.id; }catch(e){ busyIds[id] = '✗ '+(e.message||e); return pg.redraw(); }
       const t0 = Date.now();
-      while(Date.now()-t0 < (kind==='selftest'?240e3:60e3)){ await new Promise(r=>setTimeout(r, 2500));
+      while(Date.now()-t0 < (kind==='eptorture'?1500e3:kind==='selftest'?240e3:60e3)){ await new Promise(r=>setTimeout(r, 2500));
         let q = null; try{ q = (await sb6.from('oncall_jobs').select('status,note').eq('id', jid).maybeSingle()).data; }catch(e){}
-        if(q && !/^(new|seen|running)$/.test(q.status)){ busyIds[id] = (q.status==='done'?'✓ ':'✗ ')+String(q.note||q.status).slice(0,300); return pg.redraw(); }
-        busyIds[id] = '⏳ '+label+' · '+Math.round((Date.now()-t0)/1000)+'″'+(q&&q.status==='new'?' (περιμένει τον υπολογιστή)':''); pg.redraw(); }
+        if(q && !/^(new|seen|running)$/.test(q.status)){ busyIds[id] = (q.status==='done'?'✓ ':'✗ ')+String(q.note||q.status).slice(0, kind==='eptorture'?3000:300); if(/^(sys|tidy)$/.test((payload||{}).op||'')) setTimeout(()=>load(), 3000); return pg.redraw(); }
+        busyIds[id] = '⏳ '+label+' · '+Math.round((Date.now()-t0)/1000)+'″'+(q&&q.status==='new'?' (περιμένει τον υπολογιστή)':q&&q.note&&/^🧪/.test(q.note)?' · '+q.note:''); pg.redraw(); }
       busyIds[id] = '✗ δεν απάντησε σε '+Math.round((Date.now()-t0)/1000)+'″ (κλειστός/κοιμάται;)'; pg.redraw(); };
     pg.el.addEventListener('click', async e=>{
       const a = e.target.closest('[data-act]');
@@ -12401,8 +12512,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(act==='pref'){ const v = (pg.el.querySelector('[data-pref]').value||'').split(/[,\s]+/).map(x=>x.trim().toUpperCase()).filter(Boolean); const r = await sb6.from('oncall_config').upsert({key:'emr_pref', value:v, updated_at:new Date().toISOString()}, {onConflict:'key'}); msg = r.error ? 'Δεν αποθηκεύτηκε: '+r.error.message : ''; if(!r.error){ PREF = v; toast('✓ Αποθηκεύτηκε'); } return pg.redraw(); }
         if(act==='who') return job(id, 'botwho', {label:N[id]||''}, '👋');
         if(act==='selftest') return job(id, 'selftest', {rounds:1, test:true}, '🩺 Έλεγχος συστημάτων');
+        if(act==='eptest'){ let am = ''; try{ am = localStorage.getItem('pdx_ep_test_amka')||''; }catch(x){}
+          am = (prompt('Τεστ αντοχής e-prescription: 6 γύροι συνταγή/παραπεμπτικό με επαναφορτώσεις, αποσυνδέσεις, κλείσιμο καρτέλας. ΠΟΤΕ «Καταχώριση» — σταματά στον έλεγχο.\n\nΑΜΚΑ δοκιμών (π.χ. δικός σας):', am)||'').replace(/\D/g,'');
+          if(!/^\d{11}$/.test(am)) return; try{ localStorage.setItem('pdx_ep_test_amka', am); }catch(x){}
+          return job(id, 'eptorture', {amka:am, rounds:6, test:true}, '💊 Τεστ e-prescription'); }
         if(act==='restart' && !confirm('Επανεκκίνηση του bot σε αυτόν τον υπολογιστή;')) return;
-        return job(id, 'botctl', {op:act}, {appreload:'🔄 Παραδόχαρτο', emrrelog:'🔐 ΝΠΣ', update:'⬆ Ενημέρωση', restart:'♻ Επανεκκίνηση'}[act]||act);
+        if(act==='tidy' && !confirm('Καθάρισμα: οι καρτέλες στο παρασκήνιο «κοιμούνται» (ξαναφορτώνουν όταν τις ανοίξεις) και κλείνουν τα ανώνυμα παράθυρα του bot. Συνέχεια;')) return;
+        return job(id, 'botctl', {op:act}, {appreload:'🔄 Παραδόχαρτο', emrrelog:'🔐 ΝΠΣ', update:'⬆ Ενημέρωση', restart:'♻ Επανεκκίνηση', sys:'📊 Μέτρηση', tidy:'🧹 Καθάρισμα', printers:'🖨 Εκτυπωτές'}[act]||act);
       }
       const ob = e.target.closest('[data-off]'); if(ob){ const id = ob.dataset.off, nm = N[id] || id.slice(-5), turnOff = !OFF[id];
         if(turnOff && !confirm('Απενεργοποίηση του bot στον υπολογιστή «'+nm+'»;')) return;
@@ -14992,7 +15108,21 @@ Z99.2:C|αιμοκάθαρση
     h += '</div>';
     box.innerHTML = h;
     box.querySelectorAll('svg[data-t]').forEach(svg=>{ const ck = svg.closest('[data-ck]').dataset.ck, t=tests[ck], P=t.p.filter(p=>num(p[1])!=null), tip=svg.nextElementSibling;
-      svg.addEventListener('click', e=>{ const c=e.target.closest('circle'); if(!c) return; const p=P[+c.dataset.i]; tip.textContent = fmtD(p[0])+' · '+fmtN(p[1])+' '+t.u+(p[2]==='H'?' ▲ υψηλή':p[2]==='L'?' ▼ χαμηλή':''); }); });
+      // 6/11: αφή/σύρσιμο πάνω στο γράφημα → κάθετη γραμμή + ημερομηνία και τιμή του πλησιέστερου σημείου (όπως στο νοσοκομείο)
+      const NS='http://www.w3.org/2000/svg', vb=svg.viewBox.baseVal, cs=[...svg.querySelectorAll('circle[data-i]')], cur=document.createElementNS(NS,'g'); svg.appendChild(cur); svg.style.touchAction='pan-y';
+      const show = cx=>{ let best=null, bd=1e9; cs.forEach(c=>{ const d=Math.abs(+c.getAttribute('cx')-cx); if(d<bd){ bd=d; best=c; } }); if(!best) return;
+        const i=+best.dataset.i, p=P[i], x=+best.getAttribute('cx'), y=+best.getAttribute('cy'), col=p[2]==='H'?'#B42318':p[2]==='L'?'#1D4ED8':'#1B4B66';
+        const txt=fmtD(p[0])+' · '+fmtN(p[1])+' '+(t.u||''), w=Math.max(70, txt.length*6.6+16), bx=Math.max(2, Math.min(vb.width-w-2, x-w/2)), by = y-44 < 2 ? y+14 : y-44;
+        cur.innerHTML='<line x1="'+x+'" x2="'+x+'" y1="12" y2="'+(vb.height-28)+'" stroke="#94A3B8" stroke-dasharray="3 3"/><circle cx="'+x+'" cy="'+y+'" r="7" fill="none" stroke="'+col+'" stroke-width="2.5"/>'
+          +'<rect x="'+bx.toFixed(1)+'" y="'+by.toFixed(1)+'" width="'+w.toFixed(1)+'" height="26" rx="7" fill="#1F2933" opacity=".92"/><text x="'+(bx+w/2).toFixed(1)+'" y="'+(by+17.5).toFixed(1)+'" font-size="12.5" font-weight="700" text-anchor="middle" fill="#fff">'+E(txt)+'</text>';
+        tip.textContent = fmtD(p[0])+' · '+fmtN(p[1])+' '+(t.u||'')+(p[2]==='H'?' ▲ υψηλή':p[2]==='L'?' ▼ χαμηλή':''); };
+      const at = e=>{ const m=svg.getScreenCTM(); if(!m) return; const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; show(pt.matrixTransform(m.inverse()).x); };
+      let down=false;
+      svg.addEventListener('pointerdown', e=>{ down=true; try{ svg.setPointerCapture(e.pointerId); }catch(x){} at(e); });
+      svg.addEventListener('pointermove', e=>{ if(down || e.pointerType==='mouse') at(e); });
+      ['pointerup','pointercancel'].forEach(ev=>svg.addEventListener(ev, ()=>{ down=false; }));
+      ['touchstart','touchmove'].forEach(ev=>svg.addEventListener(ev, e=>{ const t0=e.touches&&e.touches[0]; if(t0) at(t0); }, {passive:true}));
+    });
     const inp = box.querySelector('[data-q]'); if(inp && document.activeElement!==inp && q){ /* κρατάμε τη θέση */ }
   }
   function load(){
@@ -15262,6 +15392,8 @@ Z99.2:C|αιμοκάθαρση
     }catch(e){} finally{ busy = false; }
   }
   // [{lab, txt, c:'r'|'a'}] για έναν ασθενή
+  // πιο πρόσφατο αποτέλεσμα Medilabi του ασθενή (ms) — για αυτόματο κλείσιμο εκκρεμοτήτων εξετάσεων
+  window.pdxLabLatestAt = function(d){ if(!d || !d.name) return 0; load(); const R = cache[nrm(d.name)] || {}; let m = 0; Object.values(R).forEach(x=>{ if(x && x.at > m) m = x.at; }); return m; };
   window.pdxLabWarn = function(d){
     if(!d || !d.name) return []; load(); if(!W) loadW();
     const L = lim(), R = cache[nrm(d.name)] || {}, out = [];
