@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z3-v132';
+const APP_VER = '2026-11-06z4-v133';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7841,13 +7841,15 @@ document.head.appendChild(st);
   };
   // ⚡ Αυτόματη έγκριση ανά λειτουργία (oncall_config 'auto_approve'): το bot ολοκληρώνει χωρίς να περιμένει «Έγκριση» από το κινητό
   window.pdxAutoApprove = async function(){
-    const L = [['order','🧾','Παραγγελία εξετάσεων','πατά «Καταχώρηση» στο Medilabi μόλις συμπληρωθεί — μόνο αν μπήκαν ΟΛΕΣ οι εξετάσεις ΚΑΙ ο ασθενής του Medilabi ταιριάζει'],['discharge','📄','Εξιτήριο','δεν υποστηρίζεται ακόμα — ρωτά πάντα στο κινητό']];
+    const L = [['order','🧾','Παραγγελία εξετάσεων','πατά «Καταχώρηση» στο Medilabi μόλις συμπληρωθεί — μόνο αν μπήκαν ΟΛΕΣ οι εξετάσεις ΚΑΙ ο ασθενής του Medilabi ταιριάζει'],['rx','💊','Συνταγή e-prescription','πατά «Καταχώριση» μόλις συμπληρωθεί — μόνο αν μπήκαν ΟΛΑ τα φάρμακα, ταιριάζει ΑΜΚΑ/όνομα και ο λογαριασμός είναι του θεράποντα· αλλιώς ρωτά'],['ref','📋','Παραπεμπτικό e-prescription','πατά «Καταχώριση» μόνο αν μπήκαν ΟΛΕΣ οι εξετάσεις με διάγνωση· αλλιώς ρωτά'],['discharge','📄','Εξιτήριο','δεν υποστηρίζεται ακόμα — ρωτά πάντα στο κινητό']];
     let v = {}, msg = '';
     try{ const r = await sb6.from('oncall_config').select('value').eq('key','auto_approve').maybeSingle(); v = (r.data && r.data.value) || {}; }catch(e){}
     const pg = iosPage('Αυτόματη έγκριση', 'Ρυθμίσεις', ()=>iosGroup('Χωρίς ερώτηση στο κινητό', L.map(([k,ic,t,sub])=>({ic, t, sub, sw:!!v[k], data:'data-aa="'+k+'"'})),
       'Όταν είναι ανοιχτό, το bot ολοκληρώνει μόνο του και σας στέλνει ειδοποίηση με το αποτέλεσμα. Όταν είναι κλειστό, περιμένει «✅ Έγκριση» από εσάς.') + (msg?'<div class="ios-f" style="color:#FF3B30">'+E(msg)+'</div>':''));
     pg.el.addEventListener('click', async e=>{ const r = e.target.closest('[data-aa]'); if(!r) return; const k = r.getAttribute('data-aa');
       if(k==='discharge' && !v[k]){ msg = 'Η αυτόματη έγκριση εξιτηρίου δεν υποστηρίζεται ακόμα.'; pg.redraw(); return; }
+      if(/^(rx|ref)$/.test(k) && !v[k] && !confirm((k==='rx'?'Συνταγές':'Παραπεμπτικά')+' ΧΩΡΙΣ έλεγχο στο κινητό;\n\nΤο bot θα πατά «Καταχώριση» μόνο του όταν όλα μπήκαν σωστά. Η καταχώριση στο e-prescription είναι οριστική (ακυρώνεται μόνο από το e-prescription).')) return;
+      if(/^(rx|ref)$/.test(k) && ['attending','admin'].indexOf(window.authRole)<0){ msg = 'Μόνο επιμελητής/διαχειριστής.'; pg.redraw(); return; }
       v[k] = !v[k]; pg.redraw();
       const x = await sb6.from('oncall_config').upsert({key:'auto_approve', value:v, updated_at:new Date().toISOString()}, {onConflict:'key'});
       if(x.error){ v[k] = !v[k]; msg = 'Δεν αποθηκεύτηκε: '+x.error.message; } else { msg=''; window.__pdxAutoN = Object.values(v).filter(Boolean).length ? 'Ενεργή' : ''; }
