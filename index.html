@@ -2202,7 +2202,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06c-v111';
+const APP_VER = '2026-11-06d-v112';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7603,7 +7603,16 @@ document.head.appendChild(st);
       + st(3,'Chrome → <b>chrome://extensions</b> → «Λειτουργία προγραμματιστή» → «Φόρτωση μη πακεταρισμένης» → φάκελος <b>ef-bot</b>.')
       + st(4,'Διπλό κλικ στο <b>ef-bot\\tools\\efbot-update.bat</b> — από εκεί και πέρα ενημερώνεται μόνο του.')
       + st(5,'Άνοιξε το Παραδόχαρτο σε αυτόν τον Chrome και συνδέσου.')
-      +'</div><div style="font-size:13px;color:#6D6D72;margin:10px 16px;line-height:1.4">Οι κωδικοί κρυπτογραφούνται ανά υπολογιστή: σε κάθε νέο PC στείλε τους ξανά από 🔐 Κωδικοί του bot. Αν τρέχουν πολλά bot, μόνο ένα κάθε φορά παίρνει τις κοινές εργασίες.</div>');
+      +'</div><div style="font-size:13px;color:#6D6D72;margin:10px 16px;line-height:1.4">Οι κωδικοί κρυπτογραφούνται ανά υπολογιστή: σε κάθε νέο PC στείλε τους ξανά από 🔐 Κωδικοί του bot. Αν τρέχουν πολλά bot, μόνο ένα κάθε φορά παίρνει τις κοινές εργασίες.</div>'
+      +'<div style="font-size:13px;color:#6D6D72;margin:18px 16px 6px;text-transform:uppercase">Ενημέρωση bot που ήδη υπάρχει</div>'
+      +'<div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;overflow:hidden">'
+      + st(1,'Βεβαιώσου ότι δεν τρέχει εργασία του bot.')
+      + st(2,'Chrome → <b>chrome://extensions</b> → «Βοηθός Φακέλου»: δες τον φάκελο στο «Φόρτωση από».')
+      + st(3,'Κατέβασε το αρχείο (κουμπί πάνω) και αποσυμπίεσέ το.')
+      + st(4,'Αντέγραψε τα περιεχόμενα του φακέλου <b>ef-bot</b> μέσα σε εκείνον τον φάκελο → «Αντικατάσταση».')
+      + st(5,'Πίσω στο chrome://extensions πάτα ↻ στο «Βοηθός Φακέλου» και έλεγξε την έκδοση.')
+      +'</div><div id="pdxBotLatest" style="font-size:13px;color:#6D6D72;margin:10px 16px 24px"></div>');
+    fetch(URL_ZIP.replace('ef-bot-latest.zip','version.json')+'?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{ const e=document.getElementById('pdxBotLatest'); if(e&&j&&j.version) e.textContent='Τελευταία έκδοση: '+j.version; }).catch(()=>{});
   };
   // 📚 στοίβα σελίδων (iOS): νέα σελίδα με ΑΛΛΟ τίτλο μπαίνει πάνω από την ανοιχτή· «‹ <προηγούμενος τίτλος>» γυρίζει σε αυτήν.
   // Η ορατή (πάνω) σελίδα είναι πάντα η #iosPg· οι από κάτω κρατιούνται ζωντανές (ίδιοι listeners) ως .iosPgU.
@@ -7893,7 +7902,7 @@ document.head.appendChild(st);
         adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:go("pdxAutoApprove()")},
         adm && {ic:'🔐', t:'Κωδικοί του bot', on:go("pdxDo('cred')")},
         adm && {ic:'🖥', t:'Υπολογιστές bot (ονόματα)', on:go("pdxBotsPage()")},
-        adm && {ic:'⬇️', t:'Κατέβασμα bot για άλλο PC', on:go("pdxBotDownload()")}
+        adm && {ic:'⬇️', t:'Κατέβασμα / ενημέρωση bot', on:go("pdxBotDownload()")}
       ]);
       if(adm) h += iosGroup('Χρήστες', [{ic:'👥', t:'Χρήστες', v: window.__pdxPendingUsers ? window.__pdxPendingUsers+' νέοι' : '', on:go("pdxDo('users')")}]);
       h += iosGroup('Ασφάλεια', [{ic:'🔐', t:'Κρυπτογράφηση', v:(window.pdxCryptoStatus?pdxCryptoStatus():''), on:go("pdxCryptoPage()")}]);
