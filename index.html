@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z4-v133';
+const APP_VER = '2026-11-06z5-v134';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -14493,7 +14493,8 @@ Z99.2:C|αιμοκάθαρση
         else if(['failed','cancelled','dismissed'].includes(j.status)) clearInterval(tick); }, 10000);
     }catch(e){}
   }
-  setTimeout(admitsAuto, 60000); setInterval(admitsAuto, 10*60000);
+  // 6/11 (απόφαση χρήστη): ΟΧΙ αυτόματα — μόνο όταν πατηθεί «Εισαγωγές & ΑΜ από ΝΠΣ»
+  void admitsAuto;
   // εφαρμογή αποτελέσματος που ήρθε όσο η εφαρμογή ήταν κλειστή
   setTimeout(async ()=>{ try{
     if(typeof sb6==='undefined' || !(await sb6.auth.getSession()).data.session) return;
