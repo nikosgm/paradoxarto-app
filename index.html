@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06q-v125';
+const APP_VER = '2026-11-06r-v126';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -6591,6 +6591,17 @@ const ICD10_MAP = {}; // στοιχείο ιστορικού -> [κωδικοί 
 'use strict';
 var BUCKET = 'hist-orig';
 function recOf(key){ return String(key).indexOf('extra-')===0 ? extraPatients[key] : data[key]; }
+// 6/11: εύρεση ασθενή για το bot — πρώτα στο κρεβάτι k· αν εκεί είναι άλλος (μετακίνηση/καθυστέρηση συγχρονισμού), μοναδικό ταίριασμα ονόματος σε όλη την κλινική
+window.pdxRecFind = function(k, name){
+  const nz = s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/\s+/g,' ').trim();
+  const want = nz(name); let d = null; try{ d = recOf(k); }catch(e){}
+  if(d && nz(d.name)===want) return {k, d};
+  if(!want) return null;
+  const hits = []; [data||{}, extraPatients||{}].forEach(src=>Object.keys(src).forEach(kk=>{ const x = src[kk]; if(x && x.name && nz(x.name)===want) hits.push({k:kk, d:x}); }));
+  return hits.length===1 ? hits[0] : null;
+};
+window.pdxRecWhy = function(k, name){ let d = null; try{ d = recOf(k); }catch(e){} const n = Object.keys(data||{}).length + Object.keys(extraPatients||{}).length;
+  return !n ? 'ο υπολογιστής δεν βλέπει κανέναν ασθενή (κλειδί κλινικής;)' : !d ? 'δεν βρέθηκε ο ασθενής σε αυτόν τον υπολογιστή ('+n+' ασθενείς)' : 'στο κρεβάτι '+k+' είναι άλλος ασθενής'; };
 function isX(key){ return String(key).indexOf('extra-')===0; }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function P(){ return (typeof PARAMS!=='undefined') ? PARAMS : {}; }
@@ -14348,7 +14359,7 @@ Z99.2:C|αιμοκάθαρση
     if(pdxAmkaOk(d.amka)) return {ok:true, kept:true};
     d.amka = String(amka); d.amkaSrc = 'emr'; saveRec(k, d); return {ok:true};
   };
-  window.pdxComorbAmka = function(k, name){ const d = recOf(k); if(!d || nmz(d.name)!==nmz(name)) return ''; return pdxAmkaOk(d.amka) ? String(d.amka) : ''; };
+  window.pdxComorbAmka = function(k, name){ const f = pdxRecFind(k, name), d = f && f.d; if(!d) return ''; return pdxAmkaOk(d.amka) ? String(d.amka) : ''; };
   window.pdxComorbAutoMark = function(k, name, st){
     const d = recOf(k); if(!d || nmz(d.name)!==nmz(name)) return {err:'άλλαξε ο ασθενής'};
     const prev = d.comorbAuto || {};
@@ -14356,7 +14367,7 @@ Z99.2:C|αιμοκάθαρση
     saveRec(k, d); return {ok:true};
   };
   window.pdxComorbAutoApply = function(k, name, lines){
-    const d = recOf(k); if(!d || nmz(d.name)!==nmz(name)) return {err:'ο ασθενής άλλαξε θέση ή όνομα — θα ξαναδοκιμάσει'};
+    const f = pdxRecFind(k, name); if(!f) return {err:'ο ασθενής άλλαξε θέση ή όνομα — θα ξαναδοκιμάσει · '+pdxRecWhy(k, name)}; k = f.k; const d = f.d;
     const text = (lines||[]).map(String).join('\n').slice(0, 20000);
     const items = window.pdxComorbClassify(text);
     const C = items.filter(i=>i.cls==='C'), U = items.filter(i=>i.cls==='U');
@@ -14609,11 +14620,11 @@ Z99.2:C|αιμοκάθαρση
     keepAt = Date.now(); return keepCache;
   };
   // κλειδί της νοσηλείας (για το ef-bot: θυμάται ποια παραπεμπτικά έχει ήδη διαβάσει γι' αυτή τη νοσηλεία)
-  window.pdxAhfyLabsKey = function(k, name){ const d = recOf(k); if(!d || nrm(d.name)!==nrm(name)) return ''; return linkOf(d) || ''; };
+  window.pdxAhfyLabsKey = function(k, name){ const f = pdxRecFind(k, name), d = f && f.d; if(!d) return ''; return linkOf(d) || ''; };
   // opts.merge: οι νέες τιμές ΠΡΟΣΤΙΘΕΝΤΑΙ σε όσες υπάρχουν ήδη (σταδιακή φόρτωση· ανάγνωση που κόπηκε δεν σβήνει τίποτα)
   window.pdxAhfyLabsSave = async function(k, name, rows, opts){
-    const d = recOf(k);
-    if(!d || nrm(d.name)!==nrm(name)) return {err:'ο ασθενής άλλαξε θέση ή όνομα'};
+    const f = pdxRecFind(k, name); if(!f) return {err:'ο ασθενής άλλαξε θέση ή όνομα · '+pdxRecWhy(k, name)};
+    k = f.k; const d = f.d;
     if(typeof sb6==='undefined') return {err:'χωρίς σύνδεση με τη βάση'};
     const K0 = await window.pdxLabsKeepGet(), keep = (K0 && Array.isArray(K0.keep) && K0.keep.length) ? new Set(K0.keep) : null;
     let dropped = 0;
