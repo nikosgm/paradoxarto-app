@@ -2202,7 +2202,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06f-v114';
+const APP_VER = '2026-11-06g-v115';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12707,7 +12707,6 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div class="r"><span class="l">Δόση</span><select data-mf="dose">'+opt([['0.5','½ δισκίο'],['1','1 δισκίο'],['1.5','1½ δισκίο'],['2','2 δισκία'],['3','3 δισκία']])+'</select></div>'
         + '<div class="r"><span class="l">Φορές / ημέρα</span><select data-mf="freq">'+opt([['0','— επίλεξε —'],['1','1 φορά'],['2','2 φορές'],['3','3 φορές'],['4','4 φορές']])+'</select></div>'
         + '<div class="r"><span class="l">Ημέρες</span><select data-mf="days">'+opt([['0','— επίλεξε —']].concat([1,2,3,4,5,6,7,8,10,14,15,20,21,28,30].map(n=>[String(n), n+(n===1?' ημέρα':' ημέρες')])))+'</select></div>'
-        + '<div class="r"><span class="l">Τεμάχια / κουτί</span><select data-mf="perBox"></select></div>'
         + '<div class="r"><span class="l">Κουτιά</span><select data-mf="boxes"></select></div>'
         + '<div class="r"><span class="l">Συμμετοχή 0%<small data-ptxt>τώρα 25%</small></span><button class="tg" data-tg0 aria-label="Συμμετοχή 0%"></button></div>'
         + '<div class="r"><div class="pv" data-medpv style="flex:1;padding:0"></div><button class="addb" data-a="add" style="height:44px">Προσθήκη</button></div></div>';
@@ -12791,10 +12790,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       mf('strength').value = f.strength||''; mf('dose').value = String(f.dose||'1'); if(mf('dose').value!==String(f.dose)){ const o = document.createElement('option'); o.value = o.textContent = String(f.dose); mf('dose').appendChild(o); mf('dose').value = String(f.dose); }
       mf('freq').value = String(f.freq||0); mf('days').value = String(f.days||0);
       if(mf('days').value!==String(f.days||0)){ const o = document.createElement('option'); o.value = String(f.days); o.textContent = f.days+' ημέρες'; mf('days').appendChild(o); mf('days').value = String(f.days); }
-      const pbL = PB.indexOf(f.perBox)<0 ? PB.concat([f.perBox]).sort((a,b)=>a-b) : PB;
-      mf('perBox').innerHTML = pbL.map(n=>'<option value="'+n+'"'+(n===f.perBox?' selected':'')+'>'+(n?n+' τεμ.':'Αυτόματα')+'</option>').join('');
       const auto = f.perBox && needOf(f) ? Math.max(1, Math.ceil(needOf(f)/f.perBox)) : 0;
-      mf('boxes').innerHTML = '<option value="0">'+(auto ? 'Αυτόματα: '+auto+(auto===1?' κουτί':' κουτιά') : 'Αυτόματα')+'</option>'+[1,2,3,4,5,6,8,10].map(n=>'<option value="'+n+'"'+(f.bxMan&&f.boxes===n?' selected':'')+'>'+n+(n===1?' κουτί':' κουτιά')+'</option>').join('');
+      mf('boxes').innerHTML = '<option value="0">'+(auto ? 'Αυτόματα: '+auto+(auto===1?' κουτί':' κουτιά')+' ('+f.perBox+' τεμ./κουτί)' : 'Αυτόματα (τα βρίσκει το bot)')+'</option>'+[1,2,3,4,5,6,8,10].map(n=>'<option value="'+n+'"'+(f.bxMan&&f.boxes===n?' selected':'')+'>'+n+(n===1?' κουτί':' κουτιά')+'</option>').join('');
       const t0 = root.querySelector('[data-tg0]'); if(t0) t0.classList.toggle('on', f.part==='0%'); const pt = root.querySelector('[data-ptxt]'); if(pt) pt.textContent = 'τώρα '+f.part;
       formPv();
     }
