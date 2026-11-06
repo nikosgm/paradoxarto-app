@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06l-v120';
+const APP_VER = '2026-11-06m-v121';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12421,7 +12421,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const st = {sel:[], pks:[], tab: 'fav', q:'', when:'Τώρα', urg:'Ρουτίνας', note:'', msg:'', pat: pdxPrintAt()};
     const addPre = x=>{ if(!x) return; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0) st.sel.push(t); }); if(x.urg) st.urg = 'Επείγον'; };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
     addPre(pre);
-    const BN = await pdxBotNames(); const PR = Object.entries(BN).sort((a,b)=>['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(b[1]));
+    const BN = Object.assign({}, await pdxBotNames());
+    try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]) delete BN[id]; }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
+    const PR = Object.entries(BN).sort((a,b)=>['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(b[1]));
     if(st.pat && !BN[st.pat]) st.pat = '';
     const IMGS = imgList(cat);
     // άλλα απεικονιστικά του καταλόγου ΔΕΝ εμφανίζονται (μόνο τα 5 της κλινικής)
