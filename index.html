@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z5-v134';
+const APP_VER = '2026-11-06z6-v135';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -11116,7 +11116,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       IMGMAP = null;
     }catch(e){}
   }
-  setTimeout(imgMapAuto, 90000); setInterval(imgMapAuto, 10*60000);
+  // 6/11 (απόφαση χρήστη): ΟΧΙ αυτόματη ταυτοποίηση φακέλων απεικονιστικών
+  void imgMapAuto;
   window.pdxImgRemote = async function(k, q0){
     const free = !k;                                   // 📁 ελεύθερη αναζήτηση (Εργαλεία): χωρίς ασθενή, με όποιο όνομα γράψεις
     const d = free ? {name:String(q0||'').trim()} : recOf(k); if(!d) return;
