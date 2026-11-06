@@ -2202,7 +2202,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06j-v118';
+const APP_VER = '2026-11-06k-v119';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7319,7 +7319,8 @@ document.head.appendChild(st);
     ]);
     h += grp('Για πολλούς', [
       ['☑','Εκκρεμότητα σε πολλούς','', "pdxDo('bulk')"],
-      adm && ['📅','Εισαγωγές & ΑΜ από ΝΠΣ','', "pdxDo('admits')"]
+      adm && ['📅','Εισαγωγές & ΑΜ από ΝΠΣ','', "pdxDo('admits')"],
+      (bot || att) && ['🌤','Ουρολογικό Ημέρας','ασθενείς & μαζικά εξιτήρια', "pdxDayUnit()"]
     ]);
     h += grp('Αρχεία', [
       ['🗄','Αρχείο εξιτηρίων','', "pdxDo('archive')"],
@@ -12347,6 +12348,61 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const pong = await pdxBotPing(3500);
     pong.forEach(p=>{ const i = bots.findIndex(b=>b.bot===p.bot); if(i>=0) bots[i] = Object.assign({}, bots[i], p, {hb:0}); else bots.push(p); });
     pg.redraw();
+  };
+  // 🌤 Ουρολογικό Ημέρας (ΝΠΣ 3434): ρυθμίσεις (πράξεις + κωδικοί, θεράποντες, ώρα), λίστα ασθενών από το bot (μόνο ανάγνωση).
+  // Τα μαζικά εξιτήρια ενεργοποιούνται ΜΕΤΑ τη χαρτογράφηση της φόρμας του ΝΠΣ (καμία καταχώριση χωρίς δική σου έγκριση).
+  window.pdxDayUnit = async function(){
+    const E2 = x=>esc(String(x==null?'':x));
+    const DEF = {procs:[{name:'Κυστεοσκόπηση', code:''}], docs:[], time:'14:00', user:'KDOUROUMIS'};
+    let C = Object.assign({}, DEF), job = null, rows = null, sel = {}, msg = '', busy = '';
+    try{ const r = await sb6.from('oncall_config').select('value').eq('key','dayunit').maybeSingle(); if(r.data && r.data.value) C = Object.assign({}, DEF, r.data.value); }catch(e){}
+    const save = async ()=>{ const r = await sb6.from('oncall_config').upsert({key:'dayunit', value:C, updated_at:new Date().toISOString()}, {onConflict:'key'}); msg = r.error ? 'Δεν αποθηκεύτηκε: '+r.error.message : '✓ Αποθηκεύτηκε'; pg.redraw(); };
+    const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px;background:var(--card,#fff);color:inherit"';
+    const pg = iosPage('Ουρολογικό Ημέρας', 'Εργαλεία', ()=>{
+      let h = '<div class="ios-h">Ιατρικές πράξεις (όνομα · κωδικός ΝΠΣ)</div><div class="ios-g noic" style="padding:10px 14px">';
+      C.procs.forEach((x,i)=>{ h += '<div style="display:flex;gap:8px;margin-bottom:8px"><input data-pn="'+i+'" value="'+E2(x.name)+'" placeholder="π.χ. Κυστεοσκόπηση" '+inp+'><input data-pc="'+i+'" value="'+E2(x.code)+'" placeholder="κωδικός" '+inp.replace('width:100%','width:42%')+'><button data-pdel="'+i+'" aria-label="διαγραφή" style="border:0;background:none;color:#B91C1C;font-size:20px;min-width:40px">✕</button></div>'; });
+      h += '<button data-a="padd" style="border:0;background:none;color:#0A84FF;font-size:16px;padding:6px 0;min-height:40px">＋ Πράξη</button></div>';
+      h += '<div class="ios-h">Θεράποντες (όπως στο ΝΠΣ, ένας ανά γραμμή)</div><div class="ios-g noic" style="padding:10px 14px"><textarea data-docs rows="4" '+inp+'>'+E2((C.docs||[]).join('\n'))+'</textarea></div>';
+      h += '<div class="ios-h">Ώρα εξόδου · λογαριασμός ΝΠΣ</div><div class="ios-g noic" style="padding:10px 14px;display:flex;gap:8px"><input data-time type="time" value="'+E2(C.time)+'" '+inp+'><input data-user value="'+E2(C.user)+'" placeholder="KDOUROUMIS" '+inp+'></div>';
+      h += '<div style="margin:10px 16px"><button data-a="save" style="width:100%;height:46px;border:0;border-radius:12px;background:var(--acc,#0A84FF);color:#fff;font-size:17px;font-weight:600">Αποθήκευση ρυθμίσεων</button></div>';
+      h += '<div class="ios-h">Ασθενείς σήμερα (ΝΠΣ 3434)</div><div class="ios-g noic" style="padding:10px 14px">';
+      h += '<button data-a="load" '+(busy?'disabled ':'')+'style="width:100%;height:44px;border:1.5px solid #1D4E80;border-radius:12px;background:none;color:#1D4E80;font-size:16px;font-weight:600">'+(busy?'⏳ '+E2(busy):'🔄 Φέρε ασθενείς από ΝΠΣ')+'</button>';
+      if(rows){
+        if(!rows.length) h += '<div style="padding:10px 0;color:#6D6D72">Κανένας ασθενής στο 3434.</div>';
+        rows.forEach((r,i)=>{ const s0 = sel[i] || (sel[i] = {on:false, proc:0, doc:(C.docs||[])[0]||''});
+          h += '<div style="border-top:1px solid #EEF2F6;padding:10px 0"><label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" data-on="'+i+'"'+(s0.on?' checked':'')+' style="width:22px;height:22px"><b style="flex:1">'+E2(r.name||r.cells.join(' · '))+'</b><span style="font-size:13px;color:#6D6D72">'+E2(r.admit||'')+'</span></label>'
+            + (s0.on ? '<div style="display:flex;gap:8px;margin-top:6px"><select data-pr="'+i+'" '+inp+'>'+C.procs.map((x,k)=>'<option value="'+k+'"'+(k===+s0.proc?' selected':'')+'>'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'</select>'
+              + '<select data-dc="'+i+'" '+inp+'>'+['<option value="">— θεράπων —</option>'].concat((C.docs||[]).map(d=>'<option'+(d===s0.doc?' selected':'')+'>'+E2(d)+'</option>')).join('')+'</select></div>' : '')
+            + '</div>'; });
+        const n = Object.keys(sel).filter(k=>sel[k].on && rows[k]).length;
+        if(rows.length) h += '<button disabled style="margin-top:10px;width:100%;height:46px;border:0;border-radius:12px;background:#E5E7EB;color:#6B7280;font-size:16px;font-weight:600">Εξιτήρια για '+n+' επιλεγμένους — σύντομα</button><div class="ios-f" style="margin:6px 0 0">Ενεργοποιείται μόλις το bot χαρτογραφήσει τη φόρμα «Συγκεντρωτικό Εξιτήριο» του ΝΠΣ. Πριν από κάθε καταχώριση θα βλέπεις προεπισκόπηση και θα πατάς «Έγκριση».</div>';
+      }
+      h += '</div>';
+      return h + (msg?'<div style="margin:10px 16px;color:'+(/^✓/.test(msg)?'#15803D':'#B91C1C')+'">'+E2(msg)+'</div>':'') + '<div style="height:60px"></div>';
+    });
+    const rd = ()=>{ const q = a=>[...pg.el.querySelectorAll(a)];
+      q('[data-pn]').forEach(e=>{ C.procs[+e.dataset.pn].name = e.value.trim(); }); q('[data-pc]').forEach(e=>{ C.procs[+e.dataset.pc].code = e.value.trim(); });
+      const d = pg.el.querySelector('[data-docs]'); if(d) C.docs = d.value.split('\n').map(x=>x.trim()).filter(Boolean);
+      const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
+      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ sel[e.dataset.dc].doc = e.value; }); };
+    pg.el.addEventListener('change', e=>{ rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; pg.redraw(); } });
+    pg.el.addEventListener('click', async e=>{ const b = e.target.closest('[data-a],[data-pdel]'); if(!b) return; rd();
+      if(b.dataset.pdel!=null){ C.procs.splice(+b.dataset.pdel,1); if(!C.procs.length) C.procs.push({name:'',code:''}); return pg.redraw(); }
+      const a = b.dataset.a;
+      if(a==='padd'){ C.procs.push({name:'',code:''}); return pg.redraw(); }
+      if(a==='save'){ C.procs = C.procs.filter(x=>x.name||x.code); if(!C.procs.length) C.procs = DEF.procs.slice(); return save(); }
+      if(a==='load'){ msg = ''; busy = 'στέλνω στον υπολογιστή…'; pg.redraw();
+        let id = 0; try{ const ins = await sb6.from('oncall_jobs').insert({kind:'dayunit', name:'Ουρολογικό Ημέρας', name_key:'zzz_dayunit', status:'new', payload:{emrUser:C.user||'KDOUROUMIS', map:true, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message); id = ins.data.id; }
+        catch(x){ busy = ''; msg = 'Δεν στάλθηκε: '+(x.message||x); return pg.redraw(); }
+        const t0 = Date.now(); job = id;
+        while(job===id && Date.now()-t0 < 240e3){ await new Promise(ok=>setTimeout(ok, 3000));
+          let q = null; try{ q = (await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle()).data; }catch(x){}
+          if(!q) continue;
+          if(q.status==='done'){ rows = ((q.payload||{}).result||{}).rows || []; sel = {}; busy = ''; msg = ''; return pg.redraw(); }
+          if(['failed','cancelled','dismissed'].indexOf(q.status)>=0){ busy = ''; msg = String(q.note||'απέτυχε'); return pg.redraw(); }
+          busy = (q.status==='new' ? 'περιμένει τον υπολογιστή…' : 'ΝΠΣ: '+String(q.note||'σε εξέλιξη').slice(0,60))+' · '+Math.round((Date.now()-t0)/1000)+'″'; pg.redraw(); }
+        if(job===id){ busy = ''; msg = 'Ο υπολογιστής δεν απάντησε σε 4′ (χρειάζεται bot 0.20.71 ή νεότερο).'; pg.redraw(); } }
+    });
   };
   // 📦 κατάλογος του φύλλου παραγγελίας (για τα πακέτα): ό,τι μπορεί να διαλέξει κανείς εδώ — αγαπημένα, πακέτα κλινικής, 5 απεικονιστικά, Medilabi
   window.pdxOrderCatalog = async function(){
