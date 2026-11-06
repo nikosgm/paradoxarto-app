@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06n-v122';
+const APP_VER = '2026-11-06o-v123';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12587,7 +12587,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs .seg button{flex:1;border:0;background:none;padding:7px 0;font-size:14px;font-weight:600;border-radius:7px;color:#1C1C1E;cursor:pointer;font-family:inherit}
   .rxs .seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
   .rxs .chw{flex-wrap:wrap;overflow:visible}
-  .rxs .mf .r .l{flex:1;font-size:16px;color:#1C1C1E;min-width:0}.rxs .mf .r .l small{display:block;font-size:12.5px;color:#8E8E93}
+  .rxs .mf .r.cs{flex-wrap:wrap;gap:6px}.rxs .mf .r.cs .l{flex:0 0 100%;font-size:13px;color:#6D6D72;text-transform:uppercase;letter-spacing:.02em}.rxs .chs2{display:flex;flex-wrap:wrap;gap:8px}.rxs .chs2 button{min-width:48px;height:42px;padding:0 14px;border-radius:21px;border:1.5px solid #1D4E80;background:#fff;color:#1D4E80;font-size:16px;font-weight:600}.rxs .chs2 button.on{background:#1D4E80;color:#fff}
+.rxs .mf .r .l{flex:1;font-size:16px;color:#1C1C1E;min-width:0}.rxs .mf .r .l small{display:block;font-size:12.5px;color:#8E8E93}
   .rxs .mf select,.rxs .g select[data-rep],.rxs .g select[data-every]{width:auto;max-width:58%;text-align:right;text-align-last:right;color:#1D4E80;min-height:44px;font-size:16px}
   .rxs .g .r .l{flex:1;font-size:16px}.rxs .mf input.v{text-align:right;width:46%;color:#1D4E80;font-size:16px}
   .rxs .mctl{flex-basis:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.rxs .mctl .stp{justify-content:space-between}.rxs .mctl .stp button{width:44px;height:44px}.rxs .mctl .stp i{min-width:0;flex:1;white-space:nowrap}
@@ -12789,11 +12790,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const opt = (L, v)=>L.map(x=>'<option value="'+E(x[0])+'"'+(String(x[0])===String(v)?' selected':'')+'>'+E(x[1])+'</option>').join('');
       h += '<div class="h" style="margin-top:14px">Νέο φάρμακο</div><div class="g mf"><div class="r"><input class="t" data-medq type="search" autocomplete="off" placeholder="🔎 Φάρμακο (π.χ. Ciproxin)" enterkeyhint="done"></div><div data-mres class="exl"></div>'
         + '<div class="r"><span class="l">Περιεκτικότητα</span><input data-mf="strength" class="t v" placeholder="π.χ. 500mg" autocomplete="off"></div>'
-        + '<div class="r"><span class="l">Δόση</span><select data-mf="dose">'+opt([['0.5','½ δισκίο'],['1','1 δισκίο'],['1.5','1½ δισκίο'],['2','2 δισκία'],['3','3 δισκία']])+'</select></div>'
-        + '<div class="r"><span class="l">Φορές / ημέρα</span><select data-mf="freq">'+opt([['0','— επίλεξε —'],['1','1 φορά'],['2','2 φορές'],['3','3 φορές'],['4','4 φορές']])+'</select></div>'
-        + '<div class="r"><span class="l">Ημέρες</span><select data-mf="days">'+opt([['0','— επίλεξε —']].concat([1,2,3,4,5,6,7,8,10,14,15,20,21,28,30].map(n=>[String(n), n+(n===1?' ημέρα':' ημέρες')])))+'</select></div>'
-        + '<div class="r"><span class="l">Κουτιά</span><select data-mf="boxes"></select></div>'
-        + '<div class="r"><span class="l">Συμμετοχή 0%<small data-ptxt>τώρα 25%</small></span><button class="tg" data-tg0 aria-label="Συμμετοχή 0%"></button></div>'
+        + '<div class="r cs"><span class="l">Δόση</span><div class="chs2" data-cs="dose"></div><select data-mf="dose" style="display:none">'+opt([['0.5','½ δισκίο'],['1','1 δισκίο'],['1.5','1½ δισκίο'],['2','2 δισκία'],['3','3 δισκία']])+'</select></div>'
+        + '<div class="r cs"><span class="l">Φορές / ημέρα</span><div class="chs2" data-cs="freq"></div><select data-mf="freq" style="display:none">'+opt([['0','— επίλεξε —'],['1','1 φορά'],['2','2 φορές'],['3','3 φορές'],['4','4 φορές']])+'</select></div>'
+        + '<div class="r cs"><span class="l">Ημέρες</span><div class="chs2" data-cs="days"></div><select data-mf="days" style="display:none">'+opt([['0','— επίλεξε —']].concat([1,2,3,4,5,6,7,8,10,14,15,20,21,28,30].map(n=>[String(n), n+(n===1?' ημέρα':' ημέρες')])))+'</select></div>'
+        + '<div class="r cs"><span class="l">Κουτιά</span><div class="chs2" data-cs="boxes"></div><select data-mf="boxes" style="display:none"></select></div>'
+        + '<div class="r cs"><span class="l">Συμμετοχή<small data-ptxt style="display:none">τώρα 25%</small></span><div class="chs2"><button type="button" data-cspart="25%">25%</button><button type="button" data-cspart="0%">0%</button></div><button class="tg" data-tg0 aria-label="Συμμετοχή 0%" style="display:none"></button></div>'
         + '<div class="r"><div class="pv" data-medpv style="flex:1;padding:0"></div><button class="addb" data-a="add" style="height:44px">Προσθήκη</button></div></div>';
       h += '<div class="h">Επανάληψη συνταγής</div><div class="g"><div class="r"><span class="l">Επαναλαμβανόμενη</span><select data-rep>'+opt([['0','Όχι'],['2','Δίμηνη'],['3','Τρίμηνη'],['6','Εξάμηνη']], S.rep)+'</select></div>'
         + (S.rep ? '<div class="r"><span class="l">Κάθε</span><select data-every>'+opt([['28','28 ημέρες'],['30','30 ημέρες']], S.every)+'</select></div>' : '')+'</div>'
@@ -12878,6 +12879,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const auto = f.perBox && needOf(f) ? Math.max(1, Math.ceil(needOf(f)/f.perBox)) : 0;
       mf('boxes').innerHTML = '<option value="0">'+(auto ? 'Αυτόματα: '+auto+(auto===1?' κουτί':' κουτιά')+' ('+f.perBox+' τεμ./κουτί)' : 'Αυτόματα (τα βρίσκει το bot)')+'</option>'+[1,2,3,4,5,6,8,10].map(n=>'<option value="'+n+'"'+(f.bxMan&&f.boxes===n?' selected':'')+'>'+n+(n===1?' κουτί':' κουτιά')+'</option>').join('');
       const t0 = root.querySelector('[data-tg0]'); if(t0) t0.classList.toggle('on', f.part==='0%'); const pt = root.querySelector('[data-ptxt]'); if(pt) pt.textContent = 'τώρα '+f.part;
+      // 6/11: κουμπιά-επιλογές (ένα πάτημα) αντί για λίστες — καθρεφτίζουν τα κρυφά select
+      const SH = {dose:o=>o.value==='0.5'?'½':o.value==='1.5'?'1½':o.value, freq:o=>o.value, days:o=>o.value, boxes:o=>o.value==='0' ? (auto?'Αυτόματα: '+auto:'Αυτόματα') : o.value};
+      const KEEP = {freq:v=>v!=='0', days:v=>['0','1','2','4','6','8','15','20','21','28'].indexOf(v)<0 || v===String(f.days||''), boxes:v=>['0','1','2','3','4','5'].indexOf(v)>=0 || v===String(f.boxes||'')};
+      Object.keys(SH).forEach(k=>{ const box = root.querySelector('[data-cs="'+k+'"]'), sl = mf(k); if(!box||!sl) return;
+        box.innerHTML = [...sl.options].filter(o=>!KEEP[k] || KEEP[k](o.value)).map(o=>'<button type="button" data-csk="'+k+'" data-csv="'+E(o.value)+'"'+(o.value===sl.value?' class="on"':'')+'>'+E(SH[k](o))+'</button>').join(''); });
+      root.querySelectorAll('[data-cspart]').forEach(b=>b.classList.toggle('on', b.dataset.cspart===(f.part||'25%')));
       formPv();
     }
     function formPv(){
@@ -13007,6 +13014,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const rdl = t.closest('[data-rdel]'); if(rdl){ rHide([rdl.dataset.rdel]); drawRecent(); return; }
       if(t.closest('[data-rclr]')){ if(!confirm('Καθαρισμός της λίστας «Πρόσφατοι»; (μόνο για εσένα — οι συνταγές δεν σβήνονται)')) return; rHide(recentAmka().map(x=>x.amka)); drawRecent(); return; }
       if(t.closest('[data-tg0]')){ S.f.part = S.f.part==='0%' ? '25%' : '0%'; syncForm(); return; }
+      const csb = t.closest('[data-csk]'); if(csb){ const sl = root.querySelector('[data-mf="'+csb.dataset.csk+'"]'); if(sl){ sl.value = csb.dataset.csv; sl.dispatchEvent(new Event('change', {bubbles:true})); } return; }
+      const csp = t.closest('[data-cspart]'); if(csp){ S.f.part = csp.dataset.cspart; syncForm(); return; }
       const ptb = t.closest('[data-pt]'); if(ptb){ const m = S.meds[+ptb.dataset.pt]; if(m){ m.part = m.part==='0%' ? '25%' : '0%'; drawMeds(); } return; }
       const dl0 = t.closest('[data-dloc]'); if(dl0){ const d = (window.pdxRxDrugs ? pdxRxDrugs() : []).find(x=>x.name===dl0.dataset.dloc); if(d){ Object.assign(S.f, {name:d.name, strength:d.s, freq:d.f, days:d.d, unit:d.u, known:true}); syncForm(); } return; }   // (λίστα μένει: διαλέγεις και συσκευασία)
       const dep = t.closest('[data-dep]'); if(dep){ const res = root.querySelector('[data-mres]'), x = (res._ep||[])[+dep.dataset.dep]; if(!x) return;
