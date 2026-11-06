@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06x-v128';
+const APP_VER = '2026-11-06y-v129';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7343,7 +7343,6 @@ document.head.appendChild(st);
       bot && ['💊','Συνταγή e-prescription','με ΑΜΚΑ', "pdxDo('rxout')"],
       bot && ['📞','Κλήση για εκτίμηση','', "pdxPickPatient('📞 Κλήση για εκτίμηση: ποιος;', k=>pdxConsultSheet(k))"],
       bot && ['🧾','Παραγγελία εξετάσεων','', "pdxPickPatient('🧾 Παραγγελία: ποιος;', k=>pdxBot(k,'order'))"],
-      ['🧪','Εργαστηριακά ασθενή','', "pdxPickPatient('🧪 Εργαστηριακά: ποιος;', k=>mobAct(k,'labs'))"],
       ['🩻','Απεικονίσεις','', "pdxPickPatient('🩻 Απεικονίσεις: ποιος;', k=>pdxCtOpen(k))"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],
       bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"]
@@ -12627,7 +12626,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
     let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t=>{ if(rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
     const st = {sel:[], pks:[], tab: 'fav', q:'', when:'Τώρα', urg:'Ρουτίνας', note:'', msg:'', pat: pdxPrintAt()};
-    const addPre = x=>{ if(!x) return; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0) st.sel.push(t); }); if(x.urg) st.urg = 'Επείγον'; };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
+    const addPre = x=>{ if(!x) return; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0) st.sel.push(t); }); if(x.urg) st.urg = 'Επείγον';
+      (x.profs||[]).forEach(n=>{ let i = P.packs.findIndex(q=>q && q.medilabi===n); if(i<0){ P.packs.push({name:n, medilabi:n, tests:[]}); i = P.packs.length-1; } if(st.pks.indexOf(i)<0) st.pks.push(i); }); };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
     addPre(pre);
     const BN = Object.assign({}, await pdxBotNames());
     try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]) delete BN[id]; }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
@@ -13310,6 +13310,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const itemSub = it=>{
     if(it.t==='med') return (it.dose&&it.dose!=='1'?fmtD(it.dose)+' '+(it.u||'δισκίο')+' ':'')+'1×'+(it.freq||1)+(it.note?' '+it.note:'')+' · '+(it.days||1)+' ημέρες';
     if(it.t==='ref') return 'Παραπεμπτικό'+(it.k?' · '+it.k:'');
+    if(it.t==='prof') return '📦 Έτοιμο προφίλ Medilabi (μπαίνει όπως είναι)';
     return (it.t==='img'?'Απεικονιστική':'Εργαστηριακή')+(it.urg?' · Επείγον':'');
   };
   const short = it=>{ if(it.t==='med') return it.n+(it.s?' '+it.s.replace(/mg$/,''):''); const n = it.n; return n.length>26 ? n.slice(0,24)+'…' : n; };
@@ -13522,10 +13523,31 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     load().then(()=>{ if(LIB===pg && document.body.contains(pg.el)) drawLib(); });
     return pg;
   };
+  // 📦 6/11: εισαγωγή των έτοιμων προφίλ του Medilabi ως πακέτα κλινικής (κοινά). Μετά διαγράφονται/αλλάζουν όπως κάθε πακέτο.
+  window.pdxMedProfImport = async function(btn){
+    if(S.medBusy) return; S.medBusy = true; const set = t=>{ S.medImp = t; if(btn && btn.isConnected) btn.textContent = t; };
+    try{
+      set('⏳ Ζητάω από το Medilabi…');
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'μπεγοσ', name:'ΜΠΕΓΟΣ ΣΠΥΡΙΔΩΝ', room:null, kind:'medprof', payload:{test:true, quiet:true}, status:'new'}).select('id').single();
+      if(ins.error) throw ins.error;
+      let j = null; for(let i=0;i<90;i++){ await new Promise(r=>setTimeout(r,2000)); j = (await sb6.from('oncall_jobs').select('status,note,payload').eq('id',ins.data.id).maybeSingle()).data; if(j && !/^(new|seen|running)$/.test(j.status)) break; set('⏳ '+(j && j.status==='new' ? 'περιμένω υπολογιστή…' : 'διαβάζω προφίλ…')+' '+(i*2)+'″'); }
+      const L = j && j.status==='done' && j.payload && j.payload.result && j.payload.result.profiles || null;
+      if(!L){ toast('✗ '+((j && j.note) || 'δεν απάντησε το bot')); return; }
+      await me(); let n = 0;
+      for(const x of L){ const nm = String(x.name||'').trim(); if(!nm) continue;
+        if((S.packs||[]).some(q=>q.fam==='order' && q.items.some(it=>it.t==='prof' && N(it.n)===N(nm)))) continue;
+        const pk = {id:newId(), fam:'order', name:nm.slice(0,80), tags:['Medilabi'], items:[{t:'prof', n:nm, urg:false}], owner:S.me, ownerName:'', shared:true, fav:{}, uses:0, last:0, updated:Date.now()};
+        const r = await saveNew(pk); if(!r.err) n++; }
+      toast(n ? '📦 Μπήκαν '+n+' πακέτα από το Medilabi (σύνολο '+L.length+')' : 'Όλα τα προφίλ του Medilabi υπάρχουν ήδη ('+L.length+')');
+      try{ await load(true); }catch(e){} drawLib();
+    }catch(e){ toast('✗ '+(e.message||e)); }
+    finally{ S.medBusy = false; S.medImp = ''; if(btn && btn.isConnected) btn.textContent = '⬇ Από το Medilabi'; }
+  };
   function drawLib(){
     if(!LIB || !document.body.contains(LIB.el)) return; const root = LIB.el.querySelector('[data-pk]');
     root.querySelector('[data-seg]').innerHTML = ['order','rx'].map(f=>'<button data-fam="'+f+'" class="'+(S.fam===f?'on':'')+'">'+(f==='order'?'Παραγγελίες':'Συνταγογράφηση')+'<small>'+(f==='order'?'κλινικής · εξετάσεις':'φάρμακα · παραπεμπτικά')+'</small></button>').join('');
-    root.querySelector('[data-flt]').innerHTML = [['fav','★ Αγαπημένα'],['mine','Δικά μου'],['clinic','Κλινικής']].map(x=>'<button class="pk-chip'+(S.flt===x[0]?' on':'')+'" data-flt="'+x[0]+'">'+x[1]+'</button>').join('');
+    root.querySelector('[data-flt]').innerHTML = [['fav','★ Αγαπημένα'],['mine','Δικά μου'],['clinic','Κλινικής']].map(x=>'<button class="pk-chip'+(S.flt===x[0]?' on':'')+'" data-flt="'+x[0]+'">'+x[1]+'</button>').join('') + (S.fam==='order' && ['attending','admin'].indexOf(window.authRole)>=0 && window.pdxIsBotUser && pdxIsBotUser() ? '<button class="pk-chip" data-medimp onclick="pdxMedProfImport(this)">'+(S.medImp||'⬇ Από το Medilabi')+'</button>' : '');
+
     drawList();
   }
   const matchQ = (p, q)=>!q || N(p.name+' '+p.tags.join(' ')+' '+p.items.map(itemTxt).join(' ')).indexOf(q)>=0;
@@ -13669,7 +13691,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const on = it.filter(x=>x.on); if(!on.length) return;
         ov.remove(); markUsed(p.id);
         if(p.fam==='order'){
-          const r = {tests:on.map(x=>x.n), urg:on.some(x=>x.urg), pack:p.name};
+          const r = {tests:on.filter(x=>x.t!=='prof').map(x=>x.n), profs:on.filter(x=>x.t==='prof').map(x=>x.n), urg:on.some(x=>x.urg), pack:p.name};
           if(opt.onApply) opt.onApply(r);
           else if(window.pdxBot) pdxBot(opt.k, 'order', r); else if(window.pdxOrderSheet) pdxOrderSheet(opt.k, r);
         } else {
