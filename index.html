@@ -7592,7 +7592,7 @@ document.head.appendChild(st);
   // σελίδα που σπρώχνεται από δεξιά (όπως οι Ρυθμίσεις του iPhone)· σύρσιμο από την αριστερή άκρη = πίσω
   // ⬇️ Κατέβασμα του bot για εγκατάσταση σε άλλον υπολογιστή (πάντα η τελευταία έκδοση: ef-bot-latest.zip στο updater)
   window.pdxBotDownload = function(){
-    const URL_ZIP = 'https://nikosgm.github.io/paradoxarto-app/bot/ef-bot-latest.zip';
+    const URL_ZIP = (location.host === 'paradoxarto.pages.dev' ? 'https://paradoxarto.pages.dev' : 'https://nikosgm.github.io/paradoxarto-app') + '/bot/ef-bot-latest.zip';
     const st = (n,t)=>'<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:.5px solid rgba(60,60,67,.18)"><b style="flex:none;width:24px;height:24px;border-radius:12px;background:var(--acc,#0A84FF);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center">'+n+'</b><div style="font-size:15.5px;line-height:1.4">'+t+'</div></div>';
     iosPage('Κατέβασμα bot', 'Ρυθμίσεις', ()=>
       '<a href="'+URL_ZIP+'" download style="display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 16px 18px;height:50px;border-radius:14px;background:var(--acc,#0A84FF);color:#fff;font-size:17px;font-weight:600;text-decoration:none">⬇️ Κατέβασμα (τελευταία έκδοση)</a>'
