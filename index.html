@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06y-v129';
+const APP_VER = '2026-11-06z-v130';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -11074,8 +11074,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const touch = matchMedia('(pointer:coarse)').matches;
     const opt = (id, ic, t, sub, on)=>'<button data-ctopt="'+id+'"'+(on?'':' disabled')+' style="display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:1.5px solid '+(on?'#C9D6E3':'#E6EBF0')+';background:'+(on?'#fff':'#F6F8FA')+';color:'+(on?'#1D2A33':'#94A3B8')+';border-radius:14px;padding:12px;margin:7px 0;font-size:15.5px"><span style="font-size:24px">'+ic+'</span><span><b>'+t+'</b><br><span style="font-size:13px;color:#64748B">'+sub+'</span></span></button>';
     sheet('🩻 Απεικονίσεις · '+d.name,
-      opt('server','📁','Από τους φακέλους της κλινικής', (touch && !host) ? 'τις φέρνει το bot από το OUROLOGIKH KLINIKH, κρυπτογραφημένες — ανοίγουν μόνο σε εγκεκριμένη συσκευή' : 'αξονικές / μαγνητικές / ακτινογραφίες που σώσατε στο OUROLOGIKH KLINIKH', true)
-      + opt('evorad','🫁','Ακτινογραφία θώρακος — Evorad','η πιο πρόσφατη, με ταυτοποίηση ΑΜΚΑ/ΑΜ · κρυπτογραφημένη, ανοίγει και στο κινητό', !!window.PDX_EVORAD_ON)
+      // 6/11: στο κινητό πρώτα ό,τι είναι ελαφρύ (ακτινογραφία θώρακος)· ολόκληρες αξονικές/μαγνητικές = βαριές → τελευταίες, «καλύτερα στον υπολογιστή»
+      opt('evorad','🫁','Ακτινογραφία θώρακος — Evorad','η πιο πρόσφατη, με ταυτοποίηση ΑΜΚΑ/ΑΜ · κρυπτογραφημένη, ανοίγει και στο κινητό', !!window.PDX_EVORAD_ON)
+      + opt('server','📁','Ολόκληρη εξέταση από τους φακέλους της κλινικής', (touch && !host) ? '⚠ βαρύ: αξονική/μαγνητική = εκατοντάδες εικόνες, αργεί πολύ στο κινητό — καλύτερα από υπολογιστή' : 'αξονικές / μαγνητικές / ακτινογραφίες που σώσατε στο OUROLOGIKH KLINIKH', true)
       ,
       ()=>true, 'Κλείσιμο');
     const ov = document.getElementById('mobSubPop');
