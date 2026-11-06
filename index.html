@@ -2202,7 +2202,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06i-v117';
+const APP_VER = '2026-11-06j-v118';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12298,10 +12298,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return window.__pdxBN;
   };
   window.pdxBotPing = function(ms){ return new Promise(res=>{ try{
-    const n = Math.random().toString(36).slice(2,10), got = [], ch = sb6.channel('efbot-ping', {config:{broadcast:{self:false}}});
+    ms = Math.max(ms||0, 3500);
+    if(typeof window.__efbotPingAll === 'function') return window.__efbotPingAll(ms).then(res, ()=>res([]));   // υπολογιστής με bot: ίδιο κανάλι, όχι δεύτερο (το έκλεινε)
+    let fin = false; const n = Math.random().toString(36).slice(2,10), got = [], ch = sb6.channel('efbot-ping', {config:{broadcast:{self:false}}});
+    const done = v=>{ if(fin) return; fin = true; try{ sb6.removeChannel(ch); }catch(e){} res(v); };
     ch.on('broadcast', {event:'pong'}, m=>{ const x = m && m.payload; if(x && x.n===n && x.bot) got.push(x); });
-    ch.subscribe(async st=>{ if(st!=='SUBSCRIBED') return; try{ await ch.send({type:'broadcast', event:'ping', payload:{n}}); }catch(e){} setTimeout(()=>{ try{ sb6.removeChannel(ch); }catch(e){} const u = {}; got.forEach(x=>{ if(x && x.bot) u[x.bot] = x; }); res(Object.values(u)); }, ms||2500); });
-    setTimeout(()=>res([]), (ms||2500)+4000);
+    ch.subscribe(async st=>{ if(st!=='SUBSCRIBED') return; try{ await ch.send({type:'broadcast', event:'ping', payload:{n}}); }catch(e){} setTimeout(()=>{ const u = {}; got.forEach(x=>{ if(x && x.bot) u[x.bot] = x; }); done(Object.values(u)); }, ms); });
+    setTimeout(()=>done([]), ms+4000);
   }catch(e){ res([]); } }); };
   window.pdxPrintAt = ()=>{ try{ return localStorage.getItem('pdx_print_at')||''; }catch(e){ return ''; } };
   // ⚙️ (διαχειριστής) ονόματα υπολογιστών: ποιος είναι ο Γωνιακός / Μεσαίος / Πόρτα
@@ -12316,7 +12319,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       ids.forEach(id=>{ const b = bots.find(x=>x.bot===id);
         h += '<div style="background:#fff;border:1px solid #E5E9EF;border-radius:12px;padding:10px 12px;margin-bottom:8px">'
           + '<div style="display:flex;gap:8px;align-items:center"><b style="flex:1">'+(N[id]?esc(N[id]):'Χωρίς όνομα')+' <span style="color:#94A3B8;font-weight:400">· '+esc(id.slice(-5))+'</span></b>'
-          + '<span style="font-size:12.5px;color:'+(b?'#15803D':'#94A3B8')+'">'+(b?('● ενεργός · v'+esc(b.v||'')+(b.cur?' · δουλεύει':'')):'○ δεν απαντά')+(b&&b.acc===0?' · <b style="color:#B91C1C">χωρίς κωδικούς ΝΠΣ</b>':'')+'</span>'
+          + '<span style="font-size:12.5px;color:'+(b?'#15803D':'#94A3B8')+'">'+(b?((b.hb?'◐ σήμα ζωής':'● ενεργός')+' · v'+esc(b.v||'')+(b.cur?' · δουλεύει':'')):'○ δεν απαντά')+(b&&b.acc===0?' · <b style="color:#B91C1C">χωρίς κωδικούς ΝΠΣ</b>':'')+'</span>'
           + (b?'<button data-who="'+esc(id)+'" style="border:0;background:#EEF2F6;border-radius:10px;padding:7px 10px">👋</button>':'')+'</div>'
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+esc(nm)+'" data-id="'+esc(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:6px 11px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+esc(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+esc(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div>'
           + '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:9px;border-top:1px solid #EEF2F6"><span style="flex:1;font-size:14px">'+(OFF[id]?'⏸ <b style="color:#B91C1C">Απενεργοποιημένο</b> — δεν παίρνει εργασίες':'▶︎ <b style="color:#15803D">Ενεργό</b> — παίρνει εργασίες')+'</span>'
@@ -12339,7 +12342,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     });
     const ids_on_after = id=>{ const all = [...new Set((bots||[]).map(b=>b.bot).concat(Object.keys(N)))]; return all.filter(x=>x!==id && !OFF[x]).length; };
     // 🖥 σήμα ζωής ανά υπολογιστή από τη βάση (efbot|hb|<id>, ≤3′): φαίνονται και όσοι δεν απάντησαν στο ping
-    let hb = []; try{ const r = await sb6.from('oncall_labs').select('data,updated_at').like('name_key','efbot|hb|%'); hb = (r.data||[]).map(x=>Object.assign({}, x.data||{}, {fresh: Date.now()-Date.parse(x.updated_at) < 3*60000})); }catch(e){}
+    let hb = []; try{ const r = await sb6.from('oncall_labs').select('data,updated_at').like('name_key','efbot|hb|%'); hb = (r.data||[]).map(x=>Object.assign({}, x.data||{}, {fresh: Date.now()-Date.parse(x.updated_at) < 5*60000})); }catch(e){}
     bots = hb.filter(x=>x.fresh && x.bot).map(x=>({bot:x.bot, v:x.v, hb:1, acc:x.acc, off:x.off})); pg.redraw();
     const pong = await pdxBotPing(3500);
     pong.forEach(p=>{ const i = bots.findIndex(b=>b.bot===p.bot); if(i>=0) bots[i] = Object.assign({}, bots[i], p, {hb:0}); else bots.push(p); });
