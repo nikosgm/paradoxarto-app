@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z6-v135';
+const APP_VER = '2026-11-06z7-v136';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -15968,7 +15968,8 @@ Z99.2:C|αιμοκάθαρση
       h += '<div class="lm-tw"><table class="lm-t"><thead><tr><th class="c1">Ασθενής</th>'+MCOLS.map(k=>'<th>'+E(shortLbl({k}))+'</th>').join('')+'</tr></thead><tbody>';
       L.forEach(x=>{ const p = x.p;
         const sub = E(p.label)+(x.b ? ' · '+(x.b.days[0]===today ? '<b class="nw">σήμερα</b>' : E(fmtD(x.b.last.d))) : '');
-        h += '<tr class="'+(x.imp?'bad':'')+'"><td class="c1" data-lpt="'+E(p.k)+'"><b>'+E(p.d.name)+'</b><small>'+sub+'</small></td>';
+        const tmL = x.b && x.b.last && (String(x.b.last.d||'').match(/(\d{1,2}:\d{2})/)||[])[1];   // 6/11: ώρα της τελευταίας λήψης, μικρή δίπλα στο όνομα
+        h += '<tr class="'+(x.imp?'bad':'')+'"><td class="c1" data-lpt="'+E(p.k)+'"><b style="display:flex;gap:5px;align-items:baseline"><span style="overflow:hidden;text-overflow:ellipsis;min-width:0">'+E(p.d.name)+'</span>'+(tmL?'<span style="flex:none;font-size:11px;font-weight:600;color:#8E8E93">'+E(tmL)+'</span>':'')+'</b><small>'+sub+'</small></td>';
         if(!x.b){ h += '<td colspan="'+MCOLS.length+'" class="nr">χωρίς αποτελέσματα</td></tr>'; return; }
         MCOLS.forEach(k=>{ const T = x.b.tests.find(t=>t.k===k), p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
