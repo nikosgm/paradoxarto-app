@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z2-v131';
+const APP_VER = '2026-11-06z3-v132';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8580,7 +8580,7 @@ document.head.appendChild(st);
   window.pdxTodoAuto = function(){
     if(window.__todoAutoBusy || Date.now()-(window.__todoAutoAt||0) < 20000) return; window.__todoAutoBusy = true; window.__todoAutoAt = Date.now();
     try{
-      const LR = /γενικ[ηή] αίματος|ουρ[ιί]α|κρεατιν|\bk\b|κάλιο|νάτριο|\bna\b|\bcrp\b|\binr\b|aptt|ηλεκτρολ|αιματοκρ|\bht\b|\bhct\b/i;
+      const LR = /γενικ[ηή] αίματος|ουρ[ιί]α|κρεατιν|(^|[^α-ωa-z])[kκ]($|[^α-ωa-z])|κάλιο|νάτριο|\bna\b|\bcrp\b|\binr\b|aptt|ηλεκτρολ|αιματοκρ|\bht\b|\bhct\b/i;
       let changed = 0;
       entries(true).forEach(e=>{ const d = e.d, T = todos(d); if(!T.length) return;
         let last = 0; const LH = d.labTime || {}; Object.keys(LH).forEach(dt=>Object.values(LH[dt]||{}).forEach(tm=>{ const x = Date.parse(dt+'T'+(tm||'07:00')); if(x > last) last = x; }));
@@ -9526,7 +9526,7 @@ document.head.appendChild(st);
   // Ε: σύρσιμο στη σελίδα εκκρεμοτήτων — δεξιά = έγινε, αριστερά = αύριο 08:00
   (function(){
     let st = null;
-    document.addEventListener('touchstart', e=>{ if(!TOPT().swipe) return; const r = e.target.closest && e.target.closest('#mobView .mtp-row'); if(!r || e.target.closest('button,.mtp-rem')) { st = null; return; } st = {r, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lock: null}; }, {passive:true});
+    document.addEventListener('touchstart', e=>{ if(!TOPT().swipe) return; const r = e.target.closest && e.target.closest('#mobView .mtp-row'); if(!r || r.classList.contains('tsw') || e.target.closest('button,.mtp-rem')) { st = null; return; }   /* 6/11: οι νέες γραμμές .tsw έχουν δικό τους σύρσιμο (σωστός δείκτης) */ st = {r, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lock: null}; }, {passive:true});
     document.addEventListener('touchmove', e=>{ if(!st) return; const dx = e.touches[0].clientX - st.x, dy = e.touches[0].clientY - st.y; if(st.lock==null && (Math.abs(dx)>10 || Math.abs(dy)>10)) st.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; if(st.lock!=='x') return; st.dx = dx; st.r.style.transform = 'translateX('+dx+'px)'; st.r.style.background = dx>0 ? '#E8F5EC' : '#FFF4DB'; }, {passive:true});
     document.addEventListener('touchend', ()=>{ if(!st) return; const s0 = st; st = null; const r = s0.r; r.style.transition = 'transform .2s'; 
       const list = r.parentNode, i = [...list.children].indexOf(r), k = openKey;
@@ -13665,7 +13665,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         return '<div class="pk-h"><span>'+title+'</span><span style="color:#1D4E80;font-weight:600">'+n+'/'+list.length+'</span></div><div class="pk-g">'
           + list.map(x=>{ const i = it.indexOf(x);
             let sub = x.t==='med' ? '1×'+x.freq+(x.note?' '+E(x.note):'')+' · '+x.days+' ημ.'+(x.on?' · <button class="chg" data-chg="'+i+'">αλλαγή</button>':'')
-              : x.t==='ref' ? E(x.k||'Εξέταση') : (x.t==='img'?'Απεικονιστική':'Εργαστηριακή')+(x.urg?' · <b style="color:#B42318">Επείγον</b>':'');
+              : x.t==='ref' ? E(x.k||'Εξέταση') : x.t==='prof' ? '📦 Έτοιμο προφίλ Medilabi' : (x.t==='img'?'Απεικονιστική':'Εργαστηριακή')+(x.urg?' · <b style="color:#B42318">Επείγον</b>':'');
             return '<div class="pv'+(x.on?'':' off')+'"><div class="m"><b>'+E(itemTxt(x))+'</b><span>'+sub+'</span>'
               + (x.t==='med' && x.on && x.chg ? '<div><span class="dstp"><button data-dd="'+i+'" data-v="-1" aria-label="λιγότερες ημέρες">−</button><i>'+x.days+' ημ.</i><button data-dd="'+i+'" data-v="1" aria-label="περισσότερες ημέρες">+</button></span></div>' : '')
               + '</div><button class="sw'+(x.on?' on':'')+'" data-tog="'+i+'" aria-label="'+(x.on?'Εκτός':'Μέσα')+'"></button></div>'; }).join('')+'</div>'; };
