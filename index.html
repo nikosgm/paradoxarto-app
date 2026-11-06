@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06m-v121';
+const APP_VER = '2026-11-06n-v122';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -11844,10 +11844,23 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const lab = (t)=>'<div style="font-size:12px;color:#6B7686;font-weight:700;margin-top:10px">'+E(t)+'</div>';
     const meds0 = (P.meds||[]).map(m=>m.line||[m.name,m.strength,m.dose,m.freq,m.days?('για '+m.days+' ημέρες'):''].filter(Boolean).join(' ')).join('\n');
     const icd0 = (Array.isArray(P.icd)?P.icd:[P.icd||'']).filter(Boolean).join(', ');
+    // 6/11 (εντολή χρήστη): καθαρή εικόνα — φάρμακο με δόση/συχνότητα/ημέρες/κουτιά/συμμετοχή + διάγνωση· η σελίδα του e-prescription σε «λεπτομέρειες»
+    const rxClean = ()=>{
+      const got = (f.meds||[]).map(String);
+      const ln = (m,i)=>{ const dz = m.dose ? String(m.dose).replace('0.5','½').replace('1.5','1½')+' '+(m.unit||'δισκίο') : '';
+        const parts = [dz, m.freq ? m.freq+'× ημέρα' : '', m.days ? m.days+' ημέρες' : '', m.boxes ? m.boxes+(m.boxes===1?' κουτί':' κουτιά') : (got[i] && /×\s*(\d+)/.test(got[i]) ? got[i].match(/×\s*(\d+)/)[1]+' κουτ.' : ''), m.part==='0%' ? 'συμμετοχή 0%' : '25%'].filter(Boolean);
+        return '<div style="padding:10px 0;border-bottom:.5px solid #E1E1E6"><div style="font-size:17px;font-weight:700">💊 '+E([m.name,m.strength].filter(Boolean).join(' '))+'</div>'
+          + '<div style="font-size:15px;color:#1C1C1E;margin-top:3px">'+E(parts.join(' · '))+'</div>'
+          + (got[i] ? '<div style="font-size:12.5px;color:#6D6D72;margin-top:2px">στο e-prescription: '+E(got[i])+'</div>' : '')+'</div>'; };
+      const meds = (P.meds||[]).length ? (P.meds||[]).map(ln).join('') : got.map(x=>'<div style="padding:10px 0;font-size:16px;font-weight:700">💊 '+E(x)+'</div>').join('');
+      return '<div style="background:#fff;border:1px solid #E5E9EF;border-radius:14px;padding:4px 14px 10px">'+meds
+        + '<div style="padding-top:10px;font-size:15px"><span style="color:#6D6D72">Διάγνωση:</span> <b>'+E((f.icds||[]).join(', ')||icd0||'—')+'</b></div>'
+        + (f.doctor?'<div style="font-size:13px;color:#6D6D72;margin-top:4px">Λογαριασμός: '+E(f.doctor)+'</div>':'')+'</div>'; };
     const body = (dlg
         ? '<div style="background:#FFF4E5;border-radius:12px;padding:10px 12px"><div style="font-size:12px;color:#B26A00;font-weight:700">⚠ ΤΟ E-PRESCRIPTION ΡΩΤΑ ΜΕΤΑ ΤΗΝ «ΚΑΤΑΧΩΡΙΣΗ» (μάλλον όχι ακόμα καταχωρισμένη — ελέγξτε)</div><div style="font-size:14.5px;white-space:pre-wrap;line-height:1.4;margin-top:4px;max-height:40vh;overflow:auto">'+E(f.dlg)+'</div></div>'
           + '<div style="font-size:13px;color:#6D6D72;margin-top:8px">Με την έγκριση το bot πατά «'+E(f.dlgBtn||'—')+'».</div>'
-        : '<div style="font-size:13px;color:#6D6D72">'+E([f.doctor?('Λογαριασμός: '+f.doctor):'', (f.icds||[]).length?('ICD '+f.icds.join(', ')):'', isRef&&f.cat?('Κατηγορία: '+f.cat):''].filter(Boolean).join(' · '))+'</div>'
+        : (!isRef ? rxClean() : '')
+          + '<div style="font-size:13px;color:#6D6D72">'+(isRef ? E([f.doctor?('Λογαριασμός: '+f.doctor):'', (f.icds||[]).length?('ICD '+f.icds.join(', ')):'', f.cat?('Κατηγορία: '+f.cat):''].filter(Boolean).join(' · ')) : '')+'</div>'
           + (isRef ? lab('ΕΞΕΤΑΣΕΙΣ ΠΟΥ ΜΠΗΚΑΝ')+'<div style="font-size:14px;line-height:1.4">'+(f.exams||[]).map(x=>'✓ '+E(x.got||x.want||'')+(x.got&&x.want&&x.got!==x.want?' <span style="color:#B26A00">(ζητήθηκε: '+E(x.want)+')</span>':'')).join('<br>')+'</div>'
               + (f.changed?'<div style="font-size:13.5px;color:#B23A3A;font-weight:700;margin-top:6px">⚠ Η σελίδα άλλαξε μετά το bot — οι εξετάσεις/συσχέτιση παραπάνω δεν ισχύουν· δείτε τη σύνοψη</div>':'')
               + lab('ΣΥΣΧΕΤΙΣΗ ΑΝΑ ΕΞΕΤΑΣΗ')+'<div style="font-size:13.5px;line-height:1.4">Διάγνωση: <b>'+E(as.dx||'—')+'</b><br>Λόγος παραπομπής: <b'+(as.reasonAuto?' style="color:#B23A3A"':'')+'>'+E(as.reason||'—')+'</b>'+(as.reasonAuto?' <span style="color:#B23A3A;font-size:12.5px">(αυτόματα η 1η επιλογή — ελέγξτε)</span>':'')
@@ -11856,21 +11869,24 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
                 +((as.unset||[]).length?'<br><span style="color:#B23A3A;font-weight:700">⚠ Χωρίς διάγνωση/λόγο: '+E(as.unset.join(', '))+'</span>':'')+'</div>'
               + ((as.reasonList||[]).length>1?'<details style="margin-top:4px"><summary style="font-size:13px;color:#1D4E80">Επιλογές λόγου ('+as.reasonList.length+')</summary><div style="font-size:12.5px;color:#555;white-space:pre-wrap">'+E(as.reasonList.join('\n'))+'</div></details>':'') : '')
           + (f.preferMiss?'<div style="font-size:13.5px;color:#B23A3A;font-weight:700;margin-top:4px">⚠ ΟΧΙ ο θεράπων ('+E(f.preferMiss)+')</div>':'')
+          + (!isRef ? '<details style="margin-top:10px"><summary style="font-size:14px;color:#1D4E80;padding:6px 0">🔎 Τι γράφει τώρα το e-prescription (λεπτομέρειες)</summary>' : '')
           + (!isRef && (P.meds||[]).some(m=>m.boxes||m.part) ? lab('ΖΗΤΗΘΗΚΑΝ (κουτιά · συμμετοχή)')+'<div style="font-size:13.5px;line-height:1.4">'+(P.meds||[]).map(m=>E(m.name)+': '+(m.boxes?m.boxes+(m.boxes===1?' κουτί':' κουτιά'):'κουτιά αυτόματα')+(m.perBox?' ('+m.perBox+'/κουτί)':'')+' · <b'+(m.part==='0%'?' style="color:#1F6F43"':'')+'>'+E(m.part||'25%')+'</b>').join('<br>')+'</div>' : '')
           + (!isRef && (f.repeatManual || (P.repeat && P.repeat.n)) ? '<div style="font-size:13.5px;color:#8A4B00;font-weight:700;background:#FFF4E5;border-radius:10px;padding:8px 10px;margin-top:8px">⚠ Επαναλαμβανόμενη ('+E(f.repeatManual || ({2:'δίμηνη',3:'τρίμηνη',6:'εξάμηνη'}[P.repeat.n]||'')+' · ανά '+(P.repeat.every||30)+' ημέρες')+'): ΔΕΝ τη συμπλήρωσε το bot — συμπληρώστε τη στον υπολογιστή πριν την «Καταχώριση»</div>' : '')
           + lab(isRef ? 'ΑΥΤΟ ΕΙΝΑΙ ΤΩΡΑ ΣΤΟ E-PRESCRIPTION (ΟΧΙ καταχωρισμένο)' : 'ΑΥΤΗ ΕΙΝΑΙ ΤΩΡΑ ΣΤΟ E-PRESCRIPTION (ΟΧΙ καταχωρισμένη)')
           + (f.pgHdr ? '<div style="font-size:13px;white-space:pre-wrap;line-height:1.35;background:#EEF4FB;border-radius:10px;padding:8px;margin-bottom:6px;max-height:22vh;overflow:auto"><b style="font-size:12px;color:#1D4E80">ΑΣΘΕΝΗΣ & ΔΙΑΓΝΩΣΕΙΣ ΣΤΗ ΣΕΛΙΔΑ</b>'+(f.icdPage?' <span style="font-size:12px;color:#1D4E80">· ICD '+E(f.icdPage)+'</span>':'')+'\n'+E(f.pgHdr)+'</div>' : '')
           + '<div style="font-size:14px;white-space:pre-wrap;line-height:1.4;background:#F7F9FB;border-radius:10px;padding:8px;max-height:42vh;overflow:auto">'+E(f.summary||j.note||'')+'</div>'
           + ((f.notes||[]).length?lab('ΜΗΝΥΜΑΤΑ E-PRESCRIPTION')+'<div style="font-size:13px;white-space:pre-wrap;color:#555">'+E(f.notes.join('\n'))+'</div>':'')
-          + '<div style="font-size:13px;color:#6D6D72;margin-top:10px">Με «Καταχώριση» το bot ξαναελέγχει ασθενή, λογαριασμό και ότι η σελίδα δείχνει ακριβώς τα παραπάνω, και μετά πατά «Καταχώριση».</div>'
-          + '<details style="margin-top:10px"><summary style="font-size:15px;font-weight:700;color:#1D4E80;padding:6px 0">✏️ Αλλαγή '+W.items+' / ICD</summary>'
+          + (!isRef ? '</details>' : '')
+          + '<div style="font-size:13px;color:#6D6D72;margin-top:10px">Με «'+(isRef?'Καταχώριση':'Επιβεβαίωση')+'» το bot ξαναελέγχει ασθενή, λογαριασμό και ότι η σελίδα δείχνει ακριβώς τα παραπάνω, και μετά πατά «Καταχώριση».</div>'
+          + '<details data-rxedit style="margin-top:10px"><summary style="font-size:15px;font-weight:700;color:#1D4E80;padding:6px 0;'+(isRef?'':'display:none')+'">✏️ Αλλαγή '+W.items+' / ICD</summary>'
           + lab(isRef ? 'Εξετάσεις · μία ανά γραμμή' : 'Φάρμακα · ένα ανά γραμμή')+'<textarea data-rxe rows="4" style="width:100%;box-sizing:border-box;border:1.5px solid #DCE2E8;border-radius:12px;padding:10px;font-size:15.5px;font-family:inherit">'+E(isRef ? ex0 : meds0)+'</textarea>'
           + lab('ICD-10 (με κόμμα)')+'<input data-rxi value="'+E(icd0)+'" style="width:100%;box-sizing:border-box;border:1.5px solid #DCE2E8;border-radius:12px;padding:10px;font-size:15.5px">'
           + '<div data-rxerr style="font-size:13px;color:#B23A3A;margin-top:4px"></div>'
           + '<button data-redo style="margin-top:8px;width:100%;border:0;background:#1D4E80;color:#fff;border-radius:14px;height:48px;font-size:16px;font-weight:700">↻ Ξαναγράψε με τις αλλαγές</button></details>')
+      + (!isRef && !dlg ? '<button data-rxmod style="margin-top:12px;width:100%;border:1.5px solid #1D4E80;background:#fff;color:#1D4E80;border-radius:14px;height:50px;font-size:17px;font-weight:600">✏️ Τροποποίηση</button>' : '')
       + '<button data-cancel style="margin-top:10px;width:100%;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:14px;height:50px;font-size:17px;font-weight:600">'+(dlg?'Ακύρωση — ΔΕΝ πατάω «'+E(f.dlgBtn||'OK')+'» (ελέγξτε στον υπολογιστή αν καταχωρίστηκε)':'Ακύρωση (δεν καταχωρίζεται)')+'</button>';
     // έγκριση ΜΟΝΟ της έκδοσης που είδε ο γιατρός (updated_at): αν το bot την άλλαξε στο μεταξύ (νέα σύνοψη/μήνυμα) ή την ενέκρινε άλλη συσκευή → τίποτα
-    sheet((dlg?'⚠ 2η έγκριση · ':isRef?'📋 Έλεγχος παραπεμπτικού · ':'💊 Έλεγχος συνταγής · ')+j.name, body, ()=>sb6.from('oncall_jobs').update({status:'approve', note:'καταχώριση από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').eq('updated_at', j.updated_at).select('id').then(x=>{ if(x.error){ toast('Σφάλμα: '+x.error.message); return false; } if(!(x.data||[]).length){ toast('⚠ '+W.It+' άλλαξε ή δεν περιμένει πια — ξανανοίγει'); setTimeout(()=>pdxBotReview(j.id), 400); return true; } toast(isRef ? '✅ Το bot καταχωρίζει το παραπεμπτικό…' : '✅ Το bot καταχωρίζει τη συνταγή…'); refreshPill(); return true; }), dlg ? '✅ Έγκριση «'+(f.dlgBtn||'OK')+'»' : '✅ Καταχώριση');
+    sheet((dlg?'⚠ 2η έγκριση · ':isRef?'📋 Έλεγχος παραπεμπτικού · ':'💊 Έλεγχος συνταγής · ')+j.name, body, ()=>sb6.from('oncall_jobs').update({status:'approve', note:'καταχώριση από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').eq('updated_at', j.updated_at).select('id').then(x=>{ if(x.error){ toast('Σφάλμα: '+x.error.message); return false; } if(!(x.data||[]).length){ toast('⚠ '+W.It+' άλλαξε ή δεν περιμένει πια — ξανανοίγει'); setTimeout(()=>pdxBotReview(j.id), 400); return true; } toast(isRef ? '✅ Το bot καταχωρίζει το παραπεμπτικό…' : '✅ Το bot καταχωρίζει τη συνταγή…'); refreshPill(); return true; }), dlg ? '✅ Έγκριση «'+(f.dlgBtn||'OK')+'»' : isRef ? '✅ Καταχώριση' : '✅ Επιβεβαίωση');
     const ov = document.getElementById('mobSubPop'); if(!ov) return;
     ov.querySelector('[data-cancel]').addEventListener('click', ()=>{ sb6.from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε από το κινητό (δεν καταχωρίστηκε)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id').then((x)=>{ if(x.error || !(x.data||[]).length){ toast('⚠ ΔΕΝ ακυρώθηκε — '+W.it+' δεν περιμένει πια έλεγχο (ίσως εγκρίθηκε)'); refreshPill(); ov.remove(); return; } toast('Ακυρώθηκε'); refreshPill(); ov.remove(); }); });
     // ✏️ μόλις αλλάξει κάτι στα φάρμακα/ICD, το μεγάλο «Καταχώριση» κλειδώνει (θα καταχώριζε την ΠΑΛΙΑ συνταγή)
@@ -11878,7 +11894,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // χωρίς σύνοψη της σελίδας ο γιατρός δεν βλέπει τι θα καταχωριστεί → κλειδωμένο
     const noSum = !dlg && !String(f.summary||'').trim();
     if(noSum && okB){ okB.disabled = true; okB.style.opacity = '.4'; okB.textContent = 'Δεν διαβάστηκε η σελίδα — δεν καταχωρίζεται'; }
-    ed.forEach(x=>x.addEventListener('input', ()=>{ const ch = ed.some((y,i)=>y.value!==ed0[i]); if(okB && !noSum){ okB.disabled = ch; okB.style.opacity = ch?'.4':''; okB.textContent = ch ? 'Άλλαξες κάτι — πάτα «↻ Ξαναγράψε»' : '✅ Καταχώριση'; } }));
+    ed.forEach(x=>x.addEventListener('input', ()=>{ const ch = ed.some((y,i)=>y.value!==ed0[i]); if(okB && !noSum){ okB.disabled = ch; okB.style.opacity = ch?'.4':''; okB.textContent = ch ? 'Άλλαξες κάτι — πάτα «↻ Ξαναγράψε»' : (isRef ? '✅ Καταχώριση' : '✅ Επιβεβαίωση'); } }));
+    const md = ov.querySelector('[data-rxmod]'); md && md.addEventListener('click', ()=>{ const d = ov.querySelector('[data-rxedit]'); if(d){ d.open = true; d.scrollIntoView({behavior:'smooth', block:'start'}); const t = d.querySelector('[data-rxe]'); t && t.focus(); } });
     const rd = ov.querySelector('[data-redo]');
     rd && rd.addEventListener('click', async ()=>{
       const er = ov.querySelector('[data-rxerr]'), say=(t)=>{ er.textContent=t; };
