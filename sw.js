@@ -1,7 +1,7 @@
 // Παραδόχαρτο service worker — pdx-shell-v3 (2026-11-02)
 // Κέλυφος: πάντα πρώτα το δίκτυο (για να μην κολλάει παλιά έκδοση), με αντίγραφο στην cache για χωρίς σήμα.
 // Μόνο τα δικά μας αρχεία· Supabase/CDN περνούν απευθείας. Web Push: {title, body} από τη send-reminders.
-const CACHE = 'pdx-shell-v4';
+const CACHE = 'pdx-shell-v4-j1';
 const SHELL = /\/(index\.html|ct\.html|manifest\.json|icon-\d+\.png)?$/;
 const VCACHE = 'pdx-vendor-v1';   // χωριστή cache: δεν σβήνεται όταν αλλάζει το κέλυφος
 const VENDOR = /\/vendor\/[\w.-]+-\d+\.\d+\.\d+(\.min)?\.js$/;
@@ -62,7 +62,9 @@ self.addEventListener('push', (e) => {
     icon: 'icon-192.png',
     badge: 'icon-192.png',
     tag: d.tag || undefined,
-    data: { url: d.url || './', title, kind: /για (έλεγχο|έγκριση)/.test(title + ' ' + (d.body || '')) ? 'review' : '' },
+    data: { url: d.url || './', title, kind: /για (έλεγχο|έγκριση)/.test(title + ' ' + (d.body || '')) ? 'review'
+      // αποτυχίες/κολλήματα εργασιών bot → σελίδα «Εργασίες bot»
+      : /⚠|δεν ξεκίνησε|απέτυχε|υπολογιστ|φύλακας/.test(title + ' ' + (d.body || '')) && !/εκτός ορίων|κωδικ/i.test(title + ' ' + (d.body || '')) ? 'jobs' : '' },
   }));
 });
 
@@ -70,10 +72,11 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const nd = e.notification.data || {}, rev = nd.kind === 'review';
   // «για έλεγχο/έγκριση» → η εφαρμογή ανοίγει κατευθείαν το φύλλο ελέγχου
-  const tu = new URL(nd.url || './', self.location.href); if (rev) tu.hash = 'pdxrev'; const target = tu.href;
+  const jobs = nd.kind === 'jobs';
+  const tu = new URL(nd.url || './', self.location.href); if (rev) tu.hash = 'pdxrev'; else if (jobs) tu.hash = 'pdxjobs'; const target = tu.href;
   e.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of all) { if (c.url.startsWith(self.location.origin)) { await c.focus(); if (rev) c.postMessage({ type: 'pdx-open-review' }); return; } }
+    for (const c of all) { if (c.url.startsWith(self.location.origin)) { await c.focus(); if (rev) c.postMessage({ type: 'pdx-open-review' }); else if (jobs) c.postMessage({ type: 'pdx-open-jobs' }); return; } }
     await self.clients.openWindow(target);
   })());
 });
