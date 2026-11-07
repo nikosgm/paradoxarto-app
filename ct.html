@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A0D11">
-<title>Αξονικές · Παραδόχαρτο</title>
+<title>Νίκος CT Viewer</title>
 <link rel="manifest" href="ct-manifest.json">
 <link rel="icon" href="ct-icon-192.png">
 <link rel="apple-touch-icon" href="ct-icon-192.png">
@@ -89,10 +89,12 @@ header h1{font-size:13px;font-weight:600;margin:0 6px 0 2px;color:var(--muted);w
 .msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted);font-size:14px;line-height:1.6;pointer-events:none}
 .drop{position:absolute;inset:12px;border:2px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--accent);background:rgba(0,0,0,.7);pointer-events:none}
 /* λεπτή μπάρα τομών μέσα στην εικόνα (κάτω) */
-.slider{position:absolute;left:10px;right:10px;bottom:calc(6px + var(--sab));display:flex;align-items:center;gap:8px;opacity:.55;transition:opacity .2s}
+.slider{position:absolute;right:4px;top:8px;bottom:calc(8px + var(--sab));width:30px;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:.7;transition:opacity .2s;z-index:1}
 .view:hover .slider,.slider:focus-within{opacity:1}
-.slider input{flex:1;min-width:0;accent-color:var(--accent);height:18px}
-.slider span{font-family:var(--font-mono);font-size:11px;color:#C9CDD3;font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 3px #000}
+/* 7/11: κατακόρυφη μπάρα τομών στο πλάι (πάνω = τομή 1) */
+.slider input{flex:1;min-height:0;width:26px;margin:0;accent-color:var(--accent);writing-mode:vertical-lr;direction:ltr;cursor:ns-resize}
+.slider span{order:-1;font-family:var(--font-mono);font-size:10.5px;color:#C9CDD3;font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 3px #000;writing-mode:horizontal-tb}
+.ov.tr,.ov.br{right:44px}
 .hint,.privacy{display:none}
 
 #cv3{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none;z-index:2}
@@ -107,13 +109,13 @@ body.is3d .ov,body.is3d .slider{display:none}
 .inst b{color:#fff} .inst .row{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
 #printArea{display:none}
 @media print{
-  @page{margin:12mm}
+  @page{size:A4 landscape;margin:8mm}
   body{background:#fff;color:#000;overflow:visible;height:auto}
   .app{display:none!important}
   #printArea{display:block;font-family:var(--font-ui);color:#000}
   #printArea h2{font-size:16px;margin:0 0 4px}
   #printArea .meta{font-size:12px;margin:0 0 8px;line-height:1.5}
-  #printArea img{max-width:100%;max-height:235mm;display:block;margin:0 auto;border:1px solid #999}
+  #printArea img{max-width:100%;max-height:168mm;display:block;margin:0 auto;border:1px solid #999}
   #printArea .foot{font-size:10.5px;color:#444;margin-top:6px}
 }
 @media (max-width:760px){
@@ -123,7 +125,7 @@ body.is3d .ov,body.is3d .slider{display:none}
   .ser{width:64px;flex:none} .ser .d{display:none}
   .ib span,.lock,header h1{display:none}
   .ib{height:36px;min-width:36px}
-  .slider{bottom:6px}
+  .slider{bottom:6px;top:30px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -132,7 +134,7 @@ body.is3d .ov,body.is3d .slider{display:none}
 <div class="app" id="app">
   <header>
     <a class="back" href="./" id="back" title="Πίσω στο Παραδόχαρτο">‹</a>
-    <h1>Viewer</h1>
+    <h1>Νίκος CT Viewer</h1>
     <button class="ib primary" id="srvBtn" title="Φάκελος κλινικής (OUROLOGIKH KLINIKH) — περιήγηση/αναζήτηση">📁<span>Κλινική</span></button>
     <button class="ib" id="pickDir" title="Άνοιγμα άλλου φακέλου (CD, δίκτυο)">🗂<span>Φάκελος</span></button>
     <button class="ib" id="pickFiles" title="Άνοιγμα αρχείων DICOM">📄<span>Αρχεία</span></button>
@@ -200,7 +202,7 @@ body.is3d .ov,body.is3d .slider{display:none}
     <canvas id="cv"></canvas>
     <canvas id="cv3" hidden></canvas>
     <div class="p3" id="p3" hidden>
-      <div class="grp seg"><button class="ib" data-p3="bone">Οστά</button><button class="ib" data-p3="angio">Αγγεία</button><button class="ib" data-p3="stone">Λίθοι</button><button class="ib" data-p3="soft">Μαλακά</button><button class="ib" data-p3="skin">Δέρμα</button><button class="ib" data-p3="mip">MIP</button></div>
+      <div class="grp seg"><button class="ib" data-p3="bone">Οστά</button><button class="ib" data-p3="organ">Όργανα</button><button class="ib" data-p3="angio">Αγγεία</button><button class="ib" data-p3="stone">Λίθοι</button><button class="ib" data-p3="soft">Μαλακά</button><button class="ib" data-p3="skin">Δέρμα</button><button class="ib" data-p3="mip">MIP</button></div>
       <div class="grp seg"><button class="ib" data-v3="ant" title="Πρόσθια">Π</button><button class="ib" data-v3="post" title="Οπίσθια">Ο</button><button class="ib" data-v3="rt" title="Δεξιά πλάγια">Δ</button><button class="ib" data-v3="lt" title="Αριστερή πλάγια">Α</button><button class="ib" data-v3="sup" title="Από πάνω">↓</button><button class="ib" data-v3="inf" title="Από κάτω">↑</button></div>
       <label title="Κατώφλι: τι φαίνεται (και δεξί σύρσιμο πάνω/κάτω)">κατώφλι<input type="range" id="p3s" min="-600" max="600" step="10" value="0"><span class="v" id="p3sv">0 HU</span></label>
       <label title="Κόψιμο από μπροστά (για να φανεί το εσωτερικό)">κόψιμο<input type="range" id="p3c" min="0" max="95" value="0"></label>
@@ -310,6 +312,57 @@ async function parseFile(file){
   const img = daikon.Series.parseImage(new DataView(buf));
   return {img, bytes:buf.byteLength};
 }
+/* ===== 7/11: ανάγνωση + αποκωδικοποίηση σε Web Workers (πολλοί πυρήνες, η οθόνη δεν «κολλάει») ===== */
+// Η ίδια συνάρτηση τρέχει μέσα στους workers και (αν δεν γίνεται worker) στο κύριο νήμα.
+function wkHandle(daikon, msg){
+  const TAGS=[[0x0008,0x0018],[0x0008,0x0008],[0x0008,0x0020],[0x0008,0x0030],[0x0008,0x0060],[0x0008,0x0070],[0x0008,0x0080],[0x0008,0x1030],[0x0008,0x103E],[0x0008,0x1090],
+    [0x0010,0x0010],[0x0010,0x0020],[0x0010,0x0030],[0x0010,0x0040],[0x0018,0x0010],[0x0018,0x0050],[0x0018,0x0060],[0x0018,0x0086],[0x0018,0x1151],[0x0018,0x1210],
+    [0x0020,0x0012],[0x0020,0x0013],[0x0020,0x0032],[0x0020,0x0100],[0x0028,0x0010],[0x0028,0x0030]];
+  const tv=(img,g,e)=>{ try{ const t=img.getTag(g,e); if(!t||t.value==null) return ''; const v=Array.isArray(t.value)?t.value.join('\\'):t.value;
+    if(v instanceof Date) return v.getFullYear()+String(v.getMonth()+1).padStart(2,'0')+String(v.getDate()).padStart(2,'0');
+    return String(v==null?'':v).replace(/\^/g,' ').replace(/\0/g,'').trim(); }catch(e){ return ''; } };
+  const own=d=>{ if(!d) return d; if(d.byteOffset||d.buffer.byteLength!==d.byteLength) d=d.slice(); return d; };
+  const compact=(d,rgb)=>{ if(!d||!d.length||d instanceof Int16Array) return own(d); for(let i=0;i<d.length;i+=7){ const v=d[i]; if(v!==(v|0)||v<-32768||v>32767) return own(d); }
+    for(let i=0;i<d.length;i++){ const v=d[i]; if(v!==(v|0)||v<-32768||v>32767) return own(d); } return Int16Array.from(d); };
+  return msg.file.arrayBuffer().then(buf=>{
+    const img=daikon.Series.parseImage(new DataView(buf));
+    if(!img||!img.hasPixelData()||!img.getRows()) return {msg:{id:msg.id, skip:true, bytes:buf.byteLength}, tr:[]};
+    const frames=img.getNumberOfFrames()||1, pi=String(img.getPhotometricInterpretation()||'').trim(), rgb=/RGB|YBR/.test(pi);
+    const dec=f=>compact(f>=0?img.getInterpretedData(false,false,f):img.getInterpretedData(false,false), rgb);
+    if(msg.decodeOnly){ const d=dec(msg.frame); return {msg:{id:msg.id, px:[d]}, tr:d?[d.buffer]:[]}; }
+    const tags={}; for(const [g,e] of TAGS){ const v=tv(img,g,e); if(v) tags[g+','+e]=v; }
+    const meta={base:img.getSeriesId()||'σειρά', rows:img.getRows(), cols:img.getCols(), frames, pos:img.getImagePosition(), dirs:img.getImageDirections(), sp:img.getPixelSpacing(), pi,
+      sdesc:img.getSeriesDescription(), idesc:img.getImageDescription(), snum:img.getSeriesNumber(), mod:img.getModality(), thick:img.getSliceThickness(),
+      wc:img.getWindowCenter(), ww:img.getWindowWidth(), inum:img.getImageNumber(), tags};
+    let px=null; const tr=[];
+    if(msg.keep){ px=[]; for(let f=0;f<frames;f++){ const d=dec(frames>1?f:-1); px.push(d); if(d) tr.push(d.buffer); } }
+    return {msg:{id:msg.id, meta, px, bytes:buf.byteLength}, tr};
+  }).catch(err=>({msg:{id:msg.id, err:String(err&&err.message||err)}, tr:[]}));
+}
+const WK=(()=>{
+  let pool=null, rr=0, seq=0, dead=false; const pend=new Map();
+  const N=Math.max(2, Math.min(touch?3:8, (navigator.hardwareConcurrency||4)-1));
+  function start(){
+    if(pool||dead) return pool;
+    try{
+      const src='importScripts('+JSON.stringify(new URL('vendor/daikon-1.2.42.min.js', location.href).href)+');\nconst handle='+wkHandle.toString()+';\nonmessage=e=>{ handle(daikon,e.data).then(r=>postMessage(r.msg,r.tr)); };';
+      const url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+      pool=Array.from({length:N},()=>{ const w=new Worker(url); w.onmessage=e=>{ const f=pend.get(e.data.id); if(f){ pend.delete(e.data.id); f(e.data); } };
+        w.onerror=ev=>{ ev.preventDefault&&ev.preventDefault(); dead=true; pool=null; for(const [id,f] of pend){ pend.delete(id); f({id, retry:true}); } }; return w; });
+    }catch(e){ dead=true; pool=null; }
+    return pool;
+  }
+  function run(m){
+    const P=start();
+    if(!P) return wkHandle(window.daikon, m).then(r=>r.msg);
+    return new Promise(res=>{ const id=++seq; pend.set(id, d=>{ if(d.retry) wkHandle(window.daikon, m).then(r=>res(r.msg)); else res(d); }); P[rr++%P.length].postMessage(Object.assign({}, m, {id})); });
+  }
+  return { N, parse:(file, keep)=>run({file, keep}), decode:(file, frame)=>run({file, frame, decodeOnly:true}).then(d=>d&&d.px?d.px[0]:null), get on(){ return !!pool; } };
+})();
+function mkImg(m){ const T=m.tags||{}; return { getSeriesId:()=>m.base, getRows:()=>m.rows, getCols:()=>m.cols, getNumberOfFrames:()=>m.frames, getImagePosition:()=>m.pos, getImageDirections:()=>m.dirs,
+  getPixelSpacing:()=>m.sp, getPhotometricInterpretation:()=>m.pi, getSeriesDescription:()=>m.sdesc, getImageDescription:()=>m.idesc, getSeriesNumber:()=>m.snum, getModality:()=>m.mod,
+  getSliceThickness:()=>m.thick, getWindowCenter:()=>m.wc, getWindowWidth:()=>m.ww, getImageNumber:()=>m.inum, hasPixelData:()=>true,
+  getTag:(g,e)=>{ const v=T[g+','+e]; return v==null?null:{value:[v]}; } }; }
 // πρώτο DICOM ενός φακέλου (βάθος έως 5, έως 25 προσπάθειες) → στοιχεία ασθενή/μελέτης
 async function dicomInfo(dir){
   let tries = 0;
@@ -413,10 +466,11 @@ async function openCand(c){
   if(await ingest(files)) verifyPatient();
 }
 async function collect(dir, out, depth){
-  for await (const [name,h] of dir.entries()){
-    if(h.kind==='file'){ try{ const f = await h.getFile(); if(isCand(name,f.size)) out.push(f); }catch(e){} }
-    else if(depth<6) await collect(h, out, depth+1);
-  }
+  // 7/11: τα αρχεία ζητούνται παράλληλα (δίκτυο/CD πολύ πιο γρήγορα)
+  const fh=[], subs=[];
+  for await (const [name,h] of dir.entries()){ if(h.kind==='file'){ if(!NOT_DICOM.test(name)) fh.push(h); } else if(depth<6) subs.push(h); }
+  for(let i=0;i<fh.length;i+=24) await Promise.all(fh.slice(i,i+24).map(h=>h.getFile().then(f=>{ if(isCand(f.name,f.size)) out.push(f); }, ()=>{})));
+  await Promise.all(subs.map(h=>collect(h, out, depth+1)));
 }
 async function runSearch(root){
   if(!Q){ status('Φάκελος κλινικής: '+root.name+'. Άνοιξε μια μελέτη από τη λίστα του Παραδόχαρτου (🩻) ή με «Άλλος φάκελος…».'); return; }
@@ -474,9 +528,12 @@ function addImage(img, L){
   if(sop){ if(L.sops.has(sop)) { L.dup++; return null; } L.sops.add(sop); }
   const base = img.getSeriesId() || 'σειρά';
   const acq = tagv(img,0x0020,0x0012), echo = tagv(img,0x0018,0x0086), tpi = tagv(img,0x0020,0x0100);
-  const grp = base+'|'+echo+'|'+tpi;
   const frames = img.getNumberOfFrames()||1;
   let pos=null; const p=img.getImagePosition(), dr=img.getImageDirections();
+  // 7/11: ίδιο Series UID αλλά άλλος προσανατολισμός (τοπογράφημα/ανασυνθέσεις) ή άλλο μέγεθος → ΧΩΡΙΣΤΗ σειρά (αλλιώς οι τομές «πηδάνε»)
+  const ori = dr && dr.length===6 ? Array.from(dr).map(x=>Math.round(x*5)/5).join(',') : '';
+  const loc = /LOCALIZER|SCOUT|TOPOGRAM|SURVIEW/i.test(tagv(img,0x0008,0x0008)) ? '|loc' : '';
+  const grp = base+'|'+echo+'|'+tpi+'|'+ori+'|'+img.getRows()+'x'+img.getCols()+loc;
   if(p && dr && dr.length===6){ const n=[dr[1]*dr[5]-dr[2]*dr[4], dr[2]*dr[3]-dr[0]*dr[5], dr[0]*dr[4]-dr[1]*dr[3]]; pos=p[0]*n[0]+p[1]*n[1]+p[2]*n[2]; }
   if(!L.split.has(grp) && acq && frames===1){
     // χωρίς θέση δεν ξέρουμε αν επικαλύπτονται → χωριστά· με θέση: χωρισμός μόλις άλλο acquisition πέσει στην ίδια θέση
@@ -488,10 +545,12 @@ function addImage(img, L){
   if(!ser){
     const sp = img.getPixelSpacing() || [1,1];
     const pi = String(img.getPhotometricInterpretation()||'').trim();
-    ser = {uid, grp, base, acq: L.split.has(grp)?acq:'', echo, tpi, desc:(img.getSeriesDescription()||img.getImageDescription()||'Σειρά').trim(), num:+img.getSeriesNumber()||0,
+    ser = {uid, grp, base, acq: L.split.has(grp)?acq:'', echo, tpi, desc:((img.getSeriesDescription()||img.getImageDescription()||'Σειρά').trim()+(loc?' (τοπογράφημα)':'')), num:+img.getSeriesNumber()||0,
       modality:String(img.getModality()||'').trim(), rows:img.getRows(), cols:img.getCols(), spr:+sp[0]||1, spc:+sp[1]||1,
       thick:+img.getSliceThickness()||0, wc:+img.getWindowCenter(), ww:+img.getWindowWidth(),
-      mono1: pi==='MONOCHROME1', rgb: /RGB|YBR/.test(pi), slices:[], usePos:true,
+      mono1: pi==='MONOCHROME1', rgb: /RGB|YBR/.test(pi), slices:[], usePos:true, loc:!!loc,
+      plane: (()=>{ if(!dr||dr.length!==6) return ''; const n=[Math.abs(dr[1]*dr[5]-dr[2]*dr[4]), Math.abs(dr[2]*dr[3]-dr[0]*dr[5]), Math.abs(dr[0]*dr[4]-dr[1]*dr[3])]; return n[2]>=n[0]&&n[2]>=n[1]?'AX':n[1]>=n[0]?'COR':'SAG'; })(),
+      kern: tagv(img,0x0018,0x1210), contrast: tagv(img,0x0018,0x0010),
       pinfo:{name:tagv(img,0x0010,0x0010), pid:tagv(img,0x0010,0x0020), dob:tagv(img,0x0010,0x0030), date:tagv(img,0x0008,0x0020), desc:tagv(img,0x0008,0x1030)}};
     S.series.push(ser); S.series.sort((a,b)=>a.num-b.num || (a.base<b.base?-1:a.base>b.base?1:0) || (+a.acq||0)-(+b.acq||0) || (+a.echo||0)-(+b.echo||0) || (+a.tpi||0)-(+b.tpi||0));
   }
@@ -499,7 +558,9 @@ function addImage(img, L){
   // χωρίς SOP UID: διπλότυπο = ίδιο instance + ίδια θέση στην ίδια σειρά
   if(!sop && inst){ const k=uid+'|'+inst+'|'+pos; if(L.sops.has(k)){ L.dup++; return null; } L.sops.add(k); }
   const same = img.getRows()===ser.rows && img.getCols()===ser.cols;
-  for(let f=0; f<frames; f++) insertSlice(ser, {id:++SID, img, acq, frame: frames>1?f:-1, pos: frames>1 ? f : pos, inst: inst*1000+f, odd:!same});
+  const px = L.px, file = L.file; L.px=null; L.file=null;
+  for(let f=0; f<frames; f++){ const d = px && px[f] || null; if(d) L.mem += d.byteLength;
+    insertSlice(ser, {id:++SID, img, file, acq, frame: frames>1?f:-1, pos: frames>1 ? f : pos, inst: inst*1000+f, odd:!same, data:d, lazy:!d}); }
   ser.vol = null;
   return ser;
 }
@@ -533,12 +594,17 @@ function splitGroup(grp, L){
   S.series.splice(i,1,...arr.sort((a,b)=>(+a.acq||0)-(+b.acq||0)));
   if(keep){ const k=arr.find(c=>c.slices.includes(keep)); S.cur=k; shiftCur(k.slices.indexOf(keep)-S.ix.ax); }
 }
-const lru=[]; const LRU_MAX = touch ? 40 : 160;   // iPhone: λιγότερες αποκωδικοποιημένες τομές στη μνήμη
+const lru=[]; const LRU_MAX = touch ? 40 : 200;
+// πόσα MB αποκωδικοποιημένων τομών κρατάμε από την αρχή (πέρα από αυτό: αποκωδικοποίηση όταν χρειαστεί)
+const MEM_BUDGET = (touch ? 220 : (navigator.deviceMemory||8)>=8 ? 1600 : 700) * 1048576;   // iPhone: λιγότερες αποκωδικοποιημένες τομές στη μνήμη
 function decode(s){
   if(s.data) return s.data;
-  try{ return s.frame>=0 ? s.img.getInterpretedData(false,false,s.frame) : s.img.getInterpretedData(false,false); }
-  catch(e){ s.err=true; return null; }
+  if(s.err || !s.file) return null;
+  // 7/11: αποκωδικοποίηση στο παρασκήνιο (worker)· μόλις έρθει, ξαναζωγραφίζει
+  if(!s.pend){ s.pend = WK.decode(s.file, s.frame).then(d=>{ s.pend=null; if(!d){ s.err=true; return null; } s.data=d; lru.push(s); while(lru.length>LRU_MAX){ const o=lru.shift(); if(o!==s && o.lazy) o.data=null; } FC=null; draw(); return d; }); }
+  return null;
 }
+async function decodeAsync(s){ if(s.data) return s.data; decode(s); return s.pend ? await s.pend : s.data; }
 // ακέραιες τιμές (π.χ. HU) → Int16: μισή μνήμη από Float32
 function compact(d, ser){
   if(ser.rgb || d instanceof Int16Array || !d.length) return d;
@@ -547,9 +613,7 @@ function compact(d, ser){
 }
 function pixels(ser, s){
   if(s.data) return s.data;
-  let d=decode(s); if(!d) return null; d=compact(d, ser); s.data=d;
-  lru.push(s); while(lru.length>LRU_MAX){ const o=lru.shift(); if(o!==s) o.data=null; }
-  return d;
+  return decode(s);
 }
 
 /* ================= Όγκος (ανασύνθεση / MIP) ================= */
@@ -568,7 +632,7 @@ async function buildVol(ser){
   try{ vol=new Int16Array(plane*n); }catch(e){ status('Δεν φτάνει η μνήμη για ανασύνθεση αυτής της σειράς.',true); return false; }
   ser.building=true; const t0=performance.now();
   for(let z=0; z<n; z++){
-    const d=decode(ser.slices[z]);
+    const d=await decodeAsync(ser.slices[z]);
     if(d){ const o=z*plane; for(let i=0;i<plane;i++){ let v=Math.round(d[i]); vol[o+i]= v<-32768?-32768:v>32767?32767:v; } }
     if(z%6===5){ status('Ανασύνθεση όγκου… '+Math.round((z+1)/n*100)+'%'); await new Promise(r=>setTimeout(r)); }
   }
@@ -579,7 +643,7 @@ async function buildVol(ser){
   ser.zsp = med>0 ? med : (ser.thick||1);
   ser.uneven = diffs.length && (diffs[diffs.length-1] > med*1.6 || diffs[0] < med*0.6);
   ser.vol=vol; ser.building=false; ser._lastBuild=performance.now()-t0;
-  for(const s of ser.slices) s.data=null;
+  for(const s of ser.slices){ s.data=null; s.lazy=true; }   // ο όγκος κρατά τις τιμές· οι τομές ξαναδιαβάζονται αν χρειαστεί
   lru.length=0;
   status(); return true;
 }
@@ -639,11 +703,28 @@ function paint(d, W, H, rgb, mono1, ww, wc, cvs, c2){
   }
   c2.putImageData(id,0,0);
 }
+// 7/11: «γέμισμα» με το σώμα — το πλαίσιο προσαρμόζεται στο περίγραμμα του ασθενή (όχι σε όλο το μαύρο του FOV)
+function bodyBox(ser){
+  if(ser.bb!==undefined) return ser.bb;
+  const s=ser.slices[Math.floor(ser.slices.length/2)], d=ser.vol ? ser.vol.subarray(Math.floor(ser.slices.length/2)*ser.rows*ser.cols, (Math.floor(ser.slices.length/2)+1)*ser.rows*ser.cols) : s && s.data;
+  if(!d || ser.rgb) return null;
+  const W=ser.cols, H=ser.rows; let thr=-400;
+  if(ser.modality!=='CT'){ const a=[]; for(let i=0;i<d.length;i+=37) a.push(d[i]); a.sort((x,y)=>x-y); thr=a[Math.floor(a.length*.02)]+(a[Math.floor(a.length*.98)]-a[Math.floor(a.length*.02)])*.08; }
+  let x0=W, x1=-1, y0=H, y1=-1;
+  for(let y=0;y<H;y+=2){ let n=0; for(let x=0;x<W;x+=2){ if(d[y*W+x]>thr){ n++; if(x<x0) x0=x; if(x>x1) x1=x; } } if(n>3){ if(y<y0) y0=y; if(y>y1) y1=y; } }
+  if(x1<0 || (x1-x0)*(y1-y0) > W*H*.85 || (x1-x0) < W*.15){ ser.bb=null; return null; }
+  const m=Math.round(Math.max(x1-x0,y1-y0)*.05);
+  ser.bb={x0:Math.max(0,x0-m), x1:Math.min(W,x1+m), y0:Math.max(0,y0-m), y1:Math.min(H,y1+m)}; return ser.bb;
+}
 function geom(f){
-  const r=view.getBoundingClientRect();
-  const iw=f.W*f.sx, ih=f.H*f.sy, fit=Math.min(r.width/iw, r.height/ih)*0.96;
-  const sc=fit*S.zoom, w=iw*sc, h=ih*sc;
-  return {r, x:(r.width-w)/2+S.panX, y:(r.height-h)/2+S.panY, w, h, px:sc*f.sx, py:sc*f.sy};
+  const r=view.getBoundingClientRect(), ser=S.cur, bb=ser && !f.noBB ? bodyBox(ser) : null;
+  // περιοχή που «γεμίζει» την οθόνη (σε pixel της εικόνας)
+  let ax0=0, ax1=f.W, ay0=0, ay1=f.H;
+  if(bb){ if(S.view==='ax'){ ax0=bb.x0; ax1=bb.x1; ay0=bb.y0; ay1=bb.y1; } else if(S.view==='cor'){ ax0=bb.x0; ax1=bb.x1; } else if(S.view==='sag'){ ax0=bb.y0; ax1=bb.y1; } }
+  const iw=(ax1-ax0)*f.sx, ih=(ay1-ay0)*f.sy, fit=Math.min(r.width/iw, r.height/ih)*0.97;
+  const sc=fit*S.zoom, w=f.W*f.sx*sc, h=f.H*f.sy*sc;
+  const cx=(ax0+ax1)/2*f.sx*sc, cy=(ay0+ay1)/2*f.sy*sc;
+  return {r, x:r.width/2-cx+S.panX, y:r.height/2-cy+S.panY, w, h, px:sc*f.sx, py:sc*f.sy};
 }
 const toImg=(g,cx,cy)=>[(cx-g.x)/g.px, (cy-g.y)/g.py];
 const toScr=(g,ix,iy)=>[g.x+ix*g.px, g.y+iy*g.py];
@@ -693,7 +774,9 @@ function drawNow(){
   } else if(S.view==='ax'){ ctx.fillStyle='#F2994A'; ctx.font='14px sans-serif'; ctx.fillText('Η τομή δεν αποκωδικοποιήθηκε (μη υποστηριζόμενη συμπίεση).',16,30); }
 
   const PL={ax:'Αξονική',cor:'Στεφανιαία',sag:'Οβελιαία'}[S.view];
-  $('ovTL').innerHTML = esc(ser.desc)+'<br>'+esc(ser.modality||'—')+(ser.thick?' · '+fmt(ser.thick)+' mm':'')
+  const pi0=ser.pinfo||{}, sex=tagv((ser.slices[0]||{}).img||{getTag:()=>null},0x0010,0x0040);
+  $('ovTL').innerHTML = '<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+((pi0.dob||sex)?'<br>'+esc([pi0.dob?fmtD(pi0.dob):'', sex].filter(Boolean).join(' · ')):'')+(pi0.date?'<br>'+esc(fmtD(pi0.date)):'')+'<br><br>'
+    + esc(ser.desc)+'<br>'+esc(ser.modality||'—')+(ser.thick?' · '+fmt(ser.thick)+' mm':'')
     +'<br><span class="a">'+PL+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(f&&f.mip?' · MIP '+(S.mip<0?'όλος ο όγκος':S.mip+' mm'):'')+'</span>'
     +(S.view!=='ax'&&ser.uneven?'<br><span class="w">άνισα διαστήματα τομών</span>':'');
   $('ovTR').innerHTML = 'Π '+Math.round(S.ww)+' · Κ '+Math.round(S.wc)+'<br>Zoom '+Math.round(S.zoom*100)+'%'
@@ -746,18 +829,27 @@ function thumb(ser){
     c.width=c.height=112; const k=Math.min(112/t.width,112/t.height); const x=c.getContext('2d'); x.fillStyle='#000'; x.fillRect(0,0,112,112); x.drawImage(t,(112-t.width*k)/2,(112-t.height*k)/2,t.width*k,t.height*k); }
   return c;
 }
+// 7/11: μια αξονική έχει συνήθως πολλές σειρές (τοπογράφημα, λεπτές/παχιές τομές, ανασυνθέσεις, αναφορά δόσης).
+// Πρώτα οι κύριες αξονικές τομές (χωρίς/με σκιαγραφικό)· οι υπόλοιπες κάτω από «Άλλες σειρές».
+function isMain(ser){ return !ser.loc && ser.slices.length>=10 && (!ser.plane || ser.plane==='AX') && !/dose|report|αναφορ|screen|save|key ?image/i.test(ser.desc) && !ser.rgb; }
 function renderRail(full){
   const rail=$('rail'); rail.innerHTML='<div class="lbl">Σειρές</div>';
   if(!S.series.length){ rail.innerHTML+='<div class="empty">Καμία μελέτη ανοιχτή.</div>'; return; }
-  for(const ser of S.series){
+  const main=S.series.filter(isMain), rest=S.series.filter(x=>!isMain(x));
+  const list = (main.length && !S.showAll) ? main.concat(rest.includes(S.cur)?[S.cur]:[]) : S.series;
+  for(const ser of list){
     const b=document.createElement('button'); b.className='ser'+(ser===S.cur?' on':'');
     if(full||!ser._th||(ser._thN!==ser.slices.length&&ser.slices.length<3)){ ser._th=thumb(ser); ser._thN=ser.slices.length; }
     b.appendChild(ser._th);
     const t=document.createElement('div'); t.className='t';
     const sib=S.series.filter(s=>s.base===ser.base).length>1, ph=sib?[ser.acq?'acq '+ser.acq:'', ser.echo?'echo '+ser.echo:'', ser.tpi?'φάση '+ser.tpi:''].filter(Boolean).join(' '):'';
-    t.innerHTML='<div class="d">'+esc(ser.desc)+(ph?' · '+esc(ph):'')+'</div><div class="m">'+esc(ser.modality||'—')+' · '+ser.slices.length+' εικ.</div>';
+    const tag=[ser.plane&&ser.plane!=='AX'?ser.plane:'', ser.thick?fmt(ser.thick)+'mm':'', ser.contrast?'σκιαγρ.':''].filter(Boolean).join(' · ');
+    t.innerHTML='<div class="d">'+esc(ser.desc)+(ph?' · '+esc(ph):'')+'</div><div class="m">'+esc(ser.modality||'—')+' · '+ser.slices.length+' εικ.'+(tag?' · '+esc(tag):'')+'</div>';
     b.appendChild(t); b.onclick=()=>{ S.touched=true; select(ser); }; rail.appendChild(b);
   }
+  if(main.length && rest.length){ const x=document.createElement('button'); x.className='btn'; x.style.cssText='width:100%;font-size:11.5px;padding:6px';
+    x.textContent = S.showAll ? '− Μόνο οι κύριες σειρές' : '+ Άλλες σειρές ('+rest.filter(r=>r!==S.cur).length+')'; x.title='τοπογράφημα, ανασυνθέσεις, λίγες εικόνες, αναφορές';
+    x.onclick=()=>{ S.showAll=!S.showAll; renderRail(true); }; rail.appendChild(x); }
 }
 function select(ser){
   if(V3.on && V3.ser!==ser) set3d(false);
@@ -804,17 +896,18 @@ async function ingest(files){
   // νέα φόρτωση = νέα «γενιά»: ό,τι φέρνουν ακόμη οι workers της προηγούμενης αγνοείται
   const gen=++S.gen;
   S.series=[]; S.cur=null; S.meas={}; lru.length=0; FC=null; PK=null; S.touched=false; S.drag=null;
-  const L={gen, t0:performance.now(), total:files.length, done:0, ok:0, skip:0, dup:0, bytes:0, first:null, end:null, sops:new Set(), split:new Set(), posAcq:new Map()};
+  const L={gen, mem:0, px:null, file:null, t0:performance.now(), total:files.length, done:0, ok:0, skip:0, dup:0, bytes:0, first:null, end:null, sops:new Set(), split:new Set(), posAcq:new Map()};
   S.load=L; status(); const q=files.slice(); let lastUi=0;
   async function worker(){
     while(q.length && gen===S.gen){
       const f=q.shift();
       try{
-        const {img, bytes}=await parseFile(f);
+        const r=await WK.parse(f, L.mem < MEM_BUDGET);
         if(gen!==S.gen) return;
-        L.bytes+=bytes;
-        if(img && img.hasPixelData() && img.getRows()){
-          const ser=addImage(img, L);
+        L.bytes+=r.bytes||0;
+        if(r.meta){
+          L.px=r.px; L.file=f;
+          const ser=addImage(mkImg(r.meta), L);
           if(ser){ L.ok++;
             if(!S.cur) select(ser);
             if(L.first===null && S.cur===ser){ drawNow(); L.first=performance.now()-L.t0; } }
@@ -824,12 +917,12 @@ async function ingest(files){
       const now=performance.now(); if(now-lastUi>250){ lastUi=now; status(); renderRail(); draw(); }
     }
   }
-  await Promise.all(Array.from({length:6},worker));
+  await Promise.all(Array.from({length:Math.max(6, WK.N*2)},worker));
   if(gen!==S.gen) return false;
   L.end=performance.now()-L.t0;
   // ανοίγει η σειρά με τις περισσότερες τομές (συνήθως η κύρια) — ΜΟΝΟ αν ο χρήστης δεν έχει ήδη αρχίσει να κοιτάει
   if(!S.touched){
-    const main = S.series.slice().sort((a,b)=>b.slices.length-a.slices.length)[0];
+    const main = S.series.slice().sort((a,b)=>(isMain(b)-isMain(a)) || b.slices.length-a.slices.length)[0];
     if(main) select(main);
   }
   status(); renderRail(true); draw();
@@ -871,14 +964,18 @@ $('printBtn').onclick = ()=>{
   const ser=S.cur; if(!ser) return;
   // εικόνα όπως φαίνεται (με μετρήσεις), σε λευκό φόντο κεφαλίδας
   const shot = document.createElement('canvas'); shot.width=cv.width; shot.height=cv.height;
-  const sc=shot.getContext('2d'); sc.drawImage(cv,0,0);
+  const sc=shot.getContext('2d'); sc.drawImage(V3.on?$('cv3'):cv,0,0,shot.width,shot.height);
+  // 7/11: τα στοιχεία (ασθενής, σειρά, παράθυρο) τυπώνονται ΠΑΝΩ στην εικόνα, άσπρα στο μαύρο
+  { const k=shot.width/Math.max(1,view.getBoundingClientRect().width); sc.save(); sc.fillStyle='#fff'; sc.shadowColor='#000'; sc.shadowBlur=3*k; sc.textBaseline='top';
+    const put=(el,right)=>{ const L=String($(el).innerText||'').split('\n'); L.forEach((t,i)=>{ sc.font=(i===0&&el==='ovTL'?'600 ':'')+Math.round(12.5*k)+'px "Segoe UI",sans-serif'; sc.textAlign=right?'right':'left'; sc.fillText(t, right?shot.width-12*k:10*k, 8*k+i*16*k); }); };
+    put('ovTL',false); put('ovTR',true); sc.restore(); }
   const inf = ser.pinfo||{}, PL={ax:'Αξονική',cor:'Στεφανιαία',sag:'Οβελιαία'}[S.view];
   const meta = [
     Q ? '<b>'+esc(Q.name)+'</b>'+(Q.amka?' · ΑΜΚΑ '+esc(Q.amka):'')+(Q.am?' · ΑΜ '+esc(Q.am):'') : (inf.name?'<b>'+esc(inf.name)+'</b>':''),
     esc([inf.desc||ser.desc, ser.modality, fmtD(inf.date)].filter(Boolean).join(' · ')),
     esc(PL+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(S.mip?' · MIP '+(S.mip<0?'όλος ο όγκος':S.mip+' mm'):'')+' · Π '+Math.round(S.ww)+' / Κ '+Math.round(S.wc))
   ].filter(Boolean).join('<br>');
-  $('printArea').innerHTML = '<h2>Απεικόνιση</h2><div class="meta">'+meta+'</div><img alt="" src="'+shot.toDataURL('image/png')+'"><div class="foot">Εκτύπωση από τον viewer του Παραδόχαρτου · '+new Date().toLocaleString('el-GR')+' · όχι γνωμάτευση</div>';
+  $('printArea').innerHTML = '<h2>Απεικόνιση</h2><div class="meta">'+meta+'</div><img alt="" src="'+shot.toDataURL('image/png')+'"><div class="foot">Εκτύπωση από το Νίκος CT Viewer · '+new Date().toLocaleString('el-GR')+' · όχι γνωμάτευση</div>';
   setTimeout(()=>window.print(), 60);
 };
 
@@ -1001,6 +1098,7 @@ const P3 = {
   angio: { n:'Αγγεία',  pts:[[100,0,[.70,.15,.10]],[180,.25,[.85,.22,.15]],[320,.55,[.98,.55,.45]],[600,.85,[1,.95,.9]],[3000,.95,[1,1,1]]] },
   skin:  { n:'Δέρμα',   pts:[[-700,0,[.90,.65,.55]],[-450,.12,[.95,.75,.65]],[-100,.25,[.95,.80,.72]],[150,.3,[.9,.82,.75]],[400,.8,[1,.97,.92]],[3000,.9,[1,1,1]]] },
   stone: { n:'Λίθοι',   pts:[[-200,0,[.4,.4,.45]],[-50,.015,[.55,.5,.5]],[120,.02,[.6,.5,.5]],[250,.0,[.6,.5,.5]],[300,.75,[1,.85,.25]],[3000,.95,[1,.9,.4]]] },
+  organ: { n:'Όργανα',  pts:[[-60,0,[.6,.3,.25]],[10,0,[.7,.35,.3]],[40,.012,[.8,.42,.36]],[80,.03,[.85,.45,.38]],[110,.16,[.88,.32,.26]],[170,.38,[.92,.38,.3]],[260,.55,[.98,.62,.52]],[400,.85,[1,.97,.92]],[3000,.95,[1,1,1]]] },
   soft:  { n:'Μαλακά',  pts:[[-150,0,[.75,.45,.35]],[-30,.05,[.85,.55,.45]],[60,.18,[.95,.65,.5]],[200,.35,[1,.85,.75]],[600,.8,[1,.97,.92]],[3000,.9,[1,1,1]]] },
   mip:   { n:'MIP', mip:true },
 };

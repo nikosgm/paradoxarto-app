@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07u-v160';
+const APP_VER = '2026-11-07v-v161';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8272,7 +8272,7 @@ document.head.appendChild(st);
     h += '<div><div class="dks-h">ΚΛΙΝΙΚΗ</div>' + a('Ασθενείς', tab==='pts', "mobTab('pts')", mine!==all ? mine+'/'+all : all) + a('Εκκρεμότητες', tab==='todo', "mobTab('todo')", nT) + '</div>';
     h += '<div><div class="dks-h">ΕΡΓΑΛΕΙΑ</div>' + a('Αναζήτηση ασθενών', false, "pdxPatients()", '', 'ptx') + a('Εργαστηριακά', false, "window.labsFullOpen ? labsFullOpen('') : pdxCmd()", '', 'labs')
       + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
-      + a('Αξονικές (3D)', false, "location.href='ct?install=1'") + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
+      + a('Νίκος CT Viewer', false, "location.href='ct?install=1'") + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
     h += '<div style="margin-top:auto">' + a('Πλήρης πίνακας', false, "mobFull()") + a('Ρυθμίσεις', tab==='me', "mobTab('me')") + '</div>';
     return h;
   }
@@ -11459,7 +11459,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       rows = [];
       const busy = !!st.wait;
       let h = '<form class="pf-bar" data-fq><input name="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="🔍 Αναζήτηση σε όλη την κλινική" value="'+E(st.hits?st.q:'')+'"'+(busy?' disabled':'')+'>'+(st.hits?'<button type="button" data-fx>Άκυρο</button>':'')+'</form>';
-      if(!st.path.length && !st.hits && !st.open) h += '<a href="ct?install=1" style="display:flex;align-items:center;gap:12px;margin:10px 16px 0;padding:12px 14px;border-radius:14px;background:#0E1218;color:#fff;text-decoration:none"><span style="font-size:26px">💻</span><span style="flex:1"><b style="font-size:15.5px">Αξονικές · viewer με 3D</b><br><small style="opacity:.75">Άνοιγμα / εγκατάσταση ως εφαρμογή υπολογιστή · CD, φάκελοι, χωρίς internet</small></span><span style="opacity:.6;font-size:20px">›</span></a>';
+      if(!st.path.length && !st.hits && !st.open) h += '<a href="ct?install=1" style="display:flex;align-items:center;gap:12px;margin:10px 16px 0;padding:12px 14px;border-radius:14px;background:#0E1218;color:#fff;text-decoration:none"><span style="font-size:26px">💻</span><span style="flex:1"><b style="font-size:15.5px">Νίκος CT Viewer · αξονικές με 3D</b><br><small style="opacity:.75">Άνοιγμα / εγκατάσταση ως εφαρμογή υπολογιστή · CD, φάκελοι, χωρίς internet</small></span><span style="opacity:.6;font-size:20px">›</span></a>';
       if(st.err) h += '<div class="pf-err"><span>'+E(st.err)+'</span>'+(st.retry ? '<button type="button" data-retry title="Δοκίμασε ξανά" aria-label="Δοκίμασε ξανά">↻</button>' : '')+'</div>';
       if(st.wait) return h + spin(st.wait);
       if(st.open){ const o = st.open;

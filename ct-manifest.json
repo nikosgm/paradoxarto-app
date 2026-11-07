@@ -1,7 +1,7 @@
 {
   "id": "./ct.html",
-  "name": "Αξονικές · Παραδόχαρτο",
-  "short_name": "Αξονικές",
+  "name": "Νίκος CT Viewer",
+  "short_name": "Νίκος CT",
   "description": "Προβολή αξονικών/μαγνητικών (DICOM) από CD, φάκελο ή δίκτυο: MPR, MIP, 3D, μετρήσεις. Χωρίς internet.",
   "start_url": "./ct?app=1",
   "scope": "./",
