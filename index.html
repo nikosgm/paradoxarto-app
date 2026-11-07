@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07p-v155';
+const APP_VER = '2026-11-07q-v156';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12577,7 +12577,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const grids = [...mv.querySelectorAll('.nv-grid,.nv-rooms,.nv-grp')]; const last = grids[grids.length-1];
     if(!last || mv.querySelector('.pth')){ if(old) old.remove(); return; }
     let a = last; while(a.parentElement && a.parentElement!==mv) a = a.parentElement;
-    const h = nbHtml(); if(old){ if(old.outerHTML===h) return; old.remove(); } if(h) a.insertAdjacentHTML('afterend', h);
+    const h = nbHtml(); if(old){ if(old.outerHTML===h) return; old.remove(); } if(!h) return;
+    // 7/11: στον υπολογιστή (3 στήλες) μπαίνει ΜΕΣΑ στη στήλη της λίστας που κυλάει — όχι σαν ξεχωριστή στήλη χωρίς scroll
+    if(mv.classList.contains('desk')){ let sc = last.parentElement; while(sc && sc!==mv && !/(auto|scroll)/.test(getComputedStyle(sc).overflowY)) sc = sc.parentElement;
+      if(sc && sc!==mv){ sc.insertAdjacentHTML('beforeend', h); return; } }
+    a.insertAdjacentHTML('afterend', h);
   }
   document.addEventListener('click', e=>{ const t = e.target; if(!t.closest || !t.closest('#npsBlk')) return; const M = nbMiss();
     if(t.closest('[data-nball]')) return window.pdxNpsPatients && pdxNpsPatients();
