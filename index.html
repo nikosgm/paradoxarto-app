@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08a-v165';
+const APP_VER = '2026-11-08b-v166';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12546,6 +12546,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   }
   async function nbAuto(){
     if(!(window.pdxIsBotUser && pdxIsBotUser()) || document.hidden) return;
+    { const h = new Date().getHours(); if(h < 7 || h >= 22) return; }   // ⚡ 8/11: όχι μεσάνυχτα/νύχτα (στις 00:01 μπήκε μπροστά από παραγγελία: +15″)
+    if(document.getElementById('obOv') || document.getElementById('pdxOrdOv')) return;   // ανοιχτή παραγγελία: όχι τώρα
     // 7/11 (εντολή χρήστη): ΜΙΑ φορά την ημέρα η λίστα ΝΠΣ· μετά ΑΜ/ΑΜΚΑ (ΝΠΣ) + ΑΗΦΥ + εργαστηριακά Medilabi για όσους λείπουν
     const d0 = new Date(); d0.setHours(0,0,0,0);
     const live = await sb6.from('oncall_jobs').select('id,kind,created_at,status').in('kind',['npslist','npsenrich']).gte('created_at', d0.toISOString()).not('status','in','(failed,cancelled)').limit(20);
@@ -12586,7 +12588,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   function nbPaint(){
     const mv = document.getElementById('mobView'); if(!mv) return; const old = document.getElementById('npsBlk');
     const grids = [...mv.querySelectorAll('.nv-grid,.nv-rooms,.nv-grp')]; const last = grids[grids.length-1];
-    if(!last || mv.querySelector('.pth')){ if(old) old.remove(); return; }
+    if(!last || (!mv.classList.contains('desk') && mv.querySelector('.pth'))){ if(old) old.remove(); return; }   // 8/11: στον υπολογιστή μένει και με ανοιχτή καρτέλα δεξιά
     let a = last; while(a.parentElement && a.parentElement!==mv) a = a.parentElement;
     const h = nbHtml(); if(old){ if(old.outerHTML===h) return; old.remove(); } if(!h) return;
     // 7/11: στον υπολογιστή (3 στήλες) μπαίνει ΜΕΣΑ στη στήλη της λίστας που κυλάει — όχι σαν ξεχωριστή στήλη χωρίς scroll
