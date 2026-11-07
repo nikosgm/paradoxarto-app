@@ -4,7 +4,7 @@
   "short_name": "Νίκος CT",
   "description": "Προβολή αξονικών/μαγνητικών (DICOM) από CD, φάκελο ή δίκτυο: MPR, MIP, 3D, μετρήσεις. Χωρίς internet.",
   "start_url": "./ct?app=1",
-  "scope": "./",
+  "scope": "./ct",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#0A0D11",

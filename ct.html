@@ -1317,17 +1317,18 @@ document.addEventListener('keydown',e=>{
 
 /* ================= Εφαρμογή υπολογιστή (εγκατάσταση, χωρίς internet, άνοιγμα .dcm) — 7/11 ================= */
 try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
-let BIP=null; const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+let BIP=null; const standalone = (matchMedia('(display-mode: standalone)').matches || navigator.standalone) && /[?&]app=1\b/.test(location.search);   // μόνο όταν τρέχει ως «Νίκος CT Viewer» (όχι μέσα στο παράθυρο του Παραδόχαρτου)
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); BIP=e; if(!standalone) $('instBtn').hidden=false; if(/[?&]install=1\b/.test(location.search)) instHelp(); });
 window.addEventListener('appinstalled',()=>{ $('instBtn').hidden=true; status('✓ Εγκαταστάθηκε: θα βρεις τις «Αξονικές» στο μενού Έναρξη και στην επιφάνεια εργασίας.'); });
-if(!standalone && !touch) $('instBtn').hidden=false;
+if(!standalone) $('instBtn').hidden=false;
 if(standalone){ $('back').style.display='none'; }
 function instHelp(){
   document.querySelectorAll('.inst.ih').forEach(x=>x.remove());
   const d=document.createElement('div'); d.className='inst ih';
-  d.innerHTML = BIP ? '<b>💻 Αξονικές ως εφαρμογή</b><br>Ανοίγει σε δικό της παράθυρο, από το μενού Έναρξη, και δουλεύει <b>χωρίς internet</b> (CD, φάκελοι, δίκτυο). Δεν χρειάζεται δικαιώματα διαχειριστή.<div class="row"><button class="btn" data-x>Όχι τώρα</button><button class="btn" data-go style="background:var(--accent);border-color:var(--accent)">Εγκατάσταση</button></div>'
-    : '<b>💻 Αξονικές ως εφαρμογή</b><br>Στο Chrome/Edge: μενού <b>⋮</b> → <b>Αποθήκευση και κοινή χρήση</b> (ή «Εφαρμογές») → <b>Εγκατάσταση σελίδας ως εφαρμογής…</b> → όνομα «Αξονικές» → Εγκατάσταση.<br>Ή το εικονίδιο ⊕ δεξιά στη γραμμή διευθύνσεων.<div class="row"><button class="btn" data-x>OK</button></div>';
+  d.innerHTML = BIP ? '<b>💻 Νίκος CT Viewer ως εφαρμογή</b><br>Ανοίγει σε δικό της παράθυρο, από το μενού Έναρξη, και δουλεύει <b>χωρίς internet</b> (CD, φάκελοι, δίκτυο). Δεν χρειάζεται δικαιώματα διαχειριστή.<div class="row"><button class="btn" data-x>Όχι τώρα</button><button class="btn" data-go style="background:var(--accent);border-color:var(--accent)">Εγκατάσταση</button></div>'
+    : '<b>💻 Νίκος CT Viewer ως εφαρμογή</b><br>1. Άνοιξε το <b>Chrome</b> (όχι το παράθυρο του Παραδόχαρτου) και γράψε στη διεύθυνση:<br><code style="user-select:all;background:#000;padding:2px 6px;border-radius:5px">'+location.origin+'/ct</code> <button class="btn" data-cp style="padding:2px 8px">Αντιγραφή</button><br>2. Πάτα το εικονίδιο <b>⊕ / 🖥</b> δεξιά στη γραμμή διευθύνσεων → <b>Εγκατάσταση</b>.<br>Ή μενού <b>⋮</b> → <b>Αποθήκευση και κοινή χρήση</b> → <b>Εγκατάσταση σελίδας ως εφαρμογής…</b><br>3. Θα το βρίσκεις στο μενού Έναρξη ως «Νίκος CT Viewer».<div class="row"><button class="btn" data-x>OK</button></div>';
   d.querySelector('[data-x]').onclick=()=>d.remove();
+  const cp=d.querySelector('[data-cp]'); if(cp) cp.onclick=()=>{ try{ navigator.clipboard.writeText(location.origin+'/ct'); cp.textContent='✓ Αντιγράφηκε'; }catch(e){} };
   const g=d.querySelector('[data-go]'); if(g) g.onclick=async()=>{ d.remove(); try{ BIP.prompt(); const r=await BIP.userChoice; if(r&&r.outcome==='accepted') BIP=null; }catch(e){} };
   document.body.appendChild(d);
 }
