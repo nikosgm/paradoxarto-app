@@ -1507,7 +1507,7 @@ function vkTF(){
   prop.setRGBTransferFunction(0,ctf); prop.setScalarOpacity(0,pwf);
   prop.setAmbient(0.15); prop.setDiffuse(0.85); prop.setSpecular(0.25); prop.setSpecularPower(15);
   prop.setInterpolationTypeToLinear();
-  prop.setUseGradientOpacity(0,true); prop.setGradientOpacityMinimumValue(0,2); prop.setGradientOpacityMinimumOpacity(0,0); prop.setGradientOpacityMaximumValue(0,20); prop.setGradientOpacityMaximumOpacity(0,1);
+  prop.setUseGradientOpacity(0,false); prop.setGradientOpacityMinimumValue(0,2); prop.setGradientOpacityMinimumOpacity(0,0); prop.setGradientOpacityMaximumValue(0,20); prop.setGradientOpacityMaximumOpacity(0,1);
   if(p.mip) prop.setUseGradientOpacity(0,false);
 }
 function vkClip(){
@@ -1526,7 +1526,7 @@ async function vkBuild(ser){
   const ok=await vkLoad(); if(!ok){ status('Δεν φόρτωσε η βιβλιοθήκη 3D (vtk.js).', true); return false; }
   const n=ser.slices.length, W0=ser.cols, H0=ser.rows, plane=W0*H0, vol=ser.vol;
   // έως ~90 εκ. voxels στον υπολογιστή (αλλιώς σμίκρυνση στο x/y)
-  const VMAX = touch ? 16e6 : 90e6; let f=1; while((W0/f)*(H0/f)*n > VMAX) f++;
+  const VMAX = touch ? 12e6 : 40e6; let f=1;   // 7/11: γρηγορότερη περιστροφή (πριν 90 εκ.) while((W0/f)*(H0/f)*n > VMAX) f++;
   const w=Math.floor(W0/f), h=Math.floor(H0/f);
   const arr=new Int16Array(w*h*n);
   // z αντεστραμμένο: δείκτης 0 = η πιο ουραία τομή → το «πάνω» της κάμερας είναι κεφαλικά
@@ -1542,9 +1542,14 @@ async function vkBuild(ser){
     VK.ren=VK.grw.getRenderer(); VK.rw=VK.grw.getRenderWindow();
     VK.map=vtk.Rendering.Core.vtkVolumeMapper.newInstance(); VK.vol=vtk.Rendering.Core.vtkVolume.newInstance(); VK.vol.setMapper(VK.map); VK.ren.addVolume(VK.vol);
     new ResizeObserver(()=>{ if(VK.on){ VK.grw.resize(); vkRender(); } }).observe(box);
+    // κατά την περιστροφή: απόδοση σε μικρότερη ανάλυση (γρήγορα)· μόλις αφήσεις το ποντίκι: πλήρης ποιότητα
+    try{ const it=VK.grw.getInteractor(); it.setDesiredUpdateRate(20); it.setStillUpdateRate(0.01);
+      it.onStartInteractionEvent(()=>{ try{ VK.map.setImageSampleDistance(2); }catch(e){} });
+      it.onEndInteractionEvent(()=>{ try{ VK.map.setImageSampleDistance(1); }catch(e){} vkRender(); }); }catch(e){}
   }
   VK.map.setInputData(img); VK.img=img; VK.ser=ser;
-  const sp=Math.min(ser.spc*f, ser.spr*f, ser.zsp||1); VK.map.setSampleDistance(sp*0.6); VK.map.setMaximumSamplesPerRay(2000);
+  const sp=Math.min(ser.spc*f, ser.spr*f, ser.zsp||1); VK.map.setSampleDistance(sp*0.85); VK.map.setMaximumSamplesPerRay(1200);
+  try{ VK.map.setAutoAdjustSampleDistances(true); VK.map.setInteractionSampleDistanceFactor(2.5); }catch(e){}
   try{ VK.map.setPreferSizeOverAccuracy(true); }catch(e){}
   vkTF(); vkClip(); status(); return true;
 }
