@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07s-v158';
+const APP_VER = '2026-11-07t-v159';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7347,6 +7347,7 @@ document.head.appendChild(st);
       bot && ['📞','Κλήση για εκτίμηση','', "pdxPickPatient('📞 Κλήση για εκτίμηση: ποιος;', k=>pdxConsultSheet(k))"],
       bot && ['🧾','Παραγγελία εξετάσεων','', "pdxPickPatient('🧾 Παραγγελία: ποιος;', k=>pdxBot(k,'order'))"],
       ['🩻','Απεικονίσεις','', "pdxPickPatient('🩻 Απεικονίσεις: ποιος;', k=>pdxCtOpen(k))"],
+      ['💻','Αξονικές (εφαρμογή, 3D)','viewer DICOM: εγκατάσταση στον υπολογιστή, χωρίς internet', "window.open('ct.html?install=1','_blank')"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],
       bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"]
     ]);
@@ -8271,7 +8272,7 @@ document.head.appendChild(st);
     h += '<div><div class="dks-h">ΚΛΙΝΙΚΗ</div>' + a('Ασθενείς', tab==='pts', "mobTab('pts')", mine!==all ? mine+'/'+all : all) + a('Εκκρεμότητες', tab==='todo', "mobTab('todo')", nT) + '</div>';
     h += '<div><div class="dks-h">ΕΡΓΑΛΕΙΑ</div>' + a('Αναζήτηση ασθενών', false, "pdxPatients()", '', 'ptx') + a('Εργαστηριακά', false, "window.labsFullOpen ? labsFullOpen('') : pdxCmd()", '', 'labs')
       + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
-      + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
+      + a('Αξονικές (3D)', false, "window.open('ct.html?install=1','_blank')") + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
     h += '<div style="margin-top:auto">' + a('Πλήρης πίνακας', false, "mobFull()") + a('Ρυθμίσεις', tab==='me', "mobTab('me')") + '</div>';
     return h;
   }
