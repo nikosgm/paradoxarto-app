@@ -176,7 +176,7 @@ body.is3d .ov,body.is3d .slider{display:none}
   <nav class="tools" aria-label="Εργαλεία">
     <div class="grp" role="group" aria-label="Εργαλείο">
       <button class="ib" data-tool="scroll" title="Τομές (σύρσιμο πάνω/κάτω) · ροδέλα">⇕<span>Τομές</span></button>
-      <button class="ib" data-tool="win" title="Παράθυρο/επίπεδο (W/L) · δεξί κλικ+σύρσιμο">◐<span>W/L</span></button>
+      <button class="ib" data-tool="win" title="Παράθυρο/επίπεδο (W/L) — σύρσιμο με αυτό το εργαλείο · δεξί σύρσιμο = zoom">◐<span>W/L</span></button>
       <button class="ib" data-tool="pan" title="Μετακίνηση · μεσαίο κλικ">✥<span>Pan</span></button>
       <button class="ib" data-tool="zoom" title="Zoom · Ctrl+ροδέλα">⌕<span>Zoom</span></button>
       <button class="ib" data-tool="measure" title="Μέτρηση απόστασης (mm)">📏<span>mm</span></button>
@@ -1121,7 +1121,7 @@ view.addEventListener('pointerdown',e=>{
   view.setPointerCapture(e.pointerId); const r=view.getBoundingClientRect(); if(S.cur) S.touched=true;
   ptrs.set(e.pointerId,{x:e.clientX-r.left,y:e.clientY-r.top});
   if(ptrs.size===2){ S.drag={pinch:true}; return; }
-  const tool = e.button===2 ? 'win' : e.button===1 ? 'pan' : S.tool;
+  const tool = e.button===2 ? 'rzoom' : e.button===1 ? 'pan' : S.tool;   // 8/11 (εντολή χρήστη): δεξί σύρσιμο = zoom (όχι αντίθεση)
   const p=ptrs.get(e.pointerId);
   S.drag={tool, x:p.x, y:p.y, ww:S.ww, wc:S.wc, panX:S.panX, panY:S.panY, idx:S.ix[S.view]};
   const f=frame();
@@ -1141,6 +1141,7 @@ view.addEventListener('pointermove',e=>{
   const D=S.drag, dx=x-D.x, dy=y-D.y;
   if(D.tool==='win'){ const k=Math.max(1,D.ww)/300; S.ww=Math.max(1,D.ww+dx*k*1.5); S.wc=D.wc+dy*k; }
   else if(D.tool==='pan'){ S.panX=D.panX+dx; S.panY=D.panY+dy; }
+  else if(D.tool==='rzoom'){ zoomAt(Math.exp((y-(D.ly??D.y))*0.01), D.x, D.y); D.ly=y; return; }   // κάτω = μεγέθυνση
   else if(D.tool==='zoom'){ zoomAt(Math.exp(-(y-(D.ly??D.y))*0.01), D.x, D.y); D.ly=y; return; }
   else if(D.tool==='scroll'&&S.cur){ const n=count(S.view), per=Math.max(3, Math.min(12, view.clientHeight/Math.max(1,n)*1.2)); S.ix[S.view]=Math.max(0,Math.min(n-1, D.idx+Math.round(dy/per))); }
   else if(D.m&&f){ const [ix,iy]=toImg(geom(f),x,y); D.m.p[2]=ix; D.m.p[3]=iy; }
@@ -1403,7 +1404,7 @@ function tagsShow(){
 $('tags').onclick=tagsShow;
 function keysShow(){
   const d=document.createElement('div'); d.className='inst';
-  d.innerHTML='<b>Συντομεύσεις</b><div style="font-family:var(--font-mono);font-size:12px;margin-top:6px;white-space:pre-line">↑ ↓ / ροδέλα: τομές · PgUp/PgDn: ±10\nCtrl+ροδέλα: zoom · δεξί σύρσιμο: W/L\n1–5: παράθυρα · A/C/S: AX/COR/SAG · D: 3D\nM: MIP · P: cine · I: αντιστροφή · T: tags\nR: επαναφορά · διπλό κλικ: σταυρός MPR\n3D: σύρσιμο = περιστροφή, δεξί = κατώφλι,\nShift/μεσαίο = μετακίνηση, διπλό κλικ = επαναφορά</div><div class="row"><button class="btn">OK</button></div>';
+  d.innerHTML='<b>Συντομεύσεις</b><div style="font-family:var(--font-mono);font-size:12px;margin-top:6px;white-space:pre-line">↑ ↓ / ροδέλα: τομές · PgUp/PgDn: ±10\nCtrl+ροδέλα: zoom · δεξί σύρσιμο: zoom (κάτω = μεγέθυνση)\n1–5: παράθυρα · A/C/S: AX/COR/SAG · D: 3D\nM: MIP · P: cine · I: αντιστροφή · T: tags\nR: επαναφορά · διπλό κλικ: σταυρός MPR\n3D: σύρσιμο = περιστροφή, δεξί = κατώφλι,\nShift/μεσαίο = μετακίνηση, διπλό κλικ = επαναφορά</div><div class="row"><button class="btn">OK</button></div>';
   d.querySelector('button').onclick=()=>d.remove(); document.body.appendChild(d);
 }
 $('keys').onclick=keysShow;
