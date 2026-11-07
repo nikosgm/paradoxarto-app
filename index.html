@@ -435,7 +435,7 @@ body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:max(calc(env(sa
     <p id="dateLabel"></p>
     <p id="syncStatus" style="font-size:11px; color:var(--muted); margin-top:2px;"></p>
     <a href="#" onclick="doLogout();return false" style="font-size:11px;color:var(--muted)">Αποσύνδεση</a> <a href="#" onclick="pdxAccountOpen();return false" style="font-size:11px;color:var(--muted)">· 👤 Λογαριασμός</a> <a href="#" onclick="pdxConsultEdit&&pdxConsultEdit();return false" style="font-size:11px;color:var(--muted)">· 📞 Εκτιμήσεις</a> <a href="#" id="usersLink" onclick="pdxUsersOpen();return false" style="font-size:11px;color:var(--muted);display:none;font-weight:700">· 👥 Χρήστες</a> <a href="#" id="impLink" onclick="importFbJson();return false" style="font-size:11px;color:var(--muted);display:none">· Εισαγωγή JSON (admin)</a><input type="file" id="impFile" accept=".json" style="display:none">
-    <div id="findWrap" style="position:relative;margin-top:4px"><input id="findQ" type="search" placeholder="🔎 Εύρεση ασθενή…" oninput="findPatient(this.value)" autocomplete="off" style="font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;width:190px"> <button id="mineBtn" onclick="pdxMineToggle()" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:1.5px solid var(--primary,#1B4B66);border-radius:8px;background:#fff;color:var(--primary,#1B4B66);cursor:pointer">👤 Οι θάλαμοί μου…</button> <a href="#" onclick="pdxMineSettings();return false" style="font-size:11px;color:var(--muted)">αλλαγή θαλάμων</a> <button onclick="pdxDeskView(true)" hidden style="display:none!important" title="Λίστα αριστερά, ασθενής δεξιά — με εργαστηριακά, bot, εκκρεμότητες" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:0;border-radius:8px;background:var(--primary,#1B4B66);color:#fff;cursor:pointer">🖥 Θάλαμος · νέα προβολή</button><div id="findRes" style="position:absolute;z-index:50;background:#fff;color:#222;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:8px;min-width:240px;font-size:13px"></div></div>
+    <div id="findWrap" style="position:relative;margin-top:4px"><input id="findQ" type="search" placeholder="🔎 Εύρεση ασθενή…" oninput="findPatient(this.value)" autocomplete="off" style="font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;width:190px"> <button id="mineBtn" onclick="pdxMineToggle()" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:1.5px solid var(--primary,#1B4B66);border-radius:8px;background:#fff;color:var(--primary,#1B4B66);cursor:pointer">👤 Οι θάλαμοί μου…</button> <a href="#" onclick="pdxMineSettings();return false" style="font-size:11px;color:var(--muted)">αλλαγή θαλάμων</a> <button onclick="pdxDeskView(true)" title="Λίστα αριστερά, ασθενής δεξιά — με εργαστηριακά, bot, εκκρεμότητες" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:0;border-radius:8px;background:var(--primary,#1B4B66);color:#fff;cursor:pointer">🖥 Θάλαμος · νέα προβολή</button><div id="findRes" style="position:absolute;z-index:50;background:#fff;color:#222;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:8px;min-width:240px;font-size:13px"></div></div>
   </header>
 
   <div style="padding:0 14px; overflow-x:auto;">
@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07n-v153';
+const APP_VER = '2026-11-07o-v154';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8051,7 +8051,7 @@ document.head.appendChild(st);
   // ===== ✨ ΝΕΑ ΕΜΦΑΝΙΣΗ (11/2026): Κάρτες / Λίστα / Θάλαμοι — το Κλασικό μένει όπως ήταν και επιλέγεται από τις Ρυθμίσεις =====
   const VMS = {classic:'Κλασικό', grid:'Κάρτες', list:'Λίστα', rooms:'Θάλαμοι'};
   // 📱 κινητό: ΜΟΝΟ η νέα εμφάνιση (το Κλασικό καταργήθηκε στο κινητό 4/11)· 🖥 υπολογιστής: και Κλασικό
-  const VM = ()=>{ let v = ''; try{ v = localStorage.getItem('pdx_view') || ''; }catch(e){} const ph = isPhone(); if(!VMS[v]) v = ph ? 'grid' : 'classic'; if(ph && v==='classic') v = 'grid'; return v; };
+  const VM = ()=>{ let v = ''; try{ v = localStorage.getItem('pdx_view') || ''; }catch(e){} const ph = isPhone(); if(!VMS[v]) v = ph ? 'grid' : 'classic'; if(ph && v==='classic') v = 'grid'; if(!ph && v==='classic' && window.__pdxDesk) v = 'grid'; return v; };   // 7/11: στον υπολογιστή η προβολή-γραφείου είναι ΠΑΝΤΑ η νέα (μενού στο πλάι + λίστα + ασθενής)
   window.pdxVM = VM;
   const phoneNv = ()=>VM()!=='classic' && !document.documentElement.classList.contains('nv3');
   window.pdxViewSet = function(v){ try{ localStorage.setItem('pdx_view', v); }catch(e){} document.documentElement.classList.toggle('nvm', v!=='classic'); openKey = openKey || null; render(); };
@@ -10172,9 +10172,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // και το παλιό «🤖 Bot» ανοίγει ως σελίδα με «‹ πίσω» (όχι στην κύρια οθόνη χωρίς επιστροφή)
   window.mobTab = t=>{ if(phoneNv()){ if(t==='today') t = 'pts'; if(t==='bot'){ closePops(); return window.pdxBotPage(); } }
     if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; } closePops(); window.__dret=null; tab=t; openKey=null; render(); view.scrollTop=0; };
-  window.mobFull = ()=>{ if(deskMode){ deskMode=false; openKey=null; render(); try{ buildGrid(); }catch(e){} return; } forceFull=true; render(); };
-  // 7/11 (εντολή χρήστη): η εμφάνιση «λίστα αριστερά / ασθενής δεξιά» στον υπολογιστή καταργήθηκε — ΜΟΝΟ ο κλασικός πίνακας
-  window.pdxDeskView = function(){ const was = deskMode; deskMode = false; openKey = null; tab = 'pts'; if(was) render(); try{ buildGrid(); }catch(e){} };
+  window.mobFull = ()=>{ if(deskMode){ deskMode=false; window.__pdxDesk=false; openKey=null; render(); try{ buildGrid(); }catch(e){} return; } forceFull=true; render(); };
+  window.pdxDeskView = function(v){ deskMode = (v===undefined) ? !deskMode : !!v; window.__pdxDesk = deskMode; openKey = null; tab = 'pts'; render(); if(!deskMode){ try{ buildGrid(); }catch(e){} } };
   btn.onclick = ()=>{ forceFull=false; render(); };
   window.buildMobileView = render;
   window.addEventListener('resize', render);
