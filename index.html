@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07c-v142';
+const APP_VER = '2026-11-07d-v143';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8813,7 +8813,7 @@ document.head.appendChild(st);
   })();
   window.mobAct = function(k, id){
     const dT = (String(k).indexOf('extra-')===0 ? extraPatients : data)[k];
-    if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxLabsFor) pdxLabsFor({name:dT.name, amka:dT.amka, am:dT.am}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
+    if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxLabsFor) pdxLabsFor({name:dT.name, amka:dT.amka, am:dT.am, medPid:dT.medPid, k}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
     if(id==='labs'){ if(window.pdxLabsUnified) return pdxLabsUnified(k); if(window.labsFullOpen) return labsFullOpen(k); return; }
     if(window.pdxBot) pdxBot(k, id);
   };
@@ -18452,10 +18452,16 @@ window.pdxPatientHistory = function(pt){ return window.pdxPatients({pt:pt, tab:'
 window.pdxLabsFor = async function(pt){
   pt = pt || {}; const amka = /^\d{11}$/.test(String(pt.amka||'')) ? String(pt.amka) : '', am = /^\d{8}$/.test(String(pt.am||'')) ? String(pt.am) : '';
   if(!isBot()){ TOAST('🤖 Μόνο για ενεργούς γιατρούς'); return; }
+  if(pt.medPid && window.labsFullOpenPid){ labsFullOpenPid(pt.medPid, pt.name||''); return; }   // βρέθηκε ήδη
+  if(window.__labsForBusy && Date.now()-window.__labsForBusy < 30000){ TOAST('⏳ Ψάχνει ήδη…'); return; } window.__labsForBusy = Date.now();
   TOAST('🔎 Medilabi: '+(pt.name||'')+'…');
   try{ const f = amka ? {amka} : am ? {am} : null; const d = await botFind(f ? {q:'', f} : {q: String(pt.name||'')}, '🔎 Εργαστηριακά: '+String(pt.name||'').slice(0,30));
-    const L = ((d && d.list) || []).filter(c=>c.pid); const pids = [...new Set(L.map(c=>c.pid))];
-    if(pids.length===1 && (f || L.length===1) && window.labsFullOpenPid){ labsFullOpenPid(pids[0], pt.name || ''); return; } }catch(e){}
+    const L = ((d && d.list) || []).filter(c=>c.pid); let C = L;
+    // συνώνυμοι: κρατά όποιον είναι στην Ουρολογική (νοσηλεύεται εδώ)
+    if(new Set(C.map(c=>c.pid)).size > 1){ const U = C.filter(c=>c.uro); if(new Set(U.map(c=>c.pid)).size===1) C = U; }
+    const pids = [...new Set(C.map(c=>c.pid))];
+    if(pids.length===1 && window.labsFullOpenPid){ window.__labsForBusy = 0; if(pt.k && window.extraPatients && extraPatients[pt.k]) extraPatients[pt.k].medPid = pids[0]; labsFullOpenPid(pids[0], pt.name || ''); return; } }catch(e){}
+  window.__labsForBusy = 0;
   window.pdxPatients({q: amka || am || pt.name || ''});
 };
 })();
