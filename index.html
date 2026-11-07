@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07b-v141';
+const APP_VER = '2026-11-07c-v142';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8813,7 +8813,7 @@ document.head.appendChild(st);
   })();
   window.mobAct = function(k, id){
     const dT = (String(k).indexOf('extra-')===0 ? extraPatients : data)[k];
-    if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxPatients) pdxPatients({q: dT.amka || dT.name}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
+    if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxLabsFor) pdxLabsFor({name:dT.name, amka:dT.amka, am:dT.am}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
     if(id==='labs'){ if(window.pdxLabsUnified) return pdxLabsUnified(k); if(window.labsFullOpen) return labsFullOpen(k); return; }
     if(window.pdxBot) pdxBot(k, id);
   };
@@ -18448,6 +18448,16 @@ window.pdxPatients = function(opt){
 };
 // 🗄 Αρχείο εξιτηρίων → «Ιστορικό» ασθενή (σύνοψη νοσηλείας/εξιτήρια όπως καταγράφηκαν στο Παραδόχαρτο)
 window.pdxPatientHistory = function(pt){ return window.pdxPatients({pt:pt, tab:'hist'}); };
+// 🧪 7/11: εργαστηριακά ασθενή που ΔΕΝ είναι στη λίστα (π.χ. από τον ΝΠΣ) — κατευθείαν με ΑΜΚΑ/ΑΜ στο Medilabi, χωρίς ενδιάμεσα βήματα
+window.pdxLabsFor = async function(pt){
+  pt = pt || {}; const amka = /^\d{11}$/.test(String(pt.amka||'')) ? String(pt.amka) : '', am = /^\d{8}$/.test(String(pt.am||'')) ? String(pt.am) : '';
+  if(!isBot()){ TOAST('🤖 Μόνο για ενεργούς γιατρούς'); return; }
+  TOAST('🔎 Medilabi: '+(pt.name||'')+'…');
+  try{ const f = amka ? {amka} : am ? {am} : null; const d = await botFind(f ? {q:'', f} : {q: String(pt.name||'')}, '🔎 Εργαστηριακά: '+String(pt.name||'').slice(0,30));
+    const L = ((d && d.list) || []).filter(c=>c.pid); const pids = [...new Set(L.map(c=>c.pid))];
+    if(pids.length===1 && (f || L.length===1) && window.labsFullOpenPid){ labsFullOpenPid(pids[0], pt.name || ''); return; } }catch(e){}
+  window.pdxPatients({q: amka || am || pt.name || ''});
+};
 })();
 </script>
 <script>
