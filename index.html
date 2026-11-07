@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08l-v176';
+const APP_VER = '2026-11-08m-v177';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -11177,6 +11177,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // Οι εικόνες διαβάζονται ΜΟΝΟ στον υπολογιστή που τις ανοίγει — δεν ανεβαίνουν πουθενά.
   window.pdxCtOpen = function(k){
     const d = recOf(k); if(!d) return;
+    // 8/11 (εντολή χρήστη): «Απεικονίσεις» = ΚΑΤΕΥΘΕΙΑΝ οι εξετάσεις του Evorad με αποστολή στον υπολογιστή (Νίκος CT Viewer).
+    // Η ακτινογραφία θώρακος στο κινητό και οι φάκελοι της κλινικής καταργήθηκαν από εδώ.
+    if(window.pdxCtRemote && window.pdxIsBotUser && pdxIsBotUser()) return window.pdxCtRemote(k);
     // τα στοιχεία περνούν εσωτερικά (ίδια συσκευή, λήγουν σε 5′) — όχι στη διεύθυνση της σελίδας
     try{ localStorage.setItem('pdx_ct_q', JSON.stringify({name:d.name||'', am:/^\d{8}$/.test(String(d.am||''))?String(d.am):'', amka:pdxAmkaOk(d.amka)?String(d.amka):'', ad:d.admitDate||'', t:Date.now()})); }catch(e){}
     // ⚡ ταυτοποιημένος φάκελος απεικονιστικών → ο viewer τον ανοίγει κατευθείαν (χωρίς αναζήτηση)
@@ -12040,9 +12043,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const draw = ()=>{
       const L = (st.exams||[]).filter(x=>st.flt==='*' || (st.flt==='XR' ? isXr(x.mod) : String(x.mod||'').toUpperCase()===st.flt));
       ov.innerHTML = '<div style="background:#fff;color:#1F2933;width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:90vh;display:flex;flex-direction:column">'
-        + '<div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1">🖥 Στον υπολογιστή</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 12px">Κλείσιμο</button></div>'
+        + '<div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1">🩻 Απεικονίσεις · Evorad</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 12px">Κλείσιμο</button></div>'
         + '<div style="font-size:14px;color:#475569;margin:2px 0 10px">'+E(d.name)+'</div>'
-        + '<div style="font-size:12.5px;font-weight:700;color:#64748B;margin-bottom:5px">ΥΠΟΛΟΓΙΣΤΗΣ</div>'
+        + '<div style="font-size:12.5px;font-weight:700;color:#64748B;margin-bottom:5px">ΑΝΟΙΓΜΑ ΣΤΟΝ ΥΠΟΛΟΓΙΣΤΗ</div>'
         + (PCS.length ? '<div>'+PCS.map(([id,nm])=>chip(pc===id,'data-pc="'+E(id)+'"',E(nm))).join('')+'</div>' : '<div style="color:#B42318;font-size:14px;margin-bottom:8px">Κανένας υπολογιστής δεν απαντά τώρα.</div>')
         + '<div style="font-size:12.5px;font-weight:700;color:#64748B;margin:6px 0 5px">ΕΞΕΤΑΣΕΙΣ ΣΤΟΝ EVORAD</div><div>'+F.map(([v,t])=>chip(st.flt===v,'data-f="'+v+'"',t)).join('')+'</div>'
         + '<div style="flex:1;overflow:auto;margin-top:4px">'
