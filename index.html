@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08k-v175';
+const APP_VER = '2026-11-08l-v176';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -19718,6 +19718,21 @@ html.pdx-night [style*="border:1.5px solid var(--mp,#1D4E80)"]:not([style*="back
     try{ if(typeof sb6!=='undefined') sb6.from('oncall_labs').upsert({name_key:'diag|tap|'+(navigator.userAgent.match(/iPhone|Android|Windows|Mac/)||['?'])[0]+'|'+Date.now(), name:'διάγνωση πατήματος', pid:null, data:rec, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }catch(x){}
     if(inv){ e.preventDefault(); e.stopPropagation(); kid.click(); }
   }, true);
+  // 8/11: «πατάω ασθενή και δεν ανοίγει» — (α) ΑΟΡΑΤΟ στοιχείο πάνω σε όλη την οθόνη → περνά το πάτημα από κάτω,
+  // (β) πάτημα σε κάρτα που δεν άνοιξε τίποτα σε 0,9″ → καταγραφή του τι υπάρχει πάνω από την εφαρμογή (για διόρθωση)
+  const overlays = ()=>[...document.body.children].filter(x=>{ const cs = getComputedStyle(x); if(cs.position!=='fixed' || cs.display==='none' || cs.visibility==='hidden') return false; const r = x.getBoundingClientRect(); return r.width*r.height > innerWidth*innerHeight*0.5; }).map(desc).slice(0,8);
+  const send = (kind, rec)=>{ try{ if(typeof sb6!=='undefined') sb6.from('oncall_labs').upsert({name_key:'diag|'+kind+'|'+(navigator.userAgent.match(/iPhone|Android|Windows|Mac/)||['?'])[0]+'|'+Date.now(), name:'διάγνωση πατήματος', pid:null, data:rec, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }catch(x){} };
+  document.addEventListener('click', e=>{
+    if(!e.isTrusted) return; const t = e.target; const mv = document.getElementById('mobView'); if(!mv || getComputedStyle(mv).display==='none') return;
+    if(t && t!==document.body && !mv.contains(t) && invisible(t)){ const r = t.getBoundingClientRect(); if(r.width*r.height > innerWidth*innerHeight*0.5){
+      const old = t.style.pointerEvents; t.style.pointerEvents='none'; const u = document.elementFromPoint(e.clientX, e.clientY); t.style.pointerEvents = old;
+      send('cover', {at:new Date().toISOString(), cover:desc(t), under:u?desc(u):'', v:typeof APP_VER!=='undefined'?APP_VER:''});
+      if(u && u!==t){ e.preventDefault(); e.stopPropagation(); t.style.display='none'; u.click(); } return; } }
+    const card = t && t.closest && t.closest('#mobView [onclick*="mobOpen("]'); if(!card) return;
+    const before = String(window.openKey||'') + '|' + (mv.querySelector('.pth h1')||{}).textContent;
+    setTimeout(()=>{ const after = String(window.openKey||'') + '|' + (mv.querySelector('.pth h1')||{}).textContent; if(after===before) send('dead', {at:new Date().toISOString(), card:(card.getAttribute('onclick')||'').slice(0,80), over:overlays(), active:document.activeElement?desc(document.activeElement):'', v:typeof APP_VER!=='undefined'?APP_VER:'', w:innerWidth+'x'+innerHeight}); }, 900);
+  }, true);
+  window.addEventListener('error', ev=>{ send('err', {at:new Date().toISOString(), msg:String(ev.message||'').slice(0,200), src:String(ev.filename||'').slice(-40)+':'+ev.lineno, v:typeof APP_VER!=='undefined'?APP_VER:''}); });
 })();
 </script>
 <style id="clsA">/* 7/11: κλασικός πίνακας — εμφάνιση «Α · Καθαρό» (επιλογή χρήστη). Μόνο οθόνη υπολογιστή· η εκτύπωση δεν αλλάζει. */
