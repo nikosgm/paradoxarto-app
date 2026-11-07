@@ -382,7 +382,7 @@
 /* island και κάτω μπάρα: απόσταση από τη γραμμή «home» του iPhone (και όταν το Safari δίνει 0 στο safe-area) */
 /* κύρια μπάρα (λίστα) και island του ασθενή: ΙΔΙΟ ύψος (η κύρια λίγο πιο πάνω από πριν, του ασθενή λίγο πιο κάτω) */
 /* «html body» = μεγαλύτερη ισχύς: αλλιώς τα στυλ που προσθέτει ο κώδικας αργότερα (γλασέ θέμα) τα ακύρωναν */
-html body #mobView .mtabs{bottom:max(calc(env(safe-area-inset-bottom) + 20px), 34px)!important}
+html body #mobView .mtabs{bottom:max(calc(env(safe-area-inset-bottom) + 30px), 44px)!important}   /* 7/11: λίγο πιο πάνω */
 html body #mobView .isl{bottom:calc(max(env(safe-area-inset-bottom), 16px) + 104px)!important}
 html body #mobView .isl.solo,html body #chIsl{bottom:max(calc(env(safe-area-inset-bottom) + 20px), 34px)!important}
 html body #mobView.desk .mtabs{bottom:10px!important}
@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07g-v146';
+const APP_VER = '2026-11-07h-v147';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -16173,6 +16173,17 @@ Z99.2:C|αιμοκάθαρση
     if(rec && rec._medLab && rec._medPid===String(pid)){ extName = String(name||'').slice(0,40) || 'Ασθενής'; extLab = rec._medLab; cur = '@ext'; render(); if(Date.now()-(rec._medAt||0) < 3*60000) return; }
     extLoad({pid:String(pid)}, String(name||'').slice(0,40) || 'Ασθενής'); };
   window.labsFullExtBack = function(){ const f = extBack; extBack = null; labsFullClose(); if(f) f(); };
+  // 7/11: η κάτω μπάρα (κάψουλα) μένει και στα εργαστηριακά: αντίγραφο της μπάρας του #mobView πάνω από το παράθυρο
+  (function(){ let cl = null;
+    const copyStyle = (from, to)=>{ const cs = getComputedStyle(from); for(let i = 0; i < cs.length; i++){ const n = cs[i]; to.style.setProperty(n, cs.getPropertyValue(n)); } [...from.children].forEach((c, j)=>{ if(to.children[j]) copyStyle(c, to.children[j]); }); };
+    const sync = ()=>{ const mv = document.getElementById('mobView'); const src = mv && mv.querySelector('.mtabs');
+      const show = box.classList.contains('on') && src && getComputedStyle(mv).display!=='none' && !mv.classList.contains('desk') && src.getBoundingClientRect().height > 0;
+      if(cl){ cl.remove(); cl = null; } if(!show) return;
+      cl = src.cloneNode(true); copyStyle(src, cl); cl.removeAttribute('id'); cl.style.setProperty('z-index', '9100'); cl.style.setProperty('position', 'fixed'); cl.id = 'lfTabs';
+      cl.addEventListener('click', e=>{ const kids = [...cl.children], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
+      document.body.appendChild(cl); };
+    new MutationObserver(()=>setTimeout(sync, 60)).observe(box, {attributes:true, attributeFilter:['class']});
+    const st = document.createElement('style'); st.textContent = '#labsFull.on{padding-bottom:calc(env(safe-area-inset-bottom) + 84px)}'; document.head.appendChild(st); })();
   // σύρσιμο δεξιά (από την αριστερή άκρη) → πίσω (στην καρτέλα του ασθενή αν ήρθαμε από εκεί)
   (function(){ let x0 = 0, y0 = 0, ok = false;
     // από οπουδήποτε (όχι μόνο την άκρη), εκτός από πίνακες που κυλάνε οριζόντια
