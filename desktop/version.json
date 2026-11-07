@@ -1,13 +1,13 @@
 {
- "version": "1.0.6",
+ "version": "1.0.7",
  "parts": [
-  "nikosct-1.0.6.zip.00",
-  "nikosct-1.0.6.zip.01",
-  "nikosct-1.0.6.zip.02",
-  "nikosct-1.0.6.zip.03",
-  "nikosct-1.0.6.zip.04",
-  "nikosct-1.0.6.zip.05"
+  "nikosct-1.0.7.zip.00",
+  "nikosct-1.0.7.zip.01",
+  "nikosct-1.0.7.zip.02",
+  "nikosct-1.0.7.zip.03",
+  "nikosct-1.0.7.zip.04",
+  "nikosct-1.0.7.zip.05"
  ],
- "sha256": "71ed9a92a6d412cfbb84d40d40c48a2b1874937677a029a5d0b7100de9172d2f",
- "notes": "Evorad: θυμάται τη σύνδεση (κρυπτογραφημένα στον υπολογιστή) · αναζήτηση ελληνικά/λατινικά"
+ "sha256": "8ec9839a3984822405e45be523876c7d9393b382d23d3b7dcac5d48b07a4c3c6",
+ "notes": "τηλεχειρισμός: ανοίγει χωρίς σύνδεση (από το bot), έρχεται μπροστά"
 }
