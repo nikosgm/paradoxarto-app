@@ -161,6 +161,7 @@ body.is3d .ov,body.is3d .slider{display:none}
       <button class="ib" data-plane="cor" title="Στεφανιαία (MPR)">COR</button>
       <button class="ib" data-plane="sag" title="Οβελιαία (MPR)">SAG</button>
       <button class="ib" id="refl" title="Γραμμές αναφοράς">✛</button>
+      <button class="ib" id="mpr3" title="MPR: AX + COR + SAG μαζί, με σταυρό αναφοράς (X)">⊞ MPR</button>
       <button class="ib" id="b3d" title="3D απόδοση όγκου (D)">3D</button>
     </div>
     <i class="sep"></i>
@@ -717,14 +718,15 @@ function bodyBox(ser){
   ser.bb={x0:Math.max(0,x0-m), x1:Math.min(W,x1+m), y0:Math.max(0,y0-m), y1:Math.min(H,y1+m)}; return ser.bb;
 }
 function geom(f){
-  const r=view.getBoundingClientRect(), ser=S.cur, bb=ser && !f.noBB ? bodyBox(ser) : null;
+  const R0=view.getBoundingClientRect(), RR=S._rect, r = RR ? {width:RR.w, height:RR.h, left:R0.left+RR.x, top:R0.top+RR.y} : R0, ser=S.cur, bb=ser && !f.noBB ? bodyBox(ser) : null;
   // περιοχή που «γεμίζει» την οθόνη (σε pixel της εικόνας)
   let ax0=0, ax1=f.W, ay0=0, ay1=f.H;
   if(bb){ if(S.view==='ax'){ ax0=bb.x0; ax1=bb.x1; ay0=bb.y0; ay1=bb.y1; } else if(S.view==='cor'){ ax0=bb.x0; ax1=bb.x1; } else if(S.view==='sag'){ ax0=bb.y0; ax1=bb.y1; } }
   const iw=(ax1-ax0)*f.sx, ih=(ay1-ay0)*f.sy, fit=Math.min(r.width/iw, r.height/ih)*0.97;
   const sc=fit*S.zoom, w=f.W*f.sx*sc, h=f.H*f.sy*sc;
   const cx=(ax0+ax1)/2*f.sx*sc, cy=(ay0+ay1)/2*f.sy*sc;
-  return {r, x:r.width/2-cx+S.panX, y:r.height/2-cy+S.panY, w, h, px:sc*f.sx, py:sc*f.sy};
+  const ox = RR ? RR.x : 0, oy = RR ? RR.y : 0, zp = RR ? 0 : 1;
+  return {r, x:ox+r.width/2-cx+S.panX*zp, y:oy+r.height/2-cy+S.panY*zp, w, h, px:sc*f.sx, py:sc*f.sy};
 }
 const toImg=(g,cx,cy)=>[(cx-g.x)/g.px, (cy-g.y)/g.py];
 const toScr=(g,ix,iy)=>[g.x+ix*g.px, g.y+iy*g.py];
@@ -742,6 +744,37 @@ function roiStats(f, m){
 }
 let raf=0; function draw(){ if(!raf) raf=requestAnimationFrame(()=>{ raf=0; drawNow(); }); }
 const A = '#E8B04A';
+/* ===== 7/11: MPR σε 3 παράθυρα (AX μεγάλο · COR · SAG) με σταυρό αναφοράς — όπως στο RadiAnt ===== */
+const OCS={ax:document.createElement('canvas'), cor:document.createElement('canvas'), sag:document.createElement('canvas')}, PKS={};
+function mprRects(r){ const w=r.width, h=r.height, L=Math.round(w*.5); return {ax:{x:0,y:0,w:L-2,h}, cor:{x:L+2,y:0,w:w-L-2,h:Math.round(h/2)-2}, sag:{x:L+2,y:Math.round(h/2)+2,w:w-L-2,h:h-Math.round(h/2)-2}}; }
+function drawMpr3(r){
+  const ser=S.cur, act=S.view, R=mprRects(r), col={ax:A, cor:'#7BD88F', sag:'#5EB8E6'}, PLN={ax:'AX',cor:'COR',sag:'SAG'};
+  for(const p of ['ax','cor','sag']){
+    S.view=p; S._rect=R[p]; const f=frame(); if(!f) continue; const oc2=OCS[p], c2=oc2.getContext('2d');
+    const pk=[f.d,f.W,f.H,ser.mono1!==!!S.inv,S.ww,S.wc]; if(!PKS[p] || pk.some((x,i)=>x!==PKS[p][i])){ paint(f.d,f.W,f.H,false,pk[3],S.ww,S.wc,oc2,c2); PKS[p]=pk; }
+    const g=geom(f); ctx.save(); ctx.beginPath(); ctx.rect(R[p].x,R[p].y,R[p].w,R[p].h); ctx.clip();
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high'; ctx.drawImage(oc2,g.x,g.y,g.w,g.h);
+    const z=S.ix.ax, y=S.ix.cor, x=S.ix.sag;
+    const lines = p==='ax' ? [['v',x+.5,col.sag],['h',y+.5,col.cor]] : p==='cor' ? [['v',x+.5,col.sag],['h',z+.5,col.ax]] : [['v',y+.5,col.cor],['h',z+.5,col.ax]];
+    ctx.lineWidth=1; ctx.globalAlpha=.85;
+    for(const [t,val,cl] of lines){ ctx.strokeStyle=cl; ctx.beginPath(); if(t==='v'){ const [sx]=toScr(g,val,0); ctx.moveTo(sx,g.y); ctx.lineTo(sx,g.y+g.h); } else { const [,sy]=toScr(g,0,val); ctx.moveTo(g.x,sy); ctx.lineTo(g.x+g.w,sy); } ctx.stroke(); }
+    ctx.globalAlpha=1; ctx.restore();
+    ctx.strokeStyle = p===act ? col[p] : '#2E3036'; ctx.lineWidth = p===act ? 2 : 1; ctx.strokeRect(R[p].x+.5,R[p].y+.5,R[p].w-1,R[p].h-1);
+    ctx.fillStyle=col[p]; ctx.font='600 12px system-ui,sans-serif'; ctx.fillText(PLN[p]+'  '+(S.ix[p]+1)+' / '+count(p), R[p].x+8, R[p].y+R[p].h-10);
+  }
+  S._rect=null; S.view=act;
+  const pi0=ser.pinfo||{};
+  $('ovTL').innerHTML='<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+'<br><br>'+esc(ser.desc)+'<br><span class="a">MPR · 3 επίπεδα</span>';
+  $('ovTR').innerHTML=''; $('ovBR').textContent='σύρε για σταυρό · ροδέλα: τομές στο παράθυρο'; $('ovBL').textContent='';
+  $('sl').max=count(S.view)-1; $('sl').value=S.ix[S.view]; $('slv').textContent=(S.ix[S.view]+1)+' / '+count(S.view);
+  document.querySelectorAll('[data-plane]').forEach(b=>b.classList.toggle('on',b.dataset.plane===S.view)); $('mpr3').classList.toggle('on',true);
+}
+function mprHit(cx,cy){ const r=view.getBoundingClientRect(), R=mprRects(r); for(const p of ['ax','cor','sag']){ const q=R[p]; if(cx>=q.x&&cx<q.x+q.w&&cy>=q.y&&cy<q.y+q.h) return p; } return null; }
+function mprSet(p,cx,cy){ const act=S.view; S.view=p; S._rect=mprRects(view.getBoundingClientRect())[p]; const f=frame(); if(!f){ S._rect=null; S.view=act; return; }
+  const g=geom(f), [ix,iy]=toImg(g,cx,cy).map(Math.floor); S._rect=null; S.view=p;
+  if(ix<0||iy<0||ix>=f.W||iy>=f.H) return;
+  if(p==='ax'){ S.ix.sag=ix; S.ix.cor=iy; } else if(p==='cor'){ S.ix.sag=ix; S.ix.ax=iy; } else { S.ix.cor=ix; S.ix.ax=iy; }
+  draw(); }
 function drawNow(){
   const dpr=window.devicePixelRatio||1, r=view.getBoundingClientRect();
   if(cv.width!==Math.round(r.width*dpr)||cv.height!==Math.round(r.height*dpr)){ cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr); }
@@ -752,6 +785,7 @@ function drawNow(){
   if(!ser||!ser.slices.length){ ['ovTL','ovTR','ovBL','ovBR'].forEach(i=>$(i).textContent=''); return; }
   for(const v of ['ax','cor','sag']) S.ix[v]=Math.max(0,Math.min(S.ix[v],count(v)-1));
   if(S.view!=='ax' && !ser.vol) S.view='ax';
+  if(S.mpr3 && ser.vol && !V3.on){ drawMpr3(r); return; }
   const f=frame(), isCT=ser.modality==='CT';
   if(f){
     // ξαναζωγραφίζουμε τα pixel μόνο αν άλλαξε εικόνα ή παράθυρο (όχι σε κάθε κίνηση ποντικιού/μέτρηση)
@@ -792,7 +826,7 @@ function drawNow(){
   document.querySelectorAll('[data-mip]').forEach(b=>b.classList.toggle('on',+b.dataset.mip===S.mip));
   document.querySelectorAll('.btn.ct').forEach(b=>b.hidden=!isCT);
   $('roiBtn').textContent = isCT ? 'HU περιοχής' : 'Τιμές περιοχής';
-  $('refl').classList.toggle('on',S.refl); $('inv').classList.toggle('on',!!S.inv); $('cine').classList.toggle('on',!!S.cineT); $('b3d').classList.toggle('on',V3.on);
+  $('mpr3').classList.toggle('on',false); $('refl').classList.toggle('on',S.refl); $('inv').classList.toggle('on',!!S.inv); $('cine').classList.toggle('on',!!S.cineT); $('b3d').classList.toggle('on',V3.on);
   if(V3.on){ document.querySelectorAll('[data-plane]').forEach(b=>b.classList.remove('on')); draw3(); }
 }
 function drawMeas(c, g, f, isCT){
@@ -884,7 +918,7 @@ function thinFor(ser){
   c.sort((a,b)=>(a.thick||9)-(b.thick||9) || b.slices.length-a.slices.length); return c[0]||null;
 }
 async function setPlane(p){
-  if(!S.cur) return; S.touched=true; if(V3.on) set3d(false);
+  if(!S.cur) return; S.touched=true; if(V3.on) set3d(false); S.mpr3=false;
   if(p!=='ax' && !(S.load && S.load.end===null)){ const t=thinFor(S.cur); if(t){ const s0=S.cur.slices[S.ix.ax], pz=s0&&s0.pos; select(t);
     if(pz!=null){ let bi=0, bd=1e9; t.slices.forEach((x,i)=>{ const d=Math.abs((x.pos||0)-pz); if(d<bd){ bd=d; bi=i; } }); S.ix.ax=bi; }
     status('MPR από τις λεπτές τομές «'+t.desc+'» ('+fmt(t.thick||t.zsp||0)+' mm) για καθαρή εικόνα'); } }
@@ -1115,7 +1149,7 @@ const P3 = {
   angio: { n:'Αγγεία',  pts:[[100,0,[.70,.15,.10]],[180,.25,[.85,.22,.15]],[320,.55,[.98,.55,.45]],[600,.85,[1,.95,.9]],[3000,.95,[1,1,1]]] },
   skin:  { n:'Δέρμα',   pts:[[-700,0,[.90,.65,.55]],[-450,.12,[.95,.75,.65]],[-100,.25,[.95,.80,.72]],[150,.3,[.9,.82,.75]],[400,.8,[1,.97,.92]],[3000,.9,[1,1,1]]] },
   stone: { n:'Λίθοι',   pts:[[-200,0,[.4,.4,.45]],[-50,.015,[.55,.5,.5]],[120,.02,[.6,.5,.5]],[250,.0,[.6,.5,.5]],[300,.75,[1,.85,.25]],[3000,.95,[1,.9,.4]]] },
-  organ: { n:'Όργανα',  pts:[[-60,0,[.6,.3,.25]],[10,0,[.7,.35,.3]],[40,.012,[.8,.42,.36]],[80,.03,[.85,.45,.38]],[110,.16,[.88,.32,.26]],[170,.38,[.92,.38,.3]],[260,.55,[.98,.62,.52]],[400,.85,[1,.97,.92]],[3000,.95,[1,1,1]]] },
+  organ: { n:'Όργανα',  pts:[[-120,0,[.95,.85,.55]],[-60,.004,[.95,.82,.5]],[0,0,[.8,.4,.35]],[30,.01,[.78,.32,.28]],[70,.05,[.82,.3,.26]],[110,.22,[.86,.24,.2]],[170,.42,[.9,.3,.24]],[250,.55,[.95,.55,.45]],[350,.8,[1,.96,.9]],[3000,.95,[1,1,1]]] },
   soft:  { n:'Μαλακά',  pts:[[-150,0,[.75,.45,.35]],[-30,.05,[.85,.55,.45]],[60,.18,[.95,.65,.5]],[200,.35,[1,.85,.75]],[600,.8,[1,.97,.92]],[3000,.9,[1,1,1]]] },
   mip:   { n:'MIP', mip:true },
 };
@@ -1135,6 +1169,7 @@ precision highp float; precision highp sampler3D;
 in vec2 uv; out vec4 o;
 uniform sampler3D V; uniform sampler2D T; uniform mat3 R; uniform vec3 B; uniform vec3 D; uniform vec2 A; uniform float Z; uniform vec2 P;
 uniform int M; uniform float S; uniform vec2 W; uniform float C; uniform float Sh; uniform float Op;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
 vec3 tx(vec3 q){ return vec3(q.x/B.x+.5, -q.z/B.z+.5, -q.y/B.y+.5); }
 float sv(vec3 t){ return texture(V,t).r; }
 void main(){
@@ -1144,9 +1179,11 @@ void main(){
   float a=max(max(tn.x,tn.y),tn.z), b=min(min(tf.x,tf.y),tf.z);
   if(b<=max(a,0.)){ o=vec4(0,0,0,1); return; }
   a=max(a,0.);
-  vec4 acc=vec4(0); float mx=0.; vec3 L=-rd; vec3 g=1./D;
-  for(int i=0;i<4096;i++){
-    float t=a+(float(i)+.5)*S; if(t>b) break;
+  vec4 acc=vec4(0); float mx=0.; vec3 L=-rd; vec3 g=1.5/D;
+  vec3 L2=normalize(-rd+vec3(.45,.6,.2));
+  float j=hash(gl_FragCoord.xy)*S;   // τυχαία μετατόπιση αρχής: χωρίς «νερά ξύλου»
+  for(int i=0;i<8192;i++){
+    float t=a+j+float(i)*S; if(t>b) break;
     vec3 q=ro+rd*t, tc=tx(q);
     if(tc.y<C) continue;
     float d=sv(tc);
@@ -1157,13 +1194,14 @@ void main(){
     // από χώρο υφής → χώρο αντικειμένου (y υφής = -z, z υφής = -y)
     n=vec3(n.x/B.x, -n.z/B.y, -n.y/B.z); float nl=length(n);
     float lit=1.;
-    if(nl>1e-5){ n/=nl; float df=abs(dot(n,L)); vec3 h=normalize(L-rd); float sp=pow(abs(dot(n,h)),28.); lit=.28+.72*df; c.rgb=c.rgb*lit+sp*.25; }
+    if(nl>1e-5){ n/=nl; float df=abs(dot(n,L)), d2=max(dot(n,L2),0.); vec3 h=normalize(L-rd); float sp=pow(abs(dot(n,h)),40.);
+      float edge=1.-abs(dot(n,-rd)); lit=.22+.58*df+.25*d2; c.rgb=c.rgb*lit*(1.-.35*edge*edge)+sp*.32*vec3(1.,.97,.92); }
     float al=1.-pow(1.-clamp(c.a*Op,0.,.999), S*220.);
     acc.rgb+=(1.-acc.a)*al*c.rgb; acc.a+=(1.-acc.a)*al;
     if(acc.a>.975) break;
   }
   if(M==1){ float v=clamp((mx-W.x)/max(1e-5,W.y-W.x),0.,1.); o=vec4(vec3(v),1.); return; }
-  o=vec4(acc.rgb,1.);
+  o=vec4(pow(clamp(acc.rgb,0.,1.),vec3(.88)),1.);
 }`;
 function gl3(){
   if(V3.gl) return V3.gl;
@@ -1184,8 +1222,10 @@ async function upload3(ser){
   if(V3.ser===ser && V3.tex) return true;
   if(V3.tex){ gl.deleteTexture(V3.tex); V3.tex=null; V3.ser=null; }
   const n=ser.slices.length, W0=ser.cols, H0=ser.rows, plane=W0*H0, vol=ser.vol;
-  const lim = touch ? 192 : (gl.getParameter(gl.MAX_3D_TEXTURE_SIZE)>=512 && (navigator.deviceMemory||8)>=8 ? 384 : 256);
-  const fx=Math.max(1,Math.ceil(Math.max(W0,H0)/lim)), fz=Math.max(1,Math.ceil(n/(lim*1.5)));
+  // 7/11: πλήρης ανάλυση όπου γίνεται (έως ~160 εκ. voxels στον υπολογιστή) — πριν: έως 384 → θολό 3D
+  const MX=gl.getParameter(gl.MAX_3D_TEXTURE_SIZE)||256, VMAX = touch ? 12e6 : ((navigator.deviceMemory||8)>=8 ? 160e6 : 70e6);
+  let fx=Math.max(1,Math.ceil(Math.max(W0,H0)/MX)), fz=Math.max(1,Math.ceil(n/MX));
+  while((W0/fx)*(H0/fx)*(n/fz) > VMAX){ if(fx<=fz) fx++; else fz++; }
   const w=Math.floor(W0/fx), h=Math.floor(H0/fx), d=Math.floor(n/fz);
   let out; try{ out=new Uint16Array(w*h*d); }catch(e){ V3.msg='Δεν φτάνει η μνήμη για 3D.'; return false; }
   const isCT=ser.modality==='CT'; let lo=HU0, rng=HUR;
@@ -1244,7 +1284,7 @@ function render3(lowq){
   const asp=W/H; gl.uniform2f(U('A'), asp>=1?asp*.62:.62, asp>=1?.62:.62/asp);
   gl.uniform1f(U('Z'),V3.zoom); gl.uniform2f(U('P'),V3.panX,V3.panY);
   gl.uniform1i(U('M'),p.mip?1:0);
-  const vox=1/Math.max(...V3.dims); gl.uniform1f(U('S'), vox*(lowq?1.6:.6));
+  const vox=1/Math.max(...V3.dims); gl.uniform1f(U('S'), vox*(lowq?1.4:.45));
   const lo=V3.isCT?nrm(S.wc-S.ww/2):(S.wc-S.ww/2-V3.lo)/V3.rng, hi=V3.isCT?nrm(S.wc+S.ww/2):(S.wc+S.ww/2-V3.lo)/V3.rng;
   gl.uniform2f(U('W'),lo,hi); gl.uniform1f(U('C'),V3.clip); gl.uniform1f(U('Sh'),V3.shift/HUR); gl.uniform1f(U('Op'),V3.opac);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
@@ -1264,7 +1304,7 @@ async function set3d(on){
   try{ if(!(await upload3(ser))){ status(V3.msg||'Το 3D δεν είναι διαθέσιμο σε αυτή τη συσκευή.', true); return; } }
   catch(e){ status('3D: '+e.message, true); return; }
   if(V3.ser!==ser || !V3.init){ V3.init=true; V3.yaw=0; V3.pitch=0; V3.zoom=1; V3.panX=V3.panY=0; V3.clip=0; V3.shift=0; V3.opac=1; if(!V3.isCT) V3.preset='mip'; }
-  V3.on=true; $('cv3').hidden=false; document.body.classList.add('is3d');
+  S.mpr3=false; V3.on=true; $('cv3').hidden=false; document.body.classList.add('is3d');
   tf3(); draw(); draw3();
 }
 // χειρισμός: αριστερό σύρσιμο = περιστροφή · δεξί = κατώφλι (HU) · μεσαίο/Shift = μετακίνηση · ροδέλα = zoom · δύο δάχτυλα = zoom
@@ -1299,6 +1339,15 @@ function cine(on){ clearInterval(S.cineT); S.cineT=0; if(on && S.cur){ S.cineT=s
 $('cine').onclick=()=>{ if(V3.on) return; cine(!S.cineT); };
 $('inv').onclick=()=>{ S.inv=!S.inv; PK=null; draw(); };
 $('b3d').onclick=()=>set3d(!V3.on);
+async function setMpr3(on){ if(!S.cur) return; if(on){ if(V3.on) set3d(false); if(!S.cur.vol){ const t=thinFor(S.cur); if(t){ select(t); } if(!(await buildVol(S.cur))) return; } S.mip=0; FC=null; }
+  S.mpr3=!!on; draw(); }
+$('mpr3').onclick=()=>setMpr3(!S.mpr3);
+// στο MPR: αριστερό σύρσιμο = σταυρός (κινεί τα άλλα δύο επίπεδα), ροδέλα = τομές στο παράθυρο που δείχνεις
+view.addEventListener('pointerdown',e=>{ if(!S.mpr3||e.button!==0||!S.cur||!S.cur.vol) return; const r=view.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top, p=mprHit(cx,cy); if(!p) return;
+  e.stopImmediatePropagation(); e.preventDefault(); view.setPointerCapture(e.pointerId); S._mprDrag=p; mprSet(p,cx,cy); },true);
+view.addEventListener('pointermove',e=>{ if(!S.mpr3) return; const r=view.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top;
+  if(S._mprDrag){ e.stopImmediatePropagation(); mprSet(S._mprDrag,cx,cy); return; } const p=mprHit(cx,cy); if(p && p!==S.view && !S.drag){ S.view=p; draw(); } },true);
+view.addEventListener('pointerup',e=>{ if(S._mprDrag){ S._mprDrag=null; e.stopImmediatePropagation(); } },true);
 $('png').onclick=()=>{ if(V3.on) return $('p3png').click(); if(!S.cur) return; drawNow(); const a=document.createElement('a');
   a.download=((S.cur.desc||'ct')+'-'+(S.ix[S.view]+1)).replace(/[^\wα-ωΑ-Ω-]+/g,'_')+'.png'; a.href=cv.toDataURL('image/png'); a.click(); };
 function tagsShow(){
@@ -1322,6 +1371,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
   const k=e.key;
   if(k==='d'||k==='D') set3d(!V3.on);
+  else if(k==='x'||k==='X') setMpr3(!S.mpr3);
   else if(k==='p'||k==='P') cine(!S.cineT);
   else if(k==='i'||k==='I'){ S.inv=!S.inv; PK=null; draw(); }
   else if(k==='t'||k==='T') tagsShow();
