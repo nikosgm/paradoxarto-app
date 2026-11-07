@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08h-v172';
+const APP_VER = '2026-11-08i-v173';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7320,16 +7320,17 @@ document.head.appendChild(st);
     const am = /^\d{8}$/.test(String(d.am||'')) ? String(d.am) : (n && /^\d{8}$/.test(String(n.am||'')) ? String(n.am) : '');
     const amka = pdxAmkaOk(d.amka) ? String(d.amka) : (n && pdxAmkaOk(n.amka) ? String(n.amka) : '');
     const father = String(d.father || (n && n.father) || '').trim();
-    return {name: titleGr(full), father, fatherGen: genGr(father), am, amka};
+    // 8/11 (εντολή χρήστη): ΟΛΑ κεφαλαία (και το πατρώνυμο)
+    return {name: String(full).toUpperCase(), father, fatherGen: genGr(father).toUpperCase(), am, amka};
   };
   window.pdxCopy = async function(t, what){ t = String(t||''); let ok = false;
     try{ await navigator.clipboard.writeText(t); ok = true; }catch(e){ try{ const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); }catch(x){} }
     toast(ok ? '⧉ Αντιγράφηκε'+(what?' '+what:'')+': '+t : 'Δεν έγινε αντιγραφή'); };
   // «Παπαδόπουλος Γεώργιος του Ιωάννη <b>ΑΜ</b>» — με το ΑΜ έντονο (όπου επικολλάται μορφοποιημένο κείμενο)
   window.pdxCopyPt = async function(k){
-    const P = pdxPtId(k); const txt = [P.name, P.fatherGen ? 'του '+P.fatherGen : '', P.am].filter(Boolean).join(' ');
+    const P = pdxPtId(k); const txt = [P.name, P.fatherGen ? 'ΤΟΥ '+P.fatherGen : '', P.am].filter(Boolean).join(' ');
     const E2 = x=>String(x).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-    const html = [E2(P.name), P.fatherGen ? 'του '+E2(P.fatherGen) : '', P.am ? '<b>'+E2(P.am)+'</b>' : ''].filter(Boolean).join(' ');
+    const html = [E2(P.name), P.fatherGen ? 'ΤΟΥ '+E2(P.fatherGen) : '', P.am ? '<b>'+E2(P.am)+'</b>' : ''].filter(Boolean).join(' ');
     let ok = false;
     try{ if(window.ClipboardItem && navigator.clipboard.write){ await navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([html], {type:'text/html'}), 'text/plain': new Blob([txt], {type:'text/plain'})})]); ok = true; } }catch(e){}
     if(!ok) return pdxCopy(txt);
@@ -8960,7 +8961,7 @@ document.head.appendChild(st);
       const age = String(d.age||'').trim(), sub = [age ? esc(/^\d+$/.test(age) ? age+' ετών' : age) : '', s0 ? '<b>'+esc(s0)+'</b>' : '', dev].filter(Boolean).join(' · ');
       // 🪪 8/11 (εντολή χρήστη): στην καρτέλα επώνυμο + όνομα (από ΝΠΣ), πατρώνυμο με μικρά, ΑΜ/ΑΜΚΑ (πάτημα = αντιγραφή) και «Αντιγραφή»
       const P = window.pdxPtId ? pdxPtId(k, d) : {name:d.name||''};
-      h += '<div class="pth"><h1 onclick="mobEditName()">'+esc(k.indexOf('extra')===0?e.room:e.room+'-'+e.bed)+' · '+esc(P.name||d.name||'—')+(P.fatherGen?' <span style="font-size:.62em;font-weight:500;opacity:.75">του '+esc(P.fatherGen)+'</span>':'')+'</h1>'+(sub?'<div class="pts">'+sub+'</div>':'')
+      h += '<div class="pth"><h1 onclick="mobEditName()">'+esc(k.indexOf('extra')===0?e.room:e.room+'-'+e.bed)+' · '+esc(P.name||d.name||'—')+(P.fatherGen?' <span style="font-size:.62em;font-weight:500;opacity:.75">ΤΟΥ '+esc(P.fatherGen)+'</span>':'')+'</h1>'+(sub?'<div class="pts">'+sub+'</div>':'')
         + ((P.am||P.amka) ? '<div class="ptid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+(P.am?'<button onclick="pdxCopy(\''+esc(P.am)+'\',\'ΑΜ\')" style="border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font-size:13.5px;color:#1F2933">ΑΜ <b>'+esc(P.am)+'</b> ⧉</button>':'')+(P.amka?'<button onclick="pdxCopy(\''+esc(P.amka)+'\',\'ΑΜΚΑ\')" style="border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font-size:13.5px;color:#1F2933">ΑΜΚΑ <b>'+esc(P.amka)+'</b> ⧉</button>':'')+'<button onclick="pdxCopyPt(\''+esc(k)+'\')" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:700">📋 Αντιγραφή</button></div>' : '')
         + '</div>'; }
     h += hdrChips(k, d);
@@ -12744,7 +12745,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxNpsInfo = function(d){ try{ if(!d || !NB.rows) return null; const t = nbNz(d.name).split(' ').filter(Boolean); if(!t.length) return null;
       const C = NB.rows.filter(r=>{ if(d.am && r.am && String(d.am)===String(r.am)) return true; const u = nbNz(r.name).split(' '); return t.every((w,i)=>u[i] && (u[i]===w || (w.length>=4 && u[i].startsWith(w)))); });
       const r = C.length===1 ? C[0] : C.find(x=>d.am && String(x.am)===String(d.am)); if(!r) return null;
-      const x = NB.enr[nbNz(r.name)] || {}; return {full:r.name, am:x.am||r.am||'', amka:x.amka||r.amka||'', father:x.father||r.father||''}; }catch(e){ return null; } };
+      const x = NB.enr[nbNz(r.name)] || {}; return {full:(x.full && x.full.split(/\s+/).length > String(r.name).split(/\s+/).length ? x.full : r.name), am:x.am||r.am||'', amka:x.amka||r.amka||'', father:x.father||r.father||''}; }catch(e){ return null; } };
   // 🏥 8/11 (εντολή χρήστη): στα «σε πολλούς» (παραγγελία, εκκρεμότητα) και στην επιλογή ασθενή μπαίνουν ΚΑΙ οι ασθενείς του ΝΠΣ που δεν είναι στο Παραδόχαρτο
   window.pdxNpsBulkList = function(){ if(!NB.rows){ nbLoad(false); return []; } return nbMiss().map(r=>{ const x = NB.enr[nbNz(r.name)] || {}; return {k:'nps:'+r.name, nps:true, d:{name:r.name, am:x.am||r.am||'', amka:x.amka||r.amka||''}}; }); };
   // προσωρινή καρτέλα (δεν αποθηκεύεται) — ή μόνιμη «Εκτός θαλάμου» όταν πρέπει να κρατηθεί κάτι (εκκρεμότητα)
