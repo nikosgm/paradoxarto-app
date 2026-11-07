@@ -182,7 +182,7 @@ body.is3d .ov,body.is3d .slider{display:none}
     </div>
     <i class="sep"></i>
     <div class="grp" role="group" aria-label="Επαναφορά">
-      <button class="ib" id="reset" title="Επαναφορά εικόνας (zoom, παράθυρο)">↺</button>
+      <button class="ib" id="reset" title="Επαναφορά εικόνας: zoom, μετακίνηση, παράθυρο, αντιστροφή, MIP (R)">↺<span>Επαναφορά</span></button>
       <button class="ib" id="clearM" title="Σβήσιμο μετρήσεων">✕<span>μετρ.</span></button>
     </div>
     <i class="sep"></i>
@@ -210,6 +210,7 @@ body.is3d .ov,body.is3d .slider{display:none}
       <label title="Κόψιμο από μπροστά (για να φανεί το εσωτερικό)">κόψιμο<input type="range" id="p3c" min="0" max="95" value="0"></label>
       <label title="Αδιαφάνεια">αδιαφ.<input type="range" id="p3o" min="10" max="300" value="100"></label>
       <button class="ib" id="p3png" title="Αποθήκευση 3D εικόνας">⤓</button>
+      <button class="ib" id="p3reset" title="Επαναφορά 3D: πρότυπο, κατώφλι, κόψιμο, αδιαφάνεια, όψη">↺<span>Επαναφορά</span></button>
     </div>
     <div class="ov tl" id="ovTL"></div>
     <div class="ov tr" id="ovTR"></div>
@@ -1059,7 +1060,7 @@ document.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>{ S.touched=tru
 document.querySelectorAll('[data-plane]').forEach(b=>b.onclick=()=>setPlane(b.dataset.plane));
 document.querySelectorAll('[data-mip]').forEach(b=>b.onclick=()=>setMip(+b.dataset.mip));
 $('refl').onclick=()=>{ S.refl=!S.refl; draw(); };
-$('reset').onclick=()=>{ S.zoom=1; S.panX=S.panY=0; applyPreset(0); };
+$('reset').onclick=()=>{ if(typeof VK!=='undefined' && VK.on) return $('p3reset').click(); S.zoom=1; S.panX=S.panY=0; S.inv=false; PK=null; if(S.mip) setMip(0); applyPreset(0); };
 $('clearM').onclick=()=>{ S.meas={}; draw(); };
 // 7/11: η μπάρα τομών δεν «περνά» στα εργαλεία της εικόνας (pan/zoom/W-L/μετρήσεις)
 ['pointerdown','pointermove','pointerup','dblclick','contextmenu'].forEach(t=>document.querySelector('.slider').addEventListener(t,e=>e.stopPropagation()));
@@ -1143,7 +1144,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='c'||k==='C') setPlane('cor');
   else if(k==='s'||k==='S') setPlane('sag');
   else if(k==='m'||k==='M') setMip(S.mip===0?10:S.mip===10?30:S.mip===30?-1:0);
-  else if(k==='r'||k==='R'){ S.zoom=1; S.panX=S.panY=0; draw(); }
+  else if(k==='r'||k==='R') $('reset').click();
 });
 new ResizeObserver(draw).observe(view);
 
@@ -1568,6 +1569,9 @@ $('p3c').oninput=e=>{ VK.clip=+e.target.value/100; vkClip(); vkRender(); };
 $('p3o').oninput=e=>{ VK.opac=+e.target.value/100; if(VK.vol){ vkTF(); vkRender(); } };
 $('p3png').onclick=async ()=>{ if(!VK.grw) return; const u=await VK.grw.getOpenGLRenderWindow().captureNextImage('image/png'); vkRender(); const a=document.createElement('a'); a.download='3D-'+(S.cur&&S.cur.desc||'ct').replace(/[^\wα-ωΑ-Ω-]+/g,'_')+'.png'; a.href=await u; a.click(); };
 $('b3d').onclick=()=>set3dVK(!VK.on);
+$('p3reset').onclick=()=>{ VK.preset='organs'; VK.shift=0; VK.clip=0; VK.opac=1; if(VK.vol){ vkTF(); vkClip(); vkView('ant'); } ui3vk(); };
+// 7/11: τα γεγονότα ποντικιού του 3D ΔΕΝ περνούν στα εργαλεία της εικόνας (πριν: η εικόνα «έπιανε» το ποντίκι και δεν γύριζε)
+['pointerdown','pointermove','pointerup','wheel','dblclick','contextmenu','mousedown','mousemove','mouseup','touchstart','touchmove'].forEach(t=>$('vk3').addEventListener(t,e=>{ e.stopPropagation(); if(t==='contextmenu') e.preventDefault(); },{passive:t!=='contextmenu'}));
 /* ================= Εκκίνηση ================= */
 setTool(S.tool); renderRail(); draw();
 if(typeof daikon==='undefined') status('Η βιβλιοθήκη ανάγνωσης DICOM δεν φόρτωσε (χρειάζεται internet).', true);
@@ -1596,7 +1600,7 @@ else if(Q){
   })();
 }
 // για δοκιμές
-window.__ct = {unNct, nctStream, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
+window.__ct = {VK:()=>VK, unNct, nctStream, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
 })();
 </script>
 </body>
