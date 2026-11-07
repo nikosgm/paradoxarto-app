@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07o-v154';
+const APP_VER = '2026-11-07p-v155';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12672,6 +12672,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const E2 = x=>esc(String(x==null?'':x));
     const N = Object.assign({}, await pdxBotNames(true)); let bots = null, msg = '', phone = null, busyIds = {};
     let OFF = {}; try{ const o = await sb6.from('oncall_config').select('value').eq('key','bot_off').maybeSingle(); OFF = Object.assign({}, (o.data && o.data.value) || {}); }catch(e){}
+    let NRB = {}; try{ const o = await sb6.from('oncall_config').select('value').eq('key','bot_nightreboot').maybeSingle(); NRB = Object.assign({}, (o.data && o.data.value) || {}); }catch(e){}
     let PREF = []; try{ const o = await sb6.from('oncall_config').select('value').eq('key','emr_pref').maybeSingle(); PREF = Array.isArray(o.data && o.data.value) ? o.data.value : []; }catch(e){}
     const NAMES = ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'];
     const ago = t=>{ if(!t) return '—'; const s = Math.round((Date.now()-t)/1000); return s<60 ? s+'″' : s<3600 ? Math.round(s/60)+'′' : Math.round(s/3600)+' ώρ.'; };
@@ -12714,6 +12715,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
               + (dk >= 0 ? bar('Δίσκος', dk, y.dfree+' GB ελεύθ.') : '')
               + '<div style="font-size:12.5px;color:#475569">Chrome: '+(y.cr ? y.cr.n+' διεργασίες · '+(y.cr.mb/1024).toFixed(1)+' GB' : '—')+' · ανοιχτός '+(y.upH>=48 ? Math.round(y.upH/24)+' ημέρες' : (y.upH||0)+' ώρες')+(y.upH>=24*7?' <b style="color:#B45309">(θέλει επανεκκίνηση Windows → 🔁)</b>':'')+'</div>'
               + (y.reboot ? '<div style="font-size:12.5px;color:#B45309;font-weight:700">⚠ Τα Windows περιμένουν επανεκκίνηση για ενημερώσεις</div>' : '')
+              + (function(){ const x = y.ext; if(!x) return ''; let o = '';
+                  const pq = (x.pq||[]).filter(q=>q.jobs||q.off||q.err>2);
+                  o += '<div style="font-size:12.5px;color:'+(pq.some(q=>q.old||q.jerr||q.err>2)?'#B91C1C':'#475569')+'">🖨 '+(pq.length ? pq.map(q=>E2(q.name)+': '+(q.jobs?q.jobs+' στην ουρά'+(q.old?' ('+q.old+' κολλημένες)':''):'')+(q.off?' εκτός σύνδεσης':'')+(q.err>2?' σφάλμα '+q.err:'')).join(' · ') : 'ουρές εκτυπωτών καθαρές')+'</div>';
+                  if(x.def) o += '<div style="font-size:12.5px;color:'+(x.def.err?'#94A3B8':(x.def.on&&x.def.rt&&!x.def.thr&&x.def.sigD<=7)?'#475569':'#B91C1C')+'">🛡 Defender: '+(x.def.err?'άγνωστο':(x.def.on&&x.def.rt?'ενεργός':'⚠ ΑΝΕΝΕΡΓΟΣ')+' · ορισμοί '+x.def.sigD+' ημ.'+(x.def.thr?' · ⚠ '+x.def.thr+' απειλές (7 ημ.)':''))+'</div>';
+                  o += '<div style="font-size:12.5px;color:#475569">🔄 τελευταία ενημέρωση Windows '+(x.wuDays>=0?'πριν '+x.wuDays+' ημ.':'—')+' · αυτόματη είσοδος Windows: '+(x.autologon?'ναι':'όχι')+'</div>';
+                  return o; })()
+              + (y.sk!=null ? '<div style="font-size:12.5px;color:'+(Math.abs(y.sk)>30?'#B91C1C':'#475569')+'">🕒 ρολόι: '+(Math.abs(y.sk)<=30?'σωστό':'⚠ '+(y.sk>0?'μπροστά ':'πίσω ')+Math.abs(y.sk)+'″ (επηρεάζει συνδέσεις/κωδικούς)')+'</div>' : '')
+              + (y.nrb ? '<div style="font-size:12.5px;color:'+(y.nrb.ok?'#475569':'#B91C1C')+'">🌙 νυχτερινή επανεκκίνηση πριν '+ago(y.nrb.at)+' ('+E2(y.nrb.why)+')'+(y.nrb.ok?'':' ✗ '+E2(y.nrb.err))+'</div>' : '')
               + (y.net ? '<div style="font-size:12.5px;color:#475569;margin-top:3px">🌐 '+Object.keys(y.net).map(n=>{ const v = y.net[n]; return E2(n)+' <b style="color:'+(v<0?'#B91C1C':v>1500?'#B45309':'#15803D')+'">'+(v<0?'χωρίς απάντηση':v+'ms')+'</b>'; }).join(' · ')+'</div>' : '')
               + (y.cv ? '<div style="font-size:12px;color:#94A3B8">Chrome '+E2(y.cv)+'</div>' : '')
               + (y.mc ? '<div style="font-size:12.5px;color:#475569">🌙 αυτόματη φροντίδα μνήμης πριν '+ago(y.mc.at)+' ('+E2(y.mc.why)+(y.mc.mb>0?', +'+y.mc.mb+' MB':'')+')</div>' : '')
@@ -12723,9 +12732,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           }
         }
         h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
-          + btn('who', id, '👋 Ποιος;') + btn('sys', id, '📊 Μέτρηση') + btn('tidy', id, '🧹 Καθάρισμα') + btn('printers', id, '🖨 Εκτυπωτές') + btn('eptest', id, '💊 Τεστ e-prescription') + btn('selftest', id, '🩺 Έλεγχος') + btn('appreload', id, '🔄 Παραδόχαρτο') + btn('emrrelog', id, '🔐 ΝΠΣ ξανά') + btn('update', id, '⬆ Ενημέρωση') + btn('restart', id, '♻ Επανεκκίνηση bot') + btn('reboot', id, '🔁 Επανεκκίνηση Windows') + btn('rebootcancel', id, '✋ Ακύρωση επανεκκίνησης')
+          + btn('who', id, '👋 Ποιος;') + btn('sys', id, '📊 Μέτρηση') + btn('health', id, '🩺 Υγεία Windows') + btn('printclear', id, '🖨 Καθάρισμα ουράς') + btn('tidy', id, '🧹 Καθάρισμα') + btn('printers', id, '🖨 Εκτυπωτές') + btn('eptest', id, '💊 Τεστ e-prescription') + btn('selftest', id, '🩺 Έλεγχος') + btn('appreload', id, '🔄 Παραδόχαρτο') + btn('emrrelog', id, '🔐 ΝΠΣ ξανά') + btn('update', id, '⬆ Ενημέρωση') + btn('restart', id, '♻ Επανεκκίνηση bot') + btn('reboot', id, '🔁 Επανεκκίνηση Windows') + btn('rebootcancel', id, '✋ Ακύρωση επανεκκίνησης')
           + '<button data-off="'+E2(id)+'" style="border:0;border-radius:10px;padding:8px 10px;font-weight:600;min-height:38px;background:'+(OFF[id]?'#15803D':'#FEE2E2')+';color:'+(OFF[id]?'#fff':'#B91C1C')+'">'+(OFF[id]?'▶ Ενεργοποίηση':'⏸ Απενεργοποίηση')+'</button></div>'
           + (busyIds[id] ? '<div style="font-size:13px;color:#1D4E80;margin-top:6px;white-space:pre-line">'+E2(busyIds[id])+'</div>' : '')
+          + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px"><span style="color:#475569">🌙 Νυχτερινή επανεκκίνηση (04:00):</span>'+[['','Όχι'],['need','Όταν χρειάζεται'],['sun','Κάθε Κυριακή']].map(([v,l])=>'<button data-nrb="'+v+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;background:'+((NRB[id]||'')===v?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+l+'</button>').join('')+'</div>'
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+E2(nm)+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+E2(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+E2(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div>'
           + '</div>'; });
       h += '<div class="ios-h">Λογαριασμοί ΝΠΣ για τις εργασίες (σειρά προτίμησης)</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:10px 14px"><input data-pref value="'+E2(PREF.join(', '))+'" placeholder="CHTHEODOROLEAS, ADAMAKIS" style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px"><button data-act="pref" data-id="" style="margin-top:8px;width:100%;height:42px;border:0;border-radius:10px;background:#1D4E80;color:#fff;font-weight:600">Αποθήκευση</button><div class="ios-f" style="margin:6px 0 0">Ο KDOUROUMIS μένει για το Ουρολογικό Ημέρας. Αλλαγή ισχύει σε ≤5′, όταν το bot είναι ελεύθερο.</div></div>';
@@ -12737,7 +12747,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const t0 = Date.now();
       while(Date.now()-t0 < (kind==='eptorture'?1500e3:kind==='selftest'?240e3:60e3)){ await new Promise(r=>setTimeout(r, 2500));
         let q = null; try{ q = (await sb6.from('oncall_jobs').select('status,note').eq('id', jid).maybeSingle()).data; }catch(e){}
-        if(q && !/^(new|seen|running)$/.test(q.status)){ busyIds[id] = (q.status==='done'?'✓ ':'✗ ')+String(q.note||q.status).slice(0, kind==='eptorture'?3000:300); if(/^(sys|tidy)$/.test((payload||{}).op||'')) setTimeout(()=>load(), 3000); return pg.redraw(); }
+        if(q && !/^(new|seen|running)$/.test(q.status)){ busyIds[id] = (q.status==='done'?'✓ ':'✗ ')+String(q.note||q.status).slice(0, kind==='eptorture'?3000:300); if(/^(sys|tidy|health|printclear)$/.test((payload||{}).op||'')) setTimeout(()=>load(), 3000); return pg.redraw(); }
         busyIds[id] = '⏳ '+label+' · '+Math.round((Date.now()-t0)/1000)+'″'+(q&&q.status==='new'?' (περιμένει τον υπολογιστή)':q&&q.note&&/^🧪/.test(q.note)?' · '+q.note:''); pg.redraw(); }
       busyIds[id] = '✗ δεν απάντησε σε '+Math.round((Date.now()-t0)/1000)+'″ (κλειστός/κοιμάται;)'; pg.redraw(); };
     pg.el.addEventListener('click', async e=>{
@@ -12752,9 +12762,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           return job(id, 'eptorture', {amka:am, rounds:6, test:true}, '💊 Τεστ e-prescription'); }
         if(act==='restart' && !confirm('Επανεκκίνηση του bot σε αυτόν τον υπολογιστή;')) return;
         if(act==='reboot' && !confirm('Επανεκκίνηση WINDOWS στον υπολογιστή «'+(N[id]||id.slice(-5))+'»;\n\n• Θα βγει μήνυμα στην οθόνη και θα γίνει σε 2 λεπτά (ακυρώνεται με «✋ Ακύρωση»).\n• Όποιος δουλεύει εκεί χάνει ό,τι δεν έχει σώσει.\n• Μετά κάποιος πρέπει να μπει στα Windows· το πρόγραμμα ενημέρωσης και το Chrome ανοίγουν μόνα τους.')) return;
+        if(act==='printclear' && !confirm('Διαγραφή ΟΛΩΝ των εκτυπώσεων που περιμένουν στην ουρά αυτού του υπολογιστή; (ό,τι δεν έχει τυπωθεί ακόμα χάνεται)')) return;
         if(act==='tidy' && !confirm('Καθάρισμα: οι καρτέλες στο παρασκήνιο «κοιμούνται» (ξαναφορτώνουν όταν τις ανοίξεις) και κλείνουν τα ανώνυμα παράθυρα του bot. Συνέχεια;')) return;
-        return job(id, 'botctl', {op:act}, {appreload:'🔄 Παραδόχαρτο', emrrelog:'🔐 ΝΠΣ', update:'⬆ Ενημέρωση', restart:'♻ Επανεκκίνηση bot', reboot:'🔁 Επανεκκίνηση Windows', rebootcancel:'✋ Ακύρωση', sys:'📊 Μέτρηση', tidy:'🧹 Καθάρισμα', printers:'🖨 Εκτυπωτές'}[act]||act);
+        return job(id, 'botctl', {op:act}, {appreload:'🔄 Παραδόχαρτο', emrrelog:'🔐 ΝΠΣ', update:'⬆ Ενημέρωση', restart:'♻ Επανεκκίνηση bot', reboot:'🔁 Επανεκκίνηση Windows', rebootcancel:'✋ Ακύρωση', sys:'📊 Μέτρηση', tidy:'🧹 Καθάρισμα', printers:'🖨 Εκτυπωτές', health:'🩺 Υγεία Windows', printclear:'🖨 Καθάρισμα ουράς'}[act]||act);
       }
+      const nb = e.target.closest('[data-nrb]'); if(nb){ const id = nb.dataset.id, v = nb.dataset.nrb, nm = N[id] || id.slice(-5);
+        if(v && !confirm('Νυχτερινή επανεκκίνηση Windows στον «'+nm+'» ('+(v==='sun'?'κάθε Κυριακή 04:00 + όποτε τη ζητούν οι ενημερώσεις':'μόνο όταν τη ζητούν οι ενημερώσεις ή είναι ανοιχτός ≥7 ημέρες')+');\n\n• Γίνεται μόνο αν κανείς δεν δούλευε 30′ και δεν τρέχει εργασία.\n• '+(((bots.find(b=>b.bot===id)||{}).sys||{}).ext && bots.find(b=>b.bot===id).sys.ext.autologon ? 'Ο υπολογιστής μπαίνει μόνος του στα Windows.' : '⚠ Ο υπολογιστής ΔΕΝ μπαίνει μόνος του στα Windows: μετά την επανεκκίνηση το bot μένει εκτός μέχρι να συνδεθεί κάποιος.'))) return;
+        const nx = Object.assign({}, NRB); if(v) nx[id] = v; else delete nx[id];
+        const r = await sb6.from('oncall_config').upsert({key:'bot_nightreboot', value:nx, updated_at:new Date().toISOString()}, {onConflict:'key'});
+        if(r.error) msg = 'Δεν αποθηκεύτηκε: '+r.error.message; else { NRB = nx; msg = ''; toast('✓ Αποθηκεύτηκε'); }
+        return pg.redraw(); }
       const ob = e.target.closest('[data-off]'); if(ob){ const id = ob.dataset.off, nm = N[id] || id.slice(-5), turnOff = !OFF[id];
         if(turnOff && !confirm('Απενεργοποίηση του bot στον υπολογιστή «'+nm+'»;')) return;
         const nx = Object.assign({}, OFF); if(turnOff) nx[id] = true; else delete nx[id];
