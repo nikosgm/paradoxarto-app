@@ -1160,7 +1160,8 @@ view.addEventListener('pointerup',endPtr); view.addEventListener('pointercancel'
 view.addEventListener('pointerleave',()=>{ S.hover=null; draw(); });
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
-  const k=e.key;
+  // 8/11: συντομεύσεις και με ελληνικό πληκτρολόγιο (ε→E, χ→X, ρ→R…) — από τη θέση του πλήκτρου
+  const k=(/^Key[A-Z]$/.test(e.code) && /[\u0370-\u03ff]/.test(e.key)) ? (e.shiftKey ? e.code.slice(3) : e.code.slice(3).toLowerCase()) : e.key;
   if(k==='ArrowUp'||k==='ArrowLeft'){ e.preventDefault(); step(-1); }
   else if(k==='ArrowDown'||k==='ArrowRight'){ e.preventDefault(); step(1); }
   else if(k==='PageUp'){ e.preventDefault(); step(-10); }
@@ -1410,7 +1411,8 @@ function keysShow(){
 $('keys').onclick=keysShow;
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
-  const k=e.key;
+  // 8/11: συντομεύσεις και με ελληνικό πληκτρολόγιο (ε→E, χ→X, ρ→R…) — από τη θέση του πλήκτρου
+  const k=(/^Key[A-Z]$/.test(e.code) && /[\u0370-\u03ff]/.test(e.key)) ? (e.shiftKey ? e.code.slice(3) : e.code.slice(3).toLowerCase()) : e.key;
   if(k==='d'||k==='D') set3dVK(!VK.on);
   else if(k==='x'||k==='X') setMpr3(!S.mpr3);
   else if(k==='p'||k==='P') cine(!S.cineT);
