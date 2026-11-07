@@ -1005,6 +1005,9 @@ document.querySelectorAll('[data-mip]').forEach(b=>b.onclick=()=>setMip(+b.datas
 $('refl').onclick=()=>{ S.refl=!S.refl; draw(); };
 $('reset').onclick=()=>{ S.zoom=1; S.panX=S.panY=0; applyPreset(0); };
 $('clearM').onclick=()=>{ S.meas={}; draw(); };
+// 7/11: η μπάρα τομών δεν «περνά» στα εργαλεία της εικόνας (pan/zoom/W-L/μετρήσεις)
+['pointerdown','pointermove','pointerup','dblclick','contextmenu'].forEach(t=>document.querySelector('.slider').addEventListener(t,e=>e.stopPropagation()));
+document.querySelector('.slider').addEventListener('wheel',e=>{ e.preventDefault(); e.stopPropagation(); step(Math.sign(e.deltaY)); },{passive:false});
 $('sl').oninput=e=>{ S.touched=true; S.ix[S.view]=+e.target.value; draw(); };
 const step=n=>{ if(!S.cur) return; S.touched=true; S.ix[S.view]=Math.max(0,Math.min(count(S.view)-1,S.ix[S.view]+n)); draw(); };
 
