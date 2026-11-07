@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07q-v156';
+const APP_VER = '2026-11-07r-v157';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7962,6 +7962,7 @@ document.head.appendChild(st);
       ['🧾','Παραγγελία εξετάσεων','παραγγελια εξετασεις γενικη αιματος order', bot?(k=>pdxBot(k,'order')):null, true],
       ['🧪','Εργαστηριακά','εργαστηριακα labs αποτελεσματα', k=>mobAct(k,'labs'), true],
       ['📁','Αρχεία κλινικής','αρχεια φακελος ουρολογικης pronas αξονικη μαγνητικη απεικονιση dicom pdf', k=>pdxFiles(), false],
+      ['💻','Αξονικές: εφαρμογή υπολογιστή (3D)','αξονικες viewer ct dicom 3d radiant εγκατασταση εφαρμογη υπολογιστη cd', k=>{ window.open('ct.html?install=1','_blank'); }, false],
       ['🔬','Βιοψίες','βιοψιες βιοψια παθολογοανατομικο ιστολογικη αποτελεσμα gleason', bot?(k=>pdxBiopsies()):null, false],
       ['☑','Εκκρεμότητα σε πολλούς','εκκρεμοτητα πολλους μαζικα bulk', k=>pdxDo('bulk'), false],
       ['📅','Εισαγωγές & ΑΜ','εισαγωγες αμ μητρωο νπσ', adm?(k=>pdxDo('admits')):null, false],

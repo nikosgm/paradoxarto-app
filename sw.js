@@ -1,12 +1,19 @@
 // Παραδόχαρτο service worker — pdx-shell-v3 (2026-11-02)
 // Κέλυφος: πάντα πρώτα το δίκτυο (για να μην κολλάει παλιά έκδοση), με αντίγραφο στην cache για χωρίς σήμα.
 // Μόνο τα δικά μας αρχεία· Supabase/CDN περνούν απευθείας. Web Push: {title, body} από τη send-reminders.
-const CACHE = 'pdx-shell-v4-j1';
-const SHELL = /\/(index\.html|ct\.html|manifest\.json|icon-\d+\.png)?$/;
+const CACHE = 'pdx-shell-v5-ct';
+const SHELL = /\/(index\.html|ct\.html|manifest\.json|ct-manifest\.json|icon-\d+\.png|ct-icon-\d+\.png)?$/;
 const VCACHE = 'pdx-vendor-v1';   // χωριστή cache: δεν σβήνεται όταν αλλάζει το κέλυφος
 const VENDOR = /\/vendor\/[\w.-]+-\d+\.\d+\.\d+(\.min)?\.js$/;
 
-self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('install', (e) => {
+  // 7/11: «Αξονικές» ως εφαρμογή υπολογιστή → ανοίγει και χωρίς internet (CD/φάκελοι)
+  e.waitUntil((async () => {
+    try { const c = await caches.open(CACHE); await c.addAll(['ct.html', 'ct-manifest.json', 'ct-icon-192.png', 'ct-icon-512.png']); } catch (err) {}
+    try { const v = await caches.open(VCACHE); if (!(await v.match(new URL('vendor/daikon-1.2.42.min.js', self.location.href).href))) await v.add('vendor/daikon-1.2.42.min.js'); } catch (err) {}
+    self.skipWaiting();
+  })());
+});
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
