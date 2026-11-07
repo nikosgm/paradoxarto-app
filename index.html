@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07h-v147';
+const APP_VER = '2026-11-07i-v148';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12460,6 +12460,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   let medCats = null;
   // ομαδοποίηση ανά ΤΜΗΜΑ (πρώτο επίπεδο του Medilabi)· κλειδί με τη διαδρομή «ΤΜΗΜΑ › ΥΠΟΚΑΤΗΓΟΡΙΑ» όταν το όνομα υπάρχει αλλού
   const medCatsBuild = cats=>{ const P = c=>c.path||c.lab, cnt = {}; cats.forEach(c=>new Set(c.tests||[]).forEach(t=>{ cnt[t] = (cnt[t]||0)+1; }));
+    window.__medPath = {}; cats.forEach(c=>(c.tests||[]).forEach(t=>{ if(cnt[t]===1) window.__medPath[t] = P(c); }));   // ⚡ για ομαδική προσθήκη ανά τμήμα στο bot
     const out = [], by = {}; cats.filter(c=>c && c.lab && (c.tests||[]).length).forEach(c=>{ const dep = c.dep||c.lab; let g = by[dep]; if(!g){ g = by[dep] = {lab:dep, keys:[]}; out.push(g); }
       [...new Set(c.tests)].forEach(t=>{ const k = cnt[t]>1 ? t+' @@ '+P(c) : t; if(g.keys.indexOf(k)<0) g.keys.push(k); }); });
     return out; };
@@ -12850,6 +12851,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           if(dup.length && !st.dupOk){ st.dupOk = true; st.msg = '⚠ Ήδη παραγγέλθηκαν τις τελευταίες 12 ώρες: '+dup.map(x=>x.t+' ('+String(x.at.getHours()).padStart(2,'0')+':'+String(x.at.getMinutes()).padStart(2,'0')+(x.st==='approved'?', καταχωρημένη':'')+')').join(', ')+'. Πάτα ξανά «Αποστολή» αν τις θέλεις πάλι.'; return draw(); }
         }catch(e){}
         const PL = Object.assign({tests:st.sel.slice(), packs:pks.map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:st.when, urgency:st.urg, note:(st.note||'').trim()}, st.pat ? {printAt:st.pat, printName:BN[st.pat]||''} : {});
+        // ⚡ 7/11: «Τυχαία» → στον υπολογιστή που έχει ΗΔΗ ανοιχτή τη φόρμα (προετοιμασία), όχι σε άλλον που θα την ξανανοίξει (13″ αντί 30″+)
+        try{ const MP = window.__medPath || {}, PA = {}; st.sel.forEach(t=>{ if(t.indexOf('@@')<0 && MP[t]) PA[t] = MP[t]; }); if(Object.keys(PA).length) PL.paths = PA; }catch(e){}
+        if(!st.pat && !MULTI) try{ const r = await sb6.from('oncall_jobs').select('payload,status,updated_at').eq('kind','orderprep').eq('name_key', nrm(d.name)).in('status',['done','running','seen']).gte('created_at', new Date(Date.now()-6*60000).toISOString()).order('id',{ascending:false}).limit(1);
+          const pb = r.data && r.data[0] && r.data[0].payload && r.data[0].payload.bot; if(pb){ PL.printAt = pb; PL.printName = BN[pb] || ''; } }catch(e){}
         if(MULTI){ let n = 0; for(const kk of MULTI){ if(await send(kk,'order',Object.assign({}, PL, {quiet:true, bulk:MULTI.length}))) n++; }
           ov.remove(); toast('🧾 Στάλθηκαν '+n+'/'+MULTI.length+' παραγγελίες στο bot'); return; }
         const ok = await send(k,'order',PL);
