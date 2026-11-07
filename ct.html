@@ -592,7 +592,9 @@ function addImage(img, L){
   const px = L.px, file = L.file; L.px=null; L.file=null;
   for(let f=0; f<frames; f++){ const d = px && px[f] || null; if(d) L.mem += d.byteLength;
     insertSlice(ser, {id:++SID, img, file, acq, frame: frames>1?f:-1, pos: frames>1 ? f : pos, inst: inst*1000+f, odd:!same, data:d, lazy:!d}); }
-  ser.vol = null;
+  // 8/11: πότε μια σειρά έχει ΟΛΟΚΛΗΡΩΘΕΙ ενώ φορτώνουν ακόμα άλλες (για MPR/coronal χωρίς να περιμένει όλη τη φόρτωση)
+  ser.lastAdd = performance.now(); if(L.lastSer && L.lastSer!==ser) L.lastSer.moved = true; L.lastSer = ser;
+  if(!(ser.vol && S.cur===ser && S.view!=='ax')) ser.vol = null;   // ανοιχτή ανασύνθεση: δεν «σβήνει» στη μέση
   return ser;
 }
 const sliceCmp = ser => ser.usePos ? (a,b)=>b.pos-a.pos || a.inst-b.inst : (a,b)=>a.inst-b.inst;
@@ -648,11 +650,13 @@ function pixels(ser, s){
 }
 
 /* ================= Όγκος (ανασύνθεση / MIP) ================= */
+// σειρά «τελείωσε»: η φόρτωση πέρασε σε άλλη σειρά και αυτή δεν πήρε νέα τομή για 1,5″ (ή τελείωσε όλη η φόρτωση)
+const serDone = ser=>!!ser && (!S.load || S.load.end!==null || (ser.moved && performance.now()-(ser.lastAdd||0) > 1500));
 function mprProblem(ser){
   if(ser.rgb) return 'Έγχρωμη σειρά: ανασύνθεση/MIP μόνο σε γκρι σειρές.';
   if(ser.slices.length<8) return 'Η σειρά έχει πολύ λίγες τομές για ανασύνθεση/MIP.';
   if(ser.slices.some(s=>s.odd)) return 'Οι τομές έχουν διαφορετικά μεγέθη· η σειρά δεν είναι συνεχής όγκος.';
-  if(S.load && S.load.end===null) return 'Περίμενε να τελειώσει η φόρτωση και ξαναπάτα.';
+  if(S.load && S.load.end===null && !serDone(ser)) return 'Η σειρά φορτώνει ακόμα — μόλις τελειώσει αυτή η σειρά (όχι όλες), ξαναπάτα.';
   return '';
 }
 async function buildVol(ser){
@@ -954,7 +958,7 @@ function thinFor(ser){
 }
 async function setPlane(p){
   if(!S.cur) return; S.touched=true; if(V3.on) set3d(false); if(VK.on) set3dVK(false); S.mpr3=false;
-  if(p!=='ax' && !(S.load && S.load.end===null)){ const t=thinFor(S.cur); if(t){ const s0=S.cur.slices[S.ix.ax], pz=s0&&s0.pos; select(t);
+  if(p!=='ax'){ const t0=thinFor(S.cur), t=t0 && serDone(t0) ? t0 : null; if(t){ const s0=S.cur.slices[S.ix.ax], pz=s0&&s0.pos; select(t);
     if(pz!=null){ let bi=0, bd=1e9; t.slices.forEach((x,i)=>{ const d=Math.abs((x.pos||0)-pz); if(d<bd){ bd=d; bi=i; } }); S.ix.ax=bi; }
     status('MPR από τις λεπτές τομές «'+t.desc+'» ('+fmt(t.thick||t.zsp||0)+' mm) για καθαρή εικόνα'); } }
   if(p!=='ax' && !S.cur.vol){ const ok=await buildVol(S.cur); if(!ok) return; }
@@ -1783,9 +1787,12 @@ if(DESK && DESK.evo){
   const b = document.createElement('button'); b.className='ib primary'; b.id='evoBtn'; b.title='Αναζήτηση εξετάσεων στον Evorad (E)'; b.innerHTML='🩻<span>Evorad</span>';
   const ref = $('srvBtn'); if(ref) ref.parentNode.insertBefore(b, ref); b.onclick=()=>evoPanel();
   document.addEventListener('keydown', e=>{ if((e.key==='e'||e.key==='E'||e.key==='ε'||e.key==='Ε'||e.code==='KeyE') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'') && !document.getElementById('evoOv')) { e.preventDefault(); evoPanel(); } });
-  // άνοιγμα από τη γραμμή εντολών / από το Παραδόχαρτο: ?evo=επώνυμο ή info().evo = {sur, amka, examid}
-  DESK.info().then(i=>{ const ev = i && i.evo; if(ev){ evoPanel({sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||''}); if(ev.examid) evoJSON('/api/getExams?examid='+encodeURIComponent(ev.examid)+'&').then(d=>{ const x=d[0]; if(x) evoSeries({examid:x.examid, date:String(x.examdate||''), mod:String(x.exammodalitytype||''), desc:String(x.studydescription||''), first:String(x.firstname||''), last:String(x.lastname||''), amka:String(x.amka||''), pid:'', pid2:'', birth:''}); }).catch(()=>{}); } }).catch(()=>{});
-  if(DESK.onEvo) DESK.onEvo(ev=>{ evoPanel({sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''}); });
+  // άνοιγμα από τη γραμμή εντολών / από το κινητό (τηλεχειρισμός): {sur, fn, amka, examid} → αναζήτηση ή κατευθείαν η εξέταση
+  const evoArgsOpen = ev=>{ if(!ev) return; evoPanel({sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''});
+    if(ev.examid) evoJSON('/api/getExams?examid='+encodeURIComponent(ev.examid)+'&').then(d=>{ const x=(d||[]).find(z=>String(z.examid)===String(ev.examid)) || (d||[])[0]; if(x){ const ex={examid:x.examid, date:String(x.examdate||''), mod:String(x.exammodalitytype||''), desc:String(x.studydescription||''), first:String(x.firstname||''), last:String(x.lastname||''), amka:String(x.amka||''), pid:'', pid2:'', birth:''};
+      evoSeries(ex).then(()=>{ if(EVO.series && EVO.series.length && EVO.sel===ex) evoOpen(EVO.series); }); } }).catch(e=>status('Evorad: '+(e.login?'χρειάζεται σύνδεση':e.message), true)); };
+  DESK.info().then(i=>evoArgsOpen(i && i.evo)).catch(()=>{});
+  if(DESK.onEvo) DESK.onEvo(evoArgsOpen);
 }
 
 window.__ct = {VK:()=>VK, unNct, nctStream, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
