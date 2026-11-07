@@ -115,7 +115,7 @@ body.is3d .ov,body.is3d .slider{display:none}
   #printArea{display:block;font-family:var(--font-ui);color:#000}
   #printArea h2{font-size:16px;margin:0 0 4px}
   #printArea .meta{font-size:12px;margin:0 0 8px;line-height:1.5}
-  #printArea img{max-width:100%;max-height:168mm;display:block;margin:0 auto;border:1px solid #999}
+  #printArea img{max-width:100%;max-height:192mm;display:block;margin:0 auto}
   #printArea .foot{font-size:10.5px;color:#444;margin-top:6px}
 }
 @media (max-width:760px){
@@ -1010,21 +1010,19 @@ $('srvBtn').onclick = async ()=>{
 };
 $('printBtn').onclick = ()=>{
   const ser=S.cur; if(!ser) return;
-  // εικόνα όπως φαίνεται (με μετρήσεις), σε λευκό φόντο κεφαλίδας
-  const shot = document.createElement('canvas'); shot.width=cv.width; shot.height=cv.height;
-  const sc=shot.getContext('2d'); sc.drawImage(V3.on?$('cv3'):cv,0,0,shot.width,shot.height);
-  // 7/11: τα στοιχεία (ασθενής, σειρά, παράθυρο) τυπώνονται ΠΑΝΩ στην εικόνα, άσπρα στο μαύρο
-  { const k=shot.width/Math.max(1,view.getBoundingClientRect().width); sc.save(); sc.fillStyle='#fff'; sc.shadowColor='#000'; sc.shadowBlur=3*k; sc.textBaseline='top';
-    const put=(el,right)=>{ const L=String($(el).innerText||'').split('\n'); L.forEach((t,i)=>{ sc.font=(i===0&&el==='ovTL'?'600 ':'')+Math.round(12.5*k)+'px "Segoe UI",sans-serif'; sc.textAlign=right?'right':'left'; sc.fillText(t, right?shot.width-12*k:10*k, 8*k+i*16*k); }); };
+  // 7/11: εκτύπωση σε ΥΨΗΛΗ ανάλυση (≈3000 px πλάτος, Α4 οριζόντια) — η εικόνα ξαναζωγραφίζεται από τα αρχικά pixel, όχι «φωτογραφία» της οθόνης
+  const r=view.getBoundingClientRect(), k=Math.max(2, 3000/Math.max(1,r.width));
+  const shot=document.createElement('canvas'); shot.width=Math.round(r.width*k); shot.height=Math.round(r.height*k);
+  const sc=shot.getContext('2d'); sc.fillStyle='#000'; sc.fillRect(0,0,shot.width,shot.height);
+  if(V3.on){ render3(false); sc.drawImage($('cv3'),0,0,shot.width,shot.height); }
+  else if(S.mpr3){ sc.drawImage(cv,0,0,shot.width,shot.height); }
+  else { const f=frame(); if(f){ const g=geom(f); sc.setTransform(k,0,0,k,0,0); sc.imageSmoothingEnabled=true; sc.imageSmoothingQuality='high'; sc.drawImage(oc,g.x,g.y,g.w,g.h); try{ drawMeas(sc,g,f,ser.modality==='CT'); }catch(e){} sc.setTransform(1,0,0,1,0,0); } }
+  // τα στοιχεία (ασθενής, σειρά, παράθυρο) πάνω στην εικόνα, άσπρα στο μαύρο — καθαρά γράμματα
+  { sc.save(); sc.setTransform(k,0,0,k,0,0); sc.fillStyle='#fff'; sc.shadowColor='#000'; sc.shadowBlur=2; sc.textBaseline='top';
+    const put=(el,right)=>{ const L=String($(el).innerText||'').split('\n'); L.forEach((t,i)=>{ sc.font=(i===0&&el==='ovTL'?'600 ':'')+'13px "Segoe UI",Arial,sans-serif'; sc.textAlign=right?'right':'left'; sc.fillText(t, right?r.width-12:10, 8+i*17); }); };
     put('ovTL',false); put('ovTR',true); sc.restore(); }
-  const inf = ser.pinfo||{}, PL={ax:'Αξονική',cor:'Στεφανιαία',sag:'Οβελιαία'}[S.view];
-  const meta = [
-    Q ? '<b>'+esc(Q.name)+'</b>'+(Q.amka?' · ΑΜΚΑ '+esc(Q.amka):'')+(Q.am?' · ΑΜ '+esc(Q.am):'') : (inf.name?'<b>'+esc(inf.name)+'</b>':''),
-    esc([inf.desc||ser.desc, ser.modality, fmtD(inf.date)].filter(Boolean).join(' · ')),
-    esc(PL+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(S.mip?' · MIP '+(S.mip<0?'όλος ο όγκος':S.mip+' mm'):'')+' · Π '+Math.round(S.ww)+' / Κ '+Math.round(S.wc))
-  ].filter(Boolean).join('<br>');
-  $('printArea').innerHTML = '<h2>Απεικόνιση</h2><div class="meta">'+meta+'</div><img alt="" src="'+shot.toDataURL('image/png')+'"><div class="foot">Εκτύπωση από το Νίκος CT Viewer · '+new Date().toLocaleString('el-GR')+' · όχι γνωμάτευση</div>';
-  setTimeout(()=>window.print(), 60);
+  $('printArea').innerHTML = '<img alt="" src="'+shot.toDataURL('image/png')+'">';
+  setTimeout(()=>window.print(), 80);
 };
 
 /* σύρσιμο φακέλου πάνω στη σελίδα */
@@ -1382,9 +1380,9 @@ document.addEventListener('keydown',e=>{
 /* ================= Εφαρμογή υπολογιστή (εγκατάσταση, χωρίς internet, άνοιγμα .dcm) — 7/11 ================= */
 try{ if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){}
 let BIP=null; const standalone = (matchMedia('(display-mode: standalone)').matches || navigator.standalone) && /[?&]app=1\b/.test(location.search);   // μόνο όταν τρέχει ως «Νίκος CT Viewer» (όχι μέσα στο παράθυρο του Παραδόχαρτου)
-window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); BIP=e; if(!standalone) $('instBtn').hidden=false; if(/[?&]install=1\b/.test(location.search)) instHelp(); });
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); BIP=e; if(!standalone && !window.nikosDesktop) $('instBtn').hidden=false; if(/[?&]install=1\b/.test(location.search)) instHelp(); });
 window.addEventListener('appinstalled',()=>{ $('instBtn').hidden=true; status('✓ Εγκαταστάθηκε: θα βρεις τις «Αξονικές» στο μενού Έναρξη και στην επιφάνεια εργασίας.'); });
-if(!standalone) $('instBtn').hidden=false;
+if(!standalone && !window.nikosDesktop) $('instBtn').hidden=false;
 if(standalone){ $('back').style.display='none'; }
 function instHelp(){
   document.querySelectorAll('.inst.ih').forEach(x=>x.remove());
@@ -1443,6 +1441,29 @@ async function unNct(f){
   return out;
 }
 async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind==='file') yield await h.getFile(); else yield* walkDir(h); } }
+
+/* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
+const DESK = window.nikosDesktop || null;
+async function deskOpen(root){
+  if(!DESK || !root) return;
+  status('Ανοίγω '+root+'…');
+  const L = await DESK.list(root); if(!L || L.err || !L.files || !L.files.length){ status(L&&L.err ? L.err : 'Δεν βρέθηκαν εικόνες σε αυτόν τον φάκελο.', true); return; }
+  S.src = L.name || root;
+  const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
+  const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
+  (async ()=>{ const F=L.files, B=24;
+    for(let i=0;i<F.length;i+=B){ const part=await DESK.read(F.slice(i,i+B).map(x=>x.p)).catch(()=>[]);
+      for(const x of part) if(x && x.b) st.buf.push(new File([x.b], (x.p.split(/[\\/]/).pop()||'f'), {type:'application/dicom'}));
+      wake(); }
+    st.done=true; wake(); })();
+  if(await ingest([], st)) verifyPatient();
+}
+if(DESK){
+  try{ document.title='Νίκος CT Viewer'; $('instBtn').hidden=true; $('back').style.display='none'; }catch(e){}
+  // «Φάκελος» → παράθυρο επιλογής φακέλου των Windows, ανάγνωση κατευθείαν από τον δίσκο (πιο γρήγορα)
+  $('pickDir').onclick=async ()=>{ const p=await DESK.pick(); if(p) deskOpen(p); };
+  DESK.info().then(i=>{ if(i && i.open) deskOpen(i.open); }).catch(()=>{});
+}
 
 /* ================= Εκκίνηση ================= */
 setTool(S.tool); renderRail(); draw();
