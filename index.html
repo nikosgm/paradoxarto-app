@@ -1198,6 +1198,9 @@ function _lg(msg, bad){ const e = document.getElementById('loginMsg'); if(e){ e.
 function showLogin(show, pending){
   const o = document.getElementById('loginOv'); if(!o) return;
   o.style.display = show ? 'flex' : 'none';
+  // 8/11: «δεν πατιούνται τα κουμπιά» στο iPhone — η οθόνη εισόδου έμπαινε ΠΑΝΩ από την εφαρμογή χωρίς να ξαναζωγραφιστεί η οθόνη
+  // (το iOS έδειχνε ακόμα την εφαρμογή) → αναγκαστικό ξαναζωγράφισμα + έλεγχος ότι πράγματι δεν υπάρχει σύνδεση
+  if(show){ try{ void o.offsetHeight; o.style.transform='translateZ(0)'; requestAnimationFrame(()=>{ o.style.transform=''; }); }catch(e){} if(window.pdxLoginWatch) pdxLoginWatch(); }
   // πάντα πάνω από όλα (νέο UI, νησί, φύλλα) — αλλιώς φαινόταν άδεια εφαρμογή χωρίς τρόπο σύνδεσης
   if(show){ o.style.zIndex = '2147483000'; try{ document.body.appendChild(o); }catch(e){} }
   document.getElementById('loginForm').style.display = pending ? 'none' : '';
@@ -1209,6 +1212,8 @@ let pdxEnterRetry = 0;
 async function enterApp(){
   let ur; try{ ur = await sb6.auth.getUser(); }catch(e){ ur = {data:{user:null}, error:e}; }
   const u = ur.data && ur.data.user;
+  if(!u && ur.error && !window.__enterRef){ window.__enterRef = 1; let again = false; try{ const f = await sb6.auth.refreshSession(); again = !!(f.data && f.data.session); }catch(e){}
+    if(again){ try{ return await enterApp(); } finally{ window.__enterRef = 0; } } window.__enterRef = 0; }
   if(!u){ if(ur.error && pdxNetErr(ur.error)){ try{ toast('📶 Χωρίς σύνδεση — ξαναδοκιμάζω…'); }catch(x){} clearTimeout(pdxEnterRetry); pdxEnterRetry = setTimeout(enterApp, 5000); return; } showLogin(true, false); return; }
   const r = await sb6.from('oncall_profiles').select('role,active,full_name').eq('user_id', u.id).maybeSingle();
   if(r.error && pdxNetErr(r.error)){ try{ toast('📶 Χωρίς σύνδεση — ξαναδοκιμάζω…'); }catch(x){} clearTimeout(pdxEnterRetry); pdxEnterRetry = setTimeout(enterApp, 5000); return; }
@@ -1555,7 +1560,15 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
 })();
 
 sb6.auth.getSession().then(r=>{ if(r.data.session) enterApp(); else showLogin(true,false); });
-sb6.auth.onAuthStateChange((ev)=>{ if(ev === 'SIGNED_OUT') showLogin(true,false); });
+// 8/11: SIGNED_OUT μπορεί να έρθει «ψευδώς» όταν το κινητό ξυπνά (ανανέωση συνεδρίας στη μέση) → ξαναελέγχουμε πριν δείξουμε την είσοδο
+sb6.auth.onAuthStateChange((ev)=>{
+  if(ev === 'SIGNED_OUT') setTimeout(async ()=>{ let ok = false; try{ const r = await sb6.auth.getSession(); ok = !!(r.data && r.data.session); if(!ok){ const f = await sb6.auth.refreshSession(); ok = !!(f.data && f.data.session); } }catch(e){} if(ok) enterApp(); else showLogin(true,false); }, 1200);
+  if((ev === 'SIGNED_IN' || ev === 'TOKEN_REFRESHED') ){ const o = document.getElementById('loginOv'); if(o && o.style.display !== 'none' && document.getElementById('loginForm').style.display !== 'none') enterApp(); }
+});
+// όσο φαίνεται η είσοδος: αν υπάρχει πια έγκυρη σύνδεση (π.χ. ανανεώθηκε), κλείνει μόνη της
+window.pdxLoginWatch = function(){ if(window.__lgW) return; window.__lgW = setInterval(async ()=>{ const o = document.getElementById('loginOv'); if(!o || o.style.display === 'none'){ clearInterval(window.__lgW); window.__lgW = 0; return; }
+  if(document.getElementById('loginPending').style.display !== 'none') return;
+  try{ const r = await sb6.auth.getSession(); if(r.data && r.data.session){ const u = await sb6.auth.getUser(); if(u.data && u.data.user){ clearInterval(window.__lgW); window.__lgW = 0; enterApp(); } } }catch(e){} }, 4000); };
 
 // Surfaces the real error on-screen instead of the browser's generic
 // "Script error." message, so it's actually possible to tell what broke.
@@ -2205,7 +2218,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08d-v168';
+const APP_VER = '2026-11-08e-v169';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
