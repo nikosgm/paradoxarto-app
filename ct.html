@@ -1666,7 +1666,7 @@ async function evoJSON(p){
 async function evoSearch(){
   const my = ++EVO.seq, q = EVO.q; EVO.busy=true; EVO.msg=''; evoPaint();
   const today = evoISO(Date.now());
-  const from = q.from || (q.sur || q.amka ? '2005-01-01' : evoISO(Date.now()-2*864e5)), to = q.to || today;
+  const from = q.from || '2005-01-01', to = q.to || today;   // 8/11: τα πεδία ξεκινούν συμπληρωμένα με «τελευταίος μήνας» (σβήνονται για όλα τα χρόνια)
   try{
     let calls = [];
     if(q.sur.trim().length>=2) calls = evoVariants(q.sur).map(v=>'/api/getExams?name='+encodeURIComponent(v)+'&fromDate='+from+'&toDate='+to+'&');
@@ -1723,6 +1723,9 @@ function evoPanel(pre){
   if(!DESK || !DESK.evo) return;
   let ov = document.getElementById('evoOv'); if(ov) ov.remove();
   if(pre) Object.assign(EVO.q, pre);
+  // 8/11 (εντολή χρήστη): προεπιλογή εύρους = τελευταίος μήνας έως σήμερα
+  const mo = ()=>{ const d = new Date(); d.setMonth(d.getMonth()-1); return evoISO(d); };
+  if(!EVO.q.from && !EVO.q.to){ EVO.q.from = mo(); EVO.q.to = evoISO(Date.now()); }
   ov = document.createElement('div'); ov.id='evoOv';
   const q = EVO.q, M = [['CT','CT'],['MR','MRI'],['XR','Ακτινογρ.'],['US','US'],['*','Όλα']];
   ov.innerHTML = '<div class="evo-box"><div class="evo-h"><b>🩻 Evorad</b><input data-k="sur" placeholder="Επώνυμο (ελλ. ή λατ.)" value="'+evoE(q.sur)+'"><input data-k="fn" placeholder="Όνομα" value="'+evoE(q.fn)+'"><input data-k="amka" placeholder="ΑΜΚΑ / ID" inputmode="numeric" value="'+evoE(q.amka)+'">'
@@ -1732,7 +1735,7 @@ function evoPanel(pre){
   ov.addEventListener('input', e=>{ const k = e.target.dataset && e.target.dataset.k; if(!k) return; EVO.q[k] = e.target.value; EVO.series=null; evoSoon(); });
   ov.addEventListener('click', async e=>{ const t = e.target;
     if(t===ov || t.closest('[data-x]')) return ov.remove();
-    if(t.closest('[data-clr]')){ Object.assign(EVO.q, {sur:'', fn:'', amka:'', from:'', to:''}); ov.querySelectorAll('[data-k]').forEach(i=>i.value=''); EVO.series=null; return evoSearch(); }
+    if(t.closest('[data-clr]')){ Object.assign(EVO.q, {sur:'', fn:'', amka:'', from:mo(), to:evoISO(Date.now())}); ov.querySelectorAll('[data-k]').forEach(i=>i.value = EVO.q[i.dataset.k]||''); EVO.series=null; return evoSearch(); }
     const m = t.closest('[data-mod]'); if(m){ EVO.q.mod = m.dataset.mod; ov.querySelectorAll('[data-mod]').forEach(b=>b.classList.toggle('on', b===m)); EVO.series=null; return evoSearch(); }
     if(t.closest('[data-login]')){ status('Evorad: άνοιξε το παράθυρο σύνδεσης — μετά τη σύνδεση κλείσ\' το αν δεν κλείσει μόνο του'); await DESK.evo.login(); EVO.logged=null; status(''); evoSearch(); return; }
     if(t.closest('[data-back]')){ EVO.series=null; return evoPaint(); }
