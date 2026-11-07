@@ -317,11 +317,11 @@ async function parseFile(file){
 /* ===== 7/11: ανάγνωση + αποκωδικοποίηση σε Web Workers (πολλοί πυρήνες, η οθόνη δεν «κολλάει») ===== */
 // Η ίδια συνάρτηση τρέχει μέσα στους workers και (αν δεν γίνεται worker) στο κύριο νήμα.
 function wkHandle(daikon, msg){
-  const TAGS=[[0x0008,0x0018],[0x0008,0x0008],[0x0008,0x0020],[0x0008,0x0021],[0x0008,0x0022],[0x0008,0x0023],[0x0008,0x0030],[0x0008,0x0060],[0x0008,0x0070],[0x0008,0x0080],[0x0008,0x1030],[0x0008,0x103E],[0x0008,0x1090],
+  const TAGS=[[0x0010,0x1010],[0x0008,0x0018],[0x0008,0x0008],[0x0008,0x0020],[0x0008,0x0021],[0x0008,0x0022],[0x0008,0x0023],[0x0008,0x0030],[0x0008,0x0060],[0x0008,0x0070],[0x0008,0x0080],[0x0008,0x1030],[0x0008,0x103E],[0x0008,0x1090],
     [0x0010,0x0010],[0x0010,0x0020],[0x0010,0x0030],[0x0010,0x0040],[0x0018,0x0010],[0x0018,0x0050],[0x0018,0x0060],[0x0018,0x0086],[0x0018,0x1151],[0x0018,0x1210],
     [0x0020,0x0012],[0x0020,0x0013],[0x0020,0x0032],[0x0020,0x0100],[0x0028,0x0010],[0x0028,0x0030]];
-  const tv=(img,g,e)=>{ try{ const t=img.getTag(g,e); if(!t||t.value==null) return ''; const v=Array.isArray(t.value)?t.value.join('\\'):t.value;
-    if(v instanceof Date) return v.getFullYear()+String(v.getMonth()+1).padStart(2,'0')+String(v.getDate()).padStart(2,'0');
+  const D8=v=>v instanceof Date ? v.getFullYear()+String(v.getMonth()+1).padStart(2,'0')+String(v.getDate()).padStart(2,'0') : v;
+  const tv=(img,g,e)=>{ try{ const t=img.getTag(g,e); if(!t||t.value==null) return ''; const v=Array.isArray(t.value)?t.value.map(D8).join('\\'):D8(t.value);
     return String(v==null?'':v).replace(/\^/g,' ').replace(/\0/g,'').trim(); }catch(e){ return ''; } };
   const own=d=>{ if(!d) return d; if(d.byteOffset||d.buffer.byteLength!==d.byteLength) d=d.slice(); return d; };
   const compact=(d,rgb)=>{ if(!d||!d.length||d instanceof Int16Array) return own(d); for(let i=0;i<d.length;i+=7){ const v=d[i]; if(v!==(v|0)||v<-32768||v>32767) return own(d); }
@@ -387,7 +387,8 @@ async function dicomInfo(dir){
   try{ return await walk(dir, 0); }catch(e){ return null; }
 }
 const dDate = s => { s=String(s||''); let m=s.match(/^(\d{4})(\d{2})(\d{2})$/)||s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
-  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if(m) return new Date(+m[3]<100?2000+ +m[3]:+m[3],+m[2]-1,+m[1]); return null; };
+  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if(m) return new Date(+m[3]<100?2000+ +m[3]:+m[3],+m[2]-1,+m[1]);
+  if(/[A-Za-z]{3} [A-Za-z]{3} \d{1,2} \d{4}/.test(s)){ const d=new Date(s); if(!isNaN(d)) return d; } return null; };
 const fmtD = s => { const d=dDate(s); return d? String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear() : ''; };
 const digits = s => String(s||'').replace(/\D/g,'');
 // ΑΜΚΑ → ημ. γέννησης (ΗΗΜΜΕΕ) για σύγκριση με το DICOM
@@ -553,7 +554,7 @@ function addImage(img, L){
       mono1: pi==='MONOCHROME1', rgb: /RGB|YBR/.test(pi), slices:[], usePos:true, loc:!!loc,
       plane: (()=>{ if(!dr||dr.length!==6) return ''; const n=[Math.abs(dr[1]*dr[5]-dr[2]*dr[4]), Math.abs(dr[2]*dr[3]-dr[0]*dr[5]), Math.abs(dr[0]*dr[4]-dr[1]*dr[3])]; return n[2]>=n[0]&&n[2]>=n[1]?'AX':n[1]>=n[0]?'COR':'SAG'; })(),
       kern: tagv(img,0x0018,0x1210), contrast: tagv(img,0x0018,0x0010),
-      pinfo:{name:tagv(img,0x0010,0x0010), pid:tagv(img,0x0010,0x0020), dob:tagv(img,0x0010,0x0030), date:tagv(img,0x0008,0x0020)||tagv(img,0x0008,0x0021)||tagv(img,0x0008,0x0022)||tagv(img,0x0008,0x0023), desc:tagv(img,0x0008,0x1030)}};
+      pinfo:{name:tagv(img,0x0010,0x0010), pid:tagv(img,0x0010,0x0020), dob:tagv(img,0x0010,0x0030), age:tagv(img,0x0010,0x1010), date:tagv(img,0x0008,0x0020)||tagv(img,0x0008,0x0021)||tagv(img,0x0008,0x0022)||tagv(img,0x0008,0x0023), desc:tagv(img,0x0008,0x1030)}};
     S.series.push(ser); S.series.sort((a,b)=>a.num-b.num || (a.base<b.base?-1:a.base>b.base?1:0) || (+a.acq||0)-(+b.acq||0) || (+a.echo||0)-(+b.echo||0) || (+a.tpi||0)-(+b.tpi||0));
   }
   const inst = +img.getImageNumber() || 0;
@@ -748,6 +749,10 @@ const A = '#E8B04A';
 /* ===== 7/11: MPR σε 3 παράθυρα (AX μεγάλο · COR · SAG) με σταυρό αναφοράς — όπως στο RadiAnt ===== */
 const OCS={ax:document.createElement('canvas'), cor:document.createElement('canvas'), sag:document.createElement('canvas')}, PKS={};
 function mprRects(r){ const w=r.width, h=r.height, L=Math.round(w*.5); return {ax:{x:0,y:0,w:L-2,h}, cor:{x:L+2,y:0,w:w-L-2,h:Math.round(h/2)-2}, sag:{x:L+2,y:Math.round(h/2)+2,w:w-L-2,h:h-Math.round(h/2)-2}}; }
+// ηλικία: από το (0010,1010) «045Y», αλλιώς από ημερομηνία γέννησης και ημερομηνία εξέτασης
+function ageOf(pi){ const a=String(pi.age||'').match(/^0*(\d+)\s*([YMWD])?/i); if(a && (!a[2] || /y/i.test(a[2]))) return +a[1];
+  const b=dDate(pi.dob); if(!b) return ''; const e=dDate(pi.date)||new Date(); let y=e.getFullYear()-b.getFullYear(); if(e.getMonth()<b.getMonth() || (e.getMonth()===b.getMonth() && e.getDate()<b.getDate())) y--; return y>=0&&y<130 ? y : ''; }
+function examDate(ser){ const pi=ser.pinfo||{}; if(pi.date) return pi.date; const s0=ser.slices[0]; const im=s0&&s0.img; if(!im) return ''; for(const e of [0x0020,0x0021,0x0022,0x0023]){ const v=tagv(im,0x0008,e); if(v) return v; } return ''; }
 function drawMpr3(r){
   const ser=S.cur, act=S.view, R=mprRects(r), col={ax:A, cor:'#7BD88F', sag:'#5EB8E6'}, PLN={ax:'AX',cor:'COR',sag:'SAG'};
   for(const p of ['ax','cor','sag']){
@@ -765,7 +770,7 @@ function drawMpr3(r){
   }
   S._rect=null; S.view=act;
   const pi0=ser.pinfo||{};
-  $('ovTL').innerHTML='<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+(pi0.date?'<br>Εξέταση: '+esc(fmtD(pi0.date)):'')+'<br><br>'+esc(ser.desc)+'<br><span class="a">MPR · 3 επίπεδα</span>';
+  $('ovTL').innerHTML='<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+(examDate(ser)?'<br>Εξέταση: '+esc(fmtD(examDate(ser))||examDate(ser)):'')+'<br><br>'+esc(ser.desc)+'<br><span class="a">MPR · 3 επίπεδα</span>';
   $('ovTR').innerHTML=''; $('ovBR').textContent='σύρε για σταυρό · ροδέλα: τομές στο παράθυρο'; $('ovBL').textContent='';
   $('sl').max=count(S.view)-1; $('sl').value=S.ix[S.view]; $('slv').textContent=(S.ix[S.view]+1)+' / '+count(S.view);
   document.querySelectorAll('[data-plane]').forEach(b=>b.classList.toggle('on',b.dataset.plane===S.view)); $('mpr3').classList.toggle('on',true);
@@ -809,9 +814,9 @@ function drawNow(){
   } else if(S.view==='ax'){ ctx.fillStyle='#F2994A'; ctx.font='14px sans-serif'; ctx.fillText('Η τομή δεν αποκωδικοποιήθηκε (μη υποστηριζόμενη συμπίεση).',16,30); }
 
   const PL={ax:'Αξονική',cor:'Στεφανιαία',sag:'Οβελιαία'}[S.view];
-  { const nm=((ser.pinfo||{}).name||'').trim(), t='Νίκος CT Viewer'+(nm?' — '+nm:''); if(document.title!==t){ document.title=t; const h=document.querySelector('header h1'); if(h) h.textContent=t; } }
+  { const pi=ser.pinfo||{}, nm=(pi.name||'').trim(), ag=ageOf(pi), t='Νίκος CT Viewer'+(nm?' — '+nm+(ag!==''?' ('+ag+' ετών)':''):''); if(document.title!==t){ document.title=t; const h=document.querySelector('header h1'); if(h) h.textContent=t; } }
   const pi0=ser.pinfo||{}, sex=tagv((ser.slices[0]||{}).img||{getTag:()=>null},0x0010,0x0040);
-  $('ovTL').innerHTML = '<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+((pi0.dob||sex)?'<br>'+esc([pi0.dob?fmtD(pi0.dob):'', sex].filter(Boolean).join(' · ')):'')+(pi0.date?'<br>Εξέταση: '+esc(fmtD(pi0.date)):'')+'<br><br>'
+  $('ovTL').innerHTML = '<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+((pi0.dob||sex)?'<br>'+esc([pi0.dob?fmtD(pi0.dob):'', sex].filter(Boolean).join(' · ')):'')+(examDate(ser)?'<br>Εξέταση: '+esc(fmtD(examDate(ser))||examDate(ser)):'')+'<br><br>'
     + esc(ser.desc)+'<br>'+esc(ser.modality||'—')+(ser.thick?' · '+fmt(ser.thick)+' mm':'')
     +'<br><span class="a">'+PL+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(f&&f.mip?' · MIP '+(S.mip<0?'όλος ο όγκος':S.mip+' mm'):'')+'</span>'
     +(S.view!=='ax'&&ser.uneven?'<br><span class="w">άνισα διαστήματα τομών</span>':'');
