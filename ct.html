@@ -1743,10 +1743,14 @@ async function evoOpen(list){
   S.src = 'Evorad · '+(x ? x.last+' '+x.first+' · '+x.date.slice(0,10) : '');
   const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
   const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
-  let i=0, bad=0; const B=16;
-  const lane = async ()=>{ while(i<urls.length){ const part = urls.slice(i, i+B); i+=B; const r = await DESK.evo.bin(part).catch(()=>[]);
-      r.forEach((y,j)=>{ if(y && y.b) st.buf.push(new File([y.b], 'evo'+(i+j)+'.dcm', {type:'application/dicom'})); else bad++; }); wake(); } };
-  (async ()=>{ await Promise.all([lane(), lane(), lane()]); st.done=true; wake(); if(bad) status('Evorad: '+bad+' εικόνες δεν ήρθαν', true); })();
+  // 8/11 (ταχύτητα): η ΠΡΩΤΗ εικόνα μόνη της (εμφανίζεται αμέσως), μετά 6 παράλληλες ροές των 8 εικόνων
+  let i=0, bad=0, bytes=0; const t0=performance.now(); let tFirst=0;
+  const lane = async (B)=>{ while(i<urls.length){ const a=i, part = urls.slice(a, a+B); i+=B; const r = await DESK.evo.bin(part).catch(()=>[]);
+      r.forEach((y,j)=>{ if(y && y.b){ bytes+=y.b.byteLength||0; st.buf.push(new File([y.b], 'evo'+(a+j)+'.dcm', {type:'application/dicom'})); } else bad++; }); if(!tFirst) tFirst=performance.now()-t0; wake(); } };
+  const one = async ()=>{ if(i>=urls.length) return; const a=i; i+=1; const r = await DESK.evo.bin([urls[a]]).catch(()=>[]); const y=r[0]; if(y && y.b){ bytes+=y.b.byteLength||0; st.buf.push(new File([y.b], 'evo'+a+'.dcm', {type:'application/dicom'})); } else bad++; tFirst=performance.now()-t0; wake(); };
+  (async ()=>{ await Promise.all([one().then(()=>lane(8)), ...[8,8,8,8,8].map(b=>lane(b))]); st.done=true; wake();
+    const sec=(performance.now()-t0)/1000; EVO.lastDl = 'λήψη '+(bytes/1048576).toFixed(0)+' MB σε '+sec.toFixed(1)+' s (πρώτη σε '+(tFirst/1000).toFixed(1)+' s)';
+    if(bad) status('Evorad: '+bad+' εικόνες δεν ήρθαν', true); else setTimeout(()=>{ try{ const el=$('status'); if(el && !/λήψη/.test(el.textContent)) el.textContent += ' · Evorad '+EVO.lastDl; }catch(e){} }, 400); })();
   if(await ingest([], st)) verifyPatient();
 }
 function evoPanel(pre){
