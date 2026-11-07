@@ -1657,7 +1657,11 @@ async function evoJSON(p){
   if(!r || r.err) throw new Error(r && r.err || 'ο Evorad δεν απαντά');
   const t = String(r.text||'').trim();
   if(!/json/i.test(r.ct) && /^</.test(t)){ EVO.logged=false; const e=new Error('LOGIN'); e.login=true; throw e; }
-  EVO.logged=true; const j=JSON.parse(t); return Array.isArray(j) ? j : (j.data || j.aaData || []);
+  let j; try{ j=JSON.parse(t); }catch(e){ EVO.raw = t.slice(0,160); if(/login|σύνδεση|session|unauthor/i.test(t)){ EVO.logged=false; const er=new Error('LOGIN'); er.login=true; throw er; } throw new Error('μη αναμενόμενη απάντηση'); }
+  EVO.raw = t.slice(0,160);
+  // 8/11: ο Evorad μπορεί να απαντά JSON και χωρίς σύνδεση (π.χ. {status:"error"} ή κενό) → τότε ζητάμε σύνδεση
+  if(j && !Array.isArray(j) && j.status && !/succ|ok/i.test(String(j.status))){ EVO.logged=false; const er=new Error('LOGIN'); er.login=true; throw er; }
+  EVO.logged=true; return Array.isArray(j) ? j : (j.data || j.aaData || []);
 }
 async function evoSearch(){
   const my = ++EVO.seq, q = EVO.q; EVO.busy=true; EVO.msg=''; evoPaint();
@@ -1689,7 +1693,7 @@ function evoPaint(){
     L.innerHTML = '<div class="evo-bar"><button class="ib" data-back>‹ Πίσω</button><b>'+evoE(x.last+' '+x.first)+'</b><span>'+evoE(x.date.slice(0,16)+' · '+x.mod+' · '+x.desc)+'</span><button class="ib primary" data-openall>Άνοιγμα όλων ('+EVO.series.reduce((a,s)=>a+s.n,0)+' εικ.)</button></div>'
       + '<div class="evo-ser">'+EVO.series.map((s,i)=>'<button data-ser="'+i+'">'+(s.thumb?'<img src="'+s.thumb+'" alt="">':'<span class="nt">🩻</span>')+'<b>'+evoE(s.desc||s.prot||('Σειρά '+(i+1)))+'</b><small>'+s.n+' εικόνες</small></button>').join('')+'</div>';
     return; }
-  const head = '<div class="evo-cnt">'+(EVO.busy?'Αναζήτηση…':EVO.msg?evoE(EVO.msg):EVO.exams.length+' εξετάσεις')+'</div>';
+  const head = '<div class="evo-cnt">'+(EVO.busy?'Αναζήτηση…':EVO.msg?evoE(EVO.msg):EVO.exams.length+' εξετάσεις')+(!EVO.busy && !EVO.exams.length && EVO.raw!=null ? ' · απάντηση Evorad: <code>'+evoE(EVO.raw||'(κενή)')+'</code>' : '')+'</div>';
   L.innerHTML = head + (EVO.exams.length ? '<table class="evo-t"><thead><tr><th>Ημερομηνία</th><th>Ασθενής</th><th>ΑΜΚΑ / ID</th><th>Γέννηση</th><th>Είδος</th><th>Περιγραφή</th></tr></thead><tbody>'
     + EVO.exams.slice(0,300).map((x,i)=>'<tr data-ex="'+i+'"><td>'+evoE(x.date.slice(0,16).replace('T',' '))+'</td><td><b>'+evoE(x.last)+'</b> '+evoE(x.first)+'</td><td>'+evoE(x.amka||x.pid)+'</td><td>'+evoE(x.birth.slice(0,10))+'</td><td>'+evoE(x.mod)+'</td><td>'+evoE(x.desc)+'</td></tr>').join('')+'</tbody></table>' : (EVO.busy?'':'<div class="evo-empty">Καμία εξέταση. Γράψε επώνυμο (ελληνικά ή λατινικά), ΑΜΚΑ ή άλλαξε ημερομηνίες.</div>'));
 }
@@ -1723,14 +1727,14 @@ function evoPanel(pre){
   const q = EVO.q, M = [['CT','CT'],['MR','MRI'],['XR','Ακτινογρ.'],['US','US'],['*','Όλα']];
   ov.innerHTML = '<div class="evo-box"><div class="evo-h"><b>🩻 Evorad</b><input data-k="sur" placeholder="Επώνυμο (ελλ. ή λατ.)" value="'+evoE(q.sur)+'"><input data-k="fn" placeholder="Όνομα" value="'+evoE(q.fn)+'"><input data-k="amka" placeholder="ΑΜΚΑ / ID" inputmode="numeric" value="'+evoE(q.amka)+'">'
     + '<label>από <input type="date" data-k="from" value="'+evoE(q.from)+'"></label><label>έως <input type="date" data-k="to" value="'+evoE(q.to)+'"></label>'
-    + '<span class="evo-m">'+M.map(([v,t])=>'<button data-mod="'+v+'" class="'+(q.mod===v?'on':'')+'">'+t+'</button>').join('')+'</span><button class="ib" data-clr title="Καθάρισμα φίλτρων">✕ φίλτρα</button><button class="ib" data-x title="Κλείσιμο (Esc)">Κλείσιμο</button></div><div class="evo-l" data-l></div></div>';
+    + '<button class="ib" data-login title="Σύνδεση στον Evorad (ανοίγει η σελίδα του· βάζεις εσύ τα στοιχεία σου)">🔑 Σύνδεση</button><span class="evo-m">'+M.map(([v,t])=>'<button data-mod="'+v+'" class="'+(q.mod===v?'on':'')+'">'+t+'</button>').join('')+'</span><button class="ib" data-clr title="Καθάρισμα φίλτρων">✕ φίλτρα</button><button class="ib" data-x title="Κλείσιμο (Esc)">Κλείσιμο</button></div><div class="evo-l" data-l></div></div>';
   document.body.appendChild(ov);
   ov.addEventListener('input', e=>{ const k = e.target.dataset && e.target.dataset.k; if(!k) return; EVO.q[k] = e.target.value; EVO.series=null; evoSoon(); });
   ov.addEventListener('click', async e=>{ const t = e.target;
     if(t===ov || t.closest('[data-x]')) return ov.remove();
     if(t.closest('[data-clr]')){ Object.assign(EVO.q, {sur:'', fn:'', amka:'', from:'', to:''}); ov.querySelectorAll('[data-k]').forEach(i=>i.value=''); EVO.series=null; return evoSearch(); }
     const m = t.closest('[data-mod]'); if(m){ EVO.q.mod = m.dataset.mod; ov.querySelectorAll('[data-mod]').forEach(b=>b.classList.toggle('on', b===m)); EVO.series=null; return evoSearch(); }
-    if(t.closest('[data-login]')){ const ok = await DESK.evo.login(); if(ok){ EVO.logged=null; evoSearch(); } return; }
+    if(t.closest('[data-login]')){ status('Evorad: άνοιξε το παράθυρο σύνδεσης — μετά τη σύνδεση κλείσ\' το αν δεν κλείσει μόνο του'); await DESK.evo.login(); EVO.logged=null; status(''); evoSearch(); return; }
     if(t.closest('[data-back]')){ EVO.series=null; return evoPaint(); }
     if(t.closest('[data-openall]')) return evoOpen(EVO.series);
     const sr = t.closest('[data-ser]'); if(sr){ const s = EVO.series[+sr.dataset.ser]; return evoOpen([s].concat(EVO.series.filter(z=>z!==s))); }
