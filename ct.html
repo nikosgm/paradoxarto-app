@@ -1757,7 +1757,7 @@ function evoPanel(pre){
   const mo = ()=>{ const d = new Date(); d.setMonth(d.getMonth()-1); return evoISO(d); };
   if(!EVO.q.from && !EVO.q.to){ EVO.q.from = mo(); EVO.q.to = evoISO(Date.now()); }
   ov = document.createElement('div'); ov.id='evoOv';
-  const q = EVO.q, M = [['CT','CT'],['MR','MRI'],['XR','Ακτινογρ.'],['US','US'],['*','Όλα']];
+  const q = EVO.q, M = [['CT','CT'],['XR','Ακτινογρ.'],['US','US'],['*','Όλα']];   // 8/11: χωρίς MRI (δεν γίνονται στο νοσοκομείο)
   ov.innerHTML = '<div class="evo-box"><div class="evo-h"><b>🩻 Evorad</b><input data-k="sur" placeholder="Επώνυμο (ελλ. ή λατ.)" value="'+evoE(q.sur)+'"><input data-k="fn" placeholder="Όνομα" value="'+evoE(q.fn)+'"><input data-k="amka" placeholder="ΑΜΚΑ / ID" inputmode="numeric" value="'+evoE(q.amka)+'">'
     + '<label>από <input type="date" data-k="from" value="'+evoE(q.from)+'"></label><label>έως <input type="date" data-k="to" value="'+evoE(q.to)+'"></label>'
     + '<button class="ib" data-login title="Σύνδεση στον Evorad (ανοίγει η σελίδα του· βάζεις εσύ τα στοιχεία σου)">🔑 Σύνδεση</button><span class="evo-m">'+M.map(([v,t])=>'<button data-mod="'+v+'" class="'+(q.mod===v?'on':'')+'">'+t+'</button>').join('')+'</span><button class="ib" data-clr title="Καθάρισμα φίλτρων">✕ φίλτρα</button><button class="ib" data-x title="Κλείσιμο (Esc)">Κλείσιμο</button></div><div class="evo-l" data-l></div></div>';
