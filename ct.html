@@ -1739,6 +1739,10 @@ function evoPanel(pre){
   ov.addEventListener('keydown', e=>{ if(e.key==='Escape') ov.remove(); if(e.key==='Enter' && EVO.exams.length===1) evoSeries(EVO.exams[0]); });
   evoPaint(); evoSearch(); setTimeout(()=>{ const i = ov.querySelector('[data-k="sur"]'); if(i) i.focus(); }, 50);
 }
+// 8/11: παλιά εφαρμογή υπολογιστή (χωρίς Evorad/CD) → μήνυμα με την έκδοση, για να φαίνεται αμέσως τι λείπει
+if(DESK) DESK.info().then(i=>{ const v = (i && i.version) || '?'; try{ document.querySelector('header h1').title = 'Έκδοση εφαρμογής '+v; }catch(e){}
+  if(!DESK.evo || !DESK.cd) status('Εφαρμογή υπολογιστή έκδοση '+v+' (παλιά) — κλείσε την εφαρμογή για 1–2 λεπτά για να ενημερωθεί στη 1.0.5 (Evorad, CD).', true);
+  else setTimeout(()=>{ if(!S.cur && !S.load) status('Νίκος CT Viewer '+v+' · 🩻 Evorad (E) · 💿 CD · 🗂 Φάκελος'); }, 300); }).catch(()=>{});
 if(DESK && DESK.evo){
   const b = document.createElement('button'); b.className='ib primary'; b.id='evoBtn'; b.title='Αναζήτηση εξετάσεων στον Evorad (E)'; b.innerHTML='🩻<span>Evorad</span>';
   const ref = $('srvBtn'); if(ref) ref.parentNode.insertBefore(b, ref); b.onclick=()=>evoPanel();
