@@ -1,13 +1,13 @@
 {
- "version": "1.0.4",
+ "version": "1.0.5",
  "parts": [
-  "nikosct-1.0.4.zip.00",
-  "nikosct-1.0.4.zip.01",
-  "nikosct-1.0.4.zip.02",
-  "nikosct-1.0.4.zip.03",
-  "nikosct-1.0.4.zip.04",
-  "nikosct-1.0.4.zip.05"
+  "nikosct-1.0.5.zip.00",
+  "nikosct-1.0.5.zip.01",
+  "nikosct-1.0.5.zip.02",
+  "nikosct-1.0.5.zip.03",
+  "nikosct-1.0.5.zip.04",
+  "nikosct-1.0.5.zip.05"
  ],
- "sha256": "9488a3662fb0b05c6995e8bcf844bc3dd45d4e4b1d712a5fdd00c60105c948c7",
- "notes": "🩻 Evorad μέσα στην εφαρμογή · 💿 CD · νέα προεπισκόπηση εκτύπωσης"
+ "sha256": "1024bb4f3a1d0d53ed54babf5cc6140e6e8f9f8f07dd74ae3815ff73acb35b2d",
+ "notes": "χωρίς άσπρο παράθυρο, σκούρα μπάρα · 🩻 Evorad · 💿 CD · προεπισκόπηση εκτύπωσης"
 }

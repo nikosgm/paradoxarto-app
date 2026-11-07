@@ -1502,7 +1502,7 @@ async function deskOpen(root){
   if(await ingest([], st)) verifyPatient();
 }
 if(DESK){
-  try{ document.title='Νίκος CT Viewer'; $('instBtn').hidden=true; $('back').style.display='none'; }catch(e){}
+  try{ document.title='Νίκος CT Viewer'; $('instBtn').hidden=true; $('back').style.display='none'; const h=document.querySelector('header h1'); if(h) h.style.display='none'; }catch(e){}   // 8/11: όνομα εφαρμογής + ασθενή μόνο στη μπάρα τίτλου των Windows
   // «Φάκελος» → παράθυρο επιλογής φακέλου των Windows, ανάγνωση κατευθείαν από τον δίσκο (πιο γρήγορα)
   $('pickDir').onclick=async ()=>{ const p=await DESK.pick(); if(p) deskOpen(p); };
   // 8/11 (εντολή χρήστη): χωρίς «Κλινική»· κουμπί «💿 CD» → κατευθείαν η αξονική από τον δίσκο της μονάδας CD
