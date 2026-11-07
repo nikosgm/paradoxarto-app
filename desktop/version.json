@@ -1,13 +1,13 @@
 {
- "version": "1.0.5",
+ "version": "1.0.6",
  "parts": [
-  "nikosct-1.0.5.zip.00",
-  "nikosct-1.0.5.zip.01",
-  "nikosct-1.0.5.zip.02",
-  "nikosct-1.0.5.zip.03",
-  "nikosct-1.0.5.zip.04",
-  "nikosct-1.0.5.zip.05"
+  "nikosct-1.0.6.zip.00",
+  "nikosct-1.0.6.zip.01",
+  "nikosct-1.0.6.zip.02",
+  "nikosct-1.0.6.zip.03",
+  "nikosct-1.0.6.zip.04",
+  "nikosct-1.0.6.zip.05"
  ],
- "sha256": "810ae00ceacd9d9b726ec0dfa04d526684774bc3012f554d653a778c707e9646",
- "notes": "χωρίς άσπρο παράθυρο, σκούρα μπάρα · 🩻 Evorad · 💿 CD · προεπισκόπηση εκτύπωσης"
+ "sha256": "71ed9a92a6d412cfbb84d40d40c48a2b1874937677a029a5d0b7100de9172d2f",
+ "notes": "Evorad: θυμάται τη σύνδεση (κρυπτογραφημένα στον υπολογιστή) · αναζήτηση ελληνικά/λατινικά"
 }
