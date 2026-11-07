@@ -1337,7 +1337,23 @@ if(/[?&]install=1\b/.test(location.search)) setTimeout(()=>{ if(!document.queryS
 // διπλό κλικ σε .dcm (όταν είναι εγκατεστημένη) → ανοίγει εδώ
 if('launchQueue' in window){ try{ launchQueue.setConsumer(async p=>{ if(!p.files||!p.files.length) return; const F=[];
   for(const h of p.files){ try{ if(h.kind==='directory'){ for await (const x of walkDir(h)) F.push(x); } else F.push(await h.getFile()); }catch(e){} }
-  if(F.length){ S.src=''; if(await ingest(F)) verifyPatient(); } }); }catch(e){} }
+  const out=[]; for(const f of F){ if(/\.nct$/i.test(f.name)){ try{ out.push(...await unNct(f)); }catch(e){ status('Δεν διαβάστηκε το πακέτο: '+e.message, true); } } else out.push(f); }
+  if(out.length){ S.src=(F[0].name||'').replace(/-\d{8}-\d{6}\.nct$/i,''); if(await ingest(out)) verifyPatient(); } }); }catch(e){} }
+// .nct = πακέτο του «Άνοιγμα με» (δεξί κλικ σε φάκελο): "NCT1", πλήθος, [μήκος ονόματος, όνομα UTF-8, μέγεθος (int64), δεδομένα]…
+// Δεν διαβάζεται ολόκληρο: κάθε αρχείο είναι ένα «κομμάτι» (slice) του ίδιου αρχείου στον δίσκο.
+async function unNct(f){
+  const rd=async (o,n)=>new DataView(await f.slice(o,o+n).arrayBuffer());
+  let h=await rd(0,8); if(h.getUint32(0,false)!==0x4E435431) throw new Error('άγνωστη μορφή');
+  const n=h.getInt32(4,true), out=[]; let o=8; const td=new TextDecoder();
+  status('Ανοίγω τον φάκελο ('+n+' αρχεία)…');
+  for(let i=0;i<n && o<f.size;i++){
+    const l=(await rd(o,4)).getInt32(0,true); o+=4;
+    const name=td.decode(await f.slice(o,o+l).arrayBuffer()); o+=l;
+    const sz=Number((await rd(o,8)).getBigInt64(0,true)); o+=8;
+    out.push(new File([f.slice(o,o+sz)], name.split(/[\\/]/).pop()||('f'+i), {type:'application/dicom'})); o+=sz;
+  }
+  return out;
+}
 async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind==='file') yield await h.getFile(); else yield* walkDir(h); } }
 
 /* ================= Εκκίνηση ================= */
@@ -1368,7 +1384,7 @@ else if(Q){
   })();
 }
 // για δοκιμές
-window.__ct = {V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
+window.__ct = {unNct, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
 })();
 </script>
 </body>
