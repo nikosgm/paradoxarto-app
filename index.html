@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07f-v145';
+const APP_VER = '2026-11-07g-v146';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -16175,8 +16175,9 @@ Z99.2:C|αιμοκάθαρση
   window.labsFullExtBack = function(){ const f = extBack; extBack = null; labsFullClose(); if(f) f(); };
   // σύρσιμο δεξιά (από την αριστερή άκρη) → πίσω (στην καρτέλα του ασθενή αν ήρθαμε από εκεί)
   (function(){ let x0 = 0, y0 = 0, ok = false;
-    box.addEventListener('touchstart', e=>{ const t = e.touches[0]; ok = e.touches.length===1 && t.clientX < 40 && !document.getElementById('lmCh'); x0 = t.clientX; y0 = t.clientY; }, {passive:true});
-    box.addEventListener('touchend', e=>{ if(!ok) return; ok = false; const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0); if(dx < 80 || dy > 70) return;
+    // από οπουδήποτε (όχι μόνο την άκρη), εκτός από πίνακες που κυλάνε οριζόντια
+    box.addEventListener('touchstart', e=>{ const t = e.touches[0]; const sc = e.target.closest && e.target.closest('.lm-tw,.lf-tw,.lf-t,.lm-t,[data-hscroll]'); ok = e.touches.length===1 && (!sc || sc.scrollLeft <= 0) && !document.getElementById('lmCh'); x0 = t.clientX; y0 = t.clientY; }, {passive:true});
+    box.addEventListener('touchend', e=>{ if(!ok) return; ok = false; const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0); if(dx < 90 || dy > dx * 0.6) return;
       if(cur==='@ext' && extBack) return labsFullExtBack(); labsFullClose(); }, {passive:true}); })();
   async function extOpen(i){
     const x = ext.pts && ext.pts[i]; if(!x || !x.pid) return;
