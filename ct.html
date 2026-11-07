@@ -899,17 +899,21 @@ async function setMip(m){
 }
 
 /* ================= Φόρτωση αρχείων ================= */
-async function ingest(files){
+// src (προαιρετικό): ροή αρχείων που έρχονται σιγά-σιγά (δεξί κλικ → «Άνοιγμα με»): {done, wait(), take()}
+async function ingest(files, src){
   files=files.filter(f=>isCand(f.name, f.size));
-  if(!files.length){ status('Δεν βρέθηκαν αρχεία DICOM σε αυτόν τον φάκελο.', true); return false; }
+  if(!files.length && !src){ status('Δεν βρέθηκαν αρχεία DICOM σε αυτόν τον φάκελο.', true); return false; }
   if(typeof daikon==='undefined'){ status('Η βιβλιοθήκη ανάγνωσης DICOM δεν φόρτωσε· έλεγξε τη σύνδεση στο internet και ξαναφόρτωσε τη σελίδα.', true); return false; }
   // νέα φόρτωση = νέα «γενιά»: ό,τι φέρνουν ακόμη οι workers της προηγούμενης αγνοείται
   const gen=++S.gen;
   S.series=[]; S.cur=null; S.meas={}; lru.length=0; FC=null; PK=null; S.touched=false; S.drag=null;
   const L={gen, mem:0, px:null, file:null, t0:performance.now(), total:files.length, done:0, ok:0, skip:0, dup:0, bytes:0, first:null, end:null, sops:new Set(), split:new Set(), posAcq:new Map()};
   S.load=L; status(); const q=files.slice(); let lastUi=0;
+  const pull=()=>{ if(src){ const nw=src.take().filter(f=>isCand(f.name,f.size)); if(nw.length){ q.push(...nw); L.total+=nw.length; } } };
   async function worker(){
-    while(q.length && gen===S.gen){
+    while(gen===S.gen){
+      if(!q.length) pull();
+      if(!q.length){ if(!src || src.done) break; await src.wait(); continue; }
       const f=q.shift();
       try{
         const r=await WK.parse(f, L.mem < MEM_BUDGET);
@@ -1346,11 +1350,35 @@ $('instBtn').onclick=instHelp;
 if(/[?&]install=1\b/.test(location.search)) setTimeout(()=>{ if(!document.querySelector('.inst.ih')) instHelp(); }, 1500);
 // διπλό κλικ σε .dcm (όταν είναι εγκατεστημένη) → ανοίγει εδώ
 if('launchQueue' in window){ try{ launchQueue.setConsumer(async p=>{ if(!p.files||!p.files.length) return; const F=[];
+  // 7/11: «Άνοιγμα με» → η εφαρμογή ανοίγει ΑΜΕΣΩΣ και οι εικόνες έρχονται όσο τις γράφει το πρόγραμμα του δεξιού κλικ (σειρά-σειρά)
+  const nh=p.files.find(h=>h.kind==='file' && /\.nct$/i.test(h.name));
+  if(nh){ const st=await nctStream(nh); if(st){ S.src=nh.name.replace(/-\d{8}-\d{6}\.nct$/i,''); status('Ανοίγω '+S.src+'…'); if(await ingest([], st)) verifyPatient(); return; } }
   for(const h of p.files){ try{ if(h.kind==='directory'){ for await (const x of walkDir(h)) F.push(x); } else F.push(await h.getFile()); }catch(e){} }
   const out=[]; for(const f of F){ if(/\.nct$/i.test(f.name)){ try{ out.push(...await unNct(f)); }catch(e){ status('Δεν διαβάστηκε το πακέτο: '+e.message, true); } } else out.push(f); }
   if(out.length){ S.src=(F[0].name||'').replace(/-\d{8}-\d{6}\.nct$/i,''); if(await ingest(out)) verifyPatient(); } }); }catch(e){} }
 // .nct = πακέτο του «Άνοιγμα με» (δεξί κλικ σε φάκελο): "NCT1", πλήθος, [μήκος ονόματος, όνομα UTF-8, μέγεθος (int64), δεδομένα]…
 // Δεν διαβάζεται ολόκληρο: κάθε αρχείο είναι ένα «κομμάτι» (slice) του ίδιου αρχείου στον δίσκο.
+// NCT2: ροή — κεφαλίδα "NCT2", -1, μετά [μήκος ονόματος, όνομα, μέγεθος, δεδομένα]… και 0 στο τέλος.
+// Το αρχείο ΜΕΓΑΛΩΝΕΙ όσο το διαβάζουμε: κάθε εγγραφή διαβάζεται αμέσως στη μνήμη (με νέο «στιγμιότυπο» αν άλλαξε το αρχείο).
+async function nctStream(h){
+  let f=await h.getFile(); const head=new DataView(await f.slice(0,8).arrayBuffer());
+  if(head.byteLength<8 || head.getUint32(0,false)!==0x4E435432) return null;   // όχι NCT2 → παλιός τρόπος
+  const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
+  const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
+  const td=new TextDecoder();
+  const read=async (o,n)=>{ for(let t=0;t<4;t++){ try{ if(f.size<o+n) f=await h.getFile(); if(f.size<o+n) return null; return await f.slice(o,o+n).arrayBuffer(); }catch(e){ f=await h.getFile(); } } return null; };
+  (async ()=>{ let o=8, idle=0, i=0;
+    while(true){
+      const a=await read(o,4); if(!a){ if(++idle>600){ break; } await new Promise(r=>setTimeout(r,100)); continue; }
+      const l=new DataView(a).getInt32(0,true); if(l===0){ break; }
+      const nb=await read(o+4,l), sb=nb && await read(o+4+l,8); if(!sb){ if(++idle>600) break; await new Promise(r=>setTimeout(r,100)); continue; }
+      const sz=Number(new DataView(sb).getBigInt64(0,true)), data=await read(o+12+l,sz); if(!data){ if(++idle>600) break; await new Promise(r=>setTimeout(r,100)); continue; }
+      idle=0; const name=td.decode(nb).split(/[\\/]/).pop()||('f'+i); i++;
+      st.buf.push(new File([data], name, {type:'application/dicom'})); o+=12+l+sz; wake();
+    }
+    st.done=true; wake(); })();
+  return st;
+}
 async function unNct(f){
   const rd=async (o,n)=>new DataView(await f.slice(o,o+n).arrayBuffer());
   let h=await rd(0,8); if(h.getUint32(0,false)!==0x4E435431) throw new Error('άγνωστη μορφή');
@@ -1394,7 +1422,7 @@ else if(Q){
   })();
 }
 // για δοκιμές
-window.__ct = {unNct, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
+window.__ct = {unNct, nctStream, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
 })();
 </script>
 </body>

@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07w-v162';
+const APP_VER = '2026-11-07x-v163';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -19551,6 +19551,125 @@ html.pdx-night [style*="border:1.5px solid var(--mp,#1D4E80)"]:not([style*="back
     if(inv){ e.preventDefault(); e.stopPropagation(); kid.click(); }
   }, true);
 })();
+</script>
+<style id="clsA">/* 7/11: κλασικός πίνακας — εμφάνιση «Α · Καθαρό» (επιλογή χρήστη). Μόνο οθόνη υπολογιστή· η εκτύπωση δεν αλλάζει. */
+/* Πρόταση A «Καθαρό» — μόνο ο κλασικός πίνακας στην οθόνη υπολογιστή. Δεν επηρεάζει #printview / @media print / κινητό. */
+@media screen and (min-width:1000px){
+  #app div:has(> table.cls-A){ overflow:visible !important; padding:0 18px !important; }
+  #app table.cls-A{ border-collapse:separate; border-spacing:0; background:#fff; border:1px solid #E3E8EE; border-radius:14px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 16px rgba(16,24,40,.04); font-size:13.5px; line-height:1.45; color:#1F2A37; font-variant-numeric:tabular-nums; }
+  #app table.cls-A thead th{ position:sticky; top:0; z-index:5; background:#F7F9FB; color:#5B6B7C; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; text-align:left; padding:10px 6px; border-bottom:1px solid #E3E8EE; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #app table.cls-A thead th:first-child{ border-top-left-radius:14px; } #app table.cls-A thead th:last-child{ border-top-right-radius:14px; }
+  #app table.cls-A tr.cls-room td{ background:#fff; padding:14px 12px 6px; border:0; }
+  #app table.cls-A .cls-room-n{ font-weight:800; font-size:13px; color:#1B4B66; letter-spacing:.01em; }
+  #app table.cls-A .cls-room-c{ margin-left:10px; font-size:11.5px; color:#8A97A6; font-weight:600; background:#F1F4F7; border-radius:999px; padding:2px 8px; }
+  #app table.cls-A .patient-row{ height:auto; border:0; }
+  #app table.cls-A .patient-row td{ height:auto; border:0; border-top:1px solid #EEF1F4; padding:9px 10px; vertical-align:top; transition:background .12s; }
+  #app table.cls-A tr.cls-room + .patient-row td{ border-top-color:transparent; }
+  #app table.cls-A .patient-row:nth-of-type(even) td{ background:#FAFBFC; }
+  #app table.cls-A .patient-row:hover td{ background:#F0F6FB; }
+  #app table.cls-A .patient-row td.f-therapist{ color:#8A97A6; font-weight:600; font-size:12px; }
+  #app table.cls-A .patient-row td.f-room{ font-weight:700; color:#1B4B66; }
+  #app table.cls-A .patient-row td.f-room .ch-rowbtn{ opacity:.35; border-radius:8px; }
+  #app table.cls-A .patient-row td.name-td{ text-align:left !important; font-size:14.5px; line-height:1.3; }
+  #app table.cls-A .patient-row td.name-td b{ font-weight:700; letter-spacing:-.005em; }
+  #app table.cls-A .surgery-td b{ display:inline-block; background:#EAF2F8; color:#164863; border-radius:6px; padding:1px 7px; margin-bottom:3px; font-weight:700; }
+  #app table.cls-A .surgery-td .cell-clip{ color:#4A5868; }
+  #app table.cls-A .labs-td .bn{ font-weight:600; }
+  #app table.cls-A .labs-td b.cls-abn{ color:#B42318; }
+  #app table.cls-A .labs-td b.cls-todo{ display:inline-block; margin-top:4px; background:#FFF6E5; color:#8A4B00; border:1px solid #FBD38D; border-radius:6px; padding:1px 7px; font-weight:600; font-size:12.5px; }
+  #app table.cls-A .labs-td b.cls-todo::before{ content:"⚑ "; color:#E08A00; }
+  #app table.cls-A col.col-name{ width:36mm; }
+  #app table.cls-A .patient-row.is-empty td.name-td{ overflow:visible; white-space:nowrap; }
+  #app table.cls-A .f-history b{ color:#9A3412; }
+  #app table.cls-A .patient-row.is-empty td{ background:#fff !important; padding-top:5px; padding-bottom:5px; color:#A0AAB5; }
+  #app table.cls-A .cls-free{ font-size:12px; font-style:italic; color:#A0AAB5; font-weight:400; }
+  #app table.cls-A .patient-row.is-fever td.labs-td{ box-shadow:inset 3px 0 0 #F04438; }
+  /* Διαγραφή: διακριτικό εικονίδιο → κόκκινο στο hover → «Σίγουρα;» */
+  #app table.cls-A td.delete-td{ text-align:center; vertical-align:middle; padding:0 6px; }
+  #app table.cls-A .cls-del{ box-shadow:none !important; outline:0; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px !important; border:1px solid transparent !important; background:transparent !important; color:#A0AAB5 !important; cursor:pointer; padding:0; transition:color .12s, background-color .12s; }
+  #app table.cls-A .patient-row:hover .cls-del{ color:#6B7785 !important; }
+  #app table.cls-A .cls-del:hover{ color:#D92D20 !important; background:#FEF3F2 !important; border-color:#FECDCA !important; }
+  #app table.cls-A .cls-del.is-confirm{ width:auto; padding:0 9px; background:#D92D20 !important; color:#fff !important; font-size:11.5px; font-weight:700; border-color:#D92D20 !important; }
+  #app table.cls-A col.col-delete{ width:56px; }
+}
+@media screen and (min-width:1000px){
+  #app table.cls-A td.delete-td{ position:relative; overflow:visible; }
+  #app table.cls-A .cls-del.is-confirm{ position:absolute; right:8px; top:50%; transform:translateY(-50%); white-space:nowrap; z-index:3; height:30px; box-shadow:0 4px 12px rgba(217,45,32,.3) !important; }
+}
+@media screen and (min-width:1000px){
+  #app table.cls-A .patient-row td.delete-td .cls-del.is-confirm{ color:#fff !important; background:#D92D20 !important; }
+}
+
+</style>
+<script>
+window.CLS_MODE='A';
+/* Πρόταση εμφάνισης κλασικού πίνακα — μόνο οθόνη υπολογιστή (#app #liveTableBody).
+   Η αναφορά/εκτύπωση (#printview) ΔΕΝ αγγίζεται: χτίζεται από buildPatientRow χωρίς clickInfo. */
+(function(){
+  if(window.__clsDeco) return; window.__clsDeco = true;
+  var MODE = window.CLS_MODE || 'A';
+  var TRASH = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>';
+  var PEN = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg>';
+  var HEAD = ['','Κλίνη','Ασθενής','Επέμβαση · Διάγνωση','Καθετήρες · Παροχ. · Κινητ.','Καλλιέργ.','Ζωτικά · Εργαστ. · ⚑ Εκκρεμότητες','Ιστορικό · Αντιπηκτικά',''];
+  function armConfirm(btn, run, idleHtml){
+    btn.onclick = function(e){
+      e.stopPropagation(); e.preventDefault();
+      if(btn.dataset.c==='1'){ btn.dataset.c=''; run(); return; }
+      btn.dataset.c='1'; btn.classList.add('is-confirm'); btn.innerHTML='Σίγουρα;';
+      clearTimeout(btn._t); btn._t=setTimeout(function(){ btn.dataset.c=''; btn.classList.remove('is-confirm'); btn.innerHTML=idleHtml; }, 3000);
+    };
+  }
+  function closeMenus(){ document.querySelectorAll('#liveTableBody .cls-menu.open').forEach(function(m){ m.classList.remove('open'); }); }
+  document.addEventListener('click', closeMenus);
+  function decorate(){
+    var tb = document.getElementById('liveTableBody'); if(!tb) return;
+    var table = tb.closest('table'); table.classList.add('cls-'+MODE);
+    if(!table.tHead){ var th = table.createTHead(), tr = th.insertRow(); HEAD.forEach(function(t){ var c=document.createElement('th'); c.textContent=t; tr.appendChild(c); }); }
+    var lastRoom = null, rows = [].slice.call(tb.querySelectorAll('tr.patient-row'));
+    var tally = {};
+    rows.forEach(function(r){ var lab=(r.querySelector('.f-room .cell-clip')||{}).textContent||''; var m=lab.match(/^(\d+(?:-Α)?)-(\d+)$/); var room=m?m[1]:'Εκτός θαλάμου'; r.dataset.room=room; r.dataset.bed=m?m[2]:''; var empty=(r.querySelector('.name-td .cell-clip')||{}).textContent.trim()==='—'; tally[room]=tally[room]||[0,0]; tally[room][1]++; if(!empty) tally[room][0]++; });
+    rows.forEach(function(r){
+      var room = r.dataset.room;
+      if(room!==lastRoom){ lastRoom=room; var g=document.createElement('tr'); g.className='cls-room'; var t=tally[room]; g.innerHTML='<td colspan="9"><span class="cls-room-n">'+(/^\d/.test(room)?'Θάλαμος '+room:room)+'</span><span class="cls-room-c">'+t[0]+'/'+t[1]+' κλίνες</span></td>'; tb.insertBefore(g, r); }
+      var name = r.querySelector('.name-td .cell-clip'), empty = name && name.textContent.trim()==='—';
+      r.classList.toggle('is-empty', !!empty);
+      if(empty){ name.innerHTML='<span class="cls-free">Ελεύθερη κλίνη</span>'; }
+      var labs = r.querySelector('.labs-td'), ltxt = labs ? labs.textContent : '';
+      var tm = ltxt.match(/(\d\d[.,]\d)°C/); var fever = tm && parseFloat(tm[1].replace(',','.'))>=38;
+      r.classList.toggle('is-fever', !!fever);
+      r.classList.toggle('is-pending', /⚑/.test(ltxt));
+      if(labs) labs.querySelectorAll('b').forEach(function(x){ if(/^\s*⚑/.test(x.textContent)){ x.classList.add('cls-todo'); x.innerHTML = x.innerHTML.replace('⚑ ',''); } else x.classList.add('cls-abn'); });
+      r.classList.toggle('is-preop', r.classList.contains('thin-row'));
+      r.classList.toggle('is-allergy', /⚠/.test((r.querySelector('.f-history')||{}).textContent||''));
+      var bedEl = r.querySelector('.f-room .cell-clip'); if(bedEl && r.dataset.bed && MODE==='B'){ bedEl.innerHTML='<span class="cls-bed">'+r.dataset.bed+'</span>'; }
+      var td = r.querySelector('td.delete-td'), btn = td && td.querySelector('.row-delete-btn'); if(!td) return;
+      var openCell = r.querySelector('td.f-room');
+      if(!btn){ td.innerHTML=''; return; }
+      var del = function(){ new Function(btn.getAttribute('onclick').replace('event.stopPropagation();',''))(); };
+      if(MODE==='A'){
+        var b = document.createElement('button'); b.className='cls-del'; b.title='Διαγραφή ασθενή'; b.setAttribute('aria-label','Διαγραφή ασθενή'); b.innerHTML=TRASH;
+        armConfirm(b, del, TRASH); td.innerHTML=''; td.appendChild(b);
+      } else if(MODE==='B'){
+        td.innerHTML='<div class="cls-menu"><button class="cls-more" aria-label="Ενέργειες" title="Ενέργειες">⋯</button><div class="cls-pop"><button data-a="open">'+PEN+' Άνοιγμα καρτέλας</button><button data-a="hist">📄 Ιστορικό</button><hr><button data-a="del" class="cls-pop-del">'+TRASH+' Διαγραφή ασθενή…</button></div></div>';
+        var menu = td.querySelector('.cls-menu');
+        td.querySelector('.cls-more').onclick = function(e){ e.stopPropagation(); var o=menu.classList.contains('open'); closeMenus(); if(!o) menu.classList.add('open'); };
+        td.querySelector('[data-a=open]').onclick = function(e){ e.stopPropagation(); closeMenus(); openCell && openCell.click(); };
+        td.querySelector('[data-a=hist]').onclick = function(e){ e.stopPropagation(); closeMenus(); var h=r.querySelector('.ch-rowbtn'); h && h.click(); };
+        var d = td.querySelector('[data-a=del]'); var idle = d.innerHTML;
+        d.onclick = function(e){ e.stopPropagation(); if(d.dataset.c==='1'){ closeMenus(); del(); return; } d.dataset.c='1'; d.innerHTML=TRASH+' Πάτα ξανά για διαγραφή'; d.classList.add('is-confirm'); setTimeout(function(){ d.dataset.c=''; d.innerHTML=idle; d.classList.remove('is-confirm'); },3000); };
+        td.onclick = function(e){ e.stopPropagation(); };
+      } else {
+        td.innerHTML='<div class="cls-acts"><button class="cls-act" data-a="open" title="Άνοιγμα καρτέλας">'+PEN+'</button><button class="cls-act cls-act-del" data-a="del" title="Διαγραφή ασθενή">'+TRASH+'</button></div>';
+        td.querySelector('[data-a=open]').onclick = function(e){ e.stopPropagation(); openCell && openCell.click(); };
+        armConfirm(td.querySelector('[data-a=del]'), del, TRASH);
+      }
+    });
+  }
+  var orig = window.buildGrid;
+  window.buildGrid = function(){ var r = orig.apply(this, arguments); try{ decorate(); }catch(e){ console.warn('cls', e); } return r; };
+  try{ decorate(); }catch(e){}
+})();
+
 </script>
 </body>
 </html>
