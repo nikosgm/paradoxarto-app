@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07a-v140';
+const APP_VER = '2026-11-07b-v141';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8792,10 +8792,10 @@ document.head.appendChild(st);
   // 👆 7/11: παρατεταμένο πάτημα (κινητό) / δεξί κλικ (υπολογιστής) σε κάρτα ασθενή → γρήγορο μενού
   (function(){
     const keyOf = el=>{ const c = el && el.closest && el.closest('[onclick*="mobOpen("]'); if(!c) return null; const m = /mobOpen\('([^']+)'\)/.exec(c.getAttribute('onclick')||''); return m ? {k:m[1], el:c} : null; };
-    const menu = (k)=>{ const d = (typeof recOf==='function') ? recOf(k) : null; if(!d || !String(d.name||'').trim()) return;
+    const menu = window.pdxCardMenu = (k)=>{ const d = (String(k).indexOf('extra-')===0 ? extraPatients : data)[k]; if(!d || !String(d.name||'').trim()) return;
       try{ navigator.vibrate && navigator.vibrate(12); }catch(e){}
       const bot = window.pdxIsBotUser && window.pdxIsBotUser();
-      const I = [['⇄','Μετακίνηση',()=>window.qeOpenSheet && qeOpenSheet(k,'mv',true), true], ['📄','Εξιτήριο',()=>mobAct(k,'dcx'), bot], ['🧾','Παραγγελία',()=>window.pdxOrderSheet && pdxOrderSheet(k), bot], ['🩺','Εκτίμηση',()=>mobAct(k,'consult'), bot], ['›','Άνοιγμα καρτέλας',()=>mobOpen(k), true]].filter(x=>x[3]);
+      const I = [['⇄','Μετακίνηση',()=>window.qeOpenSheet && qeOpenSheet(k,'mv',true), true], ['📄','Εξιτήριο',()=>mobAct(k,'dcx'), bot], ['🧾','Παραγγελία',()=>window.pdxOrderSheet && pdxOrderSheet(k), bot], ['🩺','Εκτίμηση',()=>mobAct(k,'consult'), bot], ['☑','Εκκρεμότητες',()=>window.mobTodoPage && mobTodoPage(k), true], ['›','Άνοιγμα καρτέλας',()=>mobOpen(k), true]].filter(x=>x[3]);
       let ov = document.getElementById('pdxLpOv'); if(ov) ov.remove(); ov = document.createElement('div'); ov.id = 'pdxLpOv';
       ov.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(10,15,20,.35);display:flex;align-items:flex-end;justify-content:center;-webkit-tap-highlight-color:transparent';
       ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--t1,#1F2933);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px))"><div style="padding:6px 6px 10px;font-weight:800;font-size:16px">'+esc(d.name)+(/^\d+-\d+$/.test(k)?' <span style="font-weight:600;color:var(--t2,#64748B)">· '+esc(k)+'</span>':'')+'</div>'
@@ -8804,7 +8804,7 @@ document.head.appendChild(st);
       ov.addEventListener('click', e=>{ const b = e.target.closest('[data-i]'); ov.remove(); if(b){ const f = I[+b.dataset.i][2]; setTimeout(f, 30); } });
     };
     let T = null, st = null, fired = false;
-    document.addEventListener('touchstart', e=>{ fired = false; const x = keyOf(e.target); if(!x || e.touches.length > 1) return; const t = e.touches[0]; st = {x:t.clientX, y:t.clientY, k:x.k};
+    document.addEventListener('touchstart', e=>{ fired = false; const x = keyOf(e.target); if(!x || e.touches.length > 1 || x.el.closest('#mobView')) return; const t = e.touches[0]; st = {x:t.clientX, y:t.clientY, k:x.k};
       clearTimeout(T); T = setTimeout(()=>{ fired = true; menu(st.k); }, 520); }, {passive:true});
     document.addEventListener('touchmove', e=>{ if(!st) return; const t = e.touches[0]; if(Math.abs(t.clientX-st.x) > 9 || Math.abs(t.clientY-st.y) > 9){ clearTimeout(T); st = null; } }, {passive:true});
     document.addEventListener('touchend', e=>{ clearTimeout(T); st = null; if(fired){ e.preventDefault(); } }, {passive:false});
@@ -8812,7 +8812,7 @@ document.head.appendChild(st);
     document.addEventListener('contextmenu', e=>{ const x = keyOf(e.target); if(!x) return; e.preventDefault(); menu(x.k); });
   })();
   window.mobAct = function(k, id){
-    const dT = (typeof recOf==='function') ? recOf(k) : null;
+    const dT = (String(k).indexOf('extra-')===0 ? extraPatients : data)[k];
     if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxPatients) pdxPatients({q: dT.amka || dT.name}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
     if(id==='labs'){ if(window.pdxLabsUnified) return pdxLabsUnified(k); if(window.labsFullOpen) return labsFullOpen(k); return; }
     if(window.pdxBot) pdxBot(k, id);
@@ -10005,9 +10005,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       fired=false; x0=e.touches[0].clientX; y0=e.touches[0].clientY; c0=c;
       const sink=setTimeout(()=>{ if(c0===c) c.classList.add('lpp'); },120);   // σταδιακό «βύθισμα» όσο κρατάς
       tm=setTimeout(()=>{ clearTimeout(sink); const m=/mobOpen\('([^']+)'\)/.exec(c.getAttribute('onclick')||''); if(!m) return; fired=true; try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){}
-        const go=()=>{ c.classList.remove('lpp'); window.mobTodoPage(m[1]); };
-        if(document.startViewTransition){ try{ document.startViewTransition(go); return; }catch(_){} }
-        go(); try{ window.pdxSlideIn && window.pdxSlideIn(Array.from(view.children).filter(x=>!x.classList.contains('isl')), 'r'); }catch(_){} },440);
+        c.classList.remove('lpp');
+        if(window.pdxCardMenu){ window.pdxCardMenu(m[1]); return; }   // 7/11: μενού ενεργειών (πριν: εκκρεμότητες)
+        window.mobTodoPage(m[1]); },440);
     },{passive:true});
     view.addEventListener('touchmove', e=>{ if(tm && (Math.abs(e.touches[0].clientX-x0)>8||Math.abs(e.touches[0].clientY-y0)>8)) clr(); },{passive:true});
     view.addEventListener('touchend', ()=>{ clearTimeout(tm); tm=null; if(c0 && !fired) c0.classList.remove('lpp'); },{passive:true});
@@ -12162,7 +12162,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // ορατή κεφαλίδα: υποσελίδα (#iosPg .ios-nav) → αλλιώς η κύρια (#mobView .mtop) → αλλιώς σταθερή στην κορυφή (υπολογιστής)
     let host = null;
     const hostOf = ()=>{ const pg = [...document.querySelectorAll('#iosPg.on .ios-nav')].pop(); if(pg) return pg;
-      const lf = document.querySelector('#labsFull.on .lf-top'); if(lf) return lf;
+      const lf = document.querySelector('#labsFull.on .lf-top, #labsFull.on .lm-top, #labsFull.on .lm-nav'); if(lf) return lf; if(document.querySelector('#labsFull.on')) return null;   // 7/11: Medilabi (κινητό): το island μένει
       if([...document.querySelectorAll('#arOv,#cmdOv')].some(x=>x.getBoundingClientRect().height>0)) return 'hide';
       const mv = document.getElementById('mobView'); if(mv && getComputedStyle(mv).display!=='none'){ const t = [...mv.querySelectorAll('.mtop,.nv-hd')].find(x=>x.getBoundingClientRect().height>0); if(t) return t; } return null; };
     const mount = (on)=>{ if(!document.body) return; let h = on ? hostOf() : null; if(h==='hide'){ h = null; on = false; }
