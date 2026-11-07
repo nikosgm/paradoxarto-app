@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-06z10-v139';
+const APP_VER = '2026-11-07a-v140';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -6728,6 +6728,7 @@ document.head.appendChild(st);
   #mobView .mtop span.mtb{display:flex;gap:4px;align-items:center}#mobView .mtop span.mtb button{padding:6px 8px!important}
   #mobView .mtop span{white-space:nowrap;flex:0 0 auto}#mobView .mtop button{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:7px 11px;font-size:13px}
   #mobView .mcard{display:grid;grid-template-columns:1fr auto;gap:0 10px}
+  #mobView .mcard{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
   #mobView .mcl{min-width:0}
   #mobView .mdv{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding-top:2px}
   #mobView .mdev{font-size:var(--m-dev,12.5px);font-weight:700;padding:3px 9px;border-radius:99px;background:#EDE9F6;color:#4b3c8a;white-space:nowrap}
@@ -8768,11 +8769,12 @@ document.head.appendChild(st);
     if(MOB_CFG.actionRow===false) return '';
     const xk = esc(k), bot = window.pdxIsBotUser && window.pdxIsBotUser(), warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
     const L0 = (window.pdxBotActions ? pdxBotActions() : []).filter(a=>a && a.id!=='labs' && a.id!=='ahfylabs' && (bot || a.id==='ct'));
-    const ord = ['order','rx','consult','dcx','comorb','ct','ref']; L0.sort((a,b)=>{ const i=ord.indexOf(a.id), j=ord.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
+    const ord = ['order','consult','dcx','comorb','ct','ref','rx'];   // 7/11: η συνταγή τέρμα δεξιά (στους νοσηλευόμενους σπάνια) L0.sort((a,b)=>{ const i=ord.indexOf(a.id), j=ord.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
     const it = (ic, t, act, dot)=>'<button onclick="'+act+'"><i>'+ic+'</i>'+t+(dot?' <b style="color:#F79009">●</b>':'')+'</button>';
     let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" style="background:#15803D;color:#fff"><i>＋</i>Προσθήκη σε κρεβάτι</button>' : '') + it('🧪', 'Εξετάσεις', "mobAct('"+xk+"','labs')", warn);
-    L0.forEach(a=>{ h += a.id==='ct' && window.pdxCtOpen ? it('🩻', 'Απεικονίσεις', "pdxCtOpen('"+xk+"')") : it(esc(a.icon||'🤖'), esc(PTA_SHORT[a.id]||a.label||a.id), "mobAct('"+xk+"','"+esc(a.id)+"')"); });
-    h += it('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + it('⋯', 'Όλες', "mobActions('"+xk+"')");
+    const one = a=>a.id==='ct' && window.pdxCtOpen ? it('🩻', 'Απεικονίσεις', "pdxCtOpen('"+xk+"')") : it(esc(a.icon||'🤖'), esc(PTA_SHORT[a.id]||a.label||a.id), "mobAct('"+xk+"','"+esc(a.id)+"')");
+    L0.filter(a=>a.id!=='rx').forEach(a=>{ h += one(a); });
+    h += it('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + L0.filter(a=>a.id==='rx').map(one).join('') + it('⋯', 'Όλες', "mobActions('"+xk+"')");
     return '<div class="ptab"><button class="ptab-a l" aria-label="Προηγούμενες" onclick="this.parentNode.querySelector(\'.ptab-s\').scrollBy({left:-260,behavior:\'smooth\'})">‹</button><div class="ptab-s">'+h+'</div><button class="ptab-a r" aria-label="Επόμενες" onclick="this.parentNode.querySelector(\'.ptab-s\').scrollBy({left:260,behavior:\'smooth\'})">›</button></div>';
   }
   // κρίσιμα στοιχεία κάτω από το όνομα: αλλεργία, αντιπηκτικά, συννοσηρότητες (πάτημα → η αντίστοιχη ενότητα)
@@ -8787,7 +8789,31 @@ document.head.appendChild(st);
     if(cc && window.pdxComorbOpen) c.push('<span onclick="pdxComorbOpen(\''+esc(k)+'\')">🩺 '+cc+(cc>1?' συννοσηρότητες':' συννοσηρότητα')+'</span>');
     return c.length ? '<div class="mhdr">'+c.join('')+'</div>' : '';
   }
+  // 👆 7/11: παρατεταμένο πάτημα (κινητό) / δεξί κλικ (υπολογιστής) σε κάρτα ασθενή → γρήγορο μενού
+  (function(){
+    const keyOf = el=>{ const c = el && el.closest && el.closest('[onclick*="mobOpen("]'); if(!c) return null; const m = /mobOpen\('([^']+)'\)/.exec(c.getAttribute('onclick')||''); return m ? {k:m[1], el:c} : null; };
+    const menu = (k)=>{ const d = (typeof recOf==='function') ? recOf(k) : null; if(!d || !String(d.name||'').trim()) return;
+      try{ navigator.vibrate && navigator.vibrate(12); }catch(e){}
+      const bot = window.pdxIsBotUser && window.pdxIsBotUser();
+      const I = [['⇄','Μετακίνηση',()=>window.qeOpenSheet && qeOpenSheet(k,'mv',true), true], ['📄','Εξιτήριο',()=>mobAct(k,'dcx'), bot], ['🧾','Παραγγελία',()=>window.pdxOrderSheet && pdxOrderSheet(k), bot], ['🩺','Εκτίμηση',()=>mobAct(k,'consult'), bot], ['›','Άνοιγμα καρτέλας',()=>mobOpen(k), true]].filter(x=>x[3]);
+      let ov = document.getElementById('pdxLpOv'); if(ov) ov.remove(); ov = document.createElement('div'); ov.id = 'pdxLpOv';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(10,15,20,.35);display:flex;align-items:flex-end;justify-content:center;-webkit-tap-highlight-color:transparent';
+      ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--t1,#1F2933);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px))"><div style="padding:6px 6px 10px;font-weight:800;font-size:16px">'+esc(d.name)+(/^\d+-\d+$/.test(k)?' <span style="font-weight:600;color:var(--t2,#64748B)">· '+esc(k)+'</span>':'')+'</div>'
+        + I.map((x,i)=>'<button data-i="'+i+'" style="display:flex;align-items:center;gap:12px;width:100%;border:0;border-top:1px solid var(--sep,#EEF1F4);background:none;color:inherit;text-align:left;padding:14px 6px;font-size:17px;font-weight:600"><span style="width:24px;text-align:center">'+x[0]+'</span>'+x[1]+'</button>').join('') + '</div>';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', e=>{ const b = e.target.closest('[data-i]'); ov.remove(); if(b){ const f = I[+b.dataset.i][2]; setTimeout(f, 30); } });
+    };
+    let T = null, st = null, fired = false;
+    document.addEventListener('touchstart', e=>{ fired = false; const x = keyOf(e.target); if(!x || e.touches.length > 1) return; const t = e.touches[0]; st = {x:t.clientX, y:t.clientY, k:x.k};
+      clearTimeout(T); T = setTimeout(()=>{ fired = true; menu(st.k); }, 520); }, {passive:true});
+    document.addEventListener('touchmove', e=>{ if(!st) return; const t = e.touches[0]; if(Math.abs(t.clientX-st.x) > 9 || Math.abs(t.clientY-st.y) > 9){ clearTimeout(T); st = null; } }, {passive:true});
+    document.addEventListener('touchend', e=>{ clearTimeout(T); st = null; if(fired){ e.preventDefault(); } }, {passive:false});
+    document.addEventListener('click', e=>{ if(fired && keyOf(e.target)){ fired = false; e.preventDefault(); e.stopPropagation(); } }, true);
+    document.addEventListener('contextmenu', e=>{ const x = keyOf(e.target); if(!x) return; e.preventDefault(); menu(x.k); });
+  })();
   window.mobAct = function(k, id){
+    const dT = (typeof recOf==='function') ? recOf(k) : null;
+    if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxPatients) pdxPatients({q: dT.amka || dT.name}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
     if(id==='labs'){ if(window.pdxLabsUnified) return pdxLabsUnified(k); if(window.labsFullOpen) return labsFullOpen(k); return; }
     if(window.pdxBot) pdxBot(k, id);
   };
@@ -11688,6 +11714,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const q = String((page != null && qOverride != null) ? qOverride : (qOverride || st.q || '')).trim(); if(q.length < 3 && !f){ st.err = 'Γράψτε επώνυμο, ΑΜ ή ΑΜΚΑ'; return pg.redraw(); }
       const lbl = (page != null && st.slbl) ? st.slbl : [q.length >= 3 ? q : '', f ? FL.label() : ''].filter(Boolean).join(' · ');
       const pl = {q: ''}, f2 = pdxQF(q.length >= 3 ? q : '', f); if(f2) pl.f = f2; if(+page > 1) pl.page = +page;   // ΑΜΚΑ/ΑΜ/όνομα στα σωστά πεδία
+      try{ if(q.length >= 3 && !(+page > 1)) window.pdxQHist.add('bx', q); }catch(e){}
       st.err=''; st.cands=null; st.sres=null; st.sq = q.length >= 3 ? q : ''; st.sf = f || null; st.slbl = lbl; st.spg = null; st.busy = '🔎 Medilabi: «'+lbl+'»'+(+page > 1 ? ' · σελίδα '+page : '')+'…'; pg.redraw(); const t0 = Date.now();
       try{ const d = await fastJob('bxfind', pl, '🔎 '+lbl); st.cands = (d.cands||[]).sort((a,b)=>(b.uro?1:0)-(a.uro?1:0)); st.spg = d.pg || null; st.ms = Date.now()-t0; }
       catch(e){ st.err = e.message||String(e); }
@@ -11756,6 +11783,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         h += iosGroup('Medilabi · «'+E2(st.slbl||st.sq||'')+'» · '+(CF.length!==CI.length ? CF.length+'/' : '')+st.cands.length+(st.spg && +st.spg.page > 1 ? ' · σελ. '+(+st.spg.page) : '')+(st.ms?' · '+(st.ms/1000).toFixed(1)+'″':''), CF.length ? CF.map(([c,i])=>({ic:c.uro?'🏥':'👤', t:'<b>'+E2(String(c.row||'').slice(0,70))+'</b>', sub:c.uro?'<span style="color:#15803D">✓ νοσηλεία ουρολογικής</span>':'<span style="color:#8E8E93">χωρίς ουρολογική νοσηλεία στο Medilabi</span>', data:'data-cand="'+i+'"'})) : [{t: CI.length ? 'Καμία γραμμή δεν ταιριάζει με τα φίλτρα κλινικής/ημερομηνίας' : 'Κανένας ασθενής με αυτό το όνομα στο Medilabi'}]);
         if(FL){ h += FL.note(CF.length, CI.length) + FL.pager(st.spg, !!st.busy); } }
       // 🕘 Πρόσφατα (10 ημέρες στη συσκευή) — σύρε αριστερά για διαγραφή
+      if(!String(st.q||'').trim()) try{ h += window.pdxQHist.html('bx', 'data-bhq'); }catch(e){}
       if(st.recent && st.recent.length && !String(st.q||'').trim()){
         h += '<div class="ios-h">🕘 Πρόσφατα · '+st.recent.length+' <span style="font-weight:400;text-transform:none">(10 ημέρες · σύρε ← για διαγραφή)</span></div>';
         h += st.recent.map(r=>'<div class="bxsw" data-rpid="'+E2(r.pid)+'"><div class="bxsw-del" data-rdel="'+E2(r.pid)+'">Διαγραφή</div><div class="bxsw-fg" data-ropen="'+E2(r.pid)+'"><b>'+E2(r.name||'—')+'</b><small>'+r.n+' αναφορ'+(r.n===1?'ά':'ές')+(r.nP?' · ⏳ '+r.nP+' εκκρεμ.':'')+' · '+new Date(r.at).toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit'})+'</small></div></div>').join('');
@@ -11789,6 +11817,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(e.target.closest('[data-bxold]')){ st.showOld = true; return pg.redraw(); }
       if(e.target.closest('[data-scan]')) scan();
       if(e.target.closest('[data-bxfresh]') && st.open){ const o = st.open; st.open = null; mget({pid:o.pid, label:o.name, row:o.name}, true); return; }
+      if(e.target.closest('[data-bhq-clr]')){ window.pdxQHist.clear('bx'); pg.redraw(); return; }
+      { const bh = e.target.closest('[data-bhq]'); if(bh){ st.q = bh.dataset.bhq; msearch(); return; } }
       if(e.target.closest('[data-msearch]')) msearch();
       { const dl = e.target.closest('[data-rdel]'); if(dl){ const pid = dl.dataset.rdel; pdxBxCache.del('pt|'+pid); pdxBxCache.all('pdf|').then(L=>L.forEach(x=>{ if(String(x.pid)===String(pid)) pdxBxCache.del(x.k); })); st.recent = (st.recent||[]).filter(r=>r.pid!==pid); pg.redraw(); return; } }
       { const ro = e.target.closest('[data-ropen]'); if(ro){ if(ro.classList.contains('open')){ ro.classList.remove('open'); ro.style.transform=''; return; } if(Date.now()-(ro.__sw||0) < 350) return; const r = (st.recent||[]).find(x=>x.pid===ro.dataset.ropen); if(r) mget({pid:r.pid, label:r.name, row:r.name}); return; } }
@@ -12484,19 +12514,21 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // ＋ προσωρινός ασθενής από τον ΝΠΣ → σε κρεβάτι (ελεύθερο) ή «εκτός θαλάμου» — τότε αποθηκεύεται κανονικά
   window.pdxNpsPlace = function(k){
     const d = extraPatients[k]; if(!d || !d._npsTemp) return;
-    const free = Object.keys(data||{}).filter(x=>data[x] && !String(data[x].name||'').trim()).sort((a,b)=>a.localeCompare(b,'el',{numeric:true}));
-    const pref = d._npsBed && free.includes(d._npsBed) ? d._npsBed : '';
+    // 7/11: ΟΛΑ τα κρεβάτια όλων των θαλάμων (κατειλημμένα: γκρι, με το όνομα) + «Εκτός θαλάμου». Χωρίς τον θάλαμο του ΝΠΣ (λάθος πάντα).
+    const beds = Object.keys(data||{}).filter(x=>/^\d+-\d+$/.test(x)).sort((a,b)=>a.localeCompare(b,'el',{numeric:true}));
+    const rooms = {}; beds.forEach(x=>{ const r = x.split('-')[0]; (rooms[r] = rooms[r] || []).push(x); });
     let ov = document.getElementById('npsPlOv'); if(ov) ov.remove(); ov = document.createElement('div'); ov.id = 'npsPlOv';
     ov.style.cssText = 'position:fixed;inset:0;z-index:9700;background:rgba(15,25,35,.4);display:flex;align-items:flex-end;justify-content:center';
-    const b = (v,t,hl)=>'<button data-bed="'+esc(v)+'" style="border:1.5px solid '+(hl?'#15803D':'#DCE2E8')+';background:'+(hl?'#ECFDF3':'#fff')+';border-radius:10px;padding:9px 12px;font-weight:700;font-size:14px;margin:0 6px 7px 0">'+esc(t)+'</button>';
-    ov.innerHTML = '<div style="background:#fff;color:#1F2933;width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto"><div style="display:flex;align-items:center"><b style="font-size:17px;flex:1">＋ '+esc(d.name)+' σε κρεβάτι</b><button data-x style="border:0;background:#EEF2F6;border-radius:10px;padding:6px 12px">Κλείσιμο</button></div>'
-      + (d._npsBed ? '<div style="font-size:13px;color:#64748B;margin:6px 0">Στον ΝΠΣ: '+esc(d._npsBed)+(pref?' (ελεύθερο ✓)':' (κατειλημμένο ή δεν υπάρχει στο Παραδόχαρτο)')+'</div>' : '')
-      + '<div style="margin-top:8px">'+(pref?b(pref,pref+' ★',true):'')+free.filter(x=>x!==pref).map(x=>b(x,x)).join('')+b('__extra','Εκτός θαλάμου')+'</div></div>';
+    const b = (x)=>{ const nm = String((data[x]||{}).name||'').trim(); return nm ? '<button disabled style="border:1.5px solid var(--sep,#E5E7EB);background:var(--bg2,#F3F4F6);color:var(--t3,#9CA3AF);border-radius:10px;padding:7px 10px;font-size:13px;margin:0 6px 7px 0;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.split('-')[1])+' · '+esc(nm.split(/\s+/)[0])+'</button>'
+      : '<button data-bed="'+esc(x)+'" style="border:1.5px solid #15803D;background:#ECFDF3;color:#14532D;border-radius:10px;padding:9px 14px;font-weight:800;font-size:14px;margin:0 6px 7px 0">'+esc(x.split('-')[1])+'</button>'; };
+    ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--t1,#1F2933);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto"><div style="display:flex;align-items:center"><b style="font-size:17px;flex:1">＋ '+esc(d.name)+' σε κρεβάτι</b><button data-x style="border:0;background:var(--bg2,#EEF2F6);color:inherit;border-radius:10px;padding:6px 12px">Κλείσιμο</button></div>'
+      + Object.keys(rooms).map(r=>'<div style="margin-top:10px"><div style="font-size:12.5px;font-weight:700;color:var(--t2,#64748B);margin-bottom:5px">Θάλαμος '+esc(r)+'</div>'+rooms[r].map(b).join('')+'</div>').join('')
+      + '<div style="margin-top:10px"><button data-bed="__extra" style="border:1.5px solid var(--mp,#1D4E80);background:transparent;color:var(--mp,#1D4E80);border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px">Εκτός θαλάμου</button></div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', e=>{
       if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
       const bb = e.target.closest('[data-bed]'); if(!bb) return; const v = bb.dataset.bed;
-      const rec = Object.assign({}, d); delete rec._npsTemp; delete rec._npsBed; delete rec._npsAt;
+      const rec = Object.assign({}, d); delete rec._npsTemp; delete rec._npsBed; delete rec._npsAt; delete rec.assignedWard;
       delete extraPatients[k];
       if(v==='__extra'){ extraCounter++; const nk = 'extra-'+extraCounter; extraPatients[nk] = rec; saveEntryToStorage(nk, true, rec, true); ov.remove(); toast('＋ '+rec.name+' (εκτός θαλάμου)'); if(window.mobOpen) mobOpen(nk); }
       else { const slot = data[v]; if(!slot || String(slot.name||'').trim()){ toast('Το κρεβάτι δεν είναι ελεύθερο'); return; } delete rec.assignedWard; Object.assign(slot, rec); saveEntryToStorage(v, false, slot, true); ov.remove(); toast('＋ '+rec.name+' στο '+v); if(window.mobOpen) mobOpen(v); }
@@ -12524,7 +12556,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '<div style="display:flex;gap:6px;margin:4px 16px 8px;flex-wrap:wrap">'+[['all','Όλοι '+rows.length],['miss','🟠 Λείπουν '+nO],['ok','🟢 Και στα δύο '+nG]].concat(onlyMine.length?[['gone','⚪ Μόνο Παραδόχαρτο '+onlyMine.length]]:[]).map(([v,t])=>'<button data-f="'+v+'" style="border:0;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;background:'+(flt===v?'#1D4E80;color:#fff':'#fff;color:#334155')+'">'+t+'</button>').join('')+'</div>';
       const card = (dot, title, sub, act)=>'<button '+act+' style="display:flex;gap:10px;align-items:center;width:calc(100% - 32px);margin:0 16px 6px;text-align:left;border:1px solid #E5E9EF;border-radius:12px;background:#fff;padding:10px 12px;color:#1F2933"><span style="font-size:13px">'+dot+'</span><span style="flex:1;min-width:0"><b style="display:block;font-size:15px">'+title+'</b><small style="color:#64748B;font-size:12.5px">'+sub+'</small></span><span style="color:#94A3B8">›</span></button>';
       rows.forEach(({r,m}, i)=>{ if(flt==='miss'&&m || flt==='ok'&&!m || flt==='gone') return;
-        const sub = [r.room&&r.bed?r.room+'-'+r.bed:(r.room||''), r.am?'ΑΜ '+r.am:'', r.admit?'εισ. '+r.admit:'', r.doc||''].filter(Boolean).map(E3).join(' · ');
+        const sub = [r.am?'ΑΜ '+r.am:'', r.admit?'εισ. '+r.admit:'', r.doc||''].filter(Boolean).map(E3).join(' · ');
         h += card(m?'🟢':'🟠', E3(r.name), sub + (m ? ' · στο Παραδόχαρτο: '+E3(String(m.k).startsWith('extra-')?'εκτός θαλάμου':m.k) : ' · <b style="color:#B45309">λείπει από το Παραδόχαρτο</b>'), m ? 'data-open="'+E3(m.k)+'"' : 'data-add="'+i+'"'); });
       if(flt==='all'||flt==='gone') onlyMine.forEach(x=>{ h += card('⚪', E3(x.d.name), E3(x.k)+' · δεν φαίνεται στον ΝΠΣ (έξοδος ή άλλη κλινική;)', 'data-open="'+E3(x.k)+'"'); });
       return h + '<div class="ios-f" style="margin:10px 16px 60px">Πάτα έναν ασθενή για την καρτέλα με όλες τις ενέργειες · στους 🟠 υπάρχει και «＋ Προσθήκη σε κρεβάτι».</div>';
@@ -12552,8 +12584,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const a = t.closest('[data-add]'); if(a && res){ const r = (res.rows||[])[+a.dataset.add]; if(!r) return;
         // καρτέλα «προσωρινή» (δεν αποθηκεύεται, δεν μπαίνει στη λίστα/αναφορά) με όλες τις ενέργειες + «Προσθήκη σε κρεβάτι»
         Object.keys(extraPatients).forEach(k=>{ if(extraPatients[k] && extraPatients[k]._npsTemp) delete extraPatients[k]; });
-        const key = 'extra-nps'+Date.now().toString(36); const rec = {name: r.name, _npsTemp: true, _npsBed: r.room && r.bed ? r.room+'-'+r.bed : '', _npsAt: Date.now()};
-        if(/^\d{8}$/.test(r.am||'')) rec.am = r.am; if(/^\d{11}$/.test(r.amka||'')) rec.amka = r.amka; if(r.room) rec.assignedWard = r.room;
+        const key = 'extra-nps'+Date.now().toString(36); const rec = {name: r.name, _npsTemp: true, _npsAt: Date.now()};
+        if(/^\d{8}$/.test(r.am||'')) rec.am = r.am; if(/^\d{11}$/.test(r.amka||'')) rec.amka = r.amka;
         extraPatients[key] = rec; try{ if(window.iosPageCloseAll) iosPageCloseAll(); }catch(x){} if(window.mobOpen) mobOpen(key); }
     });
     await loadLast(); pg.redraw();
@@ -17901,6 +17933,17 @@ function onFiles(files){
 
 </script>
 <script>
+/* 🕘 7/11: σημερινό ιστορικό αναζητήσεων (μόνο σε αυτή τη συσκευή, σβήνει την επόμενη μέρα) */
+window.pdxQHist = (function(){ const K = 'pdx_qhist', day = ()=>new Date().toDateString();
+  const rd = ()=>{ try{ const o = JSON.parse(localStorage.getItem(K)||'null'); return o && o.d===day() ? o : {d:day(), s:{}}; }catch(e){ return {d:day(), s:{}}; } };
+  return { add(sc, q){ q = String(q||'').trim(); if(q.length < 2) return; const o = rd(); const L = (o.s[sc] = (o.s[sc]||[]).filter(x=>x.q.toUpperCase()!==q.toUpperCase())); L.unshift({q, t:Date.now()}); o.s[sc] = L.slice(0, 25); try{ localStorage.setItem(K, JSON.stringify(o)); }catch(e){} },
+    list(sc){ return rd().s[sc] || []; },
+    clear(sc){ const o = rd(); o.s[sc] = []; try{ localStorage.setItem(K, JSON.stringify(o)); }catch(e){} },
+    html(sc, attr){ const L = this.list(sc); if(!L.length) return ''; const E = x=>String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      const hm = t=>{ const d = new Date(t); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+      return '<div class="ios-h" style="display:flex;align-items:center">🕘 Σημερινές αναζητήσεις<span style="flex:1"></span><button '+attr+'-clr style="border:0;background:none;color:var(--mp,#1D4E80);font-size:13px;text-transform:none">Καθάρισμα</button></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 16px 8px">'
+        + L.map(x=>'<button '+attr+'="'+E(x.q)+'" style="border:1.5px solid var(--sep,#DCE2E8);background:var(--card,#fff);color:inherit;border-radius:999px;padding:6px 11px;font-size:14px">'+E(/^\d{11}$/.test(x.q) ? x.q.slice(0,4)+'•••'+x.q.slice(-2) : x.q)+' <small style="color:var(--t3,#8E8E93)">'+hm(x.t)+'</small></button>').join('')+'</div>'; } };
+})();
 /* ===== 🔎 ΑΣΘΕΝΕΙΣ: αναζήτηση οποιουδήποτε ασθενή + ιστορικό (Νοσηλείες · Εξιτήρια · Εργαστ. · Βιοψίες) =====
    Μία σελίδα iOS με 3 επίπεδα: αναζήτηση → καρτέλα ασθενή → εξιτήριο (μόνο ανάγνωση). Η κατάσταση μένει στη μνήμη:
    φεύγεις για συνταγή/εργαστηριακά/βιοψίες και ξαναγυρνάς στο ίδιο σημείο.
@@ -18111,7 +18154,7 @@ function decorate(x){ (AR||[]).forEach(r=>{ if(sameName(x.name, r.name)){ x.arN 
     if((x.amka && String(d.amka||'')===x.amka) || (x.am && String(d.am||'')===x.am) || (x.src==='local' && !x.amka && !x.am && sameName(x.name, d.name))) x.nowK = k; })); }catch(e){}
   return x; }
 async function run(page){
-  const p = parseQ(M.q); M.err = '';
+  const p = parseQ(M.q); M.err = ''; try{ if(!p.bad && (+page||1)===1) window.pdxQHist.add('pt', M.q); }catch(e){}
   if(p.bad){ M.err = p.bad; return redraw(); }
   const fv = FL ? FL.validate() : ''; if(fv){ M.err = fv; return redraw(); }
   const bf = Object.assign({}, FL && FL.botF() || {}); if(p.amka) bf.amka = p.amka; if(p.am) bf.am = p.am;
@@ -18178,6 +18221,7 @@ function searchHtml(){
   const R = M.res;
   if(!R){
     const rec = (AR||[]).slice().sort((a,b)=>String(b.archived_at||'').localeCompare(String(a.archived_at||''))).slice(0, 12);
+    try{ h += window.pdxQHist.html('pt', 'data-hq'); }catch(e){}
     h += '<div class="ios-f" style="margin-top:12px">Ψάχνει σε όλο το νοσοκομείο (Medilabi) και στο αρχείο εξιτηρίων της κλινικής. 11 ψηφία = ΑΜΚΑ, 8 ψηφία = ΑΜ.</div>';
     if(ARerr) h += '<div class="ptx-err">'+E(ARerr)+'</div>';
     const seen = new Set(), rec2 = rec.filter(r=>{ const k = NZ(r.name); if(!k || seen.has(k)) return false; seen.add(k); return true; });
@@ -18370,6 +18414,8 @@ window.pdxPatients = function(opt){
   pg.el.addEventListener('submit', e=>{ const f = e.target.closest('[data-ptq]'); if(!f) return; e.preventDefault(); M.q = f.q.value; try{ f.q.blur(); }catch(x){} run(1); });
   pg.el.addEventListener('input', e=>{ const f = e.target.closest('[data-ptq]'); if(f) M.q = e.target.value; });
   pg.el.addEventListener('click', e=>{ const t = e.target; if(!t.closest) return;
+    if(t.closest('[data-hq-clr]')){ window.pdxQHist.clear('pt'); redraw(); return; }
+    const hq = t.closest('[data-hq]'); if(hq){ M.q = hq.dataset.hq; run(1); return; }
     const fa = t.closest('[data-fa]'); if(fa) return fSheet(fa.dataset.fa);
     const fx = t.closest('[data-fx]'); if(fx){ const old = JSON.stringify(FL ? FL.botF() || {} : {}), k = fx.dataset.fx; if(k==='date'){ M.flt.from = ''; M.flt.to = ''; } else M.flt[k] = ''; return afterFilter(old); }
     const pb = t.closest('[data-pg]'); if(pb && !pb.disabled){ const n = +pb.dataset.pg; if(n >= 1 && !M.busy) run(n); return; }
@@ -18926,7 +18972,7 @@ window.MEAS = { sync:sync, info:info, sup:sup, mobSub:mobSub, refresh:refresh };
 </script>
 <script>
 // ===== Ανέβασμα ιστορικού: ανοίγει τη σελίδα του Claude (artifact) — χωρίς κλειδί API, χωρίς χρέωση =====
-window.HIST_UPLOAD_URL = window.HIST_UPLOAD_URL || 'https://claude.ai/artifact/NZL67XsjxEKGm5PT5LLZHJ';   // αλλάζει από τη βάση: oncall_config «hist_upload_url»
+window.HIST_UPLOAD_URL = window.HIST_UPLOAD_URL || 'https://claude.ai/artifact/7WCs97EfWrAuqWokMGWLbd';   // αλλάζει από τη βάση: oncall_config «hist_upload_url»
 window.histUploadOpen = function(){
   try{ localStorage.setItem('pdx_up_at', String(Date.now())); }catch(e){}
   var w = window.open(window.HIST_UPLOAD_URL, '_blank'); window.__upWin = w; if(!w) location.href = window.HIST_UPLOAD_URL;
@@ -19287,5 +19333,48 @@ window.histUploadOpen = function(){
   }, 1000);
 })();
 </script>
+
+<style id="pdxNight2">
+/* 🌙 7/11: σκούρο θέμα — ενιαίο (εργαστηριακά + γενικοί κανόνες για παράθυρα με λευκό φόντο γραμμένο μέσα στη σελίδα) */
+html.pdx-night{--card:#1C1C1E;--bg2:#2C2C2E;--sep:#38383A;--t1:#F2F2F7;--t2:#AEAEB2;--t3:#8E8E93}
+html.pdx-night body{background:#000}
+html.pdx-night #loginOv{background:#000!important}
+html.pdx-night #loginOv h1,html.pdx-night #loginOv h2{color:#64B5FF}
+html.pdx-night #labsFull,html.pdx-night #labsFull.lm{background:#000!important;color:#F2F2F7!important;color-scheme:dark}
+html.pdx-night #labsFull .lf-top{background:#0A2A52!important}
+html.pdx-night #labsFull .lf-bar{background:#1C1C1E!important;border-bottom-color:#38383A!important}
+html.pdx-night #labsFull .lf-bar button,html.pdx-night #labsFull .lf-seg,html.pdx-night #labsFull .lf-srch .lm-q{background:#2C2C2E!important;color:#E5E5EA!important;border-color:#48484A!important}
+html.pdx-night #labsFull .lf-bar button.on{background:#0A84FF!important;border-color:#0A84FF!important;color:#fff!important}
+html.pdx-night #labsFull .lf-tb th,html.pdx-night #labsFull .lf-t thead th,html.pdx-night #labsFull .lf-t thead .lf-n{background:#1C1C1E!important;color:#AEAEB2!important;border-color:#38383A!important}
+html.pdx-night #labsFull .lf-t thead th.today{background:#0B3A5C!important;color:#9BD3FF!important}
+html.pdx-night #labsFull .lf-t td,html.pdx-night #labsFull .lf-tb td{border-color:#2C2C2E!important;color:#E5E5EA}
+html.pdx-night #labsFull .lf-t .lf-n{background:#000!important;box-shadow:1px 0 0 #38383A!important;color:#F2F2F7}
+html.pdx-night #labsFull .lf-t tr.lf-g td{background:#1C2A38!important;color:#9BC4E8!important}
+html.pdx-night #labsFull .lf-t td.up,html.pdx-night #labsFull .lf-chip.up,html.pdx-night #labsFull .lf-tb td.cnt .b{background:#3A1512!important;color:#FF8A80!important}
+html.pdx-night #labsFull .lf-t td.dn,html.pdx-night #labsFull .lf-chip.dn{background:#0F2245!important;color:#8AB4FF!important}
+html.pdx-night #labsFull .lf-tb tbody tr:hover td{background:#1C1C1E!important}
+html.pdx-night #labsFull .lf-card,html.pdx-night #labsFull .lf-tile{background:#1C1C1E!important;border-color:#38383A!important;color:#E5E5EA!important}
+html.pdx-night #labsFull .lf-tile.up{background:#2A1412!important;border-color:#6B2620!important}
+html.pdx-night #labsFull .lf-tile.dn{background:#101A2E!important;border-color:#24406E!important}
+html.pdx-night #labsFull .lf-chip,html.pdx-night #labsFull .lf-tb td.cnt .g,html.pdx-night #labsFull .lf-srch .lm-seg{background:#2C2C2E!important;color:#E5E5EA!important}
+html.pdx-night #labsFull .lm-ic,html.pdx-night #labsFull .lm-q{background:#1C1C1E!important;color:#E5E5EA!important}
+html.pdx-night #labsFull .lm-q input{background:transparent!important;color:#fff!important;-webkit-text-fill-color:#fff}
+html.pdx-night #labsFull .lm-tw,html.pdx-night #labsFull .lm-xbtn,html.pdx-night #labsFull .lm-xl,html.pdx-night #labsFull .lm-xr{background:#1C1C1E!important;color:#F2F2F7!important;border-color:#38383A!important}
+html.pdx-night #labsFull .lm-t th,html.pdx-night #labsFull .lm-t td{background:#1C1C1E!important;color:#E5E5EA!important;border-color:#38383A!important}
+html.pdx-night #labsFull .lm-t tr.bad td{background:#2A2210!important}
+html.pdx-night #labsFull #lfMed{background:#2A2210!important;color:#FFD98A!important;border-color:#4A3A10!important}
+/* γενικοί κανόνες: παράθυρα/κάρτες με λευκό ή ανοιχτό φόντο γραμμένο inline */
+html.pdx-night [style*="background:#fff;"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#fff\""],html.pdx-night [style*="background:#FFF;"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background: #fff"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#ffffff"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:white"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){background:#1C1C1E!important;color:#F2F2F7!important}
+html.pdx-night [style*="background:#FAFBFC"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#F8FAFC"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#F7F9FB"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#F2F2F7"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#F2F4F7"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#F1F5F9"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){background:#141416!important;color:#F2F2F7!important}
+html.pdx-night [style*="background:#EEF2F6"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#EAEFF3"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#EEF1F4"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#F3F4F6"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#E9E9EE"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#E3E8EE"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){background:#2C2C2E!important;color:#F2F2F7!important}
+html.pdx-night [style*="color:#1F2933"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:#1D2A33"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:#1C1C1E"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:#0F172A"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:#334155"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){color:#F2F2F7!important}
+html.pdx-night [style*="color:#475569"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:#64748B"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:#5B6B7A"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){color:#AEAEB2!important}
+html.pdx-night [style*="border-bottom:1px solid #EEF1F4"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="border-top:1px solid #EEF1F4"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){border-color:#2C2C2E!important}
+html.pdx-night [style*="border:1.5px solid #CBD5E1"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="border:1.5px solid #D5DCE3"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="border:1.5px solid #DCE2E8"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="border:1px solid #DCE2E8"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){border-color:#3A3A3C!important}
+html.pdx-night input:not([type=checkbox]):not([type=radio]),html.pdx-night textarea,html.pdx-night select{background:#2C2C2E;color:#fff;-webkit-text-fill-color:#fff;border-color:#3A3A3C;color-scheme:dark}
+html.pdx-night input::placeholder,html.pdx-night textarea::placeholder{color:#8E8E93;-webkit-text-fill-color:#8E8E93}
+html.pdx-night [style*="color:var(--mp,#1D4E80)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:var(--mp,#1B4B66)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){color:#64B5FF!important}
+html.pdx-night [style*="border:1.5px solid var(--mp,#1D4E80)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){border-color:#3D7FC4!important}
+</style>
 </body>
 </html>
