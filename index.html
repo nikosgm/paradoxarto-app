@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07v-v161';
+const APP_VER = '2026-11-07w-v162';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -16051,7 +16051,7 @@ Z99.2:C|αιμοκάθαρση
   // Κλινική (oncall_config «medilabi_labs», αλλάζει επιμελητής/διαχειριστής): ποιες ειδοποιούν + δικά μας όρια.
   // Προσωπικές (user_metadata.pdx_labview, ίδιες σε κινητό/υπολογιστή): τι βλέπω, ποια είναι «κύρια» πάνω-πάνω.
   const NOTIFY_OFF_DEFAULT = ['mcv','mch','mchc','rdw','rdwsd','mpv','pdw','plcr','pltcrit','ig','ig%','nrbc','nrbc%','rbc','lymph','lymph%','mono','mono%','eos','eos%','baso','baso%','tp','chol','hdl','ldl','tg','esr'];
-  const PIN_DEFAULT = ['hgb','hct','wbc','neut%','plt','creat','urea','k','na','crp','inr'];
+  const PIN_DEFAULT = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp','inr','neut%'];   // 7/11: σειρά του βιβλίου εργαστηριακών
   let cfgClinic = null, cfgMine = null, cfgAt = 0;
   async function cfgLoad(force){
     if(!force && cfgClinic && Date.now()-cfgAt < 120000) return;
@@ -16063,7 +16063,8 @@ Z99.2:C|αιμοκάθαρση
   const notifyOn = k=>{ const n = C().notify || {}; if(k in n) return !!n[k]; if(/^n:/.test(k)) return false; return NOTIFY_OFF_DEFAULT.indexOf(k)<0; };
   const limOf = k=>(C().lim || {})[k] || null;
   const hidden = k=>(M().hide || []).indexOf(k)>=0;
-  const pins = ()=>Array.isArray(M().pins) ? M().pins : PIN_DEFAULT;
+  const BOOKO = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp'];
+  const pins = ()=>{ const P = Array.isArray(M().pins) ? M().pins : PIN_DEFAULT; const ix = k=>{ const i = BOOKO.indexOf(k); return i<0 ? 100 : i; }; return P.map((k,i)=>[k,i]).sort((a,b)=>ix(a[0])-ix(b[0]) || a[1]-b[1]).map(x=>x[0]); };   // 7/11: πάντα με τη σειρά του βιβλίου, μετά τα υπόλοιπα
   // τιμή που ζητά προσοχή: δικά μας όρια αν υπάρχουν, αλλιώς το βελάκι του εργαστηρίου
   function alarmOf(k, p){
     const L = limOf(k);
@@ -16127,7 +16128,7 @@ Z99.2:C|αιμοκάθαρση
     return '<div class="lf-top">'+(left||'')+'<b>'+title+(sub?'<br><span class="lf-sub">'+sub+'</span>':'')+'</b><button onclick="labsFullSettings()" title="Ρυθμίσεις">⚙︎</button><button onclick="labsFullReload()" title="Ανανέωση">⟳</button><button onclick="labsFullClose()">Κλείσιμο</button></div>';
   }
   // 🖥 σαν το Medilabi: ΟΛΟΙ οι ασθενείς × βασικές εξετάσεις (τελευταία τιμή), πάτημα → πλήρες ιστορικό ασθενή
-  const LF_COLS = ['hgb','hct','wbc','plt','creat','urea','k','na','crp','inr','glu'];
+  const LF_COLS = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp','inr'];   // 7/11: σειρά του βιβλίου εργαστηριακών
   let lfTable = null; try{ lfTable = localStorage.getItem('pdx_lf_table'); }catch(e){}
   const lfWide = ()=>lfTable!==null ? lfTable==='1' : window.innerWidth >= 900;
   window.labsFullTable = function(v){ lfTable = v ? '1' : '0'; try{ localStorage.setItem('pdx_lf_table', lfTable); }catch(e){} render(); };
@@ -16174,7 +16175,7 @@ Z99.2:C|αιμοκάθαρση
   }
   // 📱 ===== Κινητό: πίνακας σαν Medilabi · ταξινόμηση · αναζήτηση σε όλο το Medilabi · πάτημα τιμής → γράφημα =====
   const MOB = ()=>window.innerWidth < 700;
-  const MCOLS = ['hgb','hct','wbc','plt','creat','urea','k','na','crp','inr','glu'];
+  const MCOLS = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp','inr'];
   let mSort = 'room'; try{ mSort = localStorage.getItem('pdx_lf_sort') || 'room'; }catch(e){}
   let mQ = '', chRange = 'adm', chCtx = null, chCur = null, extLab = null, extName = '', chS = null, chDown = false;
   const ext = {q:'', busy:false, msg:'', pts:null, pg:null, fsig:'{}'};
@@ -16572,7 +16573,7 @@ Z99.2:C|αιμοκάθαρση
     draw(); box.appendChild(ov);
     const RED = ['rbc','mcv','mch','mchc','rdw','rdwsd','mpv','pdw','plcr','pltcrit','nrbc','nrbc%'];
     const DIFF = ['lymph','lymph%','mono','mono%','eos','eos%','baso','baso%','ig','ig%','neut'];
-    const BASIC = ['hgb','hct','wbc','plt','neut%','creat','urea','k','na','crp','inr','aptt','glu','ca','mg','trop','ddimer'];
+    const BASIC = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp','inr','neut%','aptt','mg','trop','ddimer'];
     ov.addEventListener('click', async e=>{
       const t = e.target;
       if(t===ov || t.closest('[data-x]')) return ov.remove();
