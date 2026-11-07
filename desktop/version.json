@@ -1,13 +1,13 @@
 {
- "version": "1.0.3",
+ "version": "1.0.4",
  "parts": [
-  "nikosct-1.0.3.zip.00",
-  "nikosct-1.0.3.zip.01",
-  "nikosct-1.0.3.zip.02",
-  "nikosct-1.0.3.zip.03",
-  "nikosct-1.0.3.zip.04",
-  "nikosct-1.0.3.zip.05"
+  "nikosct-1.0.4.zip.00",
+  "nikosct-1.0.4.zip.01",
+  "nikosct-1.0.4.zip.02",
+  "nikosct-1.0.4.zip.03",
+  "nikosct-1.0.4.zip.04",
+  "nikosct-1.0.4.zip.05"
  ],
- "sha256": "0eaf71f0366f0a5dcf129151f3d9c2f53c65feae6caaf953e8d1d39d9a89f332",
- "notes": "Πάντα η τελευταία έκδοση του viewer, χωρίς άσπρη λάμψη, προεπισκόπηση εκτύπωσης"
+ "sha256": "9488a3662fb0b05c6995e8bcf844bc3dd45d4e4b1d712a5fdd00c60105c948c7",
+ "notes": "🩻 Evorad μέσα στην εφαρμογή · 💿 CD · νέα προεπισκόπηση εκτύπωσης"
 }
