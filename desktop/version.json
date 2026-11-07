@@ -1,13 +1,13 @@
 {
- "version": "1.0.1",
+ "version": "1.0.2",
  "parts": [
-  "nikosct-1.0.1.zip.00",
-  "nikosct-1.0.1.zip.01",
-  "nikosct-1.0.1.zip.02",
-  "nikosct-1.0.1.zip.03",
-  "nikosct-1.0.1.zip.04",
-  "nikosct-1.0.1.zip.05"
+  "nikosct-1.0.2.zip.00",
+  "nikosct-1.0.2.zip.01",
+  "nikosct-1.0.2.zip.02",
+  "nikosct-1.0.2.zip.03",
+  "nikosct-1.0.2.zip.04",
+  "nikosct-1.0.2.zip.05"
  ],
- "sha256": "2377a7e0bea5b71f1c85104af76752efd8924404c12c90530788f0c2023f952d",
- "notes": "Προεπισκόπηση εκτύπωσης, 3D με vtk.js"
+ "sha256": "7259e0b1cd37f782294129567e3763e5a5ef68f1ee4f0cb8f0bc58f405cadb1a",
+ "notes": "Χωρίς άσπρη λάμψη στο άνοιγμα, προεπισκόπηση εκτύπωσης"
 }
