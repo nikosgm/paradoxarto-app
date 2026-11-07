@@ -757,7 +757,7 @@ function drawNow(){
     // ξαναζωγραφίζουμε τα pixel μόνο αν άλλαξε εικόνα ή παράθυρο (όχι σε κάθε κίνηση ποντικιού/μέτρηση)
     const pk=[f.d,f.W,f.H,ser.rgb&&S.view==='ax'&&!f.mip,ser.mono1!==!!S.inv,S.ww,S.wc];
     if(!PK || pk.some((x,i)=>x!==PK[i])){ paint(f.d,f.W,f.H,pk[3],pk[4],S.ww,S.wc,oc,octx); PK=pk; }
-    const g=geom(f); ctx.imageSmoothingEnabled=S.zoom<3; ctx.drawImage(oc,g.x,g.y,g.w,g.h);
+    const g=geom(f); ctx.imageSmoothingEnabled=S.zoom<3 || S.view!=='ax'; ctx.imageSmoothingQuality='high'; ctx.drawImage(oc,g.x,g.y,g.w,g.h);
     if(S.refl && ser.vol){
       const z=S.ix.ax, y=S.ix.cor, x=S.ix.sag;
       const lines = S.view==='ax' ? [['v',x+.5,'#5EB8E6'],['h',y+.5,'#7BD88F']]
@@ -876,8 +876,18 @@ function applyPreset(i, quiet){
   } else { [S.ww,S.wc]=PRESETS[i]; }
   if(!quiet) draw();
 }
+// 7/11: MPR από ΠΑΧΙΕΣ τομές (π.χ. 5 mm) βγαίνει θολό. Αν η ίδια μελέτη έχει λεπτές τομές (π.χ. 1 mm), η ανασύνθεση γίνεται από εκείνες.
+function thinFor(ser){
+  const th = ser && (ser.thick || ser.zsp || 0); if(!ser || !th || th <= 1.5) return null;
+  const c = S.series.filter(x=>x!==ser && (x.plane||'AX')===(ser.plane||'AX') && !x.loc && !x.rgb && x.slices.length >= ser.slices.length*1.6 && (x.thick||99) <= th*0.7
+    && !!x.contrast===!!ser.contrast && x.rows===ser.rows && (!x.pinfo || !ser.pinfo || x.pinfo.date===ser.pinfo.date));
+  c.sort((a,b)=>(a.thick||9)-(b.thick||9) || b.slices.length-a.slices.length); return c[0]||null;
+}
 async function setPlane(p){
   if(!S.cur) return; S.touched=true; if(V3.on) set3d(false);
+  if(p!=='ax' && !(S.load && S.load.end===null)){ const t=thinFor(S.cur); if(t){ const s0=S.cur.slices[S.ix.ax], pz=s0&&s0.pos; select(t);
+    if(pz!=null){ let bi=0, bd=1e9; t.slices.forEach((x,i)=>{ const d=Math.abs((x.pos||0)-pz); if(d<bd){ bd=d; bi=i; } }); S.ix.ax=bi; }
+    status('MPR από τις λεπτές τομές «'+t.desc+'» ('+fmt(t.thick||t.zsp||0)+' mm) για καθαρή εικόνα'); } }
   if(p!=='ax' && !S.cur.vol){ const ok=await buildVol(S.cur); if(!ok) return; }
   if(S.view!==p){ S.view=p; S.zoom=1; S.panX=S.panY=0; }
   draw();
