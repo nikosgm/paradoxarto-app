@@ -1753,7 +1753,7 @@ if(DESK) DESK.info().then(i=>{ const v = (i && i.version) || '?'; try{ document.
 if(DESK && DESK.evo){
   const b = document.createElement('button'); b.className='ib primary'; b.id='evoBtn'; b.title='Αναζήτηση εξετάσεων στον Evorad (E)'; b.innerHTML='🩻<span>Evorad</span>';
   const ref = $('srvBtn'); if(ref) ref.parentNode.insertBefore(b, ref); b.onclick=()=>evoPanel();
-  document.addEventListener('keydown', e=>{ if((e.key==='e'||e.key==='E') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'') && !document.getElementById('evoOv')) { e.preventDefault(); evoPanel(); } });
+  document.addEventListener('keydown', e=>{ if((e.key==='e'||e.key==='E'||e.key==='ε'||e.key==='Ε'||e.code==='KeyE') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'') && !document.getElementById('evoOv')) { e.preventDefault(); evoPanel(); } });
   // άνοιγμα από τη γραμμή εντολών / από το Παραδόχαρτο: ?evo=επώνυμο ή info().evo = {sur, amka, examid}
   DESK.info().then(i=>{ const ev = i && i.evo; if(ev){ evoPanel({sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||''}); if(ev.examid) evoJSON('/api/getExams?examid='+encodeURIComponent(ev.examid)+'&').then(d=>{ const x=d[0]; if(x) evoSeries({examid:x.examid, date:String(x.examdate||''), mod:String(x.exammodalitytype||''), desc:String(x.studydescription||''), first:String(x.firstname||''), last:String(x.lastname||''), amka:String(x.amka||''), pid:'', pid2:'', birth:''}); }).catch(()=>{}); } }).catch(()=>{});
   if(DESK.onEvo) DESK.onEvo(ev=>{ evoPanel({sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''}); });
