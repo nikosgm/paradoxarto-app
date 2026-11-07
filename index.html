@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08b-v166';
+const APP_VER = '2026-11-08c-v167';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -9026,7 +9026,7 @@ document.head.appendChild(st);
       try{ view.classList.toggle('sidec', nv3 && localStorage.getItem('pdx_side_c')==='1'); }catch(e){}
       if(nv3) setTimeout(()=>{ try{ nvMeasure(); }catch(e){} }, 0);
       view.innerHTML = (nv3 ? '<div class="dk-s">'+nvSide()+'</div>' : '')+'<div class="dk-l">'+left+'</div><div class="dk-r">'+right+'</div>';
-      const L2 = view.querySelector('.dk-l'), R2 = view.querySelector('.dk-r'); L2.scrollTop = ly; R2.scrollTop = same ? ry : 0; view.__dkSig = sig;
+      const L2 = view.querySelector('.dk-l'), R2 = view.querySelector('.dk-r'); L2.scrollTop = ly; R2.scrollTop = same ? ry : 0; view.__dkSig = sig; view.__dkLy = ly; view.__dkLyAt = Date.now();   // 8/11: το μπλοκ ΝΠΣ μπαίνει λίγο αργότερα → εκεί ξαναμπαίνει η θέση (αλλιώς πήγαινε πάνω)
       if(openKey) view.querySelectorAll('.dk-l .mcard').forEach(c=>{ if((c.getAttribute('onclick')||'').indexOf("'"+openKey+"'")>=0) c.classList.add('dsel'); });
       if(window.__mq && window.mobSearch) window.mobSearch(window.__mq);
       return;
@@ -12593,7 +12593,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const h = nbHtml(); if(old){ if(old.outerHTML===h) return; old.remove(); } if(!h) return;
     // 7/11: στον υπολογιστή (3 στήλες) μπαίνει ΜΕΣΑ στη στήλη της λίστας που κυλάει — όχι σαν ξεχωριστή στήλη χωρίς scroll
     if(mv.classList.contains('desk')){ let sc = last.parentElement; while(sc && sc!==mv && !/(auto|scroll)/.test(getComputedStyle(sc).overflowY)) sc = sc.parentElement;
-      if(sc && sc!==mv){ sc.insertAdjacentHTML('beforeend', h); return; } }
+      if(sc && sc!==mv){ sc.insertAdjacentHTML('beforeend', h); if(mv.__dkLy && Date.now()-(mv.__dkLyAt||0) < 3000 && sc.classList.contains('dk-l') && sc.scrollTop < mv.__dkLy) sc.scrollTop = mv.__dkLy; return; } }
     a.insertAdjacentHTML('afterend', h);
   }
   document.addEventListener('click', e=>{ const t = e.target; if(!t.closest || !t.closest('#npsBlk')) return; const M = nbMiss();
