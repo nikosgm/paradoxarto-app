@@ -1682,7 +1682,7 @@ async function evoJSON0(p){
   let j; try{ j=JSON.parse(t); }catch(e){ EVO.raw = t.slice(0,160); if(/login|σύνδεση|session|unauthor/i.test(t)){ EVO.logged=false; const er=new Error('LOGIN'); er.login=true; throw er; } throw new Error('μη αναμενόμενη απάντηση'); }
   EVO.raw = t.slice(0,160);
   // 8/11: ο Evorad μπορεί να απαντά JSON και χωρίς σύνδεση (π.χ. {status:"error"} ή κενό) → τότε ζητάμε σύνδεση
-  if(j && !Array.isArray(j) && j.status && !/succ|ok/i.test(String(j.status))){ EVO.logged=false; const er=new Error('LOGIN'); er.login=true; throw er; }
+  if(j && !Array.isArray(j) && j.status && !/succ|ok/i.test(String(j.status)) && /login|session|auth|denied|expired/i.test(t)){ EVO.logged=false; const er=new Error('LOGIN'); er.login=true; throw er; }
   EVO.logged=true; return Array.isArray(j) ? j : (j.data || j.aaData || []);
 }
 async function evoSearch(){
@@ -1788,9 +1788,12 @@ if(DESK && DESK.evo){
   const ref = $('srvBtn'); if(ref) ref.parentNode.insertBefore(b, ref); b.onclick=()=>evoPanel();
   document.addEventListener('keydown', e=>{ if((e.key==='e'||e.key==='E'||e.key==='ε'||e.key==='Ε'||e.code==='KeyE') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'') && !document.getElementById('evoOv')) { e.preventDefault(); evoPanel(); } });
   // άνοιγμα από τη γραμμή εντολών / από το κινητό (τηλεχειρισμός): {sur, fn, amka, examid} → αναζήτηση ή κατευθείαν η εξέταση
-  const evoArgsOpen = ev=>{ if(!ev) return; evoPanel({sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''});
-    if(ev.examid) evoJSON('/api/getExams?examid='+encodeURIComponent(ev.examid)+'&').then(d=>{ const x=(d||[]).find(z=>String(z.examid)===String(ev.examid)) || (d||[])[0]; if(x){ const ex={examid:x.examid, date:String(x.examdate||''), mod:String(x.exammodalitytype||''), desc:String(x.studydescription||''), first:String(x.firstname||''), last:String(x.lastname||''), amka:String(x.amka||''), pid:'', pid2:'', birth:''};
-      evoSeries(ex).then(()=>{ if(EVO.series && EVO.series.length && EVO.sel===ex) evoOpen(EVO.series); }); } }).catch(e=>status('Evorad: '+(e.login?'χρειάζεται σύνδεση':e.message), true)); };
+  const evoArgsOpen = ev=>{ if(!ev) return; const q = {sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''};
+    if(!ev.examid){ evoPanel(q); return; }
+    { const o0 = document.getElementById('evoOv'); if(o0) o0.remove(); } status('Evorad: ανοίγω την εξέταση…');
+    // 8/11: ΚΑΤΕΥΘΕΙΑΝ οι σειρές της εξέτασης (getSeries) — χωρίς αναζήτηση/getExams· μετά φόρτωση όλων (η μεγαλύτερη πρώτη)
+    if(ev.examid){ const ex = {examid:String(ev.examid), date:'', mod:'', desc:'', first:'', last:String(ev.sur||''), amka:String(ev.amka||''), pid:'', pid2:'', birth:''};
+      evoSeries(ex).then(()=>{ if(EVO.series && EVO.series.length && EVO.sel===ex) evoOpen(EVO.series); else { evoPanel(q); if(EVO.logged===false) status('Evorad: χρειάζεται σύνδεση — πάτα «🔑 Σύνδεση»', true); else status('Evorad: η εξέταση δεν άνοιξε'+(EVO.raw?' ('+EVO.raw.slice(0,80)+')':''), true); } }); } };
   DESK.info().then(i=>evoArgsOpen(i && i.evo)).catch(()=>{});
   if(DESK.onEvo) DESK.onEvo(evoArgsOpen);
 }
