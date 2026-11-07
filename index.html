@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08c-v167';
+const APP_VER = '2026-11-08d-v168';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12886,14 +12886,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
     let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t=>{ if(rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
     const st = {sel:[], pks:[], tab: 'fav', q:'', when:'Τώρα', urg:'Ρουτίνας', note:'', msg:'', pat: pdxPrintAt()};
-    const addPre = x=>{ if(!x) return; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0) st.sel.push(t); }); if(x.urg) st.urg = 'Επείγον';
+    const addPre = x=>{ if(!x) return; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0) st.sel.push(t); });
       (x.profs||[]).forEach(n=>{ let i = P.packs.findIndex(q=>q && q.medilabi===n); if(i<0){ P.packs.push({name:n, medilabi:n, tests:[]}); i = P.packs.length-1; } if(st.pks.indexOf(i)<0) st.pks.push(i); }); };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
     addPre(pre);
     const BN = Object.assign({}, await pdxBotNames());
-    try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]) delete BN[id]; }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
+    try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]){ (window.__ordOff = window.__ordOff || {})[id] = BN[id]; delete BN[id]; } }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
     const PR = Object.entries(BN).sort((a,b)=>['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(b[1]));
     if(st.pat && !BN[st.pat]) st.pat = '';
     const CATS = await pdxMedCats();
+    const OPK = window.pdxOrderPackList ? await pdxOrderPackList().catch(()=>[]) : [];
     const IMGS = CATS.length ? [].concat(...CATS.filter(c=>IMG_LAB.test(nrm(c.lab).toUpperCase()) || c.keys.some(isImgAny) && c.keys.every(isImgAny)).map(c=>c.keys)) : imgList(cat);
     // άλλα απεικονιστικά του καταλόγου ΔΕΝ εμφανίζονται (μόνο τα 5 της κλινικής)
     const all = ()=>{ const a = CATS.length ? fav.concat(...P.packs.map(x=>x.tests||[]), rec, cat) : fav.concat(...P.packs.map(x=>x.tests||[]), rec, IMGS, cat.filter(t=>!isImgAny(t))); return a.filter((t,i)=>t && a.indexOf(t)===i); };
@@ -12925,8 +12926,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const draw = ()=>{
       const sc = ov.querySelector('[data-scroll]'), top = sc ? sc.scrollTop : 0;
       let h = '<div style="background:#fff;color:#1F2933;width:100%;max-width:640px;border-radius:22px 22px 0 0;display:flex;flex-direction:column;max-height:92vh">'
-        + '<div style="padding:14px 16px 8px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🧾 Παραγγελία</b>'+(window.pdxPacksApply?'<button data-pdxpk style="border:0;background:#EEF2F6;border-radius:12px;padding:0 12px;min-height:44px;font-size:14px;font-weight:700;white-space:nowrap">📦 Πακέτα</button>':'')+'<button data-x aria-label="Κλείσιμο" style="border:0;background:#EEF2F6;border-radius:12px;min-width:44px;min-height:44px;font-size:16px">✕</button></div>'
+        + '<div style="padding:14px 16px 8px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🧾 Παραγγελία</b>'+'<button data-x aria-label="Κλείσιμο" style="border:0;background:#EEF2F6;border-radius:12px;min-width:44px;min-height:44px;font-size:16px">✕</button></div>'
         + '<div class="pdx-ordpt" style="font-size:14.5px;color:#475569;margin-top:2px;line-height:1.3">'+ordPt()+'</div>'
+        + (OPK.length && !st.q ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;max-height:96px;overflow:auto">'+OPK.map((p,i)=>'<button data-opk="'+i+'" style="border:1.5px solid #B7791F;border-radius:999px;padding:7px 12px;font-size:14.5px;font-weight:700;background:'+(st.opk&&st.opk[i]?'#B7791F;color:#fff':'#FFF8EB;color:#7A4B06')+'">📦 '+E(p.name)+'</button>').join('')+'</div>' : '')
         + '<input data-q type="search" autocomplete="off" placeholder="🔎 Αναζήτηση σε όλο το Medilabi (π.χ. θωρ, CRP, ΝΟΚ)…" value="'+E(st.q)+'" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:16px;padding:10px 12px;border:1.5px solid #CBD5E1;border-radius:12px">'
         + (st.q?'':'<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px">'+(CATS.length ? [['fav','⭐ Αγαπημένα']].concat(rec.length?[['rec','🕘 Πρόσφατα']]:[], CATS.map((c,i)=>['L'+i, (IMG_LAB.test(nrm(c.lab).toUpperCase())?'🩻 ':'')+c.lab+' ('+c.keys.length+')']), [['all','📋 Όλα']]) : OCAT.filter(c=>c[0]!=='rec'||rec.length).filter(c=>['fav','rec','all','img'].indexOf(c[0])>=0||cat.some(t=>ocatOf(t)===c[0]))).map(c=>'<button data-tab="'+c[0]+'" style="flex:none;'+C+(st.tab===c[0]?CON:'')+'">'+E(c[1])+'</button>').join('')+'</div>')
         + '</div><div data-scroll style="flex:1;overflow:auto;padding:0 16px">';
@@ -12939,8 +12941,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       }
       h += '</div><div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid #EEF1F4;background:#FAFBFC;border-radius:0 0 0 0">'
         + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
-        + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+'<span style="width:6px"></span>'+['Ρουτίνας','Επείγον'].map(w=>'<button data-u="'+w+'" style="'+C+(st.urg===w?(w==='Επείγον'?';background:#B42318;border-color:#B42318;color:#fff':CON):'')+'">'+w+'</button>').join('')+'</div>'
-        + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" style="'+C+(st.pat===id?CON:'')+'">'+E(nm)+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button></div>' : '')
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+(st.when==='Αύριο πρωί'?'<span style="font-size:13px;color:#64748B">ώρα παραγγελίας 08:00</span>':'')+'</div>'
+        + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" style="'+C+(st.pat===id?CON:'')+'">'+E(nm)+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="Ο υπολογιστής δεν απαντά τώρα" style="'+C+';opacity:.45;border-style:dashed">'+E(window.__ordOff[id])+' · εκτός</button>').join('')+'</div>' : '')
         + '<input data-note placeholder="Σημείωση (προαιρετικά)" value="'+E(st.note)+'" style="width:100%;box-sizing:border-box;margin-top:8px;font-size:16px;padding:9px 11px;border:1.5px solid #D5DCE3;border-radius:12px">'
         + (st.msg?'<div style="color:#B42318;font-size:13.5px;margin-top:6px">'+E(st.msg)+'</div>':'')
         + '<button data-go style="margin-top:10px;width:100%;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:14px;padding:13px;font-size:16.5px;font-weight:800">Αποστολή στο bot'+(st.sel.length?' · '+st.sel.length+' εξετ.':'')+(st.pks.length?' · '+st.pks.length+' πακ.':'')+'</button></div></div>';
@@ -12957,6 +12959,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const t = e.target;
       if(t===ov || t.closest('[data-x]')){ ov.remove(); return; }
       const fv = t.closest('[data-fav]'); if(fv){ e.stopPropagation(); return favToggle(fv.dataset.fav); }
+      const opk = t.closest('[data-opk]'); if(opk){ const p = OPK[+opk.dataset.opk]; if(p){ st.dupOk = false; st.msg = ''; addPre(p.r); st.opk = st.opk || {}; st.opk[+opk.dataset.opk] = 1; if(window.pdxOrderPackUsed) pdxOrderPackUsed(p.id); draw(); } return; }
       if(t.closest('[data-pdxpk]')){ pdxPacksApply({fam:'order', k, onApply:r=>{ st.dupOk = false; st.msg = ''; addPre(r); draw(); }}); return; }
       const tb = t.closest('[data-tab]'); if(tb){ st.tab = tb.dataset.tab; return draw(); }
       const tt = t.closest('[data-t]'); if(tt){ toggle(tt.dataset.t); return draw(); }
@@ -13970,6 +13973,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   }
 
   // ---------- 📦 από το φύλλο παραγγελίας / τη Συνταγή: διάλεξε πακέτο → προεπισκόπηση → προσθήκη ----------
+  // 📦 8/11 (εντολή χρήστη): τα πακέτα παραγγελίας φαίνονται κατευθείαν στο φύλλο — ένα πάτημα = μπαίνουν όλες οι εξετάσεις (χωρίς προεπισκόπηση)
+  window.pdxOrderPackList = async function(){ try{ if(S.packs===null) await load(); }catch(e){} return (S.packs||[]).filter(p=>p.fam==='order' && (p.items||[]).length).sort((a,b)=>(!!(b.fav&&b.fav[S.me]) - !!(a.fav&&a.fav[S.me])) || (b.uses||0)-(a.uses||0) || a.name.localeCompare(b.name,'el'))
+    .map(p=>({id:p.id, name:p.name, r:{tests:p.items.filter(x=>x.t!=='prof').map(x=>x.n), profs:p.items.filter(x=>x.t==='prof').map(x=>x.n), pack:p.name}})); };
+  window.pdxOrderPackUsed = id=>markUsed(id);
   window.pdxPacksApply = function(opt){
     opt = opt || {}; const fam = opt.fam==='rx' ? 'rx' : 'order'; let q = '';
     const ov = sheetEl('<div class="grab"></div><div class="nav"><button data-x>Άκυρο</button><div class="tt">📦 Πακέτα</div><span class="sp"></span><button data-lib class="b">Όλα ›</button></div>'
