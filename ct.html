@@ -202,8 +202,9 @@ body.is3d .ov,body.is3d .slider{display:none}
   <main class="view" id="view" aria-label="Εικόνα">
     <canvas id="cv"></canvas>
     <canvas id="cv3" hidden></canvas>
+    <div id="vk3" hidden style="position:absolute;inset:0;z-index:2;background:#000"></div>
     <div class="p3" id="p3" hidden>
-      <div class="grp seg"><button class="ib" data-p3="bone">Οστά</button><button class="ib" data-p3="organ">Όργανα</button><button class="ib" data-p3="angio">Αγγεία</button><button class="ib" data-p3="stone">Λίθοι</button><button class="ib" data-p3="soft">Μαλακά</button><button class="ib" data-p3="skin">Δέρμα</button><button class="ib" data-p3="mip">MIP</button></div>
+      <div class="grp seg"><button class="ib" data-p3="organs">Όργανα</button><button class="ib" data-p3="contrast">Σκιαγραφικό</button><button class="ib" data-p3="vessels">Αγγεία</button><button class="ib" data-p3="bone">Οστά</button><button class="ib" data-p3="stone">Λίθοι</button><button class="ib" data-p3="skin">Δέρμα</button><button class="ib" data-p3="mip">MIP</button></div>
       <div class="grp seg"><button class="ib" data-v3="ant" title="Πρόσθια">Π</button><button class="ib" data-v3="post" title="Οπίσθια">Ο</button><button class="ib" data-v3="rt" title="Δεξιά πλάγια">Δ</button><button class="ib" data-v3="lt" title="Αριστερή πλάγια">Α</button><button class="ib" data-v3="sup" title="Από πάνω">↓</button><button class="ib" data-v3="inf" title="Από κάτω">↑</button></div>
       <label title="Κατώφλι: τι φαίνεται (και δεξί σύρσιμο πάνω/κάτω)">κατώφλι<input type="range" id="p3s" min="-600" max="600" step="10" value="0"><span class="v" id="p3sv">0 HU</span></label>
       <label title="Κόψιμο από μπροστά (για να φανεί το εσωτερικό)">κόψιμο<input type="range" id="p3c" min="0" max="95" value="0"></label>
@@ -316,7 +317,7 @@ async function parseFile(file){
 /* ===== 7/11: ανάγνωση + αποκωδικοποίηση σε Web Workers (πολλοί πυρήνες, η οθόνη δεν «κολλάει») ===== */
 // Η ίδια συνάρτηση τρέχει μέσα στους workers και (αν δεν γίνεται worker) στο κύριο νήμα.
 function wkHandle(daikon, msg){
-  const TAGS=[[0x0008,0x0018],[0x0008,0x0008],[0x0008,0x0020],[0x0008,0x0030],[0x0008,0x0060],[0x0008,0x0070],[0x0008,0x0080],[0x0008,0x1030],[0x0008,0x103E],[0x0008,0x1090],
+  const TAGS=[[0x0008,0x0018],[0x0008,0x0008],[0x0008,0x0020],[0x0008,0x0021],[0x0008,0x0022],[0x0008,0x0023],[0x0008,0x0030],[0x0008,0x0060],[0x0008,0x0070],[0x0008,0x0080],[0x0008,0x1030],[0x0008,0x103E],[0x0008,0x1090],
     [0x0010,0x0010],[0x0010,0x0020],[0x0010,0x0030],[0x0010,0x0040],[0x0018,0x0010],[0x0018,0x0050],[0x0018,0x0060],[0x0018,0x0086],[0x0018,0x1151],[0x0018,0x1210],
     [0x0020,0x0012],[0x0020,0x0013],[0x0020,0x0032],[0x0020,0x0100],[0x0028,0x0010],[0x0028,0x0030]];
   const tv=(img,g,e)=>{ try{ const t=img.getTag(g,e); if(!t||t.value==null) return ''; const v=Array.isArray(t.value)?t.value.join('\\'):t.value;
@@ -552,7 +553,7 @@ function addImage(img, L){
       mono1: pi==='MONOCHROME1', rgb: /RGB|YBR/.test(pi), slices:[], usePos:true, loc:!!loc,
       plane: (()=>{ if(!dr||dr.length!==6) return ''; const n=[Math.abs(dr[1]*dr[5]-dr[2]*dr[4]), Math.abs(dr[2]*dr[3]-dr[0]*dr[5]), Math.abs(dr[0]*dr[4]-dr[1]*dr[3])]; return n[2]>=n[0]&&n[2]>=n[1]?'AX':n[1]>=n[0]?'COR':'SAG'; })(),
       kern: tagv(img,0x0018,0x1210), contrast: tagv(img,0x0018,0x0010),
-      pinfo:{name:tagv(img,0x0010,0x0010), pid:tagv(img,0x0010,0x0020), dob:tagv(img,0x0010,0x0030), date:tagv(img,0x0008,0x0020), desc:tagv(img,0x0008,0x1030)}};
+      pinfo:{name:tagv(img,0x0010,0x0010), pid:tagv(img,0x0010,0x0020), dob:tagv(img,0x0010,0x0030), date:tagv(img,0x0008,0x0020)||tagv(img,0x0008,0x0021)||tagv(img,0x0008,0x0022)||tagv(img,0x0008,0x0023), desc:tagv(img,0x0008,0x1030)}};
     S.series.push(ser); S.series.sort((a,b)=>a.num-b.num || (a.base<b.base?-1:a.base>b.base?1:0) || (+a.acq||0)-(+b.acq||0) || (+a.echo||0)-(+b.echo||0) || (+a.tpi||0)-(+b.tpi||0));
   }
   const inst = +img.getImageNumber() || 0;
@@ -764,7 +765,7 @@ function drawMpr3(r){
   }
   S._rect=null; S.view=act;
   const pi0=ser.pinfo||{};
-  $('ovTL').innerHTML='<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+'<br><br>'+esc(ser.desc)+'<br><span class="a">MPR · 3 επίπεδα</span>';
+  $('ovTL').innerHTML='<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+(pi0.date?'<br>Εξέταση: '+esc(fmtD(pi0.date)):'')+'<br><br>'+esc(ser.desc)+'<br><span class="a">MPR · 3 επίπεδα</span>';
   $('ovTR').innerHTML=''; $('ovBR').textContent='σύρε για σταυρό · ροδέλα: τομές στο παράθυρο'; $('ovBL').textContent='';
   $('sl').max=count(S.view)-1; $('sl').value=S.ix[S.view]; $('slv').textContent=(S.ix[S.view]+1)+' / '+count(S.view);
   document.querySelectorAll('[data-plane]').forEach(b=>b.classList.toggle('on',b.dataset.plane===S.view)); $('mpr3').classList.toggle('on',true);
@@ -808,8 +809,9 @@ function drawNow(){
   } else if(S.view==='ax'){ ctx.fillStyle='#F2994A'; ctx.font='14px sans-serif'; ctx.fillText('Η τομή δεν αποκωδικοποιήθηκε (μη υποστηριζόμενη συμπίεση).',16,30); }
 
   const PL={ax:'Αξονική',cor:'Στεφανιαία',sag:'Οβελιαία'}[S.view];
+  { const nm=((ser.pinfo||{}).name||'').trim(), t='Νίκος CT Viewer'+(nm?' — '+nm:''); if(document.title!==t){ document.title=t; const h=document.querySelector('header h1'); if(h) h.textContent=t; } }
   const pi0=ser.pinfo||{}, sex=tagv((ser.slices[0]||{}).img||{getTag:()=>null},0x0010,0x0040);
-  $('ovTL').innerHTML = '<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+((pi0.dob||sex)?'<br>'+esc([pi0.dob?fmtD(pi0.dob):'', sex].filter(Boolean).join(' · ')):'')+(pi0.date?'<br>'+esc(fmtD(pi0.date)):'')+'<br><br>'
+  $('ovTL').innerHTML = '<b style="font-size:13px;color:#fff">'+esc(pi0.name||'')+'</b>'+(pi0.pid?'<br>ID '+esc(pi0.pid):'')+((pi0.dob||sex)?'<br>'+esc([pi0.dob?fmtD(pi0.dob):'', sex].filter(Boolean).join(' · ')):'')+(pi0.date?'<br>Εξέταση: '+esc(fmtD(pi0.date)):'')+'<br><br>'
     + esc(ser.desc)+'<br>'+esc(ser.modality||'—')+(ser.thick?' · '+fmt(ser.thick)+' mm':'')
     +'<br><span class="a">'+PL+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(f&&f.mip?' · MIP '+(S.mip<0?'όλος ο όγκος':S.mip+' mm'):'')+'</span>'
     +(S.view!=='ax'&&ser.uneven?'<br><span class="w">άνισα διαστήματα τομών</span>':'');
@@ -826,7 +828,7 @@ function drawNow(){
   document.querySelectorAll('[data-mip]').forEach(b=>b.classList.toggle('on',+b.dataset.mip===S.mip));
   document.querySelectorAll('.btn.ct').forEach(b=>b.hidden=!isCT);
   $('roiBtn').textContent = isCT ? 'HU περιοχής' : 'Τιμές περιοχής';
-  $('mpr3').classList.toggle('on',false); $('refl').classList.toggle('on',S.refl); $('inv').classList.toggle('on',!!S.inv); $('cine').classList.toggle('on',!!S.cineT); $('b3d').classList.toggle('on',V3.on);
+  $('mpr3').classList.toggle('on',false); $('refl').classList.toggle('on',S.refl); $('inv').classList.toggle('on',!!S.inv); $('cine').classList.toggle('on',!!S.cineT); $('b3d').classList.toggle('on',V3.on||(typeof VK!=='undefined'&&VK.on));
   if(V3.on){ document.querySelectorAll('[data-plane]').forEach(b=>b.classList.remove('on')); draw3(); }
 }
 function drawMeas(c, g, f, isCT){
@@ -886,7 +888,7 @@ function renderRail(full){
     x.onclick=()=>{ S.showAll=!S.showAll; renderRail(true); }; rail.appendChild(x); }
 }
 function select(ser){
-  if(V3.on && V3.ser!==ser) set3d(false);
+  if(V3.on && V3.ser!==ser) set3d(false); if(typeof VK!=='undefined' && VK.on && VK.ser!==ser) set3dVK(false);
   S.cur=ser; S.view='ax'; S.mip=0;
   S.ix={ax: Math.floor(ser.slices.length/2), cor:ser.rows>>1, sag:ser.cols>>1};
   applyPreset(0, true); S.zoom=1; S.panX=S.panY=0;
@@ -918,7 +920,7 @@ function thinFor(ser){
   c.sort((a,b)=>(a.thick||9)-(b.thick||9) || b.slices.length-a.slices.length); return c[0]||null;
 }
 async function setPlane(p){
-  if(!S.cur) return; S.touched=true; if(V3.on) set3d(false); S.mpr3=false;
+  if(!S.cur) return; S.touched=true; if(V3.on) set3d(false); if(VK.on) set3dVK(false); S.mpr3=false;
   if(p!=='ax' && !(S.load && S.load.end===null)){ const t=thinFor(S.cur); if(t){ const s0=S.cur.slices[S.ix.ax], pz=s0&&s0.pos; select(t);
     if(pz!=null){ let bi=0, bd=1e9; t.slices.forEach((x,i)=>{ const d=Math.abs((x.pos||0)-pz); if(d<bd){ bd=d; bi=i; } }); S.ix.ax=bi; }
     status('MPR από τις λεπτές τομές «'+t.desc+'» ('+fmt(t.thick||t.zsp||0)+' mm) για καθαρή εικόνα'); } }
@@ -1014,7 +1016,8 @@ $('printBtn').onclick = ()=>{
   const r=view.getBoundingClientRect(), k=Math.max(2, 3000/Math.max(1,r.width));
   const shot=document.createElement('canvas'); shot.width=Math.round(r.width*k); shot.height=Math.round(r.height*k);
   const sc=shot.getContext('2d'); sc.fillStyle='#000'; sc.fillRect(0,0,shot.width,shot.height);
-  if(V3.on){ render3(false); sc.drawImage($('cv3'),0,0,shot.width,shot.height); }
+  if(typeof VK!=='undefined' && VK.on && VK.grw){ vkRender(); sc.drawImage(VK.grw.getOpenGLRenderWindow().getCanvas(),0,0,shot.width,shot.height); }
+  else if(V3.on){ render3(false); sc.drawImage($('cv3'),0,0,shot.width,shot.height); }
   else if(S.mpr3){ sc.drawImage(cv,0,0,shot.width,shot.height); }
   else { const f=frame(); if(f){ const g=geom(f); sc.setTransform(k,0,0,k,0,0); sc.imageSmoothingEnabled=true; sc.imageSmoothingQuality='high'; sc.drawImage(oc,g.x,g.y,g.w,g.h); try{ drawMeas(sc,g,f,ser.modality==='CT'); }catch(e){} sc.setTransform(1,0,0,1,0,0); } }
   // τα στοιχεία (ασθενής, σειρά, παράθυρο) πάνω στην εικόνα, άσπρα στο μαύρο — καθαρά γράμματα
@@ -1022,7 +1025,9 @@ $('printBtn').onclick = ()=>{
     const put=(el,right)=>{ const L=String($(el).innerText||'').split('\n'); L.forEach((t,i)=>{ sc.font=(i===0&&el==='ovTL'?'600 ':'')+'13px "Segoe UI",Arial,sans-serif'; sc.textAlign=right?'right':'left'; sc.fillText(t, right?r.width-12:10, 8+i*17); }); };
     put('ovTL',false); put('ovTR',true); sc.restore(); }
   $('printArea').innerHTML = '<img alt="" src="'+shot.toDataURL('image/png')+'">';
-  setTimeout(()=>window.print(), 80);
+  // εφαρμογή υπολογιστή: προεπισκόπηση (PDF Α4 οριζόντια) με κουμπί εκτύπωσης· στον browser: το παράθυρο εκτύπωσης του Chrome
+  if(window.nikosDesktop && window.nikosDesktop.printPreview){ setTimeout(()=>{ document.body.classList.add('printing'); window.nikosDesktop.printPreview().catch(e=>status('Εκτύπωση: '+e.message,true)).finally(()=>document.body.classList.remove('printing')); }, 120); }
+  else setTimeout(()=>window.print(), 80);
 };
 
 /* σύρσιμο φακέλου πάνω στη σελίδα */
@@ -1337,16 +1342,20 @@ function cine(on){ clearInterval(S.cineT); S.cineT=0; if(on && S.cur){ S.cineT=s
 $('cine').onclick=()=>{ if(V3.on) return; cine(!S.cineT); };
 $('inv').onclick=()=>{ S.inv=!S.inv; PK=null; draw(); };
 $('b3d').onclick=()=>set3d(!V3.on);
-async function setMpr3(on){ if(!S.cur) return; if(on){ if(V3.on) set3d(false); if(!S.cur.vol){ const t=thinFor(S.cur); if(t){ select(t); } if(!(await buildVol(S.cur))) return; } S.mip=0; FC=null; }
+async function setMpr3(on){ if(!S.cur) return; if(on){ if(V3.on) set3d(false); if(VK.on) set3dVK(false); if(!S.cur.vol){ const t=thinFor(S.cur); if(t){ select(t); } if(!(await buildVol(S.cur))) return; } S.mip=0; FC=null; }
   S.mpr3=!!on; draw(); }
 $('mpr3').onclick=()=>setMpr3(!S.mpr3);
 // στο MPR: αριστερό σύρσιμο = σταυρός (κινεί τα άλλα δύο επίπεδα), ροδέλα = τομές στο παράθυρο που δείχνεις
-view.addEventListener('pointerdown',e=>{ if(!S.mpr3||e.button!==0||!S.cur||!S.cur.vol) return; const r=view.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top, p=mprHit(cx,cy); if(!p) return;
+view.addEventListener('pointerdown',e=>{ if(!S.mpr3||e.button!==0||!S.cur||!S.cur.vol||e.target.closest('.slider')) return; const r=view.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top, p=mprHit(cx,cy); if(!p) return;
   e.stopImmediatePropagation(); e.preventDefault(); view.setPointerCapture(e.pointerId); S._mprDrag=p; mprSet(p,cx,cy); },true);
 view.addEventListener('pointermove',e=>{ if(!S.mpr3) return; const r=view.getBoundingClientRect(), cx=e.clientX-r.left, cy=e.clientY-r.top;
-  if(S._mprDrag){ e.stopImmediatePropagation(); mprSet(S._mprDrag,cx,cy); return; } const p=mprHit(cx,cy); if(p && p!==S.view && !S.drag){ S.view=p; draw(); } },true);
+  if(S._mprDrag){ e.stopImmediatePropagation(); mprSet(S._mprDrag,cx,cy); return; } },true);
+// 7/11: διαλέγεις παράθυρο με κλικ· η μπάρα δεξιά κινεί ΑΥΤΟ το παράθυρο· η ροδέλα κινεί όποιο παράθυρο δείχνεις
+view.addEventListener('wheel',e=>{ if(!S.mpr3 || e.target.closest('.slider')) return; const r=view.getBoundingClientRect(), p=mprHit(e.clientX-r.left,e.clientY-r.top); if(!p) return;
+  e.preventDefault(); e.stopImmediatePropagation(); S._wacc=(S._wacc||0)+e.deltaY; const n=Math.trunc(S._wacc/40)||(e.deltaMode?Math.sign(e.deltaY):0); if(!n) return; S._wacc=0;
+  S.view=p; S.ix[p]=Math.max(0,Math.min(count(p)-1,S.ix[p]+n)); draw(); },{capture:true, passive:false});
 view.addEventListener('pointerup',e=>{ if(S._mprDrag){ S._mprDrag=null; e.stopImmediatePropagation(); } },true);
-$('png').onclick=()=>{ if(V3.on) return $('p3png').click(); if(!S.cur) return; drawNow(); const a=document.createElement('a');
+$('png').onclick=()=>{ if(V3.on || (typeof VK!=='undefined' && VK.on)) return $('p3png').click(); if(!S.cur) return; drawNow(); const a=document.createElement('a');
   a.download=((S.cur.desc||'ct')+'-'+(S.ix[S.view]+1)).replace(/[^\wα-ωΑ-Ω-]+/g,'_')+'.png'; a.href=cv.toDataURL('image/png'); a.click(); };
 function tagsShow(){
   const ser=S.cur, s=ser&&ser.slices[S.ix.ax]; if(!s||!s.img) return;
@@ -1368,13 +1377,13 @@ $('keys').onclick=keysShow;
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
   const k=e.key;
-  if(k==='d'||k==='D') set3d(!V3.on);
+  if(k==='d'||k==='D') set3dVK(!VK.on);
   else if(k==='x'||k==='X') setMpr3(!S.mpr3);
   else if(k==='p'||k==='P') cine(!S.cineT);
   else if(k==='i'||k==='I'){ S.inv=!S.inv; PK=null; draw(); }
   else if(k==='t'||k==='T') tagsShow();
   else if(k==='?') keysShow();
-  else if(k==='Escape' && V3.on) set3d(false);
+  else if(k==='Escape' && VK.on) set3dVK(false);
 });
 
 /* ================= Εφαρμογή υπολογιστή (εγκατάσταση, χωρίς internet, άνοιγμα .dcm) — 7/11 ================= */
@@ -1465,6 +1474,95 @@ if(DESK){
   DESK.info().then(i=>{ if(i && i.open) deskOpen(i.open); }).catch(()=>{});
 }
 
+/* ================= 3D με vtk.js (όπως OHIF / 3D Slicer) — 7/11 ================= */
+// Απόδοση όγκου με τη βιβλιοθήκη vtk.js (Kitware), φωτισμός και τα δοκιμασμένα πρότυπα του 3D Slicer (CT-AAA, CT-Bone, CT-Muscle…).
+const VK = { on:false, ready:null, grw:null, ren:null, rw:null, vol:null, map:null, ser:null, preset:'organs', clip:0, shift:0, opac:1, plane:null, img:null };
+// [HU, opacity] και [HU, r,g,b] — από τα presets του 3D Slicer (VolumeRendering/presets.xml)
+const VKP = {
+  organs: { n:'Όργανα',  o:[[-3024,0],[-155,0],[217,0.68],[420,0.83],[3071,0.8]], c:[[-3024,0,0,0],[-155,0.55,0.25,0.15],[217,0.88,0.6,0.29],[420,1,0.94,0.95],[3071,0.83,0.66,1]] },        // CT-Muscle
+  contrast:{ n:'Σκιαγραφικό', o:[[-3024,0],[67,0],[251,0.45],[439,0.63],[3071,0.62]], c:[[-3024,0,0,0],[67,0.55,0.25,0.15],[251,0.88,0.6,0.29],[439,1,0.94,0.95],[3071,0.83,0.66,1]] }, // CT-Chest-Contrast-Enhanced
+  vessels: { n:'Αγγεία',   o:[[-3024,0],[144,0],[166,0.69],[214,0.7],[420,0.83],[3071,0.8]], c:[[-3024,0,0,0],[144,0.62,0.36,0.18],[166,0.88,0.6,0.29],[214,1,1,1],[420,1,0.94,0.95],[3071,0.83,0.66,1]] }, // CT-AAA
+  bone:    { n:'Οστά',     o:[[-3024,0],[-16,0],[641,0.72],[3071,0.71]], c:[[-3024,0,0,0],[-16,0.73,0.25,0.3],[641,0.91,0.82,0.55],[3071,1,1,1]] },                                    // CT-Bone
+  skin:    { n:'Δέρμα',    o:[[-3024,0],[-1000,0],[-500,0],[-499,1],[3071,1]], c:[[-3024,0,0,0],[-1000,0.62,0.36,0.18],[-500,0.88,0.6,0.29],[3071,0.83,0.66,1]] },                   // CT-Skin
+  stone:   { n:'Λίθοι',    o:[[-3024,0],[250,0],[350,0.85],[3071,0.9]], c:[[-3024,0,0,0],[250,1,0.85,0.3],[700,1,0.95,0.7],[3071,1,1,1]] },
+  mip:     { n:'MIP', mip:true },
+};
+function vkLoad(){
+  if(window.vtk) return Promise.resolve(true);
+  if(VK.ready) return VK.ready;
+  VK.ready = new Promise(res=>{ const s=document.createElement('script'); s.src='vendor/vtk-38.0.5.js'; s.onload=()=>res(!!window.vtk); s.onerror=()=>res(false); document.head.appendChild(s); });
+  return VK.ready;
+}
+function vkTF(){
+  const p=VKP[VK.preset]||VKP.organs, prop=VK.vol.getProperty(), sh=VK.shift;
+  const ctf=vtk.Rendering.Core.vtkColorTransferFunction.newInstance(), pwf=vtk.Common.DataModel.vtkPiecewiseFunction.newInstance();
+  if(p.mip){ const lo=S.wc-S.ww/2, hi=S.wc+S.ww/2; ctf.addRGBPoint(lo,0,0,0); ctf.addRGBPoint(hi,1,1,1); pwf.addPoint(lo,0); pwf.addPoint(hi,1); VK.map.setBlendModeToMaximumIntensity(); prop.setShade(false); }
+  else { p.c.forEach(([h,r,g,b])=>ctf.addRGBPoint(h+sh,r,g,b)); p.o.forEach(([h,a])=>pwf.addPoint(h+sh,Math.min(1,a*VK.opac))); VK.map.setBlendModeToComposite(); prop.setShade(true); }
+  prop.setRGBTransferFunction(0,ctf); prop.setScalarOpacity(0,pwf);
+  prop.setAmbient(0.15); prop.setDiffuse(0.85); prop.setSpecular(0.25); prop.setSpecularPower(15);
+  prop.setInterpolationTypeToLinear();
+  prop.setUseGradientOpacity(0,true); prop.setGradientOpacityMinimumValue(0,2); prop.setGradientOpacityMinimumOpacity(0,0); prop.setGradientOpacityMaximumValue(0,20); prop.setGradientOpacityMaximumOpacity(0,1);
+  if(p.mip) prop.setUseGradientOpacity(0,false);
+}
+function vkClip(){
+  if(!VK.map) return; VK.map.removeAllClippingPlanes();
+  if(VK.clip>0){ const b=VK.img.getBounds(); const y=b[2]+(b[3]-b[2])*VK.clip; const pl=vtk.Common.DataModel.vtkPlane.newInstance({origin:[0,y,0], normal:[0,1,0]}); VK.map.addClippingPlane(pl); }
+}
+function vkRender(){ if(VK.rw) VK.rw.render(); }
+function vkView(v){
+  const cam=VK.ren.getActiveCamera(), c=VK.img.getCenter(), b=VK.img.getBounds(), D=Math.max(b[1]-b[0],b[3]-b[2],b[5]-b[4])*2.2;
+  const P={ant:[0,-1,0],post:[0,1,0],rt:[-1,0,0],lt:[1,0,0],sup:[0,0,1],inf:[0,0,-1]}[v]||[0,-1,0];
+  cam.setFocalPoint(...c); cam.setPosition(c[0]+P[0]*D, c[1]+P[1]*D, c[2]+P[2]*D);
+  cam.setViewUp(...(v==='sup'||v==='inf' ? [0,-1,0] : [0,0,1]));
+  VK.ren.resetCamera(); cam.zoom(1.35); VK.ren.resetCameraClippingRange(); vkRender();
+}
+async function vkBuild(ser){
+  const ok=await vkLoad(); if(!ok){ status('Δεν φόρτωσε η βιβλιοθήκη 3D (vtk.js).', true); return false; }
+  const n=ser.slices.length, W0=ser.cols, H0=ser.rows, plane=W0*H0, vol=ser.vol;
+  // έως ~90 εκ. voxels στον υπολογιστή (αλλιώς σμίκρυνση στο x/y)
+  const VMAX = touch ? 16e6 : 90e6; let f=1; while((W0/f)*(H0/f)*n > VMAX) f++;
+  const w=Math.floor(W0/f), h=Math.floor(H0/f);
+  const arr=new Int16Array(w*h*n);
+  // z αντεστραμμένο: δείκτης 0 = η πιο ουραία τομή → το «πάνω» της κάμερας είναι κεφαλικά
+  for(let z=0;z<n;z++){ const src=(n-1-z)*plane, dst=z*w*h;
+    if(f===1) arr.set(vol.subarray(src,src+plane), dst);
+    else for(let y=0;y<h;y++) for(let x=0;x<w;x++){ let s=0; for(let yy=0;yy<f;yy++){ const r=src+(y*f+yy)*W0+x*f; for(let xx=0;xx<f;xx++) s+=vol[r+xx]; } arr[dst+y*w+x]=Math.round(s/(f*f)); }
+    if(z%40===39){ status('Προετοιμασία 3D… '+Math.round((z+1)/n*100)+'%'); await new Promise(r=>setTimeout(r)); } }
+  const img=vtk.Common.DataModel.vtkImageData.newInstance();
+  img.setDimensions(w,h,n); img.setSpacing(ser.spc*f, ser.spr*f, ser.zsp||1); img.setOrigin(0,0,0);
+  img.getPointData().setScalars(vtk.Common.Core.vtkDataArray.newInstance({name:'HU', numberOfComponents:1, values:arr}));
+  if(!VK.grw){
+    const box=$('vk3'); VK.grw=vtk.Rendering.Misc.vtkGenericRenderWindow.newInstance({background:[0,0,0]}); VK.grw.setContainer(box); VK.grw.resize();
+    VK.ren=VK.grw.getRenderer(); VK.rw=VK.grw.getRenderWindow();
+    VK.map=vtk.Rendering.Core.vtkVolumeMapper.newInstance(); VK.vol=vtk.Rendering.Core.vtkVolume.newInstance(); VK.vol.setMapper(VK.map); VK.ren.addVolume(VK.vol);
+    new ResizeObserver(()=>{ if(VK.on){ VK.grw.resize(); vkRender(); } }).observe(box);
+  }
+  VK.map.setInputData(img); VK.img=img; VK.ser=ser;
+  const sp=Math.min(ser.spc*f, ser.spr*f, ser.zsp||1); VK.map.setSampleDistance(sp*0.6); VK.map.setMaximumSamplesPerRay(2000);
+  try{ VK.map.setPreferSizeOverAccuracy(true); }catch(e){}
+  vkTF(); vkClip(); status(); return true;
+}
+async function set3dVK(on){
+  const box=$('vk3');
+  if(!on){ VK.on=false; box.hidden=true; $('p3').hidden=true; document.body.classList.remove('is3d'); draw(); return; }
+  const ser=S.cur; if(!ser) return;
+  if(!ser.vol){ const t=thinFor(ser); if(t) select(t); if(!(await buildVol(S.cur))) return; }
+  S.mpr3=false; box.hidden=false; document.body.classList.add('is3d'); VK.on=true; $('p3').hidden=false; ui3vk();
+  if(VK.ser!==S.cur){ status('Προετοιμασία 3D…'); if(!(await vkBuild(S.cur))){ set3dVK(false); return; } VK.grw.resize(); vkView('ant'); }
+  else { VK.grw.resize(); vkRender(); }
+  draw();
+}
+function ui3vk(){ const p=$('p3'); p.querySelectorAll('[data-p3]').forEach(b=>b.classList.toggle('on',b.dataset.p3===VK.preset));
+  $('p3s').value=VK.shift; $('p3c').value=Math.round(VK.clip*100); $('p3o').value=Math.round(VK.opac*100); $('p3sv').textContent=(VK.shift>0?'+':'')+VK.shift+' HU'; }
+
+// σύνδεση πάνελ 3D με το vtk.js (αντικαθιστά το παλιό 3D)
+document.querySelectorAll('[data-p3]').forEach(b=>b.onclick=()=>{ VK.preset=b.dataset.p3; VK.shift=0; if(VKP[VK.preset].mip) applyPreset(0,true); if(VK.vol){ vkTF(); vkRender(); } ui3vk(); });
+document.querySelectorAll('[data-v3]').forEach(b=>b.onclick=()=>{ if(VK.ren) vkView(b.dataset.v3); });
+$('p3s').oninput=e=>{ VK.shift=+e.target.value; $('p3sv').textContent=(VK.shift>0?'+':'')+VK.shift+' HU'; if(VK.vol){ vkTF(); vkRender(); } };
+$('p3c').oninput=e=>{ VK.clip=+e.target.value/100; vkClip(); vkRender(); };
+$('p3o').oninput=e=>{ VK.opac=+e.target.value/100; if(VK.vol){ vkTF(); vkRender(); } };
+$('p3png').onclick=async ()=>{ if(!VK.grw) return; const u=await VK.grw.getOpenGLRenderWindow().captureNextImage('image/png'); vkRender(); const a=document.createElement('a'); a.download='3D-'+(S.cur&&S.cur.desc||'ct').replace(/[^\wα-ωΑ-Ω-]+/g,'_')+'.png'; a.href=await u; a.click(); };
+$('b3d').onclick=()=>set3dVK(!VK.on);
 /* ================= Εκκίνηση ================= */
 setTool(S.tool); renderRail(); draw();
 if(typeof daikon==='undefined') status('Η βιβλιοθήκη ανάγνωσης DICOM δεν φόρτωσε (χρειάζεται internet).', true);
