@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08m-v177';
+const APP_VER = '2026-11-08n-v178';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12727,7 +12727,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const grids = [...mv.querySelectorAll('.nv-grid,.nv-rooms,.nv-grp')]; const last = grids[grids.length-1];
     if(!last || (!mv.classList.contains('desk') && mv.querySelector('.pth'))){ if(old) old.remove(); return; }   // 8/11: στον υπολογιστή μένει και με ανοιχτή καρτέλα δεξιά
     let a = last; while(a.parentElement && a.parentElement!==mv) a = a.parentElement;
-    const h = nbHtml(); if(old){ if(old.outerHTML===h) return; old.remove(); } if(!h) return;
+    // ⚠ 8/11: ΑΤΕΡΜΟΝΟΣ ΒΡΟΓΧΟΣ — το outerHTML του browser ΔΕΝ είναι ποτέ ίδιο με το κείμενο που γράψαμε (π.χ. data-nball → data-nball=""),
+    // οπότε σε κάθε καρέ το μπλοκ έσβηνε & ξαναμπαινε → παρατηρητής αλλαγών → ξανά… (πάγωμα κινητού, «χαμένα» πατήματα, άλμα στο scroll).
+    // Τώρα σύγκριση με υπογραφή του περιεχομένου.
+    const h0 = nbHtml(); let sig = 0; for(let i=0;i<h0.length;i++) sig = (sig*31 + h0.charCodeAt(i))|0;
+    const h = h0 ? h0.replace('<div id="npsBlk"', '<div id="npsBlk" data-sig="'+sig+'"') : '';
+    if(old){ if(old.getAttribute('data-sig')===String(sig) && old.isConnected) return; old.remove(); } if(!h) return;
     // 7/11: στον υπολογιστή (3 στήλες) μπαίνει ΜΕΣΑ στη στήλη της λίστας που κυλάει — όχι σαν ξεχωριστή στήλη χωρίς scroll
     if(mv.classList.contains('desk')){ let sc = last.parentElement; while(sc && sc!==mv && !/(auto|scroll)/.test(getComputedStyle(sc).overflowY)) sc = sc.parentElement;
       if(sc && sc!==mv){ sc.insertAdjacentHTML('beforeend', h); if(mv.__dkLy && Date.now()-(mv.__dkLyAt||0) < 3000 && sc.classList.contains('dk-l') && sc.scrollTop < mv.__dkLy) sc.scrollTop = mv.__dkLy; return; } }
