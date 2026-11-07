@@ -435,7 +435,7 @@ body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:max(calc(env(sa
     <p id="dateLabel"></p>
     <p id="syncStatus" style="font-size:11px; color:var(--muted); margin-top:2px;"></p>
     <a href="#" onclick="doLogout();return false" style="font-size:11px;color:var(--muted)">Αποσύνδεση</a> <a href="#" onclick="pdxAccountOpen();return false" style="font-size:11px;color:var(--muted)">· 👤 Λογαριασμός</a> <a href="#" onclick="pdxConsultEdit&&pdxConsultEdit();return false" style="font-size:11px;color:var(--muted)">· 📞 Εκτιμήσεις</a> <a href="#" id="usersLink" onclick="pdxUsersOpen();return false" style="font-size:11px;color:var(--muted);display:none;font-weight:700">· 👥 Χρήστες</a> <a href="#" id="impLink" onclick="importFbJson();return false" style="font-size:11px;color:var(--muted);display:none">· Εισαγωγή JSON (admin)</a><input type="file" id="impFile" accept=".json" style="display:none">
-    <div id="findWrap" style="position:relative;margin-top:4px"><input id="findQ" type="search" placeholder="🔎 Εύρεση ασθενή…" oninput="findPatient(this.value)" autocomplete="off" style="font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;width:190px"> <button id="mineBtn" onclick="pdxMineToggle()" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:1.5px solid var(--primary,#1B4B66);border-radius:8px;background:#fff;color:var(--primary,#1B4B66);cursor:pointer">👤 Οι θάλαμοί μου…</button> <a href="#" onclick="pdxMineSettings();return false" style="font-size:11px;color:var(--muted)">αλλαγή θαλάμων</a> <button onclick="pdxDeskView(true)" title="Λίστα αριστερά, ασθενής δεξιά — με εργαστηριακά, bot, εκκρεμότητες" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:0;border-radius:8px;background:var(--primary,#1B4B66);color:#fff;cursor:pointer">🖥 Θάλαμος · νέα προβολή</button><div id="findRes" style="position:absolute;z-index:50;background:#fff;color:#222;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:8px;min-width:240px;font-size:13px"></div></div>
+    <div id="findWrap" style="position:relative;margin-top:4px"><input id="findQ" type="search" placeholder="🔎 Εύρεση ασθενή…" oninput="findPatient(this.value)" autocomplete="off" style="font-size:13px;padding:5px 8px;border:1px solid #ccc;border-radius:8px;width:190px"> <button id="mineBtn" onclick="pdxMineToggle()" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:1.5px solid var(--primary,#1B4B66);border-radius:8px;background:#fff;color:var(--primary,#1B4B66);cursor:pointer">👤 Οι θάλαμοί μου…</button> <a href="#" onclick="pdxMineSettings();return false" style="font-size:11px;color:var(--muted)">αλλαγή θαλάμων</a> <button onclick="pdxDeskView(true)" hidden style="display:none!important" title="Λίστα αριστερά, ασθενής δεξιά — με εργαστηριακά, bot, εκκρεμότητες" style="font-size:12.5px;font-weight:700;padding:5px 10px;border:0;border-radius:8px;background:var(--primary,#1B4B66);color:#fff;cursor:pointer">🖥 Θάλαμος · νέα προβολή</button><div id="findRes" style="position:absolute;z-index:50;background:#fff;color:#222;box-shadow:0 4px 14px rgba(0,0,0,.2);border-radius:8px;min-width:240px;font-size:13px"></div></div>
   </header>
 
   <div style="padding:0 14px; overflow-x:auto;">
@@ -1067,7 +1067,7 @@ async function _set(path, v){
   if(path === 'test-current'){
     const ups = [];
     Object.keys((v&&v.data)||{}).forEach(k=>{ if(v.data[k]) ups.push({key:k, is_extra:false, record:_clean(v.data[k])}); });
-    Object.keys((v&&v.extraPatients)||{}).forEach(k=>{ if(v.extraPatients[k]) ups.push({key:k, is_extra:true, record:_clean(v.extraPatients[k])}); });
+    Object.keys((v&&v.extraPatients)||{}).forEach(k=>{ if(v.extraPatients[k] && !v.extraPatients[k]._npsTemp) ups.push({key:k, is_extra:true, record:_clean(v.extraPatients[k])}); });
     return _rpc({p_upserts:ups, p_deletes:[], p_last_active:(v&&v.lastActiveDate)||null, p_replace:true});
   }
   if(path.indexOf('test-histimg/') === 0){
@@ -1086,6 +1086,7 @@ async function _update(u){
     if(m){ const key = m[2], isX = m[1]==='extraPatients';
       if(u[p] == null){ _labsGone.push(_cl(_base[key]||null)); dels.push(key); _ownDel[key] = {at: Date.now(), n: String(((m[1]==='extraPatients'?extraPatients:data)[key]||(_base[key]||{})).name||(_base[key]||{}).name||'').trim().toUpperCase()}; delete _base[key]; delete _remote[key]; return; }
       let rec = _clean(u[p]);
+      if(rec && rec._npsTemp) return;   // ⛔ 7/11: προσωρινή καρτέλα ασθενή ΝΠΣ — ΠΟΤΕ στη βάση
       // άλλη συσκευή έβγαλε (εξιτήριο/διαγραφή) τον ίδιο ασθενή πριν λίγο: δεν τον ξαναζωντανεύουμε από παλιά τοπική αλλαγή
       const b = _base[key];
       if(_remoteDel[key] && Date.now()-_remoteDel[key] < 120000 && !b && rec && _remoteDel['n:'+key] && String(rec.name||'').trim().toUpperCase()===_remoteDel['n:'+key]){
@@ -2204,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07l-v151';
+const APP_VER = '2026-11-07n-v153';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -2336,6 +2337,7 @@ function loadFromStorage(){
       const val = snap.val();
       data = (val && val.data) || {};
       extraPatients = (val && val.extraPatients) || {};
+      Object.keys(extraPatients).forEach(k=>{ if(extraPatients[k] && extraPatients[k]._npsTemp) delete extraPatients[k]; });   // 7/11: παλιές προσωρινές καρτέλες ΝΠΣ που γράφτηκαν κατά λάθος
       Object.keys(data).forEach(k=>{ if(data[k] && data[k].arrival) data[k].arrival = false; });
       [data, extraPatients].forEach(st=>Object.keys(st).forEach(k=>{ const h = st[k] && st[k].historySelected; if(Array.isArray(h)) st[k].historySelected = h.map(x=>x==='ΝΦΣ-ιστ' ? 'ΝΦΣ' : x); }));
       const lastActiveDate = (val && val.lastActiveDate) || todayISO();
@@ -10171,7 +10173,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.mobTab = t=>{ if(phoneNv()){ if(t==='today') t = 'pts'; if(t==='bot'){ closePops(); return window.pdxBotPage(); } }
     if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; } closePops(); window.__dret=null; tab=t; openKey=null; render(); view.scrollTop=0; };
   window.mobFull = ()=>{ if(deskMode){ deskMode=false; openKey=null; render(); try{ buildGrid(); }catch(e){} return; } forceFull=true; render(); };
-  window.pdxDeskView = function(v){ deskMode = (v===undefined) ? !deskMode : !!v; openKey = null; tab = 'pts'; render(); if(!deskMode){ try{ buildGrid(); }catch(e){} } };
+  // 7/11 (εντολή χρήστη): η εμφάνιση «λίστα αριστερά / ασθενής δεξιά» στον υπολογιστή καταργήθηκε — ΜΟΝΟ ο κλασικός πίνακας
+  window.pdxDeskView = function(){ const was = deskMode; deskMode = false; openKey = null; tab = 'pts'; if(was) render(); try{ buildGrid(); }catch(e){} };
   btn.onclick = ()=>{ forceFull=false; render(); };
   window.buildMobileView = render;
   window.addEventListener('resize', render);
@@ -12540,14 +12543,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   }
   async function nbAuto(){
     if(!(window.pdxIsBotUser && pdxIsBotUser()) || document.hidden) return;
-    const live = await sb6.from('oncall_jobs').select('id,kind,created_at,status').in('kind',['npslist','npsenrich']).gte('created_at', new Date(Date.now()-30*60000).toISOString()).limit(5);
+    // 7/11 (εντολή χρήστη): ΜΙΑ φορά την ημέρα η λίστα ΝΠΣ· μετά ΑΜ/ΑΜΚΑ (ΝΠΣ) + ΑΗΦΥ + εργαστηριακά Medilabi για όσους λείπουν
+    const d0 = new Date(); d0.setHours(0,0,0,0);
+    const live = await sb6.from('oncall_jobs').select('id,kind,created_at,status').in('kind',['npslist','npsenrich']).gte('created_at', d0.toISOString()).not('status','in','(failed,cancelled)').limit(20);
     const L = live.data || [];
     if(!L.some(x=>x.kind==='npslist')){ await sb6.from('oncall_jobs').insert({name_key:'zzz_npslist', name:'Ασθενείς ΝΠΣ 3449', room:null, kind:'npslist', payload:{dpt:'3449', quiet:true, auto:true}, status:'new'}); return; }
-    if(L.some(x=>x.kind==='npsenrich')) return;
-    const miss = (NB.rows||[]).filter(r=>!nbHere(r)).map(r=>r.name).filter(n=>{ const x = NB.enr[nbNz(n)]; return !x || (!x.amka && !x.am && !x.err); });
+    if(L.some(x=>x.kind==='npsenrich' && /^(new|seen|running)$/.test(x.status))) return;
+    if(L.filter(x=>x.kind==='npsenrich').length >= 3) return;   // όχι ατέρμονα
+    const miss = (NB.rows||[]).filter(r=>!nbHere(r)).map(r=>r.name).filter(n=>{ const x = NB.enr[nbNz(n)]; return !x || (!x.amka && !x.am && !x.err) || (x.amka && !x.pid && !x.medErr && !x.dx); });
     if(miss.length) await sb6.from('oncall_jobs').insert({name_key:'zzz_npsenrich', name:'ΝΠΣ: στοιχεία '+miss.length+' ασθενών', room:null, kind:'npsenrich', payload:{names:miss.slice(0,10), quiet:true}, status:'new'});
   }
-  const nbMiss = ()=>(NB.rows||[]).filter(r=>!nbHere(r));
+  const nbMiss = ()=>{ const M = (NB.rows||[]).filter(r=>!nbHere(r)); window.__npsMissing = M; return M; };
   function nbDxN(x){ try{ if(!x || !Array.isArray(x.dx) || !window.pdxComorbClassify) return 0; return pdxComorbClassify(x.dx.join('\n')).filter(i=>i.cls==='C').length; }catch(e){ return 0; } }
   function nbTemp(r){
     Object.keys(extraPatients).forEach(k=>{ if(extraPatients[k] && extraPatients[k]._npsTemp && extraPatients[k].name!==r.name) delete extraPatients[k]; });
@@ -15940,7 +15946,9 @@ Z99.2:C|αιμοκάθαρση
     const out = [];
     const add = (k,d)=>{ if(d && d.name && String(d.name).trim()) out.push({k, d, label: isExtra(k) ? (d.assignedWard?('ΑΦ '+d.assignedWard):'Εκτός θαλάμου') : k}); };
     Object.keys((typeof data!=='undefined'&&data)||{}).forEach(k=>add(k,data[k]));
-    Object.keys((typeof extraPatients!=='undefined'&&extraPatients)||{}).forEach(k=>add(k,extraPatients[k]));
+    Object.keys((typeof extraPatients!=='undefined'&&extraPatients)||{}).forEach(k=>{ const d = extraPatients[k]; if(d && !d._npsTemp) add(k,d); });
+    // 🏥 7/11: και οι ασθενείς του ΝΠΣ που δεν είναι στο Παραδόχαρτο (τα εργαστηριακά τους τα φέρνει το bot 1 φορά/ημέρα)
+    try{ (window.__npsMissing||[]).forEach(r=>{ if(r && r.name && !out.some(x=>nrm(x.d.name)===nrm(r.name))) out.push({k:'nps:'+r.name, d:{name:r.name, _npsTemp:true}, label:'ΝΠΣ'}); }); }catch(e){}
     return out.sort((a,b)=>a.label.localeCompare(b.label,'el',{numeric:true}));
   }
   // Ίδιο επίθετο με ασθενή που έφυγε: αν τα νεότερα αποτελέσματα είναι ΠΡΙΝ από την εισαγωγή αυτού του ασθενή,
