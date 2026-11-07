@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07r-v157';
+const APP_VER = '2026-11-07s-v158';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -16281,7 +16281,7 @@ Z99.2:C|αιμοκάθαρση
   // 7/11: η κάτω μπάρα (κάψουλα) μένει και στα εργαστηριακά: αντίγραφο της μπάρας του #mobView πάνω από το παράθυρο
   (function(){ let cl = null;
     const copyStyle = (from, to)=>{ const cs = getComputedStyle(from); for(let i = 0; i < cs.length; i++){ const n = cs[i]; to.style.setProperty(n, cs.getPropertyValue(n)); } [...from.children].forEach((c, j)=>{ if(to.children[j]) copyStyle(c, to.children[j]); }); };
-    const sync = ()=>{ const mv = document.getElementById('mobView'); const src = mv && mv.querySelector('.mtabs');
+    const sync = ()=>{ const mv = document.getElementById('mobView'); const src = mv && (mv.querySelector('.nv-tb') || mv.querySelector('.mtabs'));   // 7/11: η κάψουλα είναι η .nv-tb
       const show = box.classList.contains('on') && src && getComputedStyle(mv).display!=='none' && !mv.classList.contains('desk') && src.getBoundingClientRect().height > 0;
       if(cl){ cl.remove(); cl = null; } if(!show) return;
       cl = src.cloneNode(true); copyStyle(src, cl); cl.removeAttribute('id'); cl.style.setProperty('z-index', '9100'); cl.style.setProperty('position', 'fixed'); cl.id = 'lfTabs';
@@ -19525,5 +19525,29 @@ html.pdx-night input::placeholder,html.pdx-night textarea::placeholder{color:#8E
 html.pdx-night [style*="color:var(--mp,#1D4E80)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="color:var(--mp,#1B4B66)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){color:#64B5FF!important}
 html.pdx-night [style*="border:1.5px solid var(--mp,#1D4E80)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){border-color:#3D7FC4!important}
 </style>
+<script>
+/* 7/11: «δεν πατιούνται τα κουμπιά της κάτω μπάρας» — αν κάτι ΑΟΡΑΤΟ σκεπάζει την μπάρα, το πάτημα περνά στο κουμπί
+   και καταγράφεται τι ήταν (για διόρθωση). Ορατά παράθυρα/φύλλα (π.χ. σκούρο φόντο) ΔΕΝ παρακάμπτονται. */
+(function(){
+  const LOG = [];
+  const bar = ()=>{ const l = document.getElementById('lfTabs'); if(l) return l; const mv = document.getElementById('mobView'); if(!mv || getComputedStyle(mv).display==='none') return null; return mv.querySelector('.nv-tb') || mv.querySelector('.mtabs'); };
+  const invisible = el=>{ let op = 1; for(let x = el; x && x !== document.documentElement; x = x.parentElement){ const cs = getComputedStyle(x); if(cs.visibility==='hidden' || cs.display==='none') return true; op *= +cs.opacity; }
+    if(op < 0.05) return true;
+    const cs = getComputedStyle(el), bg = cs.backgroundColor;
+    const clearBg = bg==='transparent' || /rgba\([^)]*,\s*0(\.0+)?\)$/.test(bg);
+    return clearBg && !String(el.innerText||'').trim() && !el.querySelector('img,svg,canvas,button,input') && cs.backgroundImage==='none'; };
+  const desc = el=>{ const cs = getComputedStyle(el); return (el.tagName+'#'+(el.id||'')+'.'+String((el.className&&el.className.baseVal!=null)?el.className.baseVal:(el.className||'')).slice(0,40)+' z='+cs.zIndex+' pos='+cs.position+' op='+cs.opacity+' bg='+cs.backgroundColor).slice(0,200); };
+  document.addEventListener('click', e=>{
+    const b = bar(); if(!b || !e.isTrusted) return; if(b.contains(e.target)) return;
+    const r = b.getBoundingClientRect(); if(e.clientY < r.top || e.clientY > r.bottom || e.clientX < r.left || e.clientX > r.right) return;
+    const kid = [...b.children].find(c=>{ const q = c.getBoundingClientRect(); return e.clientX>=q.left && e.clientX<=q.right && e.clientY>=q.top && e.clientY<=q.bottom; }); if(!kid) return;
+    const t = e.target, inv = invisible(t);
+    const rec = {at:new Date().toISOString(), cover:desc(t), parent:t.parentElement?desc(t.parentElement):'', inv, v:typeof APP_VER!=='undefined'?APP_VER:'', w:innerWidth+'x'+innerHeight};
+    LOG.push(rec); try{ localStorage.setItem('pdx_tapdiag', JSON.stringify(LOG.slice(-10))); }catch(x){}
+    try{ if(typeof sb6!=='undefined') sb6.from('oncall_labs').upsert({name_key:'diag|tap|'+(navigator.userAgent.match(/iPhone|Android|Windows|Mac/)||['?'])[0]+'|'+Date.now(), name:'διάγνωση πατήματος', pid:null, data:rec, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }catch(x){}
+    if(inv){ e.preventDefault(); e.stopPropagation(); kid.click(); }
+  }, true);
+})();
+</script>
 </body>
 </html>
