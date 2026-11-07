@@ -3,7 +3,7 @@
   "name": "Αξονικές · Παραδόχαρτο",
   "short_name": "Αξονικές",
   "description": "Προβολή αξονικών/μαγνητικών (DICOM) από CD, φάκελο ή δίκτυο: MPR, MIP, 3D, μετρήσεις. Χωρίς internet.",
-  "start_url": "./ct.html?app=1",
+  "start_url": "./ct?app=1",
   "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
@@ -14,7 +14,7 @@
     { "src": "ct-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ],
   "file_handlers": [
-    { "action": "./ct.html?app=1", "accept": { "application/dicom": [".dcm", ".dicom"] } }
+    { "action": "./ct?app=1", "accept": { "application/dicom": [".dcm", ".dicom"] } }
   ],
   "launch_handler": { "client_mode": "focus-existing" }
 }

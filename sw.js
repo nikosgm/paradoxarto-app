@@ -1,15 +1,18 @@
 // Παραδόχαρτο service worker — pdx-shell-v3 (2026-11-02)
 // Κέλυφος: πάντα πρώτα το δίκτυο (για να μην κολλάει παλιά έκδοση), με αντίγραφο στην cache για χωρίς σήμα.
 // Μόνο τα δικά μας αρχεία· Supabase/CDN περνούν απευθείας. Web Push: {title, body} από τη send-reminders.
-const CACHE = 'pdx-shell-v5-ct';
-const SHELL = /\/(index\.html|ct\.html|manifest\.json|ct-manifest\.json|icon-\d+\.png|ct-icon-\d+\.png)?$/;
+const CACHE = 'pdx-shell-v6-ct';
+const SHELL = /\/(index\.html|ct\.html|ct|manifest\.json|ct-manifest\.json|icon-\d+\.png|ct-icon-\d+\.png)?$/;
+// 7/11: ο server κάνει ct.html → /ct (307). Μια απάντηση «με ανακατεύθυνση» ΔΕΝ επιτρέπεται για άνοιγμα σελίδας (σφάλμα «δεν είναι δυνατή η πρόσβαση»)
+// → κρατάμε/δίνουμε πάντα «καθαρό» αντίγραφο.
+const clean = async (r) => (r && r.redirected) ? new Response(await r.blob(), { status: r.status, statusText: r.statusText, headers: r.headers }) : r;
 const VCACHE = 'pdx-vendor-v1';   // χωριστή cache: δεν σβήνεται όταν αλλάζει το κέλυφος
 const VENDOR = /\/vendor\/[\w.-]+-\d+\.\d+\.\d+(\.min)?\.js$/;
 
 self.addEventListener('install', (e) => {
   // 7/11: «Αξονικές» ως εφαρμογή υπολογιστή → ανοίγει και χωρίς internet (CD/φάκελοι)
   e.waitUntil((async () => {
-    try { const c = await caches.open(CACHE); await c.addAll(['ct.html', 'ct-manifest.json', 'ct-icon-192.png', 'ct-icon-512.png']); } catch (err) {}
+    try { const c = await caches.open(CACHE); for (const u of ['ct', 'ct-manifest.json', 'ct-icon-192.png', 'ct-icon-512.png']) { try { const r = await clean(await fetch(u, { cache: 'no-store' })); if (r && r.ok) await c.put(new URL(u, self.location.href).href, r); } catch (er) {} } } catch (err) {}
     try { const v = await caches.open(VCACHE); if (!(await v.match(new URL('vendor/daikon-1.2.42.min.js', self.location.href).href))) await v.add('vendor/daikon-1.2.42.min.js'); } catch (err) {}
     self.skipWaiting();
   })());
@@ -45,7 +48,7 @@ self.addEventListener('fetch', (e) => {
   const key = url.origin + url.pathname;   // ένα αντίγραφο ανά αρχείο, χωρίς παραμέτρους
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    const net = fetch(req, { cache: 'no-store' }).then(async (r) => {
+    const net = fetch(req.url, { cache: 'no-store', credentials: 'same-origin', redirect: 'follow' }).then(clean).then(async (r) => {
       if (r && r.ok) await cache.put(key, r.clone()).catch(() => {});
       return r;
     });
@@ -54,7 +57,7 @@ self.addEventListener('fetch', (e) => {
       const r = await Promise.race([net, timeout]);
       if (r && r.ok) return r;
     } catch (err) {}
-    const hit = await cache.match(key);
+    const hit = await clean(await cache.match(key));
     if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
     return net;   // καμία cache: περιμένουμε όσο χρειαστεί
   })());
