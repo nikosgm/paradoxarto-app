@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08f-v170';
+const APP_VER = '2026-11-08g-v171';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -11137,7 +11137,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const opt = (id, ic, t, sub, on)=>'<button data-ctopt="'+id+'"'+(on?'':' disabled')+' style="display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:1.5px solid '+(on?'#C9D6E3':'#E6EBF0')+';background:'+(on?'#fff':'#F6F8FA')+';color:'+(on?'#1D2A33':'#94A3B8')+';border-radius:14px;padding:12px;margin:7px 0;font-size:15.5px"><span style="font-size:24px">'+ic+'</span><span><b>'+t+'</b><br><span style="font-size:13px;color:#64748B">'+sub+'</span></span></button>';
     sheet('🩻 Απεικονίσεις · '+d.name,
       // 6/11: στο κινητό πρώτα ό,τι είναι ελαφρύ (ακτινογραφία θώρακος)· ολόκληρες αξονικές/μαγνητικές = βαριές → τελευταίες, «καλύτερα στον υπολογιστή»
-      opt('evorad','🫁','Ακτινογραφία θώρακος — Evorad','η πιο πρόσφατη, με ταυτοποίηση ΑΜΚΑ/ΑΜ · κρυπτογραφημένη, ανοίγει και στο κινητό', !!window.PDX_EVORAD_ON)
+      ((window.pdxIsBotUser && pdxIsBotUser()) ? opt('pc','🖥','Άνοιγμα στον υπολογιστή','διάλεξε εξέταση (αξονική, ακτινογραφία…) από τον Evorad και υπολογιστή — ανοίγει εκεί στο Νίκος CT Viewer', true) : '')
+      + opt('evorad','🫁','Ακτινογραφία θώρακος — Evorad','η πιο πρόσφατη, με ταυτοποίηση ΑΜΚΑ/ΑΜ · κρυπτογραφημένη, ανοίγει και στο κινητό', !!window.PDX_EVORAD_ON)
       + opt('server','📁','Ολόκληρη εξέταση από τους φακέλους της κλινικής', (touch && !host) ? '⚠ βαρύ: αξονική/μαγνητική = εκατοντάδες εικόνες, αργεί πολύ στο κινητό — καλύτερα από υπολογιστή' : 'αξονικές / μαγνητικές / ακτινογραφίες που σώσατε στο OUROLOGIKH KLINIKH', true)
       ,
       ()=>true, 'Κλείσιμο');
@@ -11146,6 +11147,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const b = e.target.closest('[data-ctopt]'); if(!b || b.disabled) return; e.stopPropagation();
       if(b.dataset.ctopt==='server'){ ov.remove(); if(touch && !host) window.pdxImgRemote(k); else window.open(u, '_blank'); }
       else if(b.dataset.ctopt==='evorad' && window.pdxEvoradOpen){ ov.remove(); window.pdxEvoradOpen(k); }
+      else if(b.dataset.ctopt==='pc' && window.pdxCtRemote){ ov.remove(); window.pdxCtRemote(k); }
     }, true);
   };
   // 🩻 Φάκελος κλινικής ΣΤΟ ΚΙΝΗΤΟ: το bot βρίσκει τον φάκελο του ασθενή στο OUROLOGIKH KLINIKH, κρυπτογραφεί τα DICOM με το
@@ -11969,6 +11971,69 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       await put('rsa', kp); return kp; } }; })();
   const b64d = s=>Uint8Array.from(atob(s), c=>c.charCodeAt(0));
   window.PDX_EVORAD_ON = true;
+  // 🖥 8/11 (εντολή χρήστη): ΤΗΛΕΧΕΙΡΙΣΜΟΣ — από το κινητό διαλέγεις εξέταση του Evorad και υπολογιστή, και ανοίγει εκεί
+  // στο Νίκος CT Viewer. Το bot φέρνει μόνο τη ΛΙΣΤΑ των εξετάσεων (ημερομηνία/είδος/περιγραφή), καμία εικόνα δεν φεύγει από το νοσοκομείο.
+  window.pdxCtRemote = async function(k){
+    const d = recOf(k); if(!d || typeof sb6==='undefined') return;
+    const E = x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const am = /^\d{8}$/.test(String(d.am||'')) ? String(d.am) : '', amka = pdxAmkaOk(d.amka) ? String(d.amka) : '';
+    const BN = Object.assign({}, await pdxBotNames()), LIVE = {};
+    try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); }catch(e){}
+    const PCS = Object.entries(BN).filter(([id])=>LIVE[id]).sort((a,b)=>['Γωνιακός','Μεσαίος','Παράθυρο','Πόρτα'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Παράθυρο','Πόρτα'].indexOf(b[1]));
+    let pc = ''; try{ pc = localStorage.getItem('pdx_ct_pc')||''; }catch(e){} if(!PCS.some(x=>x[0]===pc)) pc = PCS[0] ? PCS[0][0] : '';
+    const st = {exams:null, err:'', flt:'*', sent:''};
+    const ov = document.createElement('div'); ov.id = 'ctRemOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9700;background:rgba(15,25,35,.45);display:flex;align-items:flex-end;justify-content:center;color-scheme:light';
+    const chip = (on, attr, t)=>'<button '+attr+' style="border:1.5px solid var(--mp,#1D4E80);border-radius:999px;padding:7px 12px;font-size:14.5px;font-weight:600;margin:0 6px 7px 0;background:'+(on?'var(--mp,#1D4E80);color:#fff':'#fff;color:var(--mp,#1D4E80)')+'">'+t+'</button>';
+    const F = [['*','Όλα'],['CT','Αξονικές'],['XR','Ακτινογραφίες'],['US','Υπέρηχοι']];
+    const isXr = m=>/^(DX|CR|XR)$/i.test(m||'');
+    const draw = ()=>{
+      const L = (st.exams||[]).filter(x=>st.flt==='*' || (st.flt==='XR' ? isXr(x.mod) : String(x.mod||'').toUpperCase()===st.flt));
+      ov.innerHTML = '<div style="background:#fff;color:#1F2933;width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:90vh;display:flex;flex-direction:column">'
+        + '<div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1">🖥 Στον υπολογιστή</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 12px">Κλείσιμο</button></div>'
+        + '<div style="font-size:14px;color:#475569;margin:2px 0 10px">'+E(d.name)+'</div>'
+        + '<div style="font-size:12.5px;font-weight:700;color:#64748B;margin-bottom:5px">ΥΠΟΛΟΓΙΣΤΗΣ</div>'
+        + (PCS.length ? '<div>'+PCS.map(([id,nm])=>chip(pc===id,'data-pc="'+E(id)+'"',E(nm))).join('')+'</div>' : '<div style="color:#B42318;font-size:14px;margin-bottom:8px">Κανένας υπολογιστής δεν απαντά τώρα.</div>')
+        + '<div style="font-size:12.5px;font-weight:700;color:#64748B;margin:6px 0 5px">ΕΞΕΤΑΣΕΙΣ ΣΤΟΝ EVORAD</div><div>'+F.map(([v,t])=>chip(st.flt===v,'data-f="'+v+'"',t)).join('')+'</div>'
+        + '<div style="flex:1;overflow:auto;margin-top:4px">'
+        + (st.err ? '<div style="color:#B42318;font-size:14.5px;padding:10px 0">✗ '+E(st.err)+'</div>'
+          : st.exams===null ? '<div style="color:#475569;font-size:14.5px;padding:14px 0">🔎 Το bot ψάχνει τις εξετάσεις του ασθενή στον Evorad (ταυτοποίηση με ΑΜΚΑ/ΑΜ)…</div>'
+          : !L.length ? '<div style="color:#475569;font-size:14.5px;padding:14px 0">Καμία εξέταση'+(st.flt!=='*'?' αυτού του είδους':'')+'.</div>'
+          : L.map(x=>'<button data-ex="'+E(x.examid)+'" style="display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid #EEF1F4;background:'+(st.sent===String(x.examid)?'#EAF6EE':'#fff')+';padding:12px 2px;font-size:15px;color:#1F2933"><span style="font-size:20px">'+(isXr(x.mod)?'🫁':/^US$/i.test(x.mod)?'🔊':'🩻')+'</span><span style="flex:1;min-width:0"><b>'+E(String(x.date||'').slice(0,10).split('-').reverse().join('/'))+'</b> · '+E(x.mod)+'<br><span style="color:#475569;font-size:13.5px">'+E(x.desc||'')+'</span></span><span style="color:var(--mp,#1D4E80);font-weight:700;font-size:14px">'+(st.sent===String(x.examid)?'✓ στάλθηκε':'Άνοιγμα ›')+'</span></button>').join(''))
+        + '</div>'
+        + '<button data-search style="margin-top:10px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:14px;padding:12px;font-size:15px;font-weight:700"'+(pc?'':' disabled')+'>🔎 Μόνο αναζήτηση του ασθενή στον υπολογιστή</button></div>';
+    };
+    const send = async (examid, desc)=>{
+      if(!pc){ toast('Διάλεξε υπολογιστή'); return; }
+      const sur = String(d.name||'').trim().split(/\s+/)[0] || '';
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctremote', name:'🖥 '+(d.name||''), room:null, kind:'ctremote', payload:{only:pc, examid:examid?String(examid):'', sur, amka, desc:desc||'', quiet:true}, status:'new'}).select('id').single();
+      if(ins.error){ toast('Σφάλμα: '+ins.error.message); return; }
+      st.sent = examid ? String(examid) : ''; draw(); toast('🖥 Ανοίγει στον '+(BN[pc]||'υπολογιστή')+'…');
+      const id = ins.data.id, t0 = Date.now();
+      while(Date.now()-t0 < 30000){ await new Promise(r=>setTimeout(r,1500)); const q = await sb6.from('oncall_jobs').select('status,note').eq('id',id).maybeSingle(); const j = q && q.data; if(!j) continue;
+        if(j.status==='done'){ toast('✓ Άνοιξε στον '+(BN[pc]||'υπολογιστή')); return; } if(j.status==='failed'){ toast('✗ '+(j.note||'δεν άνοιξε')); return; } }
+      toast('⏳ Ο υπολογιστής δεν απάντησε ακόμα');
+    };
+    ov.addEventListener('click', e=>{ const t = e.target;
+      if(t===ov || t.closest('[data-x]')) return ov.remove();
+      const p = t.closest('[data-pc]'); if(p){ pc = p.dataset.pc; try{ localStorage.setItem('pdx_ct_pc', pc); }catch(x){} return draw(); }
+      const f = t.closest('[data-f]'); if(f){ st.flt = f.dataset.f; return draw(); }
+      const x = t.closest('[data-ex]'); if(x){ const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); return send(x.dataset.ex, ex ? (ex.mod+' '+(ex.desc||'')).trim() : ''); }
+      if(t.closest('[data-search]')) return send('', '');
+    });
+    draw(); document.body.appendChild(ov);
+    // λίστα εξετάσεων από το bot (μόνο κείμενο)
+    const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_evoradlist', name:d.name, room:null, kind:'evoradimg', payload:{name:d.name, fname:d.fname||'', ad:d.admitDate||'', am, amka, listOnly:true, quiet:true}, status:'new'}).select('id').single();
+    if(ins.error){ st.err = ins.error.message; return draw(); }
+    const id = ins.data.id, t0 = Date.now();
+    while(Date.now()-t0 < 120000 && document.body.contains(ov)){
+      await new Promise(r=>setTimeout(r,1500));
+      const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id',id).maybeSingle(); const j = q && q.data; if(!j) continue;
+      if(j.status==='failed' || j.status==='cancelled'){ st.err = j.note || 'δεν βρέθηκαν εξετάσεις'; return draw(); }
+      if(j.status==='done'){ st.exams = ((j.payload||{}).result||{}).exams || []; return draw(); }
+    }
+    if(st.exams===null){ st.err = 'Το bot δεν απάντησε (ο Evorad μπορεί να θέλει σύνδεση στους υπολογιστές).'; draw(); }
+  };
   window.pdxEvoradOpen = async function(k){
     const d = recOf(k); if(!d || typeof sb6==='undefined') return;
     let pub;
