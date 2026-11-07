@@ -2205,7 +2205,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07x-v163';
+const APP_VER = '2026-11-07y-v164';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12555,7 +12555,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const miss = (NB.rows||[]).filter(r=>!nbHere(r)).map(r=>r.name).filter(n=>{ const x = NB.enr[nbNz(n)]; return !x || (!x.amka && !x.am && !x.err) || (x.amka && !x.pid && !x.medErr && !x.dx); });
     if(miss.length) await sb6.from('oncall_jobs').insert({name_key:'zzz_npsenrich', name:'ΝΠΣ: στοιχεία '+miss.length+' ασθενών', room:null, kind:'npsenrich', payload:{names:miss.slice(0,10), quiet:true}, status:'new'});
   }
-  const nbMiss = ()=>{ const M = (NB.rows||[]).filter(r=>!nbHere(r)); window.__npsMissing = M; return M; };
+  // 7/11: ταξινόμηση ασθενών ΝΠΣ — Α-Ω / νεότερη εισαγωγή / σειρά ΝΠΣ (θυμάται την επιλογή)
+  const NSO = ()=>{ try{ return localStorage.getItem('pdx_nps_sort')||'abc'; }catch(e){ return 'abc'; } };
+  const nAdm = r=>{ const m = String(r.admit||'').match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return new Date(y,+m[2]-1,+m[1]).getTime(); };
+  const npsSort = (A)=>{ const m = NSO(), C = new Intl.Collator('el',{sensitivity:'base'}); if(m==='abc') A.sort((a,b)=>C.compare(String(a.name||''),String(b.name||''))); else if(m==='adm') A.sort((a,b)=>nAdm(b)-nAdm(a) || C.compare(String(a.name||''),String(b.name||''))); return A; };
+  const npsSortBar = (cls)=>'<span style="display:inline-flex;gap:4px">'+[['abc','Α-Ω'],['adm','Εισαγωγή'],['nps','ΝΠΣ']].map(([v,t])=>'<button data-nsort="'+v+'" style="border:0;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;background:'+(NSO()===v?'#1D4E80;color:#fff':'var(--card,#fff);color:#475569;border:1px solid #E5E9EF')+'">'+t+'</button>').join('')+'</span>';
+  document.addEventListener('click', e=>{ const b = e.target.closest && e.target.closest('[data-nsort]'); if(!b) return; e.stopPropagation(); try{ localStorage.setItem('pdx_nps_sort', b.dataset.nsort); }catch(x){} try{ nbPaint(); }catch(x){} try{ window.__npsPg && window.__npsPg.redraw(); }catch(x){} }, true);
+  const nbMiss = ()=>{ const M = npsSort((NB.rows||[]).filter(r=>!nbHere(r))); window.__npsMissing = M; return M; };
   function nbDxN(x){ try{ if(!x || !Array.isArray(x.dx) || !window.pdxComorbClassify) return 0; return pdxComorbClassify(x.dx.join('\n')).filter(i=>i.cls==='C').length; }catch(e){ return 0; } }
   function nbTemp(r){
     Object.keys(extraPatients).forEach(k=>{ if(extraPatients[k] && extraPatients[k]._npsTemp && extraPatients[k].name!==r.name) delete extraPatients[k]; });
@@ -12570,6 +12576,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const t = NB.listAt ? new Date(NB.listAt) : null, hm = t ? String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0') : '';
     return '<div id="npsBlk" style="margin:18px 0 8px"><div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 16px 6px"><b style="font-size:12.5px;letter-spacing:.3px;color:var(--t2,#6B7280);text-transform:uppercase">🏥 Στον ΝΠΣ · όχι στο Παραδόχαρτο · '+M.length+'</b><button data-nball style="border:0;background:none;font-size:13px;color:var(--mp,#1D4E80);font-weight:700">Όλοι ›</button></div>'
+      + '<div style="padding:0 16px 6px">'+npsSortBar()+'</div>'
       + '<div style="background:var(--card,#fff);border-radius:14px;margin:0 10px;overflow:hidden">' + M.map((r,i)=>{ const x = NB.enr[nbNz(r.name)] || {}, am = x.am || r.am || '', n = nbDxN(x);
         const sub = [am ? 'ΑΜ '+am : (x.err ? '⚠ '+String(x.err).slice(0,40) : 'ΑΜ: έρχεται…'), r.admit ? 'εισ. '+r.admit : (x.adm && x.adm.from ? 'εισ. '+x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7) : ''), x.dx ? '🩺 '+n+(n===1?' συννοσηρότητα':' συννοσηρότητες') : ''].filter(Boolean).join(' · ');
         return '<div data-nbo="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;'+(i?'border-top:1px solid var(--sep,#EEF1F4)':'')+'"><span style="width:8px;height:8px;border-radius:4px;background:#E08A00;flex:none"></span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+E5(r.name)+'</div><div style="font-size:12px;color:var(--t2,#6B7280)">'+E5(sub)+'</div></div><button data-nbp="'+i+'" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:6px 10px;font-size:13px;flex:none">＋ Κρεβάτι</button></div>'; }).join('')
@@ -12628,15 +12635,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const match = (row, P)=>{ const n = nz(row.name), t = n.split(' ').filter(w=>w.length>=3); if(!t.length) return null;
       let c = P.filter(x=>x.n===n); if(!c.length) c = P.filter(x=>t.slice(0,2).every(w=>x.n.split(' ').includes(w))); if(!c.length) c = P.filter(x=>x.n.split(' ')[0]===t[0]);
       if(c.length>1 && row.am) { const c2 = c.filter(x=>String(x.d.am||'')===row.am); if(c2.length) c = c2; } return c.length===1 ? c[0] : null; };
-    const pg = iosPage('Ασθενείς ΝΠΣ', 'Εργαλεία', ()=>{
+    const pg = window.__npsPg = iosPage('Ασθενείς ΝΠΣ', 'Εργαλεία', ()=>{
       let h = '<div style="display:flex;gap:6px;margin:12px 16px 6px">'+[['3449','Ουρολογική 3449'],['3434','Ουρ. Ημέρας 3434']].map(([v,t])=>'<button data-dpt="'+v+'" style="flex:1;border:0;border-radius:10px;padding:9px;font-weight:700;background:'+(dpt===v?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+t+'</button>').join('')+'</div>';
       h += '<div style="margin:0 16px"><button data-go style="width:100%;height:46px;border:0;border-radius:12px;background:#1D4E80;color:#fff;font-weight:700;font-size:16px">'+(busy?'⏳ '+E3(busy):'🤖 Φέρε τώρα από τον ΝΠΣ')+'</button></div>';
       if(msg) h += '<div style="margin:8px 16px;color:#B91C1C">'+E3(msg)+'</div>';
       if(!res){ return h + '<div style="padding:18px 16px;color:#64748B">Καμία ανάγνωση ακόμα για αυτή την κλινική. Πάτα «Φέρε τώρα».</div>'; }
+      if(res.rows) npsSort(res.rows);
       const P = mine(), used = new Set(), rows = (res.rows||[]).map(r=>{ const m = match(r, P); if(m) used.add(m.k); return {r, m}; });
       const onlyMine = dpt==='3449' ? P.filter(x=>!used.has(x.k) && !String(x.k).startsWith('extra-')) : [];
       const nG = rows.filter(x=>x.m).length, nO = rows.length - nG;
       h += '<div style="margin:10px 16px 4px;font-size:13px;color:#64748B">'+rows.length+' στον ΝΠΣ · ανάγνωση '+new Date(res.at||Date.now()).toLocaleString('el-GR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})+(res.flt&&res.flt.dept?' · '+E3(res.flt.dept):'')+'</div>';
+      h += '<div style="margin:4px 16px 6px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#64748B">Ταξινόμηση '+npsSortBar()+'</div>';
       h += '<div style="display:flex;gap:6px;margin:4px 16px 8px;flex-wrap:wrap">'+[['all','Όλοι '+rows.length],['miss','🟠 Λείπουν '+nO],['ok','🟢 Και στα δύο '+nG]].concat(onlyMine.length?[['gone','⚪ Μόνο Παραδόχαρτο '+onlyMine.length]]:[]).map(([v,t])=>'<button data-f="'+v+'" style="border:0;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;background:'+(flt===v?'#1D4E80;color:#fff':'#fff;color:#334155')+'">'+t+'</button>').join('')+'</div>';
       const card = (dot, title, sub, act)=>'<button '+act+' style="display:flex;gap:10px;align-items:center;width:calc(100% - 32px);margin:0 16px 6px;text-align:left;border:1px solid #E5E9EF;border-radius:12px;background:#fff;padding:10px 12px;color:#1F2933"><span style="font-size:13px">'+dot+'</span><span style="flex:1;min-width:0"><b style="display:block;font-size:15px">'+title+'</b><small style="color:#64748B;font-size:12.5px">'+sub+'</small></span><span style="color:#94A3B8">›</span></button>';
       rows.forEach(({r,m}, i)=>{ if(flt==='miss'&&m || flt==='ok'&&!m || flt==='gone') return;
