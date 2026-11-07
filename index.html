@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08i-v173';
+const APP_VER = '2026-11-08j-v174';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7320,8 +7320,28 @@ document.head.appendChild(st);
     const am = /^\d{8}$/.test(String(d.am||'')) ? String(d.am) : (n && /^\d{8}$/.test(String(n.am||'')) ? String(n.am) : '');
     const amka = pdxAmkaOk(d.amka) ? String(d.amka) : (n && pdxAmkaOk(n.amka) ? String(n.amka) : '');
     const father = String(d.father || (n && n.father) || '').trim();
+    if(!father && k && window.pdxFatherFetch) setTimeout(()=>pdxFatherFetch(k, full, amka), 300);   // 8/11: πατρώνυμο από τον ΝΠΣ (μία φορά)
     // 8/11 (εντολή χρήστη): ΟΛΑ κεφαλαία (και το πατρώνυμο)
     return {name: String(full).toUpperCase(), father, fatherGen: genGr(father).toUpperCase(), am, amka};
+  };
+  // 🪪 8/11: πατρώνυμο από τον ΝΠΣ («Γενικά Στοιχεία» → «Όνομα Πατέρα») — το bot ανοίγει τον ασθενή μόνο για ανάγνωση·
+  // με ΑΜΚΑ: έλεγχος ότι άνοιξε ο σωστός (συνωνυμίες). Μία προσπάθεια ανά ασθενή ανά 12 ώρες (σε αυτή τη συσκευή).
+  const FF = {};
+  window.pdxFatherFetch = async function(k, full, amka){
+    if(!(window.pdxIsBotUser && pdxIsBotUser()) || typeof sb6==='undefined' || FF[k]) return; FF[k] = 1;
+    const d = (typeof data!=='undefined' && data && data[k]) || (typeof extraPatients!=='undefined' && extraPatients && extraPatients[k]); if(!d || d.father || d._npsTemp || !String(d.name||'').trim()) return;
+    let tried = {}; try{ tried = JSON.parse(localStorage.getItem('pdx_ff')||'{}'); }catch(e){}
+    const key = String(amka||full||d.name); if(tried[key] && Date.now()-tried[key] < 12*3600e3) return; tried[key] = Date.now(); try{ localStorage.setItem('pdx_ff', JSON.stringify(tried)); }catch(e){}
+    const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_npsfather', name:String(full||d.name), room:null, kind:'npspat', payload:{name:String(full||d.name), amka:amka||'', quiet:true}, status:'new'}).select('id').single();
+    if(ins.error) return; const id = ins.data.id, t0 = Date.now();
+    while(Date.now()-t0 < 5*60000){ await new Promise(r=>setTimeout(r,4000)); const q = await sb6.from('oncall_jobs').select('status,payload').eq('id',id).maybeSingle(); const j = q && q.data; if(!j) continue;
+      if(/^(failed|cancelled|dismissed)$/.test(j.status)) return;
+      if(j.status==='done'){ const r = (j.payload||{}).result || {}; const f = String(r.father||'').trim().toUpperCase(); if(!f) return;
+        const d2 = (typeof data!=='undefined' && data && data[k]) || (typeof extraPatients!=='undefined' && extraPatients && extraPatients[k]); if(!d2 || d2.father) return;
+        if(amka && r.amka && String(r.amka)!==String(amka)) return;   // ⛔ άλλος ασθενής
+        d2.father = f; if(!d2.am && /^\d{8}$/.test(String(r.am||''))) d2.am = String(r.am); if(!d2.amka && /^\d{11}$/.test(String(r.amka||''))) d2.amka = String(r.amka);
+        try{ saveEntryToStorage(k, String(k).indexOf('extra')===0, d2, true); }catch(e){}
+        try{ if(window.buildMobileView) buildMobileView(); }catch(e){} return; } }
   };
   window.pdxCopy = async function(t, what){ t = String(t||''); let ok = false;
     try{ await navigator.clipboard.writeText(t); ok = true; }catch(e){ try{ const ta = document.createElement('textarea'); ta.value = t; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); }catch(x){} }
