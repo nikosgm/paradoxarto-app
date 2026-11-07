@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08j-v174';
+const APP_VER = '2026-11-08k-v175';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8845,9 +8845,10 @@ document.head.appendChild(st);
     if(MOB_CFG.actionRow===false) return '';
     const xk = esc(k), bot = window.pdxIsBotUser && window.pdxIsBotUser(), warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
     const L0 = (window.pdxBotActions ? pdxBotActions() : []).filter(a=>a && a.id!=='labs' && a.id!=='ahfylabs' && (bot || a.id==='ct'));
-    const ord = ['order','consult','dcx','comorb','ct','ref','rx'];   // 7/11: η συνταγή τέρμα δεξιά (στους νοσηλευόμενους σπάνια) L0.sort((a,b)=>{ const i=ord.indexOf(a.id), j=ord.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
+    // 8/11 (εντολή χρήστη): πρώτα Παραγγελία, Απεικονίσεις, Εξιτήριο, Κλήση για εκτίμηση· η συνταγή τέρμα δεξιά
+    const ord = ['order','ct','dcx','consult','comorb','ref','rx']; L0.sort((a,b)=>{ const i=ord.indexOf(a.id), j=ord.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
     const it = (ic, t, act, dot)=>'<button onclick="'+act+'"><i>'+ic+'</i>'+t+(dot?' <b style="color:#F79009">●</b>':'')+'</button>';
-    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" style="background:#15803D;color:#fff"><i>＋</i>Προσθήκη σε κρεβάτι</button>' : '') + it('🧪', 'Εξετάσεις', "mobAct('"+xk+"','labs')", warn);
+    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" style="background:#15803D;color:#fff"><i>＋</i>Προσθήκη σε κρεβάτι</button>' : '');   // 8/11: χωρίς «Εξετάσεις» (υπάρχει «Όλες οι εξετάσεις» κάτω από τα βασικά)
     const one = a=>a.id==='ct' && window.pdxCtOpen ? it('🩻', 'Απεικονίσεις', "pdxCtOpen('"+xk+"')") : it(esc(a.icon||'🤖'), esc(PTA_SHORT[a.id]||a.label||a.id), "mobAct('"+xk+"','"+esc(a.id)+"')");
     L0.filter(a=>a.id!=='rx').forEach(a=>{ h += one(a); });
     h += it('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + L0.filter(a=>a.id==='rx').map(one).join('') + it('⋯', 'Όλες', "mobActions('"+xk+"')");
