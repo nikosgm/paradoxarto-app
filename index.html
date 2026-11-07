@@ -2204,7 +2204,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-07d-v143';
+const APP_VER = '2026-11-07e-v144';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -16503,7 +16503,9 @@ Z99.2:C|αιμοκάθαρση
     const b = e.target.closest('[data-medgo]'); if(!b || !window.pdxBotSend) return;
     const P = pts(), k = cur || (P[0] && P[0].k); if(!k){ alert('Χρειάζεται τουλάχιστον ένας ασθενής στη λίστα.'); return; }
     b.disabled = true; b.textContent = '⏳ Στάλθηκε…';
-    pdxBotSend(k, 'medlabs', {}).then(ok=>{ if(!ok){ b.disabled=false; b.textContent='🤖 Φέρε τώρα'; return; }
+    const dC = cur ? ((String(cur).indexOf('extra-')===0 ? extraPatients : data)[cur]) : null;
+    if(dC && dC._npsTemp && window.pdxLabsFor){ b.disabled=false; b.textContent='🤖 Φέρε τώρα'; window.labsFullClose && labsFullClose(); pdxLabsFor({name:dC.name, amka:dC.amka, am:dC.am, k:cur}); return; }
+    pdxBotSend(k, 'medlabs', dC && dC.name ? {only:[dC.name]} : {}).then(ok=>{ if(!ok){ b.disabled=false; b.textContent='🤖 Φέρε τώρα'; return; }   // 7/11: μέσα σε ασθενή → ΜΟΝΟ αυτός (δευτερόλεπτα, όχι όλη η κλινική)
       const t0 = Date.now(), tick = setInterval(()=>{
         if(!box.classList.contains('on') || Date.now()-t0 > 10*60000){ clearInterval(tick); return; }
         sb6.from('oncall_jobs').select('status,note').eq('kind','medlabs').order('created_at',{ascending:false}).limit(1).then(r=>{
