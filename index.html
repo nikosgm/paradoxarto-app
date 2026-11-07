@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08n-v178';
+const APP_VER = '2026-11-08o-v179';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7360,11 +7360,17 @@ document.head.appendChild(st);
     const all = entries(true).filter(e=>e.d && e.d.name).concat(window.pdxNpsBulkList ? pdxNpsBulkList() : []);
     let ov = document.getElementById('ppkOv'); if(ov) ov.remove(); ov = document.createElement('div'); ov.id='ppkOv';
     ov.style.cssText='position:fixed;inset:0;z-index:9600;background:rgba(15,25,35,.4);display:flex;align-items:flex-end;justify-content:center;color-scheme:light';
-    const rows = q=>all.filter(e=>!q || (nrmN(e.d.name)+' '+e.k).toLowerCase().indexOf(nrmN(q).toLowerCase())>=0 || String(e.k).indexOf(q)>=0).map(e=>'<button data-k="'+esc(e.k)+'" style="display:flex;width:100%;text-align:left;gap:10px;border:0;border-bottom:1px solid #EEF1F4;background:#fff;padding:11px 4px;font-size:15px;color:#1F2933"><b style="min-width:58px">'+esc(e.nps ? 'ΝΠΣ' : lbl(e).split(' · ')[0])+'</b><span>'+esc(e.d.name)+'</span></button>').join('');
-    ov.innerHTML='<div style="background:#fff;width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;display:flex;flex-direction:column"><div style="display:flex;align-items:center;margin-bottom:8px"><b style="flex:1;font-size:18px;color:#1F2933">'+esc(title)+'</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:7px 12px">Κλείσιμο</button></div><input data-q placeholder="🔎 όνομα ή κρεβάτι" style="font-size:16px;padding:10px;border:1.5px solid #CBD5E1;border-radius:12px;margin-bottom:6px;background:#fff;color:#1F2933"><div data-l style="overflow:auto">'+rows('')+'</div></div>';
+    // 8/11 (εντολή χρήστη): ταξινόμηση ανά θάλαμο ή αλφαβητικά (θυμάται την επιλογή)
+    let srt = 'room'; try{ srt = localStorage.getItem('pdx_pick_sort') || 'room'; }catch(e){}
+    const C = new Intl.Collator('el',{sensitivity:'base', numeric:true});
+    const sorted = ()=>all.slice().sort((a,b)=> srt==='abc' ? C.compare(String(a.d.name||''), String(b.d.name||'')) : ((a.nps?1:0)-(b.nps?1:0) || C.compare(String(a.k), String(b.k))));
+    const rows = q=>sorted().filter(e=>!q || (nrmN(e.d.name)+' '+e.k).toLowerCase().indexOf(nrmN(q).toLowerCase())>=0 || String(e.k).indexOf(q)>=0).map(e=>'<button data-k="'+esc(e.k)+'" style="display:flex;width:100%;text-align:left;gap:10px;border:0;border-bottom:1px solid #EEF1F4;background:#fff;padding:11px 4px;font-size:15px;color:#1F2933"><b style="min-width:58px">'+esc(e.nps ? 'ΝΠΣ' : lbl(e).split(' · ')[0])+'</b><span>'+esc(e.d.name)+'</span></button>').join('');
+    ov.innerHTML='<div style="background:#fff;width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;display:flex;flex-direction:column"><div style="display:flex;align-items:center;margin-bottom:8px"><b style="flex:1;font-size:18px;color:#1F2933">'+esc(title)+'</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:7px 12px">Κλείσιμο</button></div><input data-q placeholder="🔎 όνομα ή κρεβάτι" style="font-size:16px;padding:10px;border:1.5px solid #CBD5E1;border-radius:12px;margin-bottom:6px;background:#fff;color:#1F2933"><div data-srt style="display:flex;gap:6px;margin-bottom:6px">'+[['room','Ανά θάλαμο'],['abc','Α-Ω']].map(([v,t])=>'<button data-s="'+v+'" style="border:1.5px solid var(--mp,#1D4E80);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:700;background:'+(srt===v?'var(--mp,#1D4E80);color:#fff':'#fff;color:var(--mp,#1D4E80)')+'">'+t+'</button>').join('')+'</div><div data-l style="overflow:auto">'+rows('')+'</div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('input', e=>{ if(e.target.matches('[data-q]')) ov.querySelector('[data-l]').innerHTML = rows(e.target.value); });
-    ov.addEventListener('click', e=>{ if(e.target===ov || e.target.closest('[data-x]')) return ov.remove(); const b = e.target.closest('[data-k]'); if(b){ ov.remove(); const k = b.dataset.k; cb(/^nps:/.test(k) && window.pdxNpsKey ? pdxNpsKey(k) : k); } });
+    ov.addEventListener('click', e=>{ if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
+      const sb = e.target.closest('[data-s]'); if(sb){ srt = sb.dataset.s; try{ localStorage.setItem('pdx_pick_sort', srt); }catch(x){} ov.querySelectorAll('[data-s]').forEach(x=>{ const on = x.dataset.s===srt; x.style.background = on ? 'var(--mp,#1D4E80)' : '#fff'; x.style.color = on ? '#fff' : 'var(--mp,#1D4E80)'; }); ov.querySelector('[data-l]').innerHTML = rows((ov.querySelector('[data-q]')||{}).value||''); return; }
+      const b = e.target.closest('[data-k]'); if(b){ ov.remove(); const k = b.dataset.k; cb(/^nps:/.test(k) && window.pdxNpsKey ? pdxNpsKey(k) : k); } });
   };
   const nuiTop = (t, sub, right)=>'<div class="mtop"><div>'+t+(sub?'<br><span style="font-weight:400;font-size:12.5px;opacity:.85">'+sub+'</span>':'')+'</div>'+(right||'')+'</div>';
   const cmdBar = '<div onclick="pdxCmd()" style="margin:10px 12px 4px;background:#fff;border:2px solid var(--mp,#1D4E80);border-radius:16px;padding:12px 14px;font-size:15.5px;color:#64748B;cursor:pointer">🔎 Τι θέλεις να κάνεις;</div>';
