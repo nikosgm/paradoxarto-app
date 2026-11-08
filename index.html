@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v203';
+const APP_VER = '2026-11-08z-v204';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7202,7 +7202,7 @@ document.head.appendChild(st);
     const M = window.pdxMine || {rooms:[]};
     const mine = (M.rooms && M.rooms.length) || (M.xhide && M.xhide.length) ? '<button class="mqf mine'+(M.on?' on':'')+'" onclick="pdxMineToggle()">'+(M.on?'👤 Δικοί μου':'👥 Όλοι οι θάλαμοι')+'</button>' : '<button class="mqf" onclick="pdxMineSettings()">👤 Οι θάλαμοί μου…</button>';
     const thb = '<button class="mqf'+(fTher.size?' on':'')+'" onclick="mobToggleF()">👤 '+(fTher.size ? esc([...fTher].join(', ')) : 'Θεράπων')+'</button>';
-    return '<div class="mqfs">'+mine+thb+c('all','Όλοι',all.length)+(nA?c('att','⚠ Προσοχή',nA,'att'):'')+(nP?c('post','Χειρουργεία',nP):'')+(nT?c('todos','Εκκρεμότητες',nT):'')+'</div>';
+    return '<div class="mqfs">'+mine+thb+c('all','Όλοι',all.length)+(nT?c('todos','Εκκρεμότητες',nT):'')+'</div>';
   }
   window.pdxAttToggle = function(){ try{ localStorage.setItem('pdx_att_open', localStorage.getItem('pdx_att_open')==='1'?'0':'1'); }catch(_){} render(); };
   function attBox(all){
@@ -8381,8 +8381,7 @@ document.head.appendChild(st);
   html.pdx-night #mobView.desk.nv3 .dk-s{background:#1C1C1E;border-right-color:#38383A}html.pdx-night #mobView.desk.nv3 .dk-l{background:#0B0B0C}html.pdx-night #mobView.desk.nv3 .dk-r{background:#000}html.pdx-night #mobView .dks-a{color:#E5E5EA}
   `; document.head.appendChild(st); })();
   function nvStat(e){
-    const d = e.d, a = attVis(e);
-    if(a.length) return {t:a[0].t, c:'a', att:true};
+    const d = e.d;   // 8/11: η «προσοχή» δεν φαίνεται πια στις κάρτες — μόνο στις 🔔 Ειδοποιήσεις
     const p = podFmt(d.pod); if(p) return {t:p, c:/εξιτ/i.test(p) ? 'g' : /προς|αύριο|αυριο|χειρ|χε\b/i.test(p) ? 'p' : '', att:false};
     return {t:'', c:'', att:false};
   }
@@ -8536,8 +8535,6 @@ document.head.appendChild(st);
     h += '<div class="nv-sg"><button class="'+(mineOn&&!th?'on':'')+'" onclick="pdxMineToggle(true)">Οι θάλαμοί μου</button><button class="'+(!mineOn&&!th?'on':'')+'" onclick="'+(th?'mobClearF();':'')+'pdxMineToggle(false)">Όλοι</button><button class="'+(th?'on':'')+'" onclick="mobToggleF()">'+(th?esc([...fTher].join(', ')):'Θεράπων')+'</button></div>';
     const ch = [];
     if(nDc) ch.push('<span class="nv-ch">'+nDc+' '+(nDc===1?'εξιτήριο':'εξιτήρια')+'</span>');
-    if(nOr) ch.push('<span class="nv-ch">'+nOr+' χειρουργείο</span>');
-    if(nA) ch.push('<button class="nv-ch w'+(qf==='att'?' on':'')+'" onclick="mobQF(\'att\')">'+nA+' '+(nA===1?'χρειάζεται':'χρειάζονται')+' προσοχή</button>');
     { const nT = all.reduce((a,e)=>a+todos(e.d).length,0), nL = all.reduce((a,e)=>a+todos(e.d).filter(l=>{ const w = todoWhen(l); return w && w < new Date(); }).length,0);
       if(nT) ch.push('<button class="nv-ch'+(nL?' w':'')+(qf==='todos'?' on':'')+'" onclick="mobQF(\'todos\')">☑ '+nT+' εκκρεμότητ'+(nT===1?'α':'ες')+(nL?' · '+nL+' αργούν':'')+'</button>'); }
     if(qf!=='all' && qf!=='att' && qf!=='todos') ch.push('<button class="nv-ch on" onclick="mobQF(\''+qf+'\')">✕ φίλτρο</button>');
@@ -8562,7 +8559,7 @@ document.head.appendChild(st);
       return h + '<div style="height:96px"></div>' + nvTabs();
     }
     if((window.pdxIsBotUser&&window.pdxIsBotUser())) h += '<div id="mBotStrip">'+botStripHtml()+'</div>';
-    h += quickBar(all) + attBox(all);
+    h += quickBar(all);   // 8/11: «Χρειάζονται προσοχή» μόνο στις 🔔 Ειδοποιήσεις
     if(window.HIST_UNASSIGNED) h += '<button class="mpend" onclick="openCaseHistNew();setTimeout(function(){ try{ document.getElementById(\'chGoInbox\').click(); }catch(e){} },60)"><span>📄 '+window.HIST_UNASSIGNED+(window.HIST_UNASSIGNED>1?' νέα ιστορικά':' νέο ιστορικό')+' για έλεγχο<small>νέος ασθενής ή ίδιο επίθετο — διάλεξε</small></span>›</button>';
     let lastRoom=null;
     es.forEach(e=>{

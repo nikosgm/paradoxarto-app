@@ -100,8 +100,54 @@ $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
 
 // σελίδες → JPEG (≤1800px) → κλειδί μιας χρήσης → scan_put → Claude
+// 🗓 8/11: ΟΡΙΖΟΝΤΙΑ φωτογραφία (περιστροφή του κινητού) = ΠΡΟΓΡΑΜΜΑ ΧΕΙΡΟΥΡΓΕΙΟΥ → κατευθείαν email (Kerio), χωρίς Claude.
+// Όρθια = ιστορικό/πόρισμα → Claude (όπως πριν).
+function isLand(srcs, w0, h0){
+  if(typeof window.__scanLand === 'boolean') return window.__scanLand;   // δοκιμές
+  const s = srcs[0] || {}, w = w0 || s.width || 0, h = h0 || s.height || 0;
+  if(w && h && w > h * 1.1) return true;
+  try{ const a = (screen.orientation && screen.orientation.angle) || window.orientation || 0; if(Math.abs(a) === 90 || a === 270) return true; }catch(e){}
+  return false;
+}
+const b64 = u=>{ let s = ''; for(let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+async function progFlow(pages, raw){
+  let n = 5, gone = false;
+  msg('<div style="font-size:50px">🗓</div><b style="font-size:20px">Πρόγραμμα χειρουργείου</b><div>Email στο «Πρόγραμμα χειρουργείου» σε <b id="cn" style="font-size:26px">'+n+'</b>″</div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn sec" id="pno" style="min-width:0">Ακύρωση</button><button class="btn" id="pnow" style="min-width:0">Στείλε τώρα</button></div>'
+    + '<button class="btn sec" id="pcl" style="min-width:0;font-size:14px;padding:9px 14px">Δεν είναι πρόγραμμα → Claude</button>');
+  const done = ()=>{ busy = false; };
+  const iv = setInterval(()=>{ n--; if(n <= 0) go(); else { const e = $('cn'); if(e) e.textContent = n; } }, 1000);
+  $('pno').onclick = ()=>{ if(gone) return; gone = true; clearInterval(iv); done(); $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+  $('pcl').onclick = ()=>{ if(gone) return; gone = true; clearInterval(iv); done(); window.__scanForceClaude = true; window.__lastPages && send(window.__lastPages.srcs, window.__lastPages.w, window.__lastPages.h); };
+  $('pnow').onclick = ()=>go();
+  async function go(){
+    if(gone) return; gone = true; clearInterval(iv);
+    msg('<div class="spin"></div><div>Κρυπτογράφηση & αποστολή στο bot…</div>');
+    try{
+      const keys = await rpc('scan_bot_keys', { p_token: tok.get() }), wk = {};
+      for(const r of keys || []){ try{ const pub = typeof r.pub === 'string' ? JSON.parse(r.pub) : r.pub; const k = await crypto.subtle.importKey('jwk', { kty:'RSA', n:pub.n, e:pub.e, alg:'RSA-OAEP-256', ext:true }, { name:'RSA-OAEP', hash:'SHA-256' }, false, ['encrypt']); wk[r.fp] = b64(new Uint8Array(await crypto.subtle.encrypt({ name:'RSA-OAEP' }, k, raw))); }catch(e){} }
+      if(!Object.keys(wk).length) throw new Error('δεν βρέθηκε κλειδί υπολογιστή του bot');
+      const id = await rpc('scan_prog', { p_token: tok.get(), p_payload: { pages, wk } });
+      window.__scanProgId = id;
+      msg('<div class="spin"></div><div>Το bot στέλνει από το Kerio…</div><div style="opacity:.7;font-size:14px">μπορείς να κλείσεις — έρχεται ειδοποίηση όταν σταλεί</div>');
+      const t0 = Date.now();
+      while(Date.now() - t0 < 120000){
+        await new Promise(r=>setTimeout(r, 2500));
+        let j = null; try{ j = await rpc('scan_status', { p_token: tok.get(), p_id: id }); }catch(e){}
+        if(j && j.status === 'done'){ msg('<div style="font-size:54px">✅</div><div>'+E(j.note || 'Στάλθηκε')+'</div><button class="btn" id="nx">Νέα σάρωση</button>'); $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); }; return done(); }
+        if(j && (j.status === 'failed' || j.status === 'cancelled')){ throw new Error('ΔΕΝ στάλθηκε: ' + (j.note || j.status)); }
+      }
+      msg('<div style="font-size:44px">⏳</div><div>Το bot δεν απάντησε ακόμα — θα σταλεί μόλις ξυπνήσει ο υπολογιστής.</div><button class="btn" id="nx">Νέα σάρωση</button>'); $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); }; done();
+    }catch(e){
+      done(); if(/έγκριση/.test(e.message)){ tok.del(); return setup(); }
+      msg('<div style="font-size:40px">⚠</div><div>' + E(e.message) + '</div><button class="btn" id="again">Ξανά</button>'); $('again').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+    }
+  }
+}
 async function send(srcs, w0, h0){
-  busy = true; const v = $('v');
+  busy = true; const v = $('v'); const land = isLand(srcs, w0, h0);
+  // για «Δεν είναι πρόγραμμα → Claude»: κρατάμε τις πηγές (στιγμιότυπο του βίντεο σε καμβά)
+  try{ window.__lastPages = { srcs: srcs.map(sr=>{ const w = w0 || sr.width, h = h0 || sr.height; const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(sr, 0, 0, w, h); return c; }), w:0, h:0 }; }catch(e){}
   msg('<div class="spin"></div><div>Ανέβασμα…</div>');
   try{
     const raw = crypto.getRandomValues(new Uint8Array(16)), key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), pages = [];
@@ -113,6 +159,8 @@ async function send(srcs, w0, h0){
       let s = ''; for(let i = 0; i < o.length; i += 0x8000) s += String.fromCharCode.apply(null, o.subarray(i, i + 0x8000)); pages.push(btoa(s));
       w0 = h0 = 0;
     }
+    if(land && !window.__scanForceClaude) return progFlow(pages, raw);
+    window.__scanForceClaude = false;
     const id = await rpc('scan_put', { p_token: tok.get(), p_payload: { pages } });
     const tag = '#s' + id + 'k' + [...raw].map(b=>b.toString(16).padStart(2, '0')).join('');
     window.__scanNav = CLAUDE_APP + tag;
