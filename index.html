@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08r-v182';
+const APP_VER = '2026-11-08s-v183';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7973,6 +7973,107 @@ document.head.appendChild(st);
     });
     load();
   };
+  // ===== 🗂 8/11: «Αρχείο Ασθενών» (βάση στο Παράθυρο) από το Παραδόχαρτο =====
+  // Το κινητό/tablet ΔΕΝ βλέπει τον server (ακούει μόνο 127.0.0.1 στο Παράθυρο): κάθε αίτημα γίνεται εντολή «pdxdb» για το bot του Παραθύρου,
+  // που το περνά στον τοπικό server και γράφει την απάντηση. Όσα αιτήματα έρθουν μαζί (≤250ms) πάνε σε ΜΙΑ εντολή (≈10″ η καθεμία).
+  // Μετά την ανάγνωση η απάντηση σβήνεται από τη βάση εντολών (ονόματα μένουν μόνο στον server της κλινικής).
+  const PDX_DB_BOT = 'bmw51w96b7zncz';   // Παράθυρο
+  const pdxDbQ = []; let pdxDbT = 0;
+  // «ποιος» στην καταγραφή της βάσης: λατινικά (κεφαλίδα HTTP = μόνο ASCII· το bot κρατά ≤30 χαρακτήρες)
+  const PDX_LAT = {α:'a',β:'v',γ:'g',δ:'d',ε:'e',ζ:'z',η:'i',θ:'th',ι:'i',κ:'k',λ:'l',μ:'m',ν:'n',ξ:'x',ο:'o',π:'p',ρ:'r',σ:'s',ς:'s',τ:'t',υ:'y',φ:'f',χ:'ch',ψ:'ps',ω:'o'};
+  const pdxDbWho = ()=>String(window.authName||'app').replace(/@paradoxarto\.app$/,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[α-ως]/g, c=>PDX_LAT[c]||'').replace(/[^\x20-\x7e]/g,'').slice(0,30) || 'app';
+  async function pdxDbSend(batch){
+    try{
+      const calls = batch.map(x=>({method:x.method, path:x.path, body:x.body===undefined?null:x.body, who:pdxDbWho()}));
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_pdxdb', name:'🗂 Αρχείο Ασθενών', room:null, kind:'pdxdb', payload:{only:PDX_DB_BOT, calls, quiet:true}, status:'new'}).select('id').single();
+      if(ins.error) throw new Error(ins.error.message);
+      const id = ins.data.id, t0 = Date.now(); let row = null;
+      while(Date.now()-t0 < 75000){
+        await new Promise(r=>setTimeout(r, Date.now()-t0 < 8000 ? 1000 : 1800));
+        const r = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle();
+        if(r.data && /^(done|failed|dismissed|cancelled)$/.test(r.data.status)){ row = r.data; break; }
+      }
+      if(!row){ sb6.from('oncall_jobs').update({status:'cancelled', payload:{only:PDX_DB_BOT, wiped:true}}).eq('id', id).then(()=>{}, ()=>{}); throw new Error('Το Παράθυρο δεν απάντησε σε 75″ (κλειστό ή χωρίς bot;)'); }
+      sb6.from('oncall_jobs').update({status:'dismissed', payload:{only:PDX_DB_BOT, wiped:true}, note:'🗂 (καθαρίστηκε)'}).eq('id', id).then(()=>{}, ()=>{});
+      const out = (row.payload && row.payload.result && row.payload.result.out) || [];
+      if(row.status !== 'done' && !out.length) throw new Error(String(row.note||'αποτυχία').replace(/^🗂\s*/,''));
+      batch.forEach((x,i)=>{ const o = out[i]; if(!o) return x.no(new Error(String(row.note||'χωρίς απάντηση').replace(/^🗂\s*/,'')));
+        if(o.status >= 200 && o.status < 300) x.ok(o.json); else x.no(new Error((o.json && o.json.err) || ('HTTP '+o.status))); });
+    }catch(e){ batch.forEach(x=>x.no(e)); }
+  }
+  // pdxDbCall('GET', '/api/overview') → Promise(json)
+  window.pdxDbCall = function(method, path, body){
+    return new Promise((ok, no)=>{ pdxDbQ.push({method:String(method||'GET').toUpperCase(), path, body, ok, no});
+      clearTimeout(pdxDbT); pdxDbT = setTimeout(()=>{ while(pdxDbQ.length) pdxDbSend(pdxDbQ.splice(0, 20)); }, 250); });
+  };
+  const pdxDbAgo = iso=>{ const s = Math.max(0, Math.round((Date.now()-Date.parse(String(iso).replace(' ','T')+(/Z|[+-]\d\d:?\d\d$/.test(iso)?'':'Z')))/1000)); return s<60 ? s+'″' : s<3600 ? Math.round(s/60)+'′' : s<86400 ? Math.round(s/3600)+' ώρ.' : Math.round(s/86400)+' ημ.'; };
+  const pdxDbDate = d=>{ const m = String(d||'').match(/^(\d{4})-?(\d{2})-?(\d{2})/); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; };
+  const PDX_DB_ACT = {bulk:'Τωρινοί ασθενείς', settings:'Ρυθμίσεις', 'cd-accept':'Αξονική αποθηκεύτηκε', 'cd-reject':'Αξονική απορρίφθηκε', assign:'Αξονική σε ασθενή', mdt:'Συμβούλιο', 'mdt-delete':'Συμβούλιο: αφαίρεση', onc:'Ογκολογικός', patient:'Ασθενής', events:'Ιστορικό', import:'Εισαγωγή'};
+  // ⚙️ Ρυθμίσεις → 🗂 Βάση δεδομένων
+  window.pdxDbPage = function(){
+    const att = ['attending','admin'].indexOf(window.authRole)>=0;
+    let ov = null, err = '', busy = '', msg = '', syncNote = '';
+    const pg = iosPage('Βάση δεδομένων', 'Ρυθμίσεις', ()=>{
+      if(!ov && !err) return '<div style="text-align:center;color:#8E8E93;margin:40px 16px;font-size:15px">⏳ Σύνδεση με το Παράθυρο…<br><small>περίπου 10 δευτερόλεπτα</small></div>';
+      if(!ov) return iosGroup('Κατάσταση', [{ic:'🗂', t:'Server · Παράθυρο', sub:'<span style="color:#FF3B30">● '+esc(err)+'</span>'}]) + iosGroup('', [{t:'<span style="color:var(--acc,#0A84FF)">Ξανά</span>', data:'data-db="reload"'}]);
+      const S = ov.settings || {}, n = x=>Number(x||0).toLocaleString('el-GR');
+      const cdTxt = (ov.cd||[]).length ? (ov.cd||[]).map(d=>d.drive+' '+({empty:'άδειος', busy:'διαβάζει…', done:'τελείωσε', error:'σφάλμα'}[d.state]||d.state||'')).join(' · ') : 'κανένας οδηγός CD';
+      let h = iosGroup('Κατάσταση', [{ic:'🗂', t:'Server · Παράθυρο', sub:'<span style="color:#34C759">● σε λειτουργία</span> · '+(ov.ver?'έκδοση '+esc(ov.ver)+' · ':'')+'πριν από '+pdxDbAgo(ov.at)}, {ic:'💿', t:'Οδηγός CD', sub:esc(cdTxt)}])
+        + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 16px 0">'+[[ov.patients,'ασθενείς'],[ov.onc,'ογκολογικοί'],[ov.studies,'απεικονίσεις']].map(([v,l])=>'<div style="background:var(--card,#fff);border-radius:12px;padding:10px 6px;text-align:center"><b style="display:block;font-size:21px">'+n(v)+'</b><span style="font-size:12px;color:#8E8E93">'+l+'</span></div>').join('')+'</div>';
+      if(msg) h += '<div style="margin:12px 16px 0;font-size:14px;color:'+(/^⚠/.test(msg)?'#FF3B30':'#34C759')+'">'+esc(msg)+'</div>';
+      const btn = (a, id, txt, bg, fg)=>'<button data-db="'+a+'" data-id="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px 6px;font-size:15px;font-weight:600;background:'+bg+';color:'+fg+'"'+(busy?' disabled':'')+'>'+txt+'</button>';
+      const card = (s, extra, btns)=>({t:'<b>'+esc(String(s.dicom_name||'—').replace(/\^/g,' '))+'</b>'+extra, sub:esc([s.modality, s.descr, pdxDbDate(s.date), s.n_images ? s.n_images+' εικόνες' : ''].filter(Boolean).join(' · ')) + '<div style="display:flex;gap:8px;margin-top:9px">'+btns+'</div>'});
+      if((ov.staged||[]).length) h += iosGroup('Περιμένουν έγκριση ('+ov.staged.length+')', ov.staged.map(s=>card(s, s.dicom_pid ? ' <span style="color:#34C759;font-size:13px">ΑΜΚΑ/ID ✓</span>' : '', btn('acc', s.id, '✓ Αποθήκευση', 'var(--acc,#0A84FF)', '#fff') + btn('rej', s.id, '✕ Όχι', '#FBECEB', '#C0362C'))), 'Η αξονική πηγαίνει στον ασθενή με το ίδιο ΑΜΚΑ/όνομα. «Όχι» = σβήνονται οι εικόνες.');
+      if((ov.pending||[]).length) h += iosGroup('Σε ποιον ανήκει; ('+ov.pending.length+')', ov.pending.map(s=>card(s, '', (s.suggest_id ? btn('asg', s.id+':'+s.suggest_id, '→ '+esc(((s.sg_surname||'')+' '+(s.sg_firstname||'')).trim()), 'var(--acc,#0A84FF)', '#fff') : '<span style="flex:1;font-size:13px;color:#8E8E93;align-self:center">χωρίς πρόταση — από την εφαρμογή του υπολογιστή</span>') + btn('rej', s.id, '✕ Όχι', '#FBECEB', '#C0362C'))));
+      if(!(ov.staged||[]).length && !(ov.pending||[]).length) h += iosGroup('Εγκρίσεις', [{t:'Καμία αξονική δεν περιμένει', sub:'όταν μπει CD στο Παράθυρο, εμφανίζεται εδώ'}]);
+      const lock = att ? '' : 'μόνο επιμελητές αλλάζουν ρυθμίσεις';
+      h += iosGroup('Εισαγωγή CD', [
+        {t:'Λειτουργία', raw:'<span style="display:flex;background:rgba(118,118,128,.12);border-radius:9px;padding:2px">'+[['auto','⚡ Αυτόματα'],['manual','✋ Με έγκριση']].map(([v,l])=>'<button data-db="cd" data-v="'+v+'" style="border:0;border-radius:7px;padding:6px 10px;font-size:14px;font-weight:600;background:'+(S.cdMode===v?'var(--card,#fff);box-shadow:0 1px 3px #0002':'transparent')+';color:inherit"'+(att&&!busy?'':' disabled')+'>'+l+'</button>').join('')+'</span>'},
+        {t:'Βγάζει το CD όταν τελειώσει', sw:S.eject!==false, data:att?'data-db="eject"':''}
+      ], lock || (S.cdMode==='auto' ? 'Αυτόματα: κάθε αξονική αποθηκεύεται αμέσως στον ασθενή.' : 'Με έγκριση: καμία αξονική δεν αποθηκεύεται πριν πατηθεί «Αποθήκευση».'));
+      h += iosGroup('Ογκολογικοί', [{t:'Αυτόματος χαρακτηρισμός', sub:'από διαγνώσεις C / D0x / D37–D44, κακοήθη βιοψία ή συμβούλιο', sw:S.oncAuto!==false, data:att?'data-db="onc"':''}], lock || 'Κλειστό: ογκολογικός μόνο όταν τον ορίσει γιατρός.');
+      h += iosGroup('Συγχρονισμός', [{ic:'🔄', t:'Τωρινοί ασθενείς → βάση', sub: syncNote ? esc(syncNote) : 'Παραδόχαρτο + λίστα ΝΠΣ (όνομα, ΑΜΚΑ, ΑΜ, πατρώνυμο, διαγνώσεις)', data:'data-db="sync"', on:'void 0'}], 'Μπαίνουν όσοι έχουν ΑΜΚΑ ή ΑΜ· ξανά = ενημέρωση, όχι διπλοί.');
+      h += iosGroup('Συμβούλιο', [{ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη · tablet', on:'pdxMdtOpen()'}]);
+      if((ov.audit||[]).length) h += iosGroup('Πρόσφατες ενέργειες', ov.audit.slice(0,8).map(a=>({t:esc(PDX_DB_ACT[a.action]||a.action), sub:esc(String(a.who||'').replace(/^bot:/,''))+' · πριν από '+pdxDbAgo(a.ts)})));
+      h += iosGroup('Σύντομα', [{t:'<span style="color:#8E8E93">Αυτόματη ενημέρωση από τα bots</span>', sub:'νοσηλείες, εργαστηριακά, βιοψίες, χειρουργεία'}, {t:'<span style="color:#8E8E93">Νυχτερινό αντίγραφο ασφαλείας</span>'}]);
+      return h + '<div style="height:60px"></div>';
+    });
+    const load = async ()=>{ try{ ov = await pdxDbCall('GET', '/api/overview'); err = ''; }catch(e){ err = e.message; } busy = ''; pg.redraw(); };
+    const set = async (o, label)=>{ if(!att || busy) return; busy = 'set'; Object.assign(ov.settings, o); msg = '⏳ '+label+'…'; pg.redraw();
+      try{ ov.settings = await pdxDbCall('POST', '/api/settings', o); msg = '✓ '+label; }catch(e){ msg = '⚠ '+e.message; await load(); } busy = ''; pg.redraw(); };
+    pg.el.addEventListener('click', async e=>{
+      const b = e.target.closest('[data-db]'); if(!b || b.disabled) return; const a = b.dataset.db, id = b.dataset.id;
+      if(a==='reload'){ err = ''; pg.redraw(); return load(); }
+      if(a==='cd') return set({cdMode:b.dataset.v}, b.dataset.v==='auto' ? 'Εισαγωγή CD: αυτόματα' : 'Εισαγωγή CD: με έγκριση');
+      if(a==='eject') return set({eject: ov.settings.eject===false}, 'Αποβολή CD');
+      if(a==='onc') return set({oncAuto: ov.settings.oncAuto===false}, 'Αυτόματος χαρακτηρισμός');
+      if(a==='sync'){ if(busy) return; busy = 'sync'; syncNote = '⏳ στάλθηκε στο Παράθυρο…'; pg.redraw();
+        try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_pdxsync', name:'🗂 τωρινοί ασθενείς', room:null, kind:'pdxsync', payload:{only:PDX_DB_BOT, quiet:true}, status:'new'}).select('id').single();
+          if(ins.error) throw new Error(ins.error.message); const t0 = Date.now();
+          while(Date.now()-t0 < 90000){ await new Promise(r=>setTimeout(r, 2000)); const r = await sb6.from('oncall_jobs').select('status,note').eq('id', ins.data.id).maybeSingle();
+            if(r.data && /^(done|failed)$/.test(r.data.status)){ syncNote = (r.data.status==='done' ? '✓ ' : '⚠ ') + String(r.data.note||'').replace(/^🗂\s*τωρινοί ασθενείς:?\s*/,'').replace(/\s*·\s*⏱.*$/,''); break; } }
+          if(/^⏳/.test(syncNote)) syncNote = '⚠ το Παράθυρο δεν απάντησε'; }catch(er){ syncNote = '⚠ '+er.message; }
+        busy = ''; pg.redraw(); return load(); }
+      if(a==='acc' || a==='rej' || a==='asg'){
+        if(a==='rej' && !confirm('Να σβηστούν οι εικόνες αυτής της αξονικής από τη βάση;')) return;
+        busy = a; pg.redraw();
+        try{ if(a==='asg'){ const [sid, pid] = id.split(':'); await pdxDbCall('POST', '/api/studies/'+sid+'/assign', {patient_id:+pid}); msg = '✓ η αξονική πέρασε στον ασθενή'; }
+          else { const r = await pdxDbCall('POST', '/api/studies/'+id+'/'+(a==='acc'?'accept':'reject')); msg = a==='rej' ? '✓ σβήστηκε' : (r && r.patient_id ? '✓ αποθηκεύτηκε στον ασθενή' : '⚠ δεν βρέθηκε ασθενής — δες «Σε ποιον ανήκει;»'); }
+        }catch(er){ msg = '⚠ '+er.message; }
+        return load(); }
+    });
+    load();
+    return pg;
+  };
+  // 🎗 Ογκολογικό συμβούλιο (tablet): η σελίδα mdt.html μέσα στο Παραδόχαρτο — σύνδεση = ο γιατρός του Παραδόχαρτου, αιτήματα μέσω pdxDbCall
+  window.pdxMdtOpen = function(){
+    if(document.getElementById('pdxMdtOv')) return;
+    const ov = document.createElement('div'); ov.id = 'pdxMdtOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)';
+    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#0E2A47;color:#fff"><button data-x style="border:0;background:transparent;color:#fff;font-size:17px;font-weight:600;padding:8px 6px">‹ Παραδόχαρτο</button><span style="flex:1"></span><span style="font-size:13px;opacity:.75">'+esc(String(window.authName||'').replace(/@paradoxarto\.app$/,''))+'</span></div><iframe src="mdt.html?via=app" style="flex:1;border:0;width:100%"></iframe>';
+    ov.querySelector('[data-x]').onclick = ()=>ov.remove();
+    document.body.appendChild(ov);
+  };
   function meTab(){
     const bot = window.pdxIsBotUser && window.pdxIsBotUser(), att = ['attending','admin'].indexOf(window.authRole)>=0, adm = window.authRole==='admin';
     const S = window.__botSt || {}, M = window.pdxMine || {rooms:[]}, night = document.documentElement.classList.contains('pdx-night'), push = !!(window.pdxPushOn&&pdxPushOn());
@@ -7988,6 +8089,7 @@ document.head.appendChild(st);
       {ic:'✨', t:'Εμφάνιση λίστας', v:esc(VMS[VM()]), on:"pdxViewPick()"},
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"}
     ]);
+    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Αρχείο Ασθενών', [{ic:'🗂', t:'Βάση δεδομένων', sub:'κατάσταση · εγκρίσεις CD · ρυθμίσεις', on:"pdxDbPage()"}, {ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη', on:"pdxMdtOpen()"}]);
     h += adm ? iosGroup('', [{ic:'🛠', t:'Διαχείριση', sub:'Χρήστες · Bot · Υπολογιστές · Ασφάλεια · JSON', v:'admin', on:"pdxSetMore()"}])
              : iosGroup('', [{ic:'⚙️', t:'Περισσότερα', sub:'Εκκρεμότητες · Ενέργειες bot · Κρυπτογράφηση', on:"pdxSetMore()"}]);
     return h + '<div style="height:120px"></div></div>' + tabs();

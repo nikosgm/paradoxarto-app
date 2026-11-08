@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F3B66">
+<title>Ογκολογικό Συμβούλιο</title>
+<style>
+:root{--bg:#F3F5F8;--card:#fff;--ink:#16202B;--mut:#5E6B7A;--line:#DCE2E9;--pri:#1D5FA8;--ok:#1B8A4C;--warn:#B26A00;--bad:#C0362C;color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,"Segoe UI",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:#0F3B66;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
+@media (max-width:600px){header{flex-wrap:wrap;row-gap:4px}header .st{flex-basis:100%;text-align:right;font-size:12px}}
+header h1{font-size:18px;margin:0;flex:1}
+.dnav{display:flex;align-items:center;gap:6px}
+.dnav button{border:0;background:#ffffff22;color:#fff;border-radius:10px;padding:8px 12px;font-size:16px}
+.dnav b{min-width:150px;text-align:center}
+.st{font-size:12.5px;opacity:.85}
+main{max-width:980px;margin:0 auto;padding:14px 14px 120px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.ph{display:flex;align-items:center;gap:10px}
+.ph b{font-size:18px}.ph .mut{color:var(--mut);font-size:13.5px}
+.ph .num{width:30px;height:30px;border-radius:50%;background:#E8EFF8;color:var(--pri);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:0 0 auto}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.opts button{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:11px 14px;font-size:15.5px}
+.opts button.on{border-color:var(--ok);background:#E7F6EE;color:#0E5C32;font-weight:700}
+textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:10px;min-height:64px;resize:vertical;background:#FBFCFD}
+.sv{font-size:12.5px;color:var(--mut);margin-top:6px;min-height:16px}.sv.ok{color:var(--ok)}.sv.err{color:var(--bad)}
+.add{position:fixed;left:0;right:0;bottom:0;background:#fffffff2;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;justify-content:center}
+.add button{border:0;border-radius:12px;padding:14px 20px;font-size:16.5px;font-weight:700}
+.b-pri{background:var(--pri);color:#fff}.b-sec{background:#E8EDF3;color:var(--ink)}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.ov{position:fixed;inset:0;background:#0b1a2b66;z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:60px 12px}
+.sheet{background:#fff;border-radius:16px;width:min(620px,100%);padding:16px;max-height:80vh;overflow:auto}
+.sheet input{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:12px;font-size:17px}
+.hit{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 4px}
+.hit .mut{color:var(--mut);font-size:13.5px;margin-left:auto}
+.row2{display:flex;gap:8px;margin-top:8px}.row2 input{flex:1}
+.x{border:0;background:none;color:var(--mut);font-size:15px;padding:4px 8px;margin-left:auto}
+@media print{header,.add,.x,.sv{display:none}.card{break-inside:avoid;border-color:#999}body{background:#fff}.opts button:not(.on){display:none}.opts button.on{border:0;background:none;padding:0;color:#000}textarea{border:0;padding:0;min-height:0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎗 Ογκολογικό Συμβούλιο</h1>
+  <div class="dnav"><button id="prev">‹</button><b id="dlbl"></b><button id="next">›</button></div>
+  <div class="st" id="net">…</div>
+</header>
+<main id="list"></main>
+<div class="add"><button class="b-pri" id="addBtn">＋ Ασθενής</button><button class="b-sec" id="printBtn">🖨 Πρακτικό</button></div>
+<script>
+"use strict";
+const OPTS = ["Παρακολούθηση", "Χειρουργείο", "Ακτινοθεραπεία", "Συστηματική θεραπεία", "Επανεκτίμηση", "Άλλο"];
+const $ = (s) => document.querySelector(s);
+const E = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const LS = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+// κλειδί: ?k=… την πρώτη φορά (από τον QR της εγκατάστασης), μετά μένει στο tablet
+{ const k = new URLSearchParams(location.search).get("k"); if (k) { LS.set("pdx_key", k); history.replaceState(null, "", location.pathname); } }
+const KEY = () => LS.get("pdx_key", "");
+const BASE = LS.get("pdx_base", "") || "";
+// μέσα στο Παραδόχαρτο (?via=app): σύνδεση = ο γιατρός του Παραδόχαρτου, αιτήματα μέσω του bot του Παραθύρου (≈10″) — χωρίς κλειδί στο tablet
+const VIA = (() => { try { return window.parent !== window && typeof window.parent.pdxDbCall === "function" ? window.parent.pdxDbCall : null; } catch (e) { return null; } })();
+const SLOW = VIA ? 6 : 1;   // λιγότερα αιτήματα όταν περνούν από το bot
+async function api(p, o = {}) {
+  if (VIA) return VIA(o.method || "GET", p, o.body);
+  const r = await fetch(BASE + p, { method: o.method || "GET", headers: { "content-type": "application/json", "x-pdx-key": KEY(), "x-pdx-user": "tablet" }, body: o.body ? JSON.stringify(o.body) : undefined });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.err || ("HTTP " + r.status)); return j;
+}
+// ημερομηνίες: επόμενη Τρίτη/Πέμπτη (ή σήμερα αν είναι)
+const iso = (d) => d.toISOString().slice(0, 10);
+function meetingDays(from, dir) { const d = new Date(from + "T12:00:00"); do { d.setDate(d.getDate() + dir); } while (![2, 4].includes(d.getDay())); return iso(d); }
+let day = (() => { const t = new Date(); t.setHours(12); return [2, 4].includes(t.getDay()) ? iso(t) : meetingDays(iso(t), 1); })();
+const DN = ["Κυριακή", "Δευτέρα", "Τρίτη", "Τετάρτη", "Πέμπτη", "Παρασκευή", "Σάββατο"];
+const lbl = (d) => { const x = new Date(d + "T12:00:00"); return DN[x.getDay()] + " " + d.slice(8, 10) + "/" + d.slice(5, 7) + "/" + d.slice(0, 4); };
+
+// τοπικά: οι εγγραφές του tablet (μένουν και χωρίς δίκτυο· στέλνονται όταν υπάρξει σύνδεση)
+let rows = [];                       // {ext_id, id?, patient:{…}, patient_id?, decision, text, dirty, err}
+const store = () => LS.set("pdx_mdt_" + day, rows);
+async function load() {
+  $("#dlbl").textContent = lbl(day);
+  rows = LS.get("pdx_mdt_" + day, []);
+  draw();
+  try {
+    const r = await api("/api/mdt?date=" + day);
+    const byExt = new Map(rows.map((x) => [x.ext_id, x]));
+    for (const m of r.rows) {
+      const k = m.ext_id || ("srv-" + m.id); const loc = byExt.get(k);
+      if (loc && loc.dirty) continue;   // αλλαγή του tablet που δεν έχει σταλεί ακόμα: κρατιέται
+      const v = { ext_id: k, id: m.id, patient_id: m.patient_id, patient: { surname: m.surname, firstname: m.firstname, amka: m.amka, am: m.am, birth: m.birth }, decision: m.decision || "", text: m.text || "" };
+      if (loc) Object.assign(loc, v); else rows.push(v);
+    }
+    net(true); store(); draw();
+  } catch (e) { net(false, e.message); }
+  flush();
+}
+function net(on, msg) { $("#net").textContent = on ? "● συνδεδεμένο" : "○ χωρίς σύνδεση" + (msg ? " · " + msg : ""); $("#net").style.color = on ? "#9FE2BC" : "#FFB4A8"; }
+function draw() {
+  const L = $("#list");
+  if (!rows.length) { L.innerHTML = '<div class="empty">Κανένας ασθενής για ' + E(lbl(day)) + '.<br>Πατήστε «＋ Ασθενής».</div>'; return; }
+  L.innerHTML = rows.map((r, i) => {
+    const p = r.patient || {};
+    return '<div class="card" data-i="' + i + '"><div class="ph"><span class="num">' + (i + 1) + '</span><div><b>' + E(p.surname + " " + (p.firstname || "")) + '</b><div class="mut">' + E([p.amka ? "ΑΜΚΑ " + p.amka : "", p.am ? "ΑΜ " + p.am : "", p.birth ? "γ. " + p.birth.split("-").reverse().join("/") : ""].filter(Boolean).join(" · ") || "χωρίς ΑΜΚΑ") + '</div></div>'
+      + '<button class="x" data-del>✕</button></div>'
+      + '<div class="opts">' + OPTS.map((o) => '<button data-o="' + E(o) + '" class="' + (r.decision === o ? "on" : "") + '">' + (r.decision === o ? "✓ " : "") + E(o) + '</button>').join("") + '</div>'
+      + '<textarea data-t placeholder="Απόφαση / σχόλιο (π.χ. re-TURBT σε 4–6 εβδ., μετά BCG)">' + E(r.text) + '</textarea>'
+      + '<div class="sv ' + (r.err ? "err" : r.dirty ? "" : "ok") + '">' + (r.err ? "⚠ δεν στάλθηκε: " + E(r.err) + " — θα ξαναδοκιμάσει" : r.dirty ? "αποθήκευση…" : "✓ στη βάση") + '</div></div>';
+  }).join("");
+}
+let T = 0;
+function changed(i) { rows[i].v = (rows[i].v || 0) + 1; rows[i].dirty = true; rows[i].err = ""; store(); { const sv = document.querySelector('.card[data-i="' + i + '"] .sv'); if (sv) { sv.className = "sv"; sv.textContent = "αποθήκευση…"; } } clearTimeout(T); T = setTimeout(flush, 700 * SLOW); }
+let flushing = false;
+async function flush() {
+  if (flushing) return; flushing = true; try {
+  // όλες μαζί (μέσω bot = ΜΙΑ εντολή)· «αποθηκεύτηκε» μόνο αν δεν άλλαξε ξανά όσο περιμέναμε
+  await Promise.all(rows.filter((x) => x.dirty).map(async (r) => { const v = r.v || 0;
+    try { const out = await api("/api/mdt", { method: "POST", body: { meeting: day, patient_id: r.patient_id, patient: r.patient, decision: r.decision, text: r.text, ext_id: r.ext_id, src: "tablet" } });
+      r.patient_id = out.patient_id; if ((r.v || 0) === v) r.dirty = false; r.err = ""; net(true); }
+    catch (e) { r.err = e.message; net(false); }
+  }));
+  store(); document.querySelectorAll(".card").forEach((c) => { const r = rows[+c.dataset.i]; const s = c.querySelector(".sv"); if (r && s) { s.className = "sv " + (r.err ? "err" : r.dirty ? "" : "ok"); s.textContent = r.err ? "⚠ δεν στάλθηκε: " + r.err + " — θα ξαναδοκιμάσει" : r.dirty ? "αποθήκευση…" : "✓ στη βάση"; } });
+  } finally { flushing = false; }
+}
+setInterval(() => { if (rows.some((r) => r.dirty)) flush(); }, 15000);
+$("#list").addEventListener("click", (e) => {
+  const c = e.target.closest(".card"); if (!c) return; const i = +c.dataset.i;
+  const o = e.target.closest("[data-o]"); if (o) { rows[i].decision = rows[i].decision === o.dataset.o ? "" : o.dataset.o; changed(i); draw(); return; }
+  if (e.target.closest("[data-del]") && confirm("Αφαίρεση του ασθενή από αυτό το συμβούλιο;")) { const r = rows[i]; api("/api/mdt/" + encodeURIComponent(r.ext_id.startsWith("srv-") ? r.ext_id.slice(4) : r.ext_id), { method: "DELETE" }).then(() => net(true)).catch((er) => alert("Δεν αφαιρέθηκε από τη βάση: " + er.message)); rows.splice(i, 1); store(); draw(); }
+});
+$("#list").addEventListener("input", (e) => { const t = e.target.closest("[data-t]"); if (!t) return; const i = +t.closest(".card").dataset.i; rows[i].text = t.value; changed(i); });
+$("#prev").onclick = () => { day = meetingDays(day, -1); load(); };
+$("#next").onclick = () => { day = meetingDays(day, 1); load(); };
+$("#printBtn").onclick = () => window.print();
+// ＋ ασθενής: αναζήτηση στη βάση (επώνυμο / ΑΜΚΑ / ΑΜ) ή νέος
+$("#addBtn").onclick = () => {
+  const ov = document.createElement("div"); ov.className = "ov";
+  ov.innerHTML = '<div class="sheet"><input id="q" placeholder="Επώνυμο, ΑΜΚΑ ή ΑΜ…" autocomplete="off"><div id="hits"></div>'
+    + '<div style="margin-top:14px;font-size:13.5px;color:var(--mut)">Δεν υπάρχει; Νέος ασθενής:</div><div class="row2"><input id="ns" placeholder="Επώνυμο"><input id="nf" placeholder="Όνομα"></div><div class="row2"><input id="na" placeholder="ΑΜΚΑ (προαιρετικά)" inputmode="numeric"><button class="b-pri" id="nadd" style="border:0;border-radius:11px;padding:0 16px;font-weight:700">Προσθήκη</button></div></div>';
+  document.body.appendChild(ov);
+  const add = (p) => { rows.push({ ext_id: "tab-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), patient_id: p.id || null, patient: { surname: p.surname, firstname: p.firstname, amka: p.amka || "", am: p.am || "", birth: p.birth || "" }, decision: "", text: "", dirty: true }); store(); draw(); ov.remove(); flush(); setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50); };
+  let qt = 0, hits = [];
+  ov.querySelector("#q").oninput = (e) => { clearTimeout(qt); qt = setTimeout(async () => { const v = e.target.value.trim(); if (v.length < 2) { ov.querySelector("#hits").innerHTML = ""; return; }
+    try { hits = (await api("/api/patients?q=" + encodeURIComponent(v) + "&lim=12")).rows; } catch (er) { hits = []; ov.querySelector("#hits").innerHTML = '<div class="sv err">' + E(er.message) + '</div>'; return; }
+    ov.querySelector("#hits").innerHTML = hits.map((p, i) => '<button class="hit" data-h="' + i + '"><b>' + E(p.surname + " " + (p.firstname || "")) + '</b><span class="mut">' + E([p.amka, p.birth ? p.birth.split("-").reverse().join("/") : ""].filter(Boolean).join(" · ")) + '</span></button>').join("") || '<div class="sv">Κανένα αποτέλεσμα</div>'; }, 250 * (VIA ? 3 : 1)); };
+  ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); const h = e.target.closest("[data-h]"); if (h) add(hits[+h.dataset.h]);
+    if (e.target.closest("#nadd")) { const s = ov.querySelector("#ns").value.trim().toUpperCase(); if (!s) return ov.querySelector("#ns").focus(); add({ surname: s, firstname: ov.querySelector("#nf").value.trim().toUpperCase(), amka: ov.querySelector("#na").value.replace(/\D/g, "") }); } });
+  setTimeout(() => ov.querySelector("#q").focus(), 50);
+};
+if (!VIA && !KEY()) { const k = prompt("Κλειδί πρόσβασης του Αρχείου Ασθενών (μία φορά σε αυτό το tablet):"); if (k) LS.set("pdx_key", k.trim()); }
+load();
+</script>
+</body>
+</html>
