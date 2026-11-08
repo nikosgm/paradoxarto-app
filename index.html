@@ -13118,7 +13118,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const tt = t.closest('[data-t]'); if(tt){ toggle(tt.dataset.t); return draw(); }
       const w = t.closest('[data-w]'); if(w){ st.when = w.dataset.w; return draw(); }
       const u = t.closest('[data-u]'); if(u){ st.urg = u.dataset.u; return draw(); }
-      const pa = t.closest('[data-pat]'); if(pa){ st.pat = pa.dataset.pat; try{ localStorage.setItem('pdx_print_at', st.pat); }catch(x){} return draw(); }
+      const pa = t.closest('[data-pat]'); if(pa){ const prev = st.pat; st.pat = pa.dataset.pat; try{ localStorage.setItem('pdx_print_at', st.pat); }catch(x){}
+        // ⚡ 8/11: άλλαξε ο υπολογιστής εκτύπωσης → η φόρμα ετοιμάζεται ΕΚΕΙ (αλλιώς η παραγγελία ξεκινούσε από την αρχή: +10–20″)
+        if(st.pat && st.pat!==prev && !MULTI) try{ sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload:{printAt:st.pat}}).then(()=>{}, ()=>{}); try{ sessionStorage.setItem('pdx_oprep_'+nrm(d.name), String(Date.now())); }catch(x){} }catch(x){}
+        return draw(); }
       if(t.closest('[data-go]')){
         if(!st.sel.length && !st.pks.length){ st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
         const pks = st.pks.map(i=>P.packs[i]).filter(Boolean);
