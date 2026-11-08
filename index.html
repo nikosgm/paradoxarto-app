@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08q-v181';
+const APP_VER = '2026-11-08r-v182';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7350,7 +7350,9 @@ document.head.appendChild(st);
   window.pdxCopyPt = async function(k){
     const P = pdxPtId(k); const txt = [P.name, P.fatherGen ? 'ΤΟΥ '+P.fatherGen : '', P.am].filter(Boolean).join(' ');
     const E2 = x=>String(x).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-    const html = [E2(P.name), P.fatherGen ? 'ΤΟΥ '+E2(P.fatherGen) : '', P.am ? '<b>'+E2(P.am)+'</b>' : ''].filter(Boolean).join(' ');
+    // 8/11: για Excel — πλήρες έγγραφο HTML (UTF-8) με ένα κελί· το ΑΜ ως έντονο τμήμα του ίδιου κελιού
+    const cell = [E2(P.name), P.fatherGen ? 'ΤΟΥ '+E2(P.fatherGen) : '', P.am ? '<b style="font-weight:700">'+E2(P.am)+'</b>' : ''].filter(Boolean).join(' ');
+    const html = '<html><head><meta charset="utf-8"></head><body><table><tr><td style="font-weight:400">'+cell+'</td></tr></table></body></html>';
     let ok = false;
     try{ if(window.ClipboardItem && navigator.clipboard.write){ await navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([html], {type:'text/html'}), 'text/plain': new Blob([txt], {type:'text/plain'})})]); ok = true; } }catch(e){}
     if(!ok) return pdxCopy(txt);

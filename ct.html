@@ -1493,6 +1493,9 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
+const CT_VER = '2026-11-08b';
+// 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
+async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
   if(!DESK || !root) return;
   status('Ανοίγω '+root+'…');
@@ -1792,7 +1795,8 @@ if(DESK && DESK.evo){
   const ref = $('srvBtn'); if(ref) ref.parentNode.insertBefore(b, ref); b.onclick=()=>evoPanel();
   document.addEventListener('keydown', e=>{ if((e.key==='e'||e.key==='E'||e.key==='ε'||e.key==='Ε'||e.code==='KeyE') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'') && !document.getElementById('evoOv')) { e.preventDefault(); evoPanel(); } });
   // άνοιγμα από τη γραμμή εντολών / από το κινητό (τηλεχειρισμός): {sur, fn, amka, examid} → αναζήτηση ή κατευθείαν η εξέταση
-  const evoArgsOpen = ev=>{ if(!ev) return;
+  const evoArgsOpen = async ev=>{ if(!ev) return;
+    if(!S.cur && !S.load && Date.now() - (+(sessionStorage.getItem('nct_rl')||0)) > 120000 && await ctStale()){ try{ sessionStorage.setItem('nct_rl', String(Date.now())); sessionStorage.setItem('nct_pend', JSON.stringify(ev)); }catch(e){} location.replace('/ct?app=desktop&t='+Date.now()); return; }
     // 📱 8/11: ζεύξη τηλεχειριστηρίου — το κινητό στέλνει «PDXRC<κλειδί>» στο πεδίο fn (χωρίς στοιχεία ασθενή)
     { const m = /PDXRC([A-Za-z0-9]{24,40})/.exec(String(ev.fn||'')); if(m){ RC.pair(m[1]); ev = Object.assign({}, ev, {fn: String(ev.fn||'').replace(m[0],'').trim()}); } }
     if(!ev.examid && !ev.sur && !ev.amka && !ev.fn) return;
@@ -1802,7 +1806,7 @@ if(DESK && DESK.evo){
     // 8/11: ΚΑΤΕΥΘΕΙΑΝ οι σειρές της εξέτασης (getSeries) — χωρίς αναζήτηση/getExams· μετά φόρτωση όλων (η μεγαλύτερη πρώτη)
     if(ev.examid){ const ex = {examid:String(ev.examid), date:'', mod:'', desc:'', first:'', last:String(ev.sur||''), amka:String(ev.amka||''), pid:'', pid2:'', birth:''};
       evoSeries(ex).then(()=>{ if(EVO.series && EVO.series.length && EVO.sel===ex) evoOpen(EVO.series); else { evoPanel(q); if(EVO.logged===false) status('Evorad: χρειάζεται σύνδεση — πάτα «🔑 Σύνδεση»', true); else status('Evorad: η εξέταση δεν άνοιξε'+(EVO.raw?' ('+EVO.raw.slice(0,80)+')':''), true); } }); } };
-  DESK.info().then(i=>evoArgsOpen(i && i.evo)).catch(()=>{});
+  DESK.info().then(i=>{ let pend = null; try{ pend = JSON.parse(sessionStorage.getItem('nct_pend')||'null'); sessionStorage.removeItem('nct_pend'); }catch(e){} evoArgsOpen(pend || (i && i.evo)); }).catch(()=>{});
   if(DESK.onEvo) DESK.onEvo(evoArgsOpen);
 }
 
