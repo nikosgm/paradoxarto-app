@@ -1,13 +1,13 @@
 {
- "version": "1.0.7",
+ "version": "1.0.8",
  "parts": [
-  "nikosct-1.0.7.zip.00",
-  "nikosct-1.0.7.zip.01",
-  "nikosct-1.0.7.zip.02",
-  "nikosct-1.0.7.zip.03",
-  "nikosct-1.0.7.zip.04",
-  "nikosct-1.0.7.zip.05"
+  "nikosct-1.0.8.zip.00",
+  "nikosct-1.0.8.zip.01",
+  "nikosct-1.0.8.zip.02",
+  "nikosct-1.0.8.zip.03",
+  "nikosct-1.0.8.zip.04",
+  "nikosct-1.0.8.zip.05"
  ],
- "sha256": "5a531f2accdac110fdcbc483109fac44191d12e1dc35a053d60f96eb1697851f",
- "notes": "τηλεχειρισμός χωρίς σύνδεση, παράθυρο μπροστά, διόρθωση «δεν ανοίγει»"
+ "sha256": "fa11a53f99be6789df978e1ecc2e0405638d47807780201ee188e8c2fdd35a26",
+ "notes": "«Αρχείο Ασθενών» ως εφαρμογή (--archive)"
 }
