@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v198';
+const APP_VER = '2026-11-08z-v199';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20274,14 +20274,17 @@ window.CLS_MODE='A';
   async function queuePage(pg, blob, ckP){
     const S0 = st;
     try{
-      await ckP; if(!window.pdxCK || !(await pdxCK.ready())) throw new Error('🔐 '+((window.pdxCK && pdxCK.why()) || 'χωρίς κλειδί κλινικής'));
-      const sealed = await pdxCK.sealBytes(new Uint8Array(await blob.arrayBuffer()));
+      // 8/11: ΚΛΕΙΔΙ ΜΙΑΣ ΧΡΗΣΗΣ ανά σάρωση (AES-128) — δεν χρειάζεται κλειδί κλινικής/έγκριση συσκευής. Το κλειδί ΔΕΝ πάει στη
+      // βάση: ταξιδεύει μόνο μέσα στον σύνδεσμο προς τη σελίδα του Claude (#s<id>k<hex>), που το τυλίγει για τα bots αν χρειαστεί.
+      if(!S0.otk){ const raw = crypto.getRandomValues(new Uint8Array(16)); S0.otk = { raw, key: await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']) }; }
+      const pt = new Uint8Array(await blob.arrayBuffer()), iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, S0.otk.key, pt)), sealed = new Uint8Array(12+ct.length); sealed.set(iv); sealed.set(ct, 12);
       let s = ''; for(let i=0;i<sealed.length;i+=0x8000) s += String.fromCharCode.apply(null, sealed.subarray(i, i+0x8000));
       pg.b64 = btoa(s);
       // σειριακά: μία γραμμή scanq ανά σάρωση, οι σελίδες με τη σειρά
       S0.chain = (S0.chain || Promise.resolve()).then(async ()=>{
         const pages = S0.pages.filter(x=>x.b64).map(x=>x.b64), who = String(window.authName||'').replace(/@paradoxarto\.app$/,'');
-        const payload = { pages, kid: pdxCK.kid(), by: who, at: Date.now(), n: pages.length };
+        const payload = { pages, enc:'otk', by: who, at: Date.now(), n: pages.length };
         if(!S0.qid){ const ins = await sb6.from('oncall_jobs').insert({ name_key:'zzz_scanq', name:'📷 Σάρωση', room:null, kind:'scanq', payload, status:'scanq' }).select('id').single(); if(ins.error) throw new Error(ins.error.message); S0.qid = ins.data.id; }
         else { const up = await sb6.from('oncall_jobs').update({ payload }).eq('id', S0.qid); if(up.error) throw new Error(up.error.message); }
         S0.pages.forEach(x=>{ if(x.b64) x.ok = true; });
@@ -20296,7 +20299,9 @@ window.CLS_MODE='A';
     clearTimeout(S0.goT);
     S0.goT = setTimeout(()=>{ if(st!==S0 || S0.pages.some(x=>!x.ok && !x.err) || S0.gone) return; S0.gone = true;
       const m = S0.ov.querySelector('[data-msg]'); if(m) m.innerHTML = '<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div>';
-      const u = CLAUDE_APP(); if(window.__pdxNoNav){ window.__pdxNav = u; close(); claudeFallback(); return; }
+      const hex = [...S0.otk.raw].map(b=>b.toString(16).padStart(2,'0')).join(''), tag = '#s'+S0.qid+'k'+hex;
+      window.__pdxScanTag = tag;
+      const u = CLAUDE_APP()+tag; if(window.__pdxNoNav){ window.__pdxNav = u; close(); claudeFallback(); return; }
       close(); try{ location.href = u; }catch(e){} setTimeout(()=>{ if(!document.hidden) claudeFallback(); }, 1800); }, S0.multi ? 400 : 250);
   }
   // αν δεν άνοιξε η εφαρμογή Claude (δεν είναι εγκατεστημένη/παλιά έκδοση): μικρό παράθυρο με τις δύο επιλογές
@@ -20304,7 +20309,7 @@ window.CLS_MODE='A';
     let d = document.getElementById('pdxClaudeGo'); if(d) d.remove();
     d = document.createElement('div'); d.id = 'pdxClaudeGo';
     d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:100003;background:#fff;color:#1F2933;border-radius:18px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:-apple-system,system-ui,sans-serif';
-    d.innerHTML = '<div style="font-size:15px;font-weight:700;margin-bottom:10px">✓ Η σάρωση ανέβηκε — άνοιξε το Claude για ανάγνωση</div><a href="'+CLAUDE_APP()+'" style="display:block;text-align:center;text-decoration:none;background:#1D4E80;color:#fff;border-radius:12px;padding:13px;font-weight:800;font-size:16px">Άνοιγμα στην εφαρμογή Claude</a><div style="display:flex;gap:8px;margin-top:8px"><a href="'+CLAUDE_URL()+'" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;border:1.5px solid #CBD5E1;color:#1D4E80;border-radius:12px;padding:10px;font-weight:700;font-size:14px">στον browser</a><button data-x style="flex:1;border:0;background:#F2F2F7;border-radius:12px;padding:10px;font-size:14px">Κλείσιμο</button></div>';
+    d.innerHTML = '<div style="font-size:15px;font-weight:700;margin-bottom:10px">✓ Η σάρωση ανέβηκε — άνοιξε το Claude για ανάγνωση</div><a href="'+CLAUDE_APP()+(window.__pdxScanTag||'')+'" style="display:block;text-align:center;text-decoration:none;background:#1D4E80;color:#fff;border-radius:12px;padding:13px;font-weight:800;font-size:16px">Άνοιγμα στην εφαρμογή Claude</a><div style="display:flex;gap:8px;margin-top:8px"><a href="'+CLAUDE_URL()+(window.__pdxScanTag||'')+'" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;border:1.5px solid #CBD5E1;color:#1D4E80;border-radius:12px;padding:10px;font-weight:700;font-size:14px">στον browser</a><button data-x style="flex:1;border:0;background:#F2F2F7;border-radius:12px;padding:10px;font-size:14px">Κλείσιμο</button></div>';
     d.querySelector('[data-x]').onclick = ()=>d.remove(); d.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>setTimeout(()=>d.remove(), 600)));
     document.body.appendChild(d);
   }
