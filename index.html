@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v202';
+const APP_VER = '2026-11-08z-v203';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8489,12 +8489,50 @@ document.head.appendChild(st);
     gear:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
     me:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'
   };
+  // 🔔 8/11 (εντολή χρήστη): ΕΙΔΟΠΟΙΗΣΕΙΣ — κουδούνι με αριθμό στην πάνω μπάρα. Ανά ασθενή (όχι ανά εξέταση):
+  // νέα ιστορικά προς επιβεβαίωση · πορίσματα για έλεγχο · «χρειάζονται προσοχή» ΤΗΣ ΗΜΕΡΑΣ (φεύγουν την επόμενη μέρα) · εκκρεμότητες.
+  const ntDay = ()=>{ const d = new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); };
+  function ntSeen(all){   // πρώτη φορά που εμφανίστηκε η τωρινή «προσοχή» κάθε ασθενή (ανά συσκευή)
+    let o = {}; try{ o = JSON.parse(localStorage.getItem('pdx_nt_seen')||'{}'); }catch(_){}
+    const day = ntDay(), keep = {}; let ch = false;
+    all.forEach(e=>{ const a = attVis(e); if(!a.length) return; const sig = attSig(e,a); const x = o[e.k];
+      if(x && x.sig===sig) keep[e.k] = x; else { keep[e.k] = {sig, d:day}; ch = true; } });
+    if(ch || Object.keys(o).length!==Object.keys(keep).length){ try{ localStorage.setItem('pdx_nt_seen', JSON.stringify(keep)); }catch(_){} }
+    return keep;
+  }
+  function ntModel(){
+    const all = entries(true), day = ntDay(), seen = ntSeen(all), HP = window.HIST_PEND || {};
+    const hist = Object.keys(HP).map(k=>({k, e:all.find(x=>x.k===k)})).filter(x=>x.e);
+    const att = all.filter(e=>{ const a = attVis(e); return a.length && seen[e.k] && seen[e.k].d===day; });
+    const td = all.filter(e=>todos(e.d).length);
+    const rep = window.__pdxRepN || 0, un = window.HIST_UNASSIGNED || 0;
+    return {all, hist, att, td, rep, un, n: hist.length + att.length + rep + un};
+  }
+  window.pdxNotifCount = function(){ try{ return ntModel().n; }catch(_){ return 0; } };
+  window.pdxNotifOpen = function(){
+    const lbl = e=>e.bed ? e.room+'-'+e.bed : (e.room==='Έξτρα' ? 'Εκτός' : e.room);
+    const row = (e, chips, js, ic)=>({ic:ic||'🛏', t:'<b>'+esc(lbl(e))+'</b> · '+esc(e.d.name||'—'), sub:chips, on:js});
+    const pg = iosPage('Ειδοποιήσεις', 'Κλινική', ()=>{
+      const M = ntModel(); let h = '';
+      const H = M.hist.map(x=>row(x.e, 'νέο ιστορικό — επεξεργασία & αβέβαια', "(function(){ try{ iosPageCloseAll(); }catch(e){} window.__histOpenPending && __histOpenPending('"+esc(x.k)+"', "+(String(x.k).indexOf('extra')===0)+"); })()", '📝'));
+      if(M.un) H.push({ic:'📥', t:'Νέα ιστορικά χωρίς ασθενή · '+M.un, sub:'διάλεξε σε ποιον ασθενή ανήκουν', on:"(function(){ try{ iosPageCloseAll(); openCaseHistNew(); setTimeout(function(){ var b=document.getElementById('chGoInbox'); b&&b.click(); },120); }catch(e){} })()"});
+      h += iosGroup('📝 Νέα ιστορικά προς επιβεβαίωση', H.length ? H : [{t:'<span style="color:#8E8E93">Κανένα</span>'}]);
+      if(M.rep) h += iosGroup('📋 Πορίσματα για έλεγχο', [{ic:'📋', t:M.rep+' πόρισμα(τα) από σάρωση', sub:'ταυτοποίηση ασθενή & αποθήκευση', on:"window.pdxRepQueue && pdxRepQueue()"}]);
+      h += iosGroup('⚠ Χρειάζονται προσοχή · σήμερα', M.att.length ? M.att.map(e=>row(e, attVis(e).map(x=>esc(x.t)).join(' · '), "mobOpen('"+esc(e.k)+"')", '⚠')) : [{t:'<span style="color:#8E8E93">Τίποτα νέο σήμερα</span>'}], 'Ένας ασθενής = μία γραμμή, με όλες τις τιμές του. Ό,τι εμφανίστηκε σήμερα· φεύγει αύριο (ή με «✓ Το είδα»).');
+      h += iosGroup('☑ Εκκρεμότητες', M.td.length ? M.td.map(e=>{ const L = todos(e.d), late = L.filter(l=>{ const w = todoWhen(l); return w && w < new Date(); }).length; return row(e, esc(L.slice(0,3).join(' · '))+(L.length>3?' …(+'+(L.length-3)+')':'')+(late?' · <b style="color:#B42318">'+late+' αργ'+(late===1?'εί':'ούν')+'</b>':''), "mobOpen('"+esc(e.k)+"')", '☑'); }) : [{t:'<span style="color:#8E8E93">Καμία</span>'}]);
+      return h + '<div style="height:60px"></div>';
+    });
+    try{ window.histPendRefresh && histPendRefresh(); }catch(_){}
+    setTimeout(()=>{ try{ pg.redraw(); }catch(_){} }, 1500);
+    return pg;
+  };
+  const ntBell = cls=>{ const n = window.pdxNotifCount(); return '<button '+(cls?'class="'+cls+'" ':'')+'aria-label="Ειδοποιήσεις" title="Ειδοποιήσεις" onclick="pdxNotifOpen()" style="position:relative">🔔'+(n?'<em style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#FF3B30;color:#fff;font:700 11px/18px -apple-system,system-ui;font-style:normal;box-sizing:border-box">'+n+'</em>':'')+'</button>'; };
   function nvHeader(all, es){
     const M = window.pdxMine || {rooms:[]}, mineOn = !!(M.on && M.rooms && M.rooms.length), th = fTher.size;
     const d = new Date(), WD = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
     const nDc = all.filter(e=>/εξιτ/i.test(String(e.d.pod||''))).length, nOr = all.filter(e=>/προς|αύριο|αυριο|χε\b/i.test(String(e.d.pod||''))).length, nA = all.filter(e=>attVis(e).length).length;
     let h = '<div class="nv-hd"><div class="nv-hd1"><button class="nv-sidebtn" aria-label="Εμφάνιση πλαϊνής μπάρας" title="Πλαϊνή μπάρα" onclick="pdxSideToggle()">'+NVI.side+'</button><div style="flex:1;min-width:0"><h1>Κλινική</h1><span>'+es.length+(es.length!==all.length?' από '+all.length:'')+' ασθενείς · '+WD[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+'</span></div>'
-      + '<div class="nv-hb"><button aria-label="Εμφάνιση" onclick="pdxViewPick()">'+NVI.view+'</button><button aria-label="Αναζήτηση" onclick="pdxCmd()">'+NVI.search+'</button><button class="p" aria-label="Νέος ασθενής" onclick="mobNewChoice()">'+NVI.plus+'</button></div></div>';
+      + '<div class="nv-hb">'+ntBell()+'<button aria-label="Εμφάνιση" onclick="pdxViewPick()">'+NVI.view+'</button><button aria-label="Αναζήτηση" onclick="pdxCmd()">'+NVI.search+'</button><button class="p" aria-label="Νέος ασθενής" onclick="mobNewChoice()">'+NVI.plus+'</button></div></div>';
     h += '<div class="nv-sg"><button class="'+(mineOn&&!th?'on':'')+'" onclick="pdxMineToggle(true)">Οι θάλαμοί μου</button><button class="'+(!mineOn&&!th?'on':'')+'" onclick="'+(th?'mobClearF();':'')+'pdxMineToggle(false)">Όλοι</button><button class="'+(th?'on':'')+'" onclick="mobToggleF()">'+(th?esc([...fTher].join(', ')):'Θεράπων')+'</button></div>';
     const ch = [];
     if(nDc) ch.push('<span class="nv-ch">'+nDc+' '+(nDc===1?'εξιτήριο':'εξιτήρια')+'</span>');
@@ -8515,7 +8553,7 @@ document.head.appendChild(st);
   function list(){
     const all = entries(), es = all.filter(qfKeep);
     if(window.pdxIsBotUser&&window.pdxIsBotUser()) botRefresh();   // κατάσταση bot μόνο για τον διαχειριστή
-    let h = '<div class="mtop"><div style="display:flex;align-items:center;gap:10px">'+(NUI()?'<button onclick="pdxCmd()" style="font-size:18px;padding:5px 10px" title="Τι θέλεις να κάνεις;">🔎</button>':'<button onclick="mobDrawerOpen()" style="font-size:20px;padding:5px 11px">☰</button>')+'<div>'+esc(L().title)+'<br><span style="font-weight:400;font-size:12.5px;opacity:.85">'+all.length+' ασθενείς</span></div></div><span class="mtb"><button onclick="mobNewChoice()" title="Νέος ασθενής">➕</button> <button onclick="labInboxOpen()" title="Εισερχόμενα εργαστηριακά">📋</button> <button onclick="labsFullOpen()" title="Εργαστηριακά">🧪</button> <button onclick="mobFull()">'+(deskMode?'⬅ Κλασικός πίνακας':esc(String(L().full||'').replace(/\s*προβολή/i,'')||'Πλήρης'))+'</button></span></div>';
+    let h = '<div class="mtop"><div style="display:flex;align-items:center;gap:10px">'+(NUI()?'<button onclick="pdxCmd()" style="font-size:18px;padding:5px 10px" title="Τι θέλεις να κάνεις;">🔎</button>':'<button onclick="mobDrawerOpen()" style="font-size:20px;padding:5px 11px">☰</button>')+'<div>'+esc(L().title)+'<br><span style="font-weight:400;font-size:12.5px;opacity:.85">'+all.length+' ασθενείς</span></div></div><span class="mtb">'+ntBell()+' <button onclick="mobNewChoice()" title="Νέος ασθενής">➕</button> <button onclick="labInboxOpen()" title="Εισερχόμενα εργαστηριακά">📋</button> <button onclick="labsFullOpen()" title="Εργαστηριακά">🧪</button> <button onclick="mobFull()">'+(deskMode?'⬅ Κλασικός πίνακας':esc(String(L().full||'').replace(/\s*προβολή/i,'')||'Πλήρης'))+'</button></span></div>';
     h += filterBar();
     if(VM()!=='classic'){   // ✨ νέα εμφάνιση (όπως το σχέδιο): χωρίς κόκκινες μπάρες· προσοχή = κουμπί-φίλτρο + πορτοκαλί περίγραμμα
       h = nvHeader(all, es) + (showF ? filterBar() : '') + (qf==='todos' ? todoBoard(es) : nvBody(es));
@@ -12989,7 +13027,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   }
   // 7/11: ταξινόμηση ασθενών ΝΠΣ — Α-Ω / νεότερη εισαγωγή / σειρά ΝΠΣ (θυμάται την επιλογή)
   const NSO = ()=>{ try{ return localStorage.getItem('pdx_nps_sort')||'abc'; }catch(e){ return 'abc'; } };
-  const nAdm = r=>{ const m = String(r.admit||'').match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return new Date(y,+m[2]-1,+m[1]).getTime(); };
+  // 8/11: η λίστα του ΝΠΣ ΔΕΝ έχει ημ. εισαγωγής (admit κενό) → από τα στοιχεία ΝΠΣ του ασθενή (adm.from) ή από το Παραδόχαρτο (admitDate)
+  const nAdmS = r=>{ if(r.admit) return String(r.admit); try{ const x = NB.enr[nbNz(r.name)] || {}; if(x.adm && x.adm.from) return String(x.adm.from); }catch(e){} try{ const t = nbNz(r.name); for(const st of [data, extraPatients]) for(const k in (st||{})){ const d = st[k]; if(d && d.admitDate && (r.am && String(d.am)===String(r.am) || nbNz(d.name)===t)) return String(d.admitDate); } }catch(e){} return ''; };
+  const nAdm = r=>{ const s = nAdmS(r); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]).getTime(); m = s.match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return new Date(y,+m[2]-1,+m[1]).getTime(); };
+  const nAdmTxt = r=>{ const t = nAdm(r); if(!t) return ''; const d = new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
   const npsSort = (A)=>{ const m = NSO(), C = new Intl.Collator('el',{sensitivity:'base'}); if(m==='abc') A.sort((a,b)=>C.compare(String(a.name||''),String(b.name||''))); else if(m==='adm') A.sort((a,b)=>nAdm(b)-nAdm(a) || C.compare(String(a.name||''),String(b.name||''))); return A; };
   const npsSortBar = (cls)=>'<span style="display:inline-flex;gap:4px">'+[['abc','Α-Ω'],['adm','Εισαγωγή'],['nps','ΝΠΣ']].map(([v,t])=>'<button data-nsort="'+v+'" style="border:0;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;background:'+(NSO()===v?'#1D4E80;color:#fff':'var(--card,#fff);color:#475569;border:1px solid #E5E9EF')+'">'+t+'</button>').join('')+'</span>';
   document.addEventListener('click', e=>{ const b = e.target.closest && e.target.closest('[data-nsort]'); if(!b) return; e.stopPropagation(); try{ localStorage.setItem('pdx_nps_sort', b.dataset.nsort); }catch(x){} try{ nbPaint(); }catch(x){} try{ window.__npsPg && window.__npsPg.redraw(); }catch(x){} }, true);
@@ -13101,7 +13142,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '<div style="display:flex;gap:6px;margin:4px 16px 8px;flex-wrap:wrap">'+[['all','Όλοι '+rows.length],['miss','🟠 Λείπουν '+nO],['ok','🟢 Και στα δύο '+nG]].concat(onlyMine.length?[['gone','⚪ Μόνο Παραδόχαρτο '+onlyMine.length]]:[]).map(([v,t])=>'<button data-f="'+v+'" style="border:0;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;background:'+(flt===v?'#1D4E80;color:#fff':'#fff;color:#334155')+'">'+t+'</button>').join('')+'</div>';
       const card = (dot, title, sub, act)=>'<button '+act+' style="display:flex;gap:10px;align-items:center;width:calc(100% - 32px);margin:0 16px 6px;text-align:left;border:1px solid #E5E9EF;border-radius:12px;background:#fff;padding:10px 12px;color:#1F2933"><span style="font-size:13px">'+dot+'</span><span style="flex:1;min-width:0"><b style="display:block;font-size:15px">'+title+'</b><small style="color:#64748B;font-size:12.5px">'+sub+'</small></span><span style="color:#94A3B8">›</span></button>';
       rows.forEach(({r,m}, i)=>{ if(flt==='miss'&&m || flt==='ok'&&!m || flt==='gone') return;
-        const sub = [r.am?'ΑΜ '+r.am:'', r.admit?'εισ. '+r.admit:'', r.doc||''].filter(Boolean).map(E3).join(' · ');
+        const sub = [r.am?'ΑΜ '+r.am:'', nAdmTxt(r)?'εισ. '+nAdmTxt(r):'', r.doc||''].filter(Boolean).map(E3).join(' · ');
         h += card(m?'🟢':'🟠', E3(r.name), sub + (m ? ' · στο Παραδόχαρτο: '+E3(String(m.k).startsWith('extra-')?'εκτός θαλάμου':m.k) : ' · <b style="color:#B45309">λείπει από το Παραδόχαρτο</b>'), m ? 'data-open="'+E3(m.k)+'"' : 'data-add="'+i+'"'); });
       if(flt==='all'||flt==='gone') onlyMine.forEach(x=>{ h += card('⚪', E3(x.d.name), E3(x.k)+' · δεν φαίνεται στον ΝΠΣ (έξοδος ή άλλη κλινική;)', 'data-open="'+E3(x.k)+'"'); });
       return h + '<div class="ios-f" style="margin:10px 16px 60px">Πάτα έναν ασθενή για την καρτέλα με όλες τις ενέργειες · στους 🟠 υπάρχει και «＋ Προσθήκη σε κρεβάτι».</div>';
