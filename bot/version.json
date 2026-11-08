@@ -1,1 +1,1 @@
-{"version": "0.21.139", "zip": "ef-bot-0.21.139.zip", "sha256": "8bdcf65b89838e531b146e903caa75f619f8ffbe3c7ea2a1d589a7eac14e8ae3", "notes": "npsepmap φόρμα Προσθήκη (μόνο ανάγνωση) · epcat διόρθωση · dbinstall: κλείνει φύλακα CD, επαναφορά παλιού server αν αποτύχει"}
+{"version": "0.21.140", "zip": "ef-bot-0.21.140.zip", "sha256": "cb0a4990076fca07a4df7f588daae91a1dcd3dda2817cc6a4ea7aa84d3790446", "notes": "epcat probe: μήνυμα σφάλματος API"}
