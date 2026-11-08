@@ -1,1 +1,1 @@
-{"version": "0.21.137", "zip": "ef-bot-0.21.137.zip", "sha256": "a69106d6d210798e0097678484cd66bc68412e95147893a17e474b01baaec103", "notes": "npspat: άνοιγμα όλων των επεισοδίων (κλινική μας/άλλες) · npsepmap · epsearch αυτόματη καρτέλα+προεπιλογές+εμβόλια · epcat · βιοψίες 01:00 · ώρες ανοιχτού υπολογιστή · dbinstall ρόλος"}
+{"version": "0.21.138", "zip": "ef-bot-0.21.138.zip", "sha256": "0fbfd875206e1f7a5c06830952d89cfcc00edf60ef2532f8e2fe5860b524dbcb", "notes": "npsprogmap: πρώτα τύπος (SOAP/ISBAR) μετά «Νέα καταχώρηση»"}
