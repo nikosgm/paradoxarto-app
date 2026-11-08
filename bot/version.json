@@ -1,1 +1,1 @@
-{"version": "0.21.113", "zip": "ef-bot-0.21.113.zip", "sha256": "ca2e28f57b32bec61ad099b24fdda7d7eaf370939dbfc3eb19f4ab8cb9a66db9", "notes": "e-prescription: συνεδρία έληξε → καθαρισμός σελίδας + ανανέωση"}
+{"version": "0.21.114", "zip": "ef-bot-0.21.114.zip", "sha256": "ce3bfc11e7e7fd69b841052579ae2da90268b7462994117aa6904124c9ef6926", "notes": "αναζήτηση φαρμάκου: σε άλλο bot αν δεν έχει e-prescription"}

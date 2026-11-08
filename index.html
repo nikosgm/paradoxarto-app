@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08v-v186';
+const APP_VER = '2026-11-08x-v188';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -13230,8 +13230,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
     let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t=>{ if(rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
     const st = {sel:[], pks:[], tab: 'fav', q:'', when:'Τώρα', urg:'Ρουτίνας', note:'', msg:'', pat: pdxPrintAt()};
-    const addPre = x=>{ if(!x) return; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0) st.sel.push(t); });
-      (x.profs||[]).forEach(n=>{ let i = P.packs.findIndex(q=>q && q.medilabi===n); if(i<0){ P.packs.push({name:n, medilabi:n, tests:[]}); i = P.packs.length-1; } if(st.pks.indexOf(i)<0) st.pks.push(i); }); };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
+    // 8/11: επιστρέφει ΤΙ πρόσθεσε (για να αναιρείται με 2ο πάτημα στο πακέτο — μόνο αυτά, όχι ό,τι είχε διαλέξει ο γιατρός)
+    const addPre = x=>{ const add = {t:[], p:[]}; if(!x) return add; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0){ st.sel.push(t); add.t.push(t); } });
+      (x.profs||[]).forEach(n=>{ let i = P.packs.findIndex(q=>q && q.medilabi===n); if(i<0){ P.packs.push({name:n, medilabi:n, tests:[]}); i = P.packs.length-1; } if(st.pks.indexOf(i)<0){ st.pks.push(i); add.p.push(i); } }); return add; };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
     addPre(pre);
     const BN = Object.assign({}, await pdxBotNames());
     try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]){ (window.__ordOff = window.__ordOff || {})[id] = BN[id]; delete BN[id]; } }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
@@ -13303,7 +13304,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const t = e.target;
       if(t===ov || t.closest('[data-x]')){ ov.remove(); return; }
       const fv = t.closest('[data-fav]'); if(fv){ e.stopPropagation(); return favToggle(fv.dataset.fav); }
-      const opk = t.closest('[data-opk]'); if(opk){ const p = OPK[+opk.dataset.opk]; if(p){ st.dupOk = false; st.msg = ''; addPre(p.r); st.opk = st.opk || {}; st.opk[+opk.dataset.opk] = 1; if(window.pdxOrderPackUsed) pdxOrderPackUsed(p.id); draw(); } return; }
+      const opk = t.closest('[data-opk]'); if(opk){ const n = +opk.dataset.opk, p = OPK[n]; if(p){ st.dupOk = false; st.msg = ''; st.opk = st.opk || {};
+        if(st.opk[n]){ const a = st.opk[n]; (a.t||[]).forEach(x=>{ const j = st.sel.indexOf(x); if(j>=0) st.sel.splice(j,1); }); (a.p||[]).forEach(x=>{ const j = st.pks.indexOf(x); if(j>=0) st.pks.splice(j,1); }); delete st.opk[n]; return draw(); }   // 8/11: 2ο πάτημα = αφαίρεση
+        st.opk[n] = addPre(p.r); if(window.pdxOrderPackUsed) pdxOrderPackUsed(p.id); draw(); } return; }
+      const pk = t.closest('[data-pk]'); if(pk){ const i = +pk.dataset.pk, j = st.pks.indexOf(i); if(j>=0) st.pks.splice(j,1); st.dupOk = false; st.msg = ''; return draw(); }   // 8/11: «📦 … ✕» αφαιρεί το προφίλ
       if(t.closest('[data-pdxpk]')){ pdxPacksApply({fam:'order', k, onApply:r=>{ st.dupOk = false; st.msg = ''; addPre(r); draw(); }}); return; }
       const tb = t.closest('[data-tab]'); if(tb){ st.tab = tb.dataset.tab; return draw(); }
       const tt = t.closest('[data-t]'); if(tt){ toggle(tt.dataset.t); return draw(); }
@@ -13450,6 +13454,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 🔌 ζωντανή αναζήτηση στον κατάλογο του e-prescription μέσω bot (εντολή «epsearch»: ΜΟΝΟ ανάγνωση, γρήγορη λωρίδα)
   // what: 'exam' | 'med'. Επιστρέφει {items} | {err} | {stale}. Κρατά τα αποτελέσματα 10′ στη μνήμη (όχι στοιχεία ασθενή).
   const EPQ = {};
+  window.pdxEpMedNames = ()=>{ try{ return JSON.parse(localStorage.getItem('pdx_epmed_names')||'[]'); }catch(e){ return []; } };   // 8/11: μόνο ονόματα φαρμάκων (καμία πληροφορία ασθενή)
   window.pdxEpSearch = async function(what, q, opt){
     opt = opt || {}; q = String(q||'').replace(/\s+/g,' ').trim().slice(0,60); if(q.length<3) return {items:[]};
     const key = what+'|'+rfN(q), c = EPQ[key]; if(c && Date.now()-c.at < 600000) return c.r;
@@ -13462,7 +13467,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       await new Promise(r=>setTimeout(r, 450));
       if(opt.stale && opt.stale()){ sb6.from('oncall_jobs').update({status:'cancelled', note:'νέα αναζήτηση'}).eq('id', id).in('status',['new','seen']).then(()=>{}, ()=>{}); return {stale:true}; }
       const x = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = x && x.data;
-      if(j && j.status==='done'){ const res = (j.payload||{}).result||{}; const r = {items:Array.isArray(res.items)?res.items:[], n:res.n||0}; EPQ[key] = {at:Date.now(), r}; return r; }
+      if(j && j.status==='done'){ const res = (j.payload||{}).result||{}; const r = {items:Array.isArray(res.items)?res.items:[], n:res.n||0}; EPQ[key] = {at:Date.now(), r};
+        if(what==='med') try{ const L = JSON.parse(localStorage.getItem('pdx_epmed_names')||'[]'); r.items.forEach(x=>{ const n = String(x.name||'').trim(); if(n && L.indexOf(n)<0) L.unshift(n); }); localStorage.setItem('pdx_epmed_names', JSON.stringify(L.slice(0,600))); }catch(x){}
+        return r; }
       if(j && /^(failed|cancelled|dismissed)$/.test(j.status)) return {err:String(j.note||'απέτυχε').replace(/^🔌\s*/,'').slice(0,160)};
     }
     sb6.from('oncall_jobs').update({status:'cancelled', note:'έληξε ο χρόνος'}).eq('id', id).in('status',['new','seen']).then(()=>{}, ()=>{});
@@ -13721,16 +13728,20 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(r && !r.bad){ const keepPB = S.f.name && RXN(S.f.name)===RXN(r.name);
         Object.assign(S.f, {name:r.name, strength:r.strength||S.f.strength, dose:String(r.dose||'1'), freq:r.freq||S.f.freq, days:r.days||S.f.days, unit:r.unit||'δισκίο', known:!!r.known}); if(!keepPB){ S.f.perBox = 0; S.f.bxMan = false; S.f.boxes = 0; } syncForm(); }
       // λίστα: τοπικός κατάλογος αμέσως + e-prescription (συσκευασίες) σε 1-3″
-      const w0 = RXN(v.split(/\s+/)[0]||''), my = ++mSeq;
+      // 8/11: ελληνικά → λατινικά («αλγ» → «alg») + μνήμη ονομάτων από προηγούμενες αναζητήσεις e-prescription (αμέσως, από 2 γράμματα)
+      const GL = {α:'a',β:'v',γ:'g',δ:'d',ε:'e',ζ:'z',η:'i',θ:'th',ι:'i',κ:'k',λ:'l',μ:'m',ν:'n',ξ:'x',ο:'o',π:'p',ρ:'r',σ:'s',τ:'t',υ:'y',φ:'f',χ:'ch',ψ:'ps',ω:'o'};
+      const w00 = RXN(v.split(/\s+/)[0]||''), w0 = /[α-ω]/.test(w00) ? w00.replace(/ου/g,'ou').replace(/[α-ω]/g, c=>GL[c]||'') : w00, my = ++mSeq;
       const loc = (window.pdxRxDrugs ? pdxRxDrugs() : []).filter(d=>w0.length>=2 && RXN(d.name).indexOf(w0)===0).slice(0,4);
+      const mem = w0.length>=2 ? (window.pdxEpMedNames ? pdxEpMedNames() : []).filter(n=>RXN(n).indexOf(w0)===0 && !loc.some(d=>RXN(n).indexOf(RXN(d.name))===0)).slice(0,6) : [];
       const item = (attr, a, b)=>'<button type="button" class="exl-it" '+attr+'><span>'+a+'</span><small>'+b+'</small></button>';
       const paint = st=>{ let h = loc.length ? '<div class="exl-h">Κατάλογος κλινικής</div>'+loc.map(d=>item('data-dloc="'+E(d.name)+'"', '<b>'+E(d.name)+'</b> '+E(d.s), '1×'+d.f+' · '+d.d+' ημ.')).join('') : '';
+        if(mem.length && !(st && (st.items||[]).length)) h += '<div class="exl-h">Από προηγούμενες αναζητήσεις</div>'+mem.map(n=>item('data-dmem="'+E(n)+'"', E(n), '')).join('');
         if(w0.length>=3){ h += '<div class="exl-h">e-prescription · συσκευασίες</div>';
           if(!st) h += '<div class="exl-st">⏳ Αναζήτηση…</div>'; else if(st.err) h += '<div class="exl-st bad">⚠ '+E(st.err)+' — συνέχισε με τις επιλογές· τα κουτιά τα βρίσκει το bot</div>';
           else { const L = (st.items||[]).slice(0,8); h += L.length ? L.map((x,k)=>{ const n = window.pdxRxPackN(x.pack||x.name); return item('data-dep="'+k+'"', E(x.name), n ? n+' τεμ./κουτί' : (x.pack?E(x.pack):'')); }).join('') : '<div class="exl-st">Δεν βρέθηκε στο e-prescription</div>'; } }
         res.innerHTML = h; res._ep = st && st.items || []; };
       paint(null); clearTimeout(mTm); if(w0.length<3) return;
-      mTm = setTimeout(async ()=>{ const inf = window.pdxAmkaInfo && S.amka ? pdxAmkaInfo(S.amka) : null; const st = await window.pdxEpSearch('med', v.split(/\s+/)[0], {stale:()=>my!==mSeq, age: inf && inf.age}); if(my!==mSeq || st.stale) return; paint(st); }, 650);
+      mTm = setTimeout(async ()=>{ const inf = window.pdxAmkaInfo && S.amka ? pdxAmkaInfo(S.amka) : null; const st = await window.pdxEpSearch('med', w0, {stale:()=>my!==mSeq, age: inf && inf.age}); if(my!==mSeq || st.stale) return; paint(st); }, 350);
     }
     function addFromInput(){
       const f = S.f, pv = root.querySelector('[data-medpv]'), q = root.querySelector('[data-medq]');
@@ -13833,6 +13844,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const csb = t.closest('[data-csk]'); if(csb){ const sl = root.querySelector('[data-mf="'+csb.dataset.csk+'"]'); if(sl){ sl.value = csb.dataset.csv; sl.dispatchEvent(new Event('change', {bubbles:true})); } return; }
       const csp = t.closest('[data-cspart]'); if(csp){ S.f.part = csp.dataset.cspart; syncForm(); return; }
       const ptb = t.closest('[data-pt]'); if(ptb){ const m = S.meds[+ptb.dataset.pt]; if(m){ m.part = m.part==='0%' ? '25%' : '0%'; drawMeds(); } return; }
+      const dm = t.closest('[data-dmem]'); if(dm){ const q = root.querySelector('[data-medq]'); if(q){ q.value = String(dm.dataset.dmem).split(/\s+/)[0]; q.focus(); medPreview(); } return; }   // 8/11: από τη μνήμη → συσκευασίες e-prescription
       const dl0 = t.closest('[data-dloc]'); if(dl0){ const d = (window.pdxRxDrugs ? pdxRxDrugs() : []).find(x=>x.name===dl0.dataset.dloc); if(d){ Object.assign(S.f, {name:d.name, strength:d.s, freq:d.f, days:d.d, unit:d.u, known:true}); syncForm(); } return; }   // (λίστα μένει: διαλέγεις και συσκευασία)
       const dep = t.closest('[data-dep]'); if(dep){ const res = root.querySelector('[data-mres]'), x = (res._ep||[])[+dep.dataset.dep]; if(!x) return;
         const br = brandOf(x.name), st = String(x.str||'').trim() || ((String(x.name).match(/(\d+(?:[.,]\d+)?)\s*(MG|MCG|G|ML)\b/i)||[]).slice(1,3).join('').toLowerCase().replace(',','.'));
