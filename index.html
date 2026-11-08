@@ -413,9 +413,19 @@ body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:max(calc(env(sa
       <p style="font-size:15px">Ο λογαριασμός σου περιμένει έγκριση από διαχειριστή.</p>
       <button type="button" onclick="doLogout()" style="padding:10px 18px;border:1.5px solid var(--primary);border-radius:10px;background:#fff;color:var(--primary);cursor:pointer">Αποσύνδεση</button>
     </div>
+    <div id="pdxBoot" style="display:none;font-size:15px;color:var(--muted)"><div style="width:26px;height:26px;margin:4px auto 10px;border:3px solid #D6E0EA;border-top-color:var(--primary);border-radius:50%;animation:pdxBootR .8s linear infinite"></div>Άνοιγμα…</div>
     <p style="font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.05em; margin-top:24px;">ΑΚΡΩΣ ΕΜΠΙΣΤΕΥΤΙΚΟ</p>
   </div>
 </div>
+<style>@keyframes pdxBootR{to{transform:rotate(360deg)}}</style>
+<script>
+// 8/11: με αποθηκευμένη σύνδεση ΔΕΝ δείχνουμε τη φόρμα εισόδου όσο γίνεται ο έλεγχος (ήταν «λογκ-ιν για λίγα δευτερόλεπτα»)·
+// φαίνεται μόνο «Άνοιγμα…». Αν ο έλεγχος αποτύχει, η showLogin(true) ξαναδείχνει τη φόρμα.
+(function(){ try{
+  let has = false; for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(/^sb-.*-auth-token$/.test(k||'')){ const v = localStorage.getItem(k)||''; if(/refresh_token/.test(v)) has = true; } }
+  if(has){ document.getElementById('loginForm').style.display = 'none'; document.getElementById('pdxBoot').style.display = ''; window.__pdxBoot = true; }
+}catch(e){} })();
+</script>
 
 <div id="lockOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:100; display:none; align-items:center; justify-content:center; padding:20px;">
   <div style="max-width:320px; width:100%; text-align:center;">
@@ -1205,6 +1215,7 @@ function showLogin(show, pending){
   if(show){ o.style.zIndex = '2147483000'; try{ document.body.appendChild(o); }catch(e){} }
   document.getElementById('loginForm').style.display = pending ? 'none' : '';
   document.getElementById('loginPending').style.display = pending ? '' : 'none';
+  const bt = document.getElementById('pdxBoot'); if(bt) bt.style.display = 'none'; window.__pdxBoot = false;
 }
 // χωρίς δίκτυο (ασανσέρ/υπόγειο) ΔΕΝ πετάμε τον γιατρό στην είσοδο: ξαναδοκιμάζουμε μόνοι μας
 const pdxNetErr = (e)=> !navigator.onLine || /fetch|network|load failed|timeout|ECONN|Failed to/i.test(String((e && (e.message||e.name)) || ''));
@@ -2224,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v192';
+const APP_VER = '2026-11-08z-v193';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20145,7 +20156,7 @@ window.CLS_MODE='A';
     const f = st.ov.querySelector('[data-g]'); f.style.left = g.x+'px'; f.style.top = g.y+'px'; f.style.width = g.w+'px'; f.style.height = g.h+'px'; st.g = g;
     st.ov.querySelector('[data-rot]').textContent = st.land ? '⇆ Οριζόντιο' : '⇅ Κάθετο';
     st.ov.querySelectorAll('[data-mode]').forEach(b=>{ const on = b.dataset.mode===st.mode; b.style.background = on ? '#fff' : '#ffffff22'; b.style.color = on ? '#000' : '#fff'; });
-    st.ov.querySelector('[data-msg]').textContent = st.mode==='prog' ? 'Βάλε το υπογεγραμμένο πρόγραμμα μέσα στο πράσινο πλαίσιο' : 'Ιστορικό, πόρισμα ή πρόγραμμα — το Claude βρίσκει τι είναι';
+    if(!st.native) st.ov.querySelector('[data-msg]').textContent = st.mode==='prog' ? 'Βάλε το υπογεγραμμένο πρόγραμμα μέσα στο πράσινο πλαίσιο' : 'Ιστορικό, πόρισμα ή πρόγραμμα — το Claude βρίσκει τι είναι';
     pagesDraw();
   }
   function pagesDraw(){
@@ -20170,7 +20181,7 @@ window.CLS_MODE='A';
       + '<div data-msg style="position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14.5px;text-shadow:0 1px 3px #000"></div>'
       + '<img data-prev style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111">'
       + '<div data-cd style="display:none;position:absolute;left:0;right:0;bottom:0;padding:18px 16px 22px;background:linear-gradient(transparent,#000c 30%);text-align:center"></div></div>'
-      + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_URL()+'" target="_blank" rel="noopener" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
+      + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><label data-gal aria-label="Από τη συλλογή ή αρχείο" style="flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer">🖼<input data-galf type="file" accept="image/*" multiple style="display:none"></label><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_URL()+'" target="_blank" rel="noopener" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
     document.body.appendChild(ov);
     const m0 = mode==='prog' || mode==='auto' ? mode : modePref();
     st = { ov, mode: m0, land: landPref(m0), pages: [] };
@@ -20184,6 +20195,41 @@ window.CLS_MODE='A';
     layout();
     // κλειδί κλινικής από πριν (για να μην περιμένει μετά τη λήψη)
     const ckP = window.pdxCK ? window.pdxCK.ready().catch(()=>null) : Promise.resolve(null);
+    // επεξεργασία μίας λήψης (από το ζωντανό βίντεο ή από την κάμερα του iPhone)
+    async function take(src, sw, sh, crop){
+      const auto = st.mode==='auto';
+      const c = crop || {x:0, y:0, w:sw, h:sh};
+      const sc = Math.min(1, (auto ? 1800 : 2400)/Math.max(c.w, c.h)), cw = Math.round(c.w*sc), ch = Math.round(c.h*sc);
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const x = cv.getContext('2d', {willReadFrequently:true});
+      x.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, cw, ch);
+      if(!auto) x.putImageData(enhance(x.getImageData(0,0,cw,ch)), 0, 0);   // στα χειρόγραφα κρατάμε το χρώμα (μπλε στυλό, μολύβι)
+      const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', 0.8));
+      if(auto){ st.busy = false; const pg = { url: URL.createObjectURL(blob) }; st.pages.push(pg); pagesDraw(); flash(); queuePage(pg, blob, ckP); return; }
+      const jpg = new Uint8Array(await blob.arrayBuffer()), pdf = jpegPdf(jpg, cw, ch, cw > ch);
+      $('[data-prev]').src = URL.createObjectURL(blob); $('[data-prev]').style.display = ''; $('[data-g]').style.display = 'none'; $('[data-bar]').style.display = 'none';
+      countdown(pdf, ckP);
+    }
+    // 🖼 Από τη συλλογή / Αρχεία / άλλη εφαρμογή (πολλές μαζί στο «Αυτόματα»)
+    $('[data-galf]').onchange = async (e)=>{ const fs = [...(e.target.files||[])]; e.target.value = ''; if(!fs.length || !st) return;
+      const list = st.mode==='auto' ? fs.slice(0, Math.max(0, 4 - st.pages.length)) : fs.slice(0, 1);
+      if(!list.length) return toast('Έως 4 σελίδες — πάτα «Στο Claude»');
+      for(const f of list){ if(!st) return; st.busy = true; try{ const bmp = await createImageBitmap(f); await take(bmp, bmp.width, bmp.height, null); }catch(er){ st.busy = false; toast('⚠ '+(f.name||'εικόνα')+': δεν διαβάστηκε ('+(er && er.message || er)+')'); } } };
+    // 📱 iPhone/iPad: η εφαρμογή στην αρχική οθόνη ΔΕΝ θυμάται την άδεια κάμερας (ρωτά κάθε φορά) → η κάμερα του iPhone
+    // (χωρίς ερώτηση άδειας): πατάς τον κύκλο → τραβάς → «Χρήση φωτογραφίας»
+    const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if(IOS || window.__pdxScanNative){
+      st.native = true;
+      v.style.display = 'none'; $('[data-g]').style.display = 'none'; $('[data-rot]').style.visibility = 'hidden';
+      const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.setAttribute('capture', 'environment'); fi.style.display = 'none'; fi.setAttribute('data-file', ''); ov.appendChild(fi);
+      $('[data-msg]').style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;font-size:16px;padding:20px';
+      const hint = ()=>{ $('[data-msg]').innerHTML = '<div style="font-size:64px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> → τράβηξε → «Χρήση φωτογραφίας»</div><div style="opacity:.75;font-size:14px">'+(st.mode==='prog'?'Πρόγραμμα: όλο το Α4 στη φωτογραφία':'Ιστορικό/πόρισμα: μία φωτογραφία ανά σελίδα (έως 4)')+'</div>'; };
+      hint(); ov.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click', ()=>setTimeout(hint, 0)));
+      $('[data-shot]').onclick = ()=>{ if(!st || st.busy) return; if(st.mode==='auto' && st.pages.length >= 4) return toast('Έως 4 σελίδες — πάτα «Στο Claude»'); fi.value = ''; fi.click(); };
+      fi.onchange = async ()=>{ const f = fi.files && fi.files[0]; if(!f || !st) return; st.busy = true;
+        try{ const bmp = await createImageBitmap(f); await take(bmp, bmp.width, bmp.height, null); }
+        catch(e){ st.busy = false; toast('⚠ Η φωτογραφία δεν διαβάστηκε: '+(e.message||e)); } };
+      return;
+    }
     try{
       st.stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ideal:'environment'}, width:{ideal:3840}, height:{ideal:2160} } });
       v.srcObject = st.stream; await v.play().catch(()=>{});
@@ -20191,19 +20237,10 @@ window.CLS_MODE='A';
     }catch(e){ $('[data-msg]').innerHTML = '⚠ Η κάμερα δεν άνοιξε: '+esc(e.message||e)+'<br>Δώσε άδεια κάμερας στο Παραδόχαρτο.'; return; }
     $('[data-shot]').onclick = async ()=>{
       if(!st || st.busy || !v.videoWidth) return;
-      const auto = st.mode==='auto';
-      if(auto && st.pages.length >= 4) return toast('Έως 4 σελίδες — πάτα «Στο Claude»');
+      if(st.mode==='auto' && st.pages.length >= 4) return toast('Έως 4 σελίδες — πάτα «Στο Claude»');
       st.busy = true;
       const box = $('[data-cam]').getBoundingClientRect(), c = cropOf(v.videoWidth, v.videoHeight, box.width, box.height, st.g);
-      const sc = Math.min(1, (auto ? 1800 : 2400)/Math.max(c.w, c.h)), cw = Math.round(c.w*sc), ch = Math.round(c.h*sc);
-      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const x = cv.getContext('2d', {willReadFrequently:true});
-      x.drawImage(v, c.x, c.y, c.w, c.h, 0, 0, cw, ch);
-      if(!auto) x.putImageData(enhance(x.getImageData(0,0,cw,ch)), 0, 0);   // στα χειρόγραφα κρατάμε το χρώμα (μπλε στυλό, μολύβι)
-      const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', auto ? 0.8 : 0.8));
-      if(auto){ st.busy = false; const pg = { url: URL.createObjectURL(blob) }; st.pages.push(pg); pagesDraw(); flash(); queuePage(pg, blob, ckP); return; }
-      const jpg = new Uint8Array(await blob.arrayBuffer()), pdf = jpegPdf(jpg, cw, ch, st.land);
-      $('[data-prev]').src = URL.createObjectURL(blob); $('[data-prev]').style.display = ''; $('[data-g]').style.display = 'none'; $('[data-bar]').style.display = 'none';
-      countdown(pdf, ckP);
+      await take(v, v.videoWidth, v.videoHeight, c);
     };
   };
   function flash(){ if(!st) return; const f = st.ov.querySelector('[data-g]'); f.style.background = '#ffffff55'; setTimeout(()=>{ f.style.background = ''; }, 140); }

@@ -1,1 +1,1 @@
-{"version": "0.21.119", "zip": "ef-bot-0.21.119.zip", "sha256": "360be33f31144d83066b681c7227d9140d56002d3c2a571e33013b31f56f5d87", "notes": "kmail από σάρωση (scanq → PDF)"}
+{"version": "0.21.120", "zip": "ef-bot-0.21.120.zip", "sha256": "0e19e9d5bc19dc5a67459c5bc826b6df841d22079515af869b72d625e0b6fe2e", "notes": "Kerio: επίλυση διεύθυνσης (ανακατεύθυνση http→https, Parse error)"}
