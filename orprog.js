@@ -142,6 +142,7 @@
   const CK = () => window.pdxCK;
   const BOT = "bmw51nismmo82h", PRINTER = "Lexmark MX530 Series XL";
   const ROOMS_ALL = ["10", "9", "8", "8Α"];
+  const RESIDENTS = ["ΓΑΡΥΦΑΛΛΟΣ", "ΓΙΑΓΚΟΣ", "ΘΕΟΔΩΡΟΛΕΑΣ", "ΚΑΛΦΑΣ", "ΚΑΛΦΟΥΝΤΖΟΣ", "ΜΑΝΟΣ", "ΜΑΥΡΟΥΔΗΣ", "ΠΑΝΑΓΟΠΟΥΛΟΣ"];
   const ANS = ["ΓΕΝΙΚΗ", "ΤΟΠΙΚΗ"], BLOOD = ["", "300", "600", "900", "1200", "1500"], SIDES = ["", "ΑΡ", "ΔΕ", "ΑΜΦΩ"];
   const PK = () => { const d = window.ORP_DATA || {}; return [...(d.lib || []), ...(d.extra || [])]; };
   const FULL = () => window.THERAPIST_FULL || { "Αν": "Αναστασίου", "Αδ": "Αδαμάκης", "Στρ": "Στραβοδήμος", "Φρ": "Φραγκιάδης", "Μουλ": "Μουλαβασίλης", "Λεβ": "Λεβής", "Δουρ": "Δουρούμης" };
@@ -191,7 +192,9 @@
       let h = css + '<div id="orpPg">';
       h += '<div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" data-f="date" value="' + E(P.date) + '"><select data-f="kind">' + ["ΠΡΟΓΡΑΜΜΑ", "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ", "ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΠΡΟΓΡΑΜΜΑ"].map((k) => "<option" + (P.kind === k ? " selected" : "") + ">" + k + "</option>").join("") + "</select>"
         + '<span style="color:#6B7280;font-size:13px">' + (P.status === "submitted" ? "✅ υποβλήθηκε" + (P.file ? " · " + E(P.file) : "") : dirty ? "● μη αποθηκευμένο" : P.at ? "💾 πρόχειρο " + new Date(P.at).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" }) + (P.by ? " · " + E(P.by) : "") : "νέο") + "</span></div>";
-      h += '<div style="margin-top:8px;font-weight:700">Υπεύθυνος προγράμματος</div><div>' + (cfg.residents || []).map((n) => chip("data-resp", n, P.resp === n)).join("") + chip("data-resp-add", "+", false, "＋ όνομα") + "</div>";
+      // 8/11: οι 8 ειδικευόμενοι (από τα προγράμματα του φακέλου) σε λίστα επιλογής· «＋ άλλος…» μόνο για νέο όνομα
+      const RES = [...new Set([...RESIDENTS, ...(cfg.residents || []), ...(P.resp ? [P.resp] : [])])];
+      h += '<div style="margin-top:8px;font-weight:700">Υπεύθυνος προγράμματος</div><select data-f="resp" style="width:100%;margin-top:4px"><option value="">— διάλεξε ειδικευόμενο —</option>' + RES.map((n) => "<option" + (P.resp === n ? " selected" : "") + ">" + E(n) + "</option>").join("") + '<option value="__add">＋ άλλος…</option></select>';
       h += (P.pts.length && window.pdxXrQueue ? '<button class="chip" data-act="xr" style="margin-top:8px;background:#0F172A;color:#fff;border-color:#0F172A">🫁 Ακτινογραφίες θώρακα (' + P.pts.length + ') → Νίκος CT Viewer</button>' : "");
       h += '<div style="margin-top:8px;font-weight:700">Αίθουσες</div><div>' + ROOMS_ALL.map((r) => chip("data-room", r, P.rooms.indexOf(r) >= 0, E(ORP.roomLabel(r).replace("ΑΙΘΟΥΣΑ ", "")))).join("") + "</div></div>";
       for (const R of ORP.rooms(P)) {
@@ -218,7 +221,8 @@
     };
     const touch = () => { dirty = true; if (P.status === "submitted") P.status = "changed"; redraw(); };
     const renum = (room) => P.pts.filter((p) => p.room === room).sort((a, b) => (a.n || 0) - (b.n || 0)).forEach((p, i) => { p.n = i + 1; });
-    pg.el.addEventListener("change", (e) => { const f = e.target.dataset.f; if (!f) return; if (f === "date") { if (dirty && !confirm("Αλλαγή ημερομηνίας χωρίς αποθήκευση;")) { e.target.value = P.date; return; } load(e.target.value); return; } P[f] = e.target.value; touch(); });
+    pg.el.addEventListener("change", async (e) => { const f = e.target.dataset.f; if (!f) return;
+      if (f === "resp" && e.target.value === "__add") { const n = UP(prompt("Επώνυμο ειδικευόμενου:") || "").trim(); if (n) { cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; } touch(); return; } if (f === "date") { if (dirty && !confirm("Αλλαγή ημερομηνίας χωρίς αποθήκευση;")) { e.target.value = P.date; return; } load(e.target.value); return; } P[f] = e.target.value; touch(); });
     pg.el.addEventListener("click", async (e) => {
       const b = e.target.closest("button,[data-open]"); if (!b) return; const ds = b.dataset;
       if (ds.room) { const i = P.rooms.indexOf(ds.room); if (i >= 0) { if (P.pts.some((p) => p.room === ds.room)) { say("Η αίθουσα έχει ασθενείς"); return; } P.rooms.splice(i, 1); } else P.rooms.push(ds.room); touch(); return; }

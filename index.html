@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v205';
+const APP_VER = '2026-11-08z-v206';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7587,7 +7587,9 @@ document.head.appendChild(st);
     const BACKTXT = (bar, b)=>{ const t=(b.textContent||'').replace(/^\s*‹\s*/,'').trim(); return t==='Πίσω' && bar.querySelector('.mnedit') ? 'Ασθενείς' : t; };
     function norm(bar){
       if(!bar) return;
-      if(bar.id==='chBar'){ bar.classList.add('pnav'); const b = bar.querySelector('button.back:not(.pnb)'); if(b){ b.classList.add('pnb'); b.textContent = BACKTXT(bar,b) || 'Πίσω'; } return; }   // ξαναζωγραφίζεται: κάθε φορά
+      if(bar.id==='chBar'){ bar.classList.add('pnav'); const b = bar.querySelector('button.back:not(.pnb)'); if(b){ b.classList.add('pnb'); b.textContent = BACKTXT(bar,b) || 'Πίσω'; }
+        // 8/11: κουμπιά με λέξη (π.χ. «✓ Επιβεβαίωση») = κανονικά κουμπιά, όχι κύκλοι 34px που αλληλοκαλύπτονται
+        bar.querySelectorAll('.tools button').forEach(x=>{ const t=(x.textContent||'').replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\s‹›+＋⋯✓✎−]/gu,''); if(t.length>=2 && !/^A$/.test(t)) x.classList.add('pnw'); }); return; }   // ξαναζωγραφίζεται: κάθε φορά
       if(bar.__pn) return; bar.__pn = true; bar.classList.add('pnav');
       const kids = [...bar.children]; const title = kids.find(x=>x.tagName==='DIV' && !x.querySelector('button')) || kids.find(x=>x.tagName==='DIV') || kids[0];
       if(title) title.classList.add('pnt');
@@ -8296,12 +8298,16 @@ document.head.appendChild(st);
   #mobView .nv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 12px}
   /* 7/11: κινητό — κάρτες σε 3 στήλες, μικρότερα γράμματα, επώνυμο + αρχικό (εντολή χρήστη) */
   html body #mobView:not(.desk) .nv-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important;margin:0 10px!important}
+  @media (max-width:359px){ html body #mobView:not(.desk) .nv-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important} }
   html body #mobView:not(.desk) .nv-grid .mcard{padding:7px 8px 8px!important;min-height:0!important;border-radius:12px!important}
   html body #mobView:not(.desk) .nv-grid .mcard .nv-ln{font-size:11px!important;line-height:1.3!important;margin-top:3px!important;color:#6B7280!important}
   html body #mobView:not(.desk) .nv-grid .mcard .nvt-h{gap:5px!important;align-items:flex-start!important;display:flex!important}
+  /* 8/11: ΠΛΗΡΕΣ όνομα σε 2 γραμμές (επώνυμο / όνομα)· κάθε γραμμή μικραίνει όσο χρειάζεται για να χωρέσει (nvFitNames) */
+  html body #mobView:not(.desk) .nv-grid .mcard .mnm.nm2{display:block!important;min-width:0!important;flex:1 1 auto!important;white-space:normal!important;overflow:hidden!important;font-size:12.5px!important;line-height:1.18!important;font-weight:800!important;letter-spacing:-.2px}
+  html body #mobView:not(.desk) .nv-grid .mcard .mnm.nm2 .nl{display:block;white-space:nowrap;overflow:hidden}
+  #mobView .mnm.nm2 .nl+.nl{margin-left:.3em}
+  html body #mobView:not(.desk) .nv-grid .mcard .mnm.nm2 .nl+.nl{font-weight:600;margin-left:0}
   html body #mobView:not(.desk) .nv-grid .mcard .nv-bed{font-size:11.5px!important;line-height:1.2!important;min-width:0!important;padding:0!important;background:none!important;color:#8E8E93!important;font-weight:700!important}
-  html body #mobView:not(.desk) .nv-grid .mcard .mnm[data-short]:not([data-short=""]){font-size:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:block!important;min-width:0!important}
-  html body #mobView:not(.desk) .nv-grid .mcard .mnm[data-short]:not([data-short=""])::after{content:attr(data-short);font-size:11.5px;line-height:1.2;font-weight:800;letter-spacing:-.25px;display:block;word-break:normal;overflow-wrap:normal}
   html.pdx-night body #mobView:not(.desk) .nv-grid .mcard .nv-ln{color:#98989F!important}
   #mobView .nvt{background:#fff;border-radius:16px;padding:11px 12px;display:flex;flex-direction:column;gap:4px;min-height:92px;box-sizing:border-box;cursor:pointer;-webkit-tap-highlight-color:transparent;min-width:0}
   #mobView .nvt:active{transform:scale(.98)}
@@ -8319,6 +8325,10 @@ document.head.appendChild(st);
   #mobView .nv-p{font-size:11px;font-weight:600;color:#48484D;background:#F2F2F7;border-radius:6px;padding:2px 6px;white-space:nowrap}
   #mobView .nv-p.r{color:#9A2A1E;background:#FCEBE8}#mobView .nv-p.b{color:#1D4E80;background:#E6EEF7}
   #mobView .nv-th{font-size:11px;color:#8E8E93;margin-left:auto}
+  #mobView .nv-p{max-width:100%;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+  #mobView .nv-p.st{text-decoration:line-through;opacity:.6}#mobView .nv-p.al{color:#fff;background:#C0392B}
+  #mobView .mnm.nv2l{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15!important;overflow-wrap:anywhere}
+  #mobView .nvt{min-height:76px}
   #mobView .nv-add{background:transparent;border:1.5px dashed #C7C7CC;border-radius:16px;min-height:108px;font-size:14px;font-weight:600;color:#8E8E93;cursor:pointer}
   #mobView .nv-grp{background:#fff;border-radius:14px;overflow:hidden;margin:0 12px}
   #mobView .nvr{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;position:relative}
@@ -8387,16 +8397,27 @@ document.head.appendChild(st);
   }
   function nvLine(d){ return [surg(d), d.dx].filter(Boolean).join(' · '); }
   // «ΕΠΩΝΥΜΟ Ο.» όταν το πλήρες όνομα δεν χωράει στην κάρτα
+  function nvName2(n){ const w = String(n||'—').trim().split(/\s+/); return '<span class="nl">'+esc(w[0])+'</span>'+(w.length>1?'<span class="nl">'+esc(w.slice(1).join(' '))+'</span>':''); }
   function nvShort(n){ const w = String(n||'').trim().split(/\s+/); return w.length>1 ? w[0]+' '+w[1].charAt(0)+'.' : ''; }
   try{ window.addEventListener('resize', ()=>{ clearTimeout(window.__nvFitT); window.__nvFitT = setTimeout(()=>{ try{ window.nvFitNames(); }catch(x){} }, 120); }); }catch(x){}
-  window.nvFitNames = function(){ document.querySelectorAll('#mobView .nvt .mnm[data-short]').forEach(el=>{ const sh = el.getAttribute('data-short'), full = el.getAttribute('title'); if(!sh) return; if(el.textContent!==full) el.textContent = full; el.style.fontSize = ''; if(el.scrollWidth > el.clientWidth + 1) el.textContent = sh; [15, 13.5].forEach(fs=>{ if(el.scrollWidth > el.clientWidth + 1) el.style.fontSize = fs+'px'; }); }); };
+  window.nvFitNames = function(){
+    const fit = (el, steps)=>{ el.style.fontSize = ''; el.style.letterSpacing = ''; if(el.scrollWidth <= el.clientWidth + 1) return true;
+      for(const [fs, ls] of steps){ el.style.fontSize = fs+'px'; el.style.letterSpacing = ls+'px'; if(el.scrollWidth <= el.clientWidth + 1) return true; } return false; };
+    // πλέγμα (κινητό): κάθε γραμμή (επώνυμο / όνομα) χωριστά
+    // ό,τι δεν χωράει ούτε στα 10.5px → «στενότερα» γράμματα (οριζόντια συμπίεση), ποτέ κομμένο
+    document.querySelectorAll('#mobView .nvt .mnm.nm2 .nl').forEach(el=>{ el.style.transform = ''; el.style.width = ''; el.style.whiteSpace = ''; el.style.overflowWrap = '';
+      if(fit(el, [[12,-.3],[11.5,-.35],[11,-.4]])) return;
+      const k0 = (el.clientWidth - 1) / el.scrollWidth; if(k0 < 0.45){ el.style.whiteSpace = 'normal'; el.style.overflowWrap = 'anywhere'; return; }   // ακραία περίπτωση: σπάει σε 2 γραμμές
+      const k = k0; el.style.transformOrigin = '0 50%'; el.style.transform = 'scaleX('+k.toFixed(3)+')'; el.style.width = (100/k).toFixed(2)+'%'; });
+    // λίστα / μεγάλη οθόνη: μία γραμμή, μικραίνει· αλλιώς 2 γραμμές
+    document.querySelectorAll('#mobView .nvr .mnm').forEach(el=>{ el.classList.remove('nv2l'); if(!fit(el, [[16,-.2],[15,-.3],[14,-.35],[13,-.4]])){ el.style.fontSize = '14.5px'; el.style.letterSpacing = '-.3px'; el.classList.add('nv2l'); } }); };
+  // 8/11 (χρήστης): στην κάρτα ΜΟΝΟ αντιπηκτικά + αλλεργίες (όχι καθετήρες/παροχετεύσεις/εκκρεμότητες)
   function nvPills(d){
-    const out = [];
-    (d.foleyTypes||[]).forEach(t=>out.push('<span class="nv-p">'+esc(['Open end','3way'].includes(t)?'Foley':t)+'</span>'));
-    if(d.drainType) out.push('<span class="nv-p">'+esc(d.drainType)+'</span>');
-    if((d.anticoagList||[]).length) out.push('<span class="nv-p r">'+esc(d.anticoagList[0])+'</span>');
-    const n = todos(d).length; if(n) out.push('<span class="nv-p b">☑ '+n+'</span>');
-    return out.slice(0,3).join('');
+    const out = [], st = (d.anticoagStopped && typeof d.anticoagStopped==='object') ? d.anticoagStopped : {};
+    (d.anticoagList||[]).forEach(t=>out.push('<span class="nv-p r'+(st[t]?' st':'')+'">'+esc(t)+(st[t]?' STOP':'')+'</span>'));
+    if(d.anticoagCustom) out.push('<span class="nv-p r'+(d.anticoagCustomStopped?' st':'')+'">'+esc(String(d.anticoagCustom).slice(0,24))+(d.anticoagCustomStopped?' STOP':'')+'</span>');
+    if(String(d.allergy||'').trim()) out.push('<span class="nv-p al">⚠ '+esc(String(d.allergy).trim().slice(0,30))+'</span>');
+    return out.join('');
   }
   const nvBedLbl = e=>e.bed ? esc(e.bed) : (String(e.k).indexOf('extra')===0 ? esc(e.d.assignedWard && !/^\d+$/.test(String(e.d.assignedWard)) ? e.d.assignedWard : 'Εκτός') : '•');
   const nvRoomKey = e=>{ const isX = String(e.k).indexOf('extra')===0, clin = isX && !!e.d.assignedWard && !/^\d+$/.test(String(e.d.assignedWard)); return clin ? 'Άλλες κλινικές' : isX ? ((e.room&&e.room!=='Έξτρα')?e.room:'Εκτός θαλάμου') : String(e.room); };
@@ -8410,9 +8431,7 @@ document.head.appendChild(st);
       if(v==='grid'){
         // όλες οι κάρτες ίδιο πλάτος, στη θέση του κρεβατιού: κρεβάτια 1 και 3 → κάρτα, κενό, κάρτα (αριθμός κρεβατιών από ROOMS)
         const card = e=>{ const d = e.d, s = nvStat(e);
-          if(!s.att && s.t && nvLine(d).indexOf(s.t)===0) s.t = '';   // όχι διπλό «Χ2» (ήδη στη γραμμή επέμβασης)
-          return '<div class="mcard mrow nvt'+(s.att?' att':'')+'" onclick="mobOpen(\''+esc(e.k)+'\')"><div class="nvt-h"><span class="nv-bed mroom">'+nvBedLbl(e)+'</span><span class="mnm" data-short="'+esc(nvShort(d.name))+'" title="'+esc(d.name||'')+'">'+esc(d.name||'—')+'</span></div>'
-            + (s.t?'<div class="nv-st '+s.c+'">'+esc(s.t)+'</div>':'') + (nvLine(d)?'<div class="nv-ln">'+esc(nvLine(d))+'</div>':'')
+          return '<div class="mcard mrow nvt'+(s.att?' att':'')+'" onclick="mobOpen(\''+esc(e.k)+'\')"><div class="nvt-h"><span class="nv-bed mroom">'+nvBedLbl(e)+'</span><span class="mnm nm2" title="'+esc(d.name||'')+'">'+nvName2(d.name)+'</span></div>'
             + '<div class="nv-ft">'+nvPills(d)+(d.therapist?'<span class="nv-th">'+esc(d.therapist)+'</span>':'')+'</div></div>'; };
         const rm = (typeof ROOMS!=='undefined'?ROOMS:[]).find(r=>String(r.num)===String(g.r)), nb = rm ? (rm.beds||0) : 0;
         let cells = '', rest = g.es.slice();
@@ -8421,8 +8440,8 @@ document.head.appendChild(st);
             if(i>=0) cells += card(rest.splice(i,1)[0]); else cells += '<div class="nv-gap" aria-hidden="true"></div>'; } }
         h += '<div class="nv-grid">' + cells + rest.map(card).join('') + '</div>';
       } else {
-        h += '<div class="nv-grp">' + g.es.map(e=>{ const d = e.d, s = nvStat(e), ln = nvLine(d), sub = [ln, s.t && !s.att && ln.indexOf(s.t)!==0 ? s.t : ''].filter(Boolean).join(' · ');
-          return '<div class="mcard mrow nvr" onclick="mobOpen(\''+esc(e.k)+'\')"><span class="nv-bn mroom">'+(e.bed?esc(e.bed):'•')+'</span><div class="nv-mid"><span class="mnm">'+esc(d.name||'—')+(s.att?'<span class="nv-dot" title="'+esc(s.t)+'"></span>':'')+'</span>'+(sub?'<span class="nv-sub">'+esc(sub)+'</span>':'')+'</div>'+(d.therapist?'<span class="nv-th" style="margin-left:0">'+esc(d.therapist)+'</span>':'')+'</div>'; }).join('') + '</div>';
+        h += '<div class="nv-grp">' + g.es.map(e=>{ const d = e.d, s = nvStat(e), pl = nvPills(d);
+          return '<div class="mcard mrow nvr" onclick="mobOpen(\''+esc(e.k)+'\')"><span class="nv-bn mroom">'+(e.bed?esc(e.bed):'•')+'</span><div class="nv-mid"><span class="mnm">'+esc(d.name||'—')+(s.att?'<span class="nv-dot" title="'+esc(s.t)+'"></span>':'')+'</span>'+(pl?'<span class="nv-sub nv-ft" style="margin-top:2px">'+pl+'</span>':'')+'</div>'+(d.therapist?'<span class="nv-th" style="margin-left:0">'+esc(d.therapist)+'</span>':'')+'</div>'; }).join('') + '</div>';
       }
     });
     setTimeout(()=>{ try{ window.nvFitNames(); }catch(x){} }, 0);
@@ -8444,7 +8463,7 @@ document.head.appendChild(st);
     });
     h += '</div><div class="nv-leg"><span><i style="background:#1D4E80"></i>Νοσηλεύεται</span><span><i style="background:#6E8FB5"></i>Προς επέμβαση</span><span><i style="background:#1F6F43"></i>Εξιτήριο</span><span><i style="background:#E08A00"></i>Προσοχή</span></div>';
     const X = es.filter(e=>String(e.k).indexOf('extra')===0);
-    if(X.length){ h += '<div class="nv-rh">Εκτός θαλάμων · '+X.length+'</div><div class="nv-grp">' + X.map(e=>{ const s = nvStat(e); return '<div class="mcard mrow nvr" onclick="mobOpen(\''+esc(e.k)+'\')"><span class="nv-bn mroom">•</span><div class="nv-mid"><span class="mnm">'+esc(e.d.name||'—')+(s.att?'<span class="nv-dot"></span>':'')+'</span><span class="nv-sub">'+esc([nvRoomKey(e), nvLine(e.d)].filter(Boolean).join(' · '))+'</span></div></div>'; }).join('') + '</div>'; }
+    if(X.length){ h += '<div class="nv-rh">Εκτός θαλάμων · '+X.length+'</div><div class="nv-grp">' + X.map(e=>{ const s = nvStat(e); return '<div class="mcard mrow nvr" onclick="mobOpen(\''+esc(e.k)+'\')"><span class="nv-bn mroom">•</span><div class="nv-mid"><span class="mnm">'+esc(e.d.name||'—')+(s.att?'<span class="nv-dot"></span>':'')+'</span><span class="nv-sub">'+esc(nvRoomKey(e))+'</span></div></div>'; }).join('') + '</div>'; }
     return h;
   }
   // 🖥 ΕΝΑ πράγμα κάθε φορά στο δεξί πάνελ: ασθενής Ή σελίδα (βιοψίες, ενέργειες, ρυθμίσεις, εργαστηριακά…).
@@ -16801,6 +16820,7 @@ Z99.2:C|αιμοκάθαρση
     }catch(e){ ext.pts = null; ext.msg = '⚠ '+String(e && e.message || e).slice(0,140); }
     ext.busy = false; if(!cur) mobRedraw();
   }
+let viaList = false;   // ο ασθενής ανοίχτηκε από τη λίστα των εργαστηριακών (σύρσιμο → πίσω στη λίστα)
   let extBack = null;   // 🔎 «Ασθενείς»: «‹» γυρίζει στην καρτέλα ασθενή
   let extTempK = '';   // 7/11: ασθενής ΝΠΣ (προσωρινός): τα αποτελέσματα μένουν και στην καρτέλα του («Τελευταία εργαστηριακά»)
   window.labsFullOpenPid = function(pid, name, onBack, tempK){ if(!pid) return; extBack = onBack || null; extTempK = tempK || ''; box.classList.add('on');
@@ -16822,9 +16842,17 @@ Z99.2:C|αιμοκάθαρση
   // σύρσιμο δεξιά (από την αριστερή άκρη) → πίσω (στην καρτέλα του ασθενή αν ήρθαμε από εκεί)
   (function(){ let x0 = 0, y0 = 0, ok = false;
     // από οπουδήποτε (όχι μόνο την άκρη), εκτός από πίνακες που κυλάνε οριζόντια
-    box.addEventListener('touchstart', e=>{ const t = e.touches[0]; const sc = e.target.closest && e.target.closest('.lm-tw,.lf-tw,.lf-t,.lm-t,[data-hscroll]'); ok = e.touches.length===1 && (!sc || sc.scrollLeft <= 0) && !document.getElementById('lmCh'); x0 = t.clientX; y0 = t.clientY; }, {passive:true});
-    box.addEventListener('touchend', e=>{ if(!ok) return; ok = false; const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0); if(dx < 90 || dy > dx * 0.6) return;
-      if(cur==='@ext' && extBack) return labsFullExtBack(); labsFullClose(); }, {passive:true}); })();
+    // 8/11: μικρό σύρσιμο (π.χ. κύλιση πίνακα) ΔΕΝ κλείνει. Μέσα σε πίνακα που κυλάει οριζόντια → μόνο από την άκρη.
+    // Ιεραρχία: ασθενής (αν ήρθες από τη λίστα) → λίστα → κλείσιμο.
+    box.addEventListener('touchstart', e=>{ const t = e.touches[0]; const sc = e.target.closest && e.target.closest('.lm-tw,.lf-tw,.lf-t,.lm-t,[data-hscroll]');
+      let inH = !!sc; for(let n = e.target; !inH && n && n !== box; n = n.parentElement){ if(n.scrollWidth > n.clientWidth + 2){ const o = getComputedStyle(n).overflowX; if(o==='auto' || o==='scroll') inH = true; } }   // μόνο ό,τι είναι ΜΕΣΑ στη σελίδα (όχι η ίδια)
+      ok = e.touches.length===1 && (!inH || t.clientX <= 28) && !document.getElementById('lmCh') && !e.target.closest('input,textarea,select'); x0 = t.clientX; y0 = t.clientY; }, {passive:true});
+    box.addEventListener('touchend', e=>{ if(!ok) return; ok = false; const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0), W = window.innerWidth;
+      if(dx < Math.max(110, W*0.3) || dy > dx * 0.5) return;
+      if(cur==='@ext' && extBack) return labsFullExtBack();
+      if(cur && cur!=='@ext' && viaList) return labsFullOpen('');
+      if(!cur) return;   // η λίστα είναι κύρια οθόνη (κάτω μπάρα): το σύρσιμο ΔΕΝ την κλείνει — όπως στο iOS, αλλαγή μόνο από τη μπάρα
+      labsFullClose(); }, {passive:true}); })();
   async function extOpen(i){
     const x = ext.pts && ext.pts[i]; if(!x || !x.pid) return;
     extBack = null; extLoad(x, String(x.row||'').split(/\s{2,}|\s\d/)[0].slice(0,40) || 'Ασθενής');
@@ -17199,8 +17227,9 @@ Z99.2:C|αιμοκάθαρση
     if(tk) chartOpen(c, tk); else labsFullOpen(k);
   };
   window.labsFullOpen = function(k){
-    cur = k || '';
     const first = !box.classList.contains('on');
+    if(first) viaList = !k; else if(!cur && k) viaList = true;
+    cur = k || '';
     box.classList.add('on');
     // ό,τι υπάρχει ήδη εμφανίζεται ΑΜΕΣΩΣ· η ανανέωση γίνεται στο παρασκήνιο
     if(rows.length){ render(); medBar(); if(Date.now()-loadedAt > 20000) load().then(()=>{ if(box.classList.contains('on')){ const st=box.scrollTop; render(); medBar(); box.scrollTop=st; } }); }
@@ -17478,6 +17507,7 @@ function render(){
   renderCard();
 }
 
+window.__chBarHtml = function(items){ return barHtml(items); };   // δοκιμές UI
 function barHtml(items){
   var b = $('chBar');
   b.innerHTML = '';
@@ -17489,8 +17519,9 @@ function barHtml(items){
     rest.push(it);
   });
   var mk = function(it, cls){ var btn=document.createElement('button'); btn.textContent=it.label; if(it.on) btn.className='on'; if(cls) btn.className=(btn.className+' '+cls).trim(); btn.onclick=it.fn; return btn; };
-  if(!back && rest.length && rest[0].label==='Ακύρωση') back = rest.shift();
-  if(back){ var bb = mk({label:'‹ Πίσω', fn:back.fn}, 'back'); b.appendChild(bb); }
+  // 8/11: «Ακύρωση» ΠΑΝΤΑ αριστερά (στη θέση του «Πίσω») — πριν έπεφτε πάνω στο «✓ Επιβεβαίωση» στο κινητό
+  if(!back){ var ia = rest.findIndex(function(x){ return x.label==='Ακύρωση'; }); if(ia>=0){ back = rest.splice(ia,1)[0]; back.cancel = true; } }
+  if(back){ var bb = mk({label: back.cancel ? '‹ Ακύρωση' : '‹ Πίσω', fn:back.fn}, 'back'); b.appendChild(bb); }
   var h=document.createElement('h2');
   try{ if(ctx && !ctx.isNew && /^📄 Ιστορικό/.test(title||'')){ var r0 = getRec()||{}; h.textContent = (ctx.isExtra ? '' : ctx.key+' · ')+(r0.name||'Ιστορικό'); } else h.textContent = title||''; }catch(e){ h.textContent = title||''; }
   b.appendChild(h);
@@ -20467,7 +20498,7 @@ window.CLS_MODE='A';
   window.pdxScanDevCount = async function(){ try{ const r = await sb6.from('oncall_scan_devices').select('id').eq('approved', false); return (r.data||[]).length; }catch(e){ return 0; } };
   // 🗓 8/11: Πρόγραμμα χειρουργείου — φορτώνεται μόνο όταν ανοίξει (orprog-data.js + orprog.js)
   window.pdxOrProgOpen = async function(date){
-    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v=202'; s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
+    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v=206'; s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
     try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); return window.pdxOrProg(date); }catch(e){ alert('⚠ '+(e.message||e)); }
   };
   window.pdxScanDevices = function(){
