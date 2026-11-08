@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v194';
+const APP_VER = '2026-11-08z-v195';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20151,6 +20151,8 @@ window.CLS_MODE='A';
   function modePref(){ try{ return localStorage.getItem(MODEFILE)==='prog' ? 'prog' : 'auto'; }catch(e){ return 'auto'; } }
   function landPref(m){ try{ const v = localStorage.getItem('pdx_scan_land_'+m); return v===null ? m==='prog' : v==='1'; }catch(e){ return m==='prog'; } }
   const CLAUDE_URL = ()=>window.HIST_UPLOAD_URL || 'https://claude.ai/artifact/7WCs97EfWrAuqWokMGWLbd';
+  // 8/11: άνοιγμα στην ΕΦΑΡΜΟΓΗ Claude (claude://claude.ai/…) — με https άνοιγε μέσα σε Safari χωρίς σύνδεση
+  const CLAUDE_APP = ()=>CLAUDE_URL().replace(/^https:\/\//, 'claude://');
   function layout(){
     if(!st) return; const box = st.ov.querySelector('[data-cam]'), r = box.getBoundingClientRect(), g = guide(r.width, r.height, st.land);
     const f = st.ov.querySelector('[data-g]'); f.style.left = g.x+'px'; f.style.top = g.y+'px'; f.style.width = g.w+'px'; f.style.height = g.h+'px'; st.g = g;
@@ -20181,7 +20183,7 @@ window.CLS_MODE='A';
       + '<div data-msg style="position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14.5px;text-shadow:0 1px 3px #000"></div>'
       + '<img data-prev style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111">'
       + '<div data-cd style="display:none;position:absolute;left:0;right:0;bottom:0;padding:18px 16px 22px;background:linear-gradient(transparent,#000c 30%);text-align:center"></div></div>'
-      + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><label data-gal aria-label="Από τη συλλογή ή αρχείο" style="flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer">🖼<input data-galf type="file" accept="image/*" multiple style="display:none"></label><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_URL()+'" target="_blank" rel="noopener" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
+      + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><label data-gal aria-label="Από τη συλλογή ή αρχείο" style="flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer">🖼<input data-galf type="file" accept="image/*" multiple style="display:none"></label><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_APP()+'" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
     document.body.appendChild(ov);
     // 8/11: «κανένα κουμπί»: πάντα Αυτόματα (Claude) — το πρόγραμμα το αναγνωρίζει το Claude και το στέλνει μόνο του (5″ για ακύρωση).
     // Ο τρόπος «πρόγραμμα → email χωρίς Claude» μένει μόνο με pdxScanOpen('prog') (εφεδρικός).
@@ -20273,9 +20275,19 @@ window.CLS_MODE='A';
     clearTimeout(S0.goT);
     S0.goT = setTimeout(()=>{ if(st!==S0 || S0.pages.some(x=>!x.ok && !x.err) || S0.gone) return; S0.gone = true;
       const m = S0.ov.querySelector('[data-msg]'); if(m) m.innerHTML = '<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div>';
-      const u = CLAUDE_URL(); if(window.__pdxNoNav){ window.__pdxNav = u; close(); return; }
-      close(); try{ location.href = u; }catch(e){ window.open(u, '_blank'); } }, S0.multi ? 400 : 250);
+      const u = CLAUDE_APP(); if(window.__pdxNoNav){ window.__pdxNav = u; close(); claudeFallback(); return; }
+      close(); try{ location.href = u; }catch(e){} setTimeout(()=>{ if(!document.hidden) claudeFallback(); }, 1800); }, S0.multi ? 400 : 250);
   }
+  // αν δεν άνοιξε η εφαρμογή Claude (δεν είναι εγκατεστημένη/παλιά έκδοση): μικρό παράθυρο με τις δύο επιλογές
+  function claudeFallback(){
+    let d = document.getElementById('pdxClaudeGo'); if(d) d.remove();
+    d = document.createElement('div'); d.id = 'pdxClaudeGo';
+    d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:100003;background:#fff;color:#1F2933;border-radius:18px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:-apple-system,system-ui,sans-serif';
+    d.innerHTML = '<div style="font-size:15px;font-weight:700;margin-bottom:10px">✓ Η σάρωση ανέβηκε — άνοιξε το Claude για ανάγνωση</div><a href="'+CLAUDE_APP()+'" style="display:block;text-align:center;text-decoration:none;background:#1D4E80;color:#fff;border-radius:12px;padding:13px;font-weight:800;font-size:16px">Άνοιγμα στην εφαρμογή Claude</a><div style="display:flex;gap:8px;margin-top:8px"><a href="'+CLAUDE_URL()+'" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;border:1.5px solid #CBD5E1;color:#1D4E80;border-radius:12px;padding:10px;font-weight:700;font-size:14px">στον browser</a><button data-x style="flex:1;border:0;background:#F2F2F7;border-radius:12px;padding:10px;font-size:14px">Κλείσιμο</button></div>';
+    d.querySelector('[data-x]').onclick = ()=>d.remove(); d.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>setTimeout(()=>d.remove(), 600)));
+    document.body.appendChild(d);
+  }
+  window.pdxClaudeFallback = claudeFallback;
   function countdown(pdf, ckP){
     const $ = s=>st.ov.querySelector(s), cd = $('[data-cd]'); let n = WAIT;
     const back = ()=>{ clearInterval(st.cd); st.busy = false; cd.style.display = 'none'; $('[data-prev]').style.display = 'none'; $('[data-g]').style.display = ''; $('[data-bar]').style.display = 'flex'; };
