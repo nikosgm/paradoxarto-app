@@ -1863,6 +1863,24 @@ const RC = (()=>{
   return { pair(t){ if(!/^[A-Za-z0-9]{24,40}$/.test(t)) return; toks = toks.filter(x=>x!==t).concat(t).slice(-6); try{ localStorage.setItem(KEY, JSON.stringify(toks)); }catch(e){} sub(t); status('📱 Τηλεχειριστήριο κινητού: συνδέθηκε'); } };
 })();
 
+/* ================= 🗂 Αρχείο Ασθενών (server κλινικής): /ct?pdxStudy=ID#k=ΚΛΕΙΔΙ ================= */
+(async ()=>{
+  const sp = new URLSearchParams(location.search), sid = sp.get('pdxStudy'); if(!sid) return;
+  const key = decodeURIComponent((location.hash.match(/k=([^&]+)/)||[])[1]||''); if(key){ try{ localStorage.setItem('pdx_key', JSON.stringify(key)); }catch(e){} history.replaceState(null,'',location.pathname+location.search); }
+  let K = key; if(!K){ try{ K = JSON.parse(localStorage.getItem('pdx_key')||'""'); }catch(e){} }
+  const H = {'x-pdx-key':K, 'x-pdx-user':'viewer'};
+  let s; try{ const r = await fetch('/api/studies/'+encodeURIComponent(sid), {headers:H}); s = await r.json(); if(!r.ok) throw new Error(s.err||r.status); }
+  catch(e){ status('Αρχείο Ασθενών: '+e.message, true); return; }
+  const sops = []; s.series.slice().sort((a,b)=>b.sops.length-a.sops.length).forEach(se=>se.sops.forEach(x=>sops.push(x)));
+  S.src = 'Αρχείο · '+String(s.dicom_name||'').replace(/\^/g,' ')+' · '+(s.date||'');
+  const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
+  const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
+  let i=0, bad=0;
+  const lane = async ()=>{ while(i<sops.length){ const a=i++; try{ const r = await fetch('/dicom/'+encodeURIComponent(sops[a]), {headers:H}); if(!r.ok) throw 0; const ab = await r.arrayBuffer(); st.buf.push(new File([ab], 'pdx'+a+'.dcm', {type:'application/dicom'}));   /* ΠΡΩΤΑ το await: το st.buf αλλάζει όσο περιμένουμε */ }catch(e){ bad++; } if(st.buf.length>=8 || i>=sops.length) wake(); } };
+  (async ()=>{ await Promise.all(Array.from({length:8}, lane)); st.done=true; wake(); if(bad) status('Αρχείο: '+bad+' εικόνες δεν ήρθαν', true); })();
+  await ingest([], st);
+})();
+
 window.__ct = {VK:()=>VK, unNct, nctStream, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
 })();
 </script>
