@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08t-v184';
+const APP_VER = '2026-11-08u-v185';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8017,7 +8017,7 @@ document.head.appendChild(st);
       if(!ov && !err) return '<div style="text-align:center;color:#8E8E93;margin:40px 16px;font-size:15px">⏳ Σύνδεση με το Παράθυρο…<br><small>περίπου 10 δευτερόλεπτα</small></div>';
       if(!ov) return iosGroup('Κατάσταση', [{ic:'🗂', t:'Server · Παράθυρο', sub:'<span style="color:#FF3B30">● '+esc(err)+'</span>'}]) + iosGroup('', [{t:'<span style="color:var(--acc,#0A84FF)">Ξανά</span>', data:'data-db="reload"'}]);
       const S = ov.settings || {}, n = x=>Number(x||0).toLocaleString('el-GR');
-      const cdTxt = (ov.cd||[]).length ? (ov.cd||[]).map(d=>d.drive+' '+({empty:'άδειος', busy:'διαβάζει…', done:'τελείωσε', error:'σφάλμα'}[d.state]||d.state||'')).join(' · ') : 'κανένας οδηγός CD';
+      const cdTxt = (ov.cd||[]).length ? (ov.cd||[]).map(d=>d.drive+' '+({empty:'άδειος', busy:'διαβάζει…', done:'τελείωσε', error:'σφάλμα'}[d.state]||d.state||'')+(d.state==='done'&&d.eject?' · ⏏ '+d.eject:'')).join(' · ') : 'κανένας οδηγός CD';
       let h = iosGroup('Κατάσταση', [{ic:'🗂', t:'Server · Παράθυρο', sub:'<span style="color:#34C759">● σε λειτουργία</span> · '+(ov.ver?'έκδοση '+esc(ov.ver)+' · ':'')+'πριν από '+pdxDbAgo(ov.at)}, {ic:'💿', t:'Οδηγός CD', sub:esc(cdTxt)}])
         + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 16px 0">'+[[ov.patients,'ασθενείς'],[ov.onc,'ογκολογικοί'],[ov.studies,'απεικονίσεις']].map(([v,l])=>'<div style="background:var(--card,#fff);border-radius:12px;padding:10px 6px;text-align:center"><b style="display:block;font-size:21px">'+n(v)+'</b><span style="font-size:12px;color:#8E8E93">'+l+'</span></div>').join('')+'</div>';
       if(msg) h += '<div style="margin:12px 16px 0;font-size:14px;color:'+(/^⚠/.test(msg)?'#FF3B30':'#34C759')+'">'+esc(msg)+'</div>';
