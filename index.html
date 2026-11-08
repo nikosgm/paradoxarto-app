@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v197';
+const APP_VER = '2026-11-08z-v198';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20237,7 +20237,10 @@ window.CLS_MODE='A';
     // iPhone: η εφαρμογή αρχικής οθόνης ρωτά άδεια για ζωντανή κάμερα σε ΚΑΘΕ άνοιγμα → κάμερα του iPhone.
     // Android: θυμάται την άδεια → ζωντανή κάμερα που ανοίγει ΑΜΕΣΩΣ με το άνοιγμα της εφαρμογής (ένα πάτημα για λήψη).
     const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-    if((IOS || window.__pdxScanNative) && !window.__pdxScanLive){
+    // 8/11 (απόφαση χρήστη): ΖΩΝΤΑΝΗ κάμερα παντού — ανοίγει αμέσως, ένα πάτημα για λήψη.
+    // iPhone ως εφαρμογή αρχικής οθόνης: ρωτά «Allow» σε κάθε άνοιγμα (περιορισμός iOS). Στο Safari με «Ρυθμίσεις ιστότοπου →
+    // Κάμερα → Να επιτρέπεται» ΔΕΝ ρωτά ποτέ. Αν η ζωντανή κάμερα αποτύχει/απορριφθεί → κάμερα του κινητού (nativeMode).
+    const nativeMode = ()=>{
       st.native = true;
       v.style.display = 'none'; $('[data-g]').style.display = 'none'; $('[data-rot]').style.visibility = 'hidden';
       const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.setAttribute('capture', 'environment'); fi.style.display = 'none'; fi.setAttribute('data-file', ''); ov.appendChild(fi);
@@ -20250,13 +20253,13 @@ window.CLS_MODE='A';
       fi.onchange = async ()=>{ const f = fi.files && fi.files[0]; if(!f || !st) return; st.busy = true;
         try{ const bmp = await createImageBitmap(f); await take(bmp, bmp.width, bmp.height, null); }
         catch(e){ st.busy = false; toast('⚠ Η φωτογραφία δεν διαβάστηκε: '+(e.message||e)); } };
-      return;
-    }
+    };
+    if(window.__pdxScanNative && !window.__pdxScanLive){ nativeMode(); return; }
     try{
       st.stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ideal:'environment'}, width:{ideal:3840}, height:{ideal:2160} } });
       v.srcObject = st.stream; await v.play().catch(()=>{});
       try{ const tr = st.stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if(cap.focusMode && cap.focusMode.includes('continuous')) await tr.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
-    }catch(e){ $('[data-msg]').innerHTML = '⚠ Η κάμερα δεν άνοιξε: '+esc(e.message||e)+'<br>Δώσε άδεια κάμερας στο Παραδόχαρτο.'; return; }
+    }catch(e){ if(!st) return; window.__pdxScanNoAuto = true; nativeMode(); toast('Η ζωντανή κάμερα δεν επιτράπηκε — πάτα τον κύκλο για την κάμερα του κινητού'); return; }
     $('[data-shot]').onclick = async ()=>{
       if(!st || st.busy || !v.videoWidth) return;
       if(st.mode==='auto' && st.pages.length >= 4) return toast('Έως 4 σελίδες — πάτα «Στο Claude»');
@@ -20357,7 +20360,9 @@ window.CLS_MODE='A';
   };
   // συντόμευση: ?scan=1 → η κάμερα ανοίγει μόλις μπει ο χρήστης
   if(/[?&]scan=1\b/.test(location.search)){
-    const t = setInterval(()=>{ if(window.__pdxIn && typeof sb6!=='undefined'){ clearInterval(t); setTimeout(()=>window.pdxScanOpen(), 300); try{ history.replaceState(null, '', location.pathname); }catch(e){} } }, 300);
+    const SA = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+    if(!SA){ try{ document.title = 'Σάρωση'; const l = document.createElement('link'); l.rel = 'apple-touch-icon'; l.href = 'scan-icon-180.png'; document.head.appendChild(l); }catch(e){} }
+    const t = setInterval(()=>{ if(window.__pdxIn && typeof sb6!=='undefined'){ clearInterval(t); setTimeout(()=>window.pdxScanOpen(), 300); if(SA){ try{ history.replaceState(null, '', location.pathname); }catch(e){} } } }, 300);
   }
 })();
 </script>
