@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v204';
+const APP_VER = '2026-11-08z-v205';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -9378,7 +9378,8 @@ document.head.appendChild(st);
       if(!view.classList.contains('on')||openKey&&!isOpen){ mode=null; return; }
       const t=e.touches[0]; sx=t.clientX; sy=t.clientY; dec=false; lt=0; lx=t.clientX; vel=0;
       if(isOpen && t.clientX>cur-4){ mode='close'; base=W; }
-      else if(!isOpen && t.clientX<=28 && tab==='pts'){ mode='open'; base=0; }
+      // 8/11: ΜΟΝΟ από την ίδια τη λίστα — όχι όταν από πάνω είναι σελίδα/φύλλο (Ειδοποιήσεις κ.λπ.: εκεί το σύρσιμο = «πίσω»)
+      else if(!isOpen && t.clientX<=28 && tab==='pts' && view.contains(e.target) && !document.getElementById('iosPg')){ mode='open'; base=0; }
       else mode=null;
     },{passive:true});
     document.addEventListener('touchmove',e=>{
