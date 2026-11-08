@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v209';
+const APP_VER = '2026-11-08z-v210';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8397,6 +8397,8 @@ document.head.appendChild(st);
   #mobView.desk.nv3 .mcard{transition:box-shadow .12s ease, transform .12s ease}
   #mobView.desk.nv3 .nvt:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
   html.nv3 #mobSubPop{left:var(--nvR,600px)!important;align-items:center!important;justify-content:center}
+  /* 8/11: ό,τι ανοίγει από την ΠΛΑΪΝΗ μπάρα (βιοψίες, συνταγογράφηση, …) πιάνει ΟΛΗ την οθόνη δεξιά της μπάρας — όχι μόνο τη δεξιά στήλη */
+  html.nv3.nvwide #iosPg,html.nv3.nvwide .iosPgU,html.nv3.nvwide #mobSubPop{left:var(--nvS,220px)!important}
   html.nv3 #mobSubPop>.sb{max-width:680px;border-radius:18px!important;max-height:90vh;overflow:auto}
   html.pdx-night #mobView.desk.nv3 .dk-s{background:#1C1C1E;border-right-color:#38383A}html.pdx-night #mobView.desk.nv3 .dk-l{background:#0B0B0C}html.pdx-night #mobView.desk.nv3 .dk-r{background:#000}html.pdx-night #mobView .dks-a{color:#E5E5EA}
   `; document.head.appendChild(st); })();
@@ -8499,9 +8501,9 @@ document.head.appendChild(st);
     try{ const sp = document.getElementById('mobSubPop'); if(sp) sp.remove(); }catch(e){}
   };
   const nv3on = ()=>document.documentElement.classList.contains('nv3');
-  window.nvGo = function(id, fn){ nvClearRight(); window.__nvAct = id; openKey = null; render(); try{ fn(); }catch(e){ console.error(e); } setTimeout(()=>{ if(window.__nvAct===id) render(); }, 30); };
+  window.nvGo = function(id, fn){ nvClearRight(); window.__nvAct = id; openKey = null; document.documentElement.classList.add('nvwide'); render(); try{ fn(); }catch(e){ console.error(e); } setTimeout(()=>{ if(window.__nvAct===id) render(); }, 30); };
   // κλείσιμο σελίδας (Πίσω) → φεύγει και η επιλογή από την πλαϊνή μπάρα
-  try{ new MutationObserver(()=>{ if(!nv3on() || !window.__nvAct) return; const open = document.getElementById('iosPg') || (document.getElementById('labsFull')||{classList:{contains:()=>false}}).classList.contains('on'); if(!open){ window.__nvAct = null; render(); } }).observe(document.body, {childList:true}); }catch(e){}
+  try{ new MutationObserver(()=>{ if(!nv3on() || !window.__nvAct) return; const open = document.getElementById('iosPg') || (document.getElementById('labsFull')||{classList:{contains:()=>false}}).classList.contains('on'); if(!open){ window.__nvAct = null; document.documentElement.classList.remove('nvwide'); render(); } }).observe(document.body, {childList:true}); }catch(e){}
   // 🖥 πλαϊνή μπάρα υπολογιστή (macOS): ενότητες + εργαλεία· ό,τι ανοίγει πάει στο δεξί πάνελ
   function nvSide(){
     const bot = window.pdxIsBotUser && window.pdxIsBotUser(), all = entries(true).length, mine = entries().length, nT = entries().reduce((a,e)=>a+todos(e.d).length,0);
@@ -10236,7 +10238,7 @@ document.head.appendChild(st);
   // θέση της λίστας: κρατιέται όταν ανοίγει ασθενής από τη λίστα και επανέρχεται στο «πίσω» (κουμπί ή σύρσιμο)
   window.mobSaveList = ()=>{ try{ if(!openKey) window.__listY = {tab:tab, y:view.scrollTop, t:Date.now()}; }catch(e){} };
   const listRestore = ()=>{ const L=window.__listY; if(!L || L.tab!==tab || Date.now()-L.t>60*60000) return; const set=()=>{ if(!openKey) view.scrollTop=L.y; }; set(); requestAnimationFrame(set); setTimeout(set,80); };
-  window.mobOpen = k=>{ if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; } closePops(); window.mobSaveList(); if(openKey!==k){ window.__qkOpen=false; window.__ptTab=null; } openKey=k; window.__tp=false; render(); view.scrollTop=window.mobTakeScroll(k); };   // άνοιγμα από τη λίστα: πάντα στην καρτέλα «Σήμερα»
+  window.mobOpen = k=>{ if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; document.documentElement.classList.remove('nvwide'); } closePops(); window.mobSaveList(); if(openKey!==k){ window.__qkOpen=false; window.__ptTab=null; } openKey=k; window.__tp=false; render(); view.scrollTop=window.mobTakeScroll(k); };   // άνοιγμα από τη λίστα: πάντα στην καρτέλα «Σήμερα»
   window.__pdxNavState = ()=>({tab, openKey, ptTab:(window.__ptTab && window.__ptTab.k===openKey) ? window.__ptTab.t : (openKey?'today':''), tp:!!window.__tp});   // για τις δοκιμές πλοήγησης
   window.mobBack = ()=>{ closePops(); if(window.__tp){ window.__tp=false; render(); view.scrollTop=window.mobTakeScroll(openKey); return; } window.__dret=null; openKey=null; window.__qkOpen=false; render(); listRestore(); };
   // ---- νυχτερινή λειτουργία ----
@@ -12202,8 +12204,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // ο τελευταίος έλεγχος έγινε με παλιό (λάθος) τρόπο ανάγνωσης → νέος έλεγχος αμέσως
     // (ΕΝΑΣ μόνο έλεγχος — πριν ξεκινούσαν δύο ταυτόχρονα)
     if(st.stale && !st.data){ st.stale = false; scan(); }
-    // πρώτη φορά (ή παλιό): έλεγχος αμέσως
-    else if(!st.data || Date.now() - st.at > 12*3600e3) scan();
+    // 8/11 (εντολή χρήστη): ΔΕΝ ξαναψάχνει κάθε φορά που ανοίγει — δείχνει τον τελευταίο έλεγχο· νέος έλεγχος ΜΟΝΟ με το κουμπί
+    // (ή αν δεν υπάρχει κανένας έλεγχος ακόμα). Ο αυτόματος έλεγχος του bot συνεχίζει όπως πριν.
+    else if(!st.data) scan();
   };
   // ===== 💊 Εξωνοσοκομειακή συνταγογράφηση: δική της οθόνη (☰) με ιστορικό =====
   const RXST = {new:['περιμένει','#B26A00'], running:['τρέχει','#1D4E80'], seen:['παραλήφθηκε','#B26A00'], done:['✓ έτοιμη για έλεγχο','#1B6B3A'], review:['για έγκριση','#B26A00'], approve:['εγκρίθηκε','#1B6B3A'], approved:['✓ καταχωρίστηκε','#1B6B3A'], failed:['✗ απέτυχε','#B42318'], cancelled:['ακυρώθηκε','#64748B']};
@@ -13053,8 +13056,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return all.some(d=>{ if(r.am && d.am && String(d.am)===String(r.am)) return true; const u = nbNz(d.name).split(' '); const [a, b] = u.length <= t.length ? [u, t] : [t, u]; return a.length && a.every((w, i)=>b[i] && (b[i]===w || (w.length>=4 && b[i].startsWith(w)) || (b[i].length>=4 && w.startsWith(b[i])))); }); };
   async function nbLoad(force){
     if(NB.busy || (!force && Date.now()-NB.at < 120000)) return; NB.busy = true; NB.at = Date.now();
-    try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at,created_at').eq('kind','npslist').eq('status','done').order('id',{ascending:false}).limit(1);
-      const j = r.data && r.data[0]; const res = j && j.payload && j.payload.result;
+    // 8/11: η τελευταία λίστα ΤΗΣ ΚΛΙΝΙΚΗΣ (3449) — όχι απλώς η τελευταία npslist (μια λίστα άλλου τμήματος, π.χ. 3434, έκρυβε όλους τους ασθενείς ΝΠΣ)
+    try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at,created_at').eq('kind','npslist').eq('status','done').order('id',{ascending:false}).limit(15);
+      const j = (r.data||[]).find(x=>{ const rs = x.payload && x.payload.result; return rs && Array.isArray(rs.rows) && (rs.dpt||'3449')==='3449'; }); const res = j && j.payload && j.payload.result;
       if(res && Array.isArray(res.rows) && (res.dpt||'3449')==='3449'){ NB.rows = res.rows; NB.listAt = Date.parse(j.updated_at)||0; }
       const e = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npsenrich').eq('status','done').gte('created_at', new Date(Date.now()-3*864e5).toISOString()).order('id',{ascending:true}).limit(20);
       (e.data||[]).forEach(x=>{ const P = x.payload && x.payload.result && x.payload.result.pts || {}; Object.keys(P).forEach(n=>{ NB.enr[nbNz(n)] = P[n]; }); });
@@ -13640,6 +13644,29 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 🔌 ζωντανή αναζήτηση στον κατάλογο του e-prescription μέσω bot (εντολή «epsearch»: ΜΟΝΟ ανάγνωση, γρήγορη λωρίδα)
   // what: 'exam' | 'med'. Επιστρέφει {items} | {err} | {stale}. Κρατά τα αποτελέσματα 10′ στη μνήμη (όχι στοιχεία ασθενή).
   const EPQ = {};
+  // ⚡ 8/11: ΑΜΕΣΗ αναζήτηση φαρμάκου (όπως οι διαγνώσεις): ολόκληρος ο κατάλογος του e-prescription στη συσκευή
+  // (oncall_labs «epcat|med» = {v, n, items:[[όνομα, ΕΟΦ, id, μορφή, συσκευασία]]} — τον γεμίζει το bot· καμία πληροφορία ασθενή)
+  const EPC = {items:null, v:0, at:0, busy:null};
+  try{ const c = JSON.parse(localStorage.getItem('pdx_epcat')||'null'); if(c && Array.isArray(c.items)){ EPC.items = c.items; EPC.v = c.v||0; EPC.at = c.at||0; } }catch(e){}
+  const EPN = s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  window.pdxEpCatLoad = async function(force){
+    if(EPC.busy) return EPC.busy; if(!force && EPC.items && Date.now()-EPC.at < 6*3600e3) return EPC.items;
+    EPC.busy = (async ()=>{ try{ if(typeof sb6==='undefined') return EPC.items;
+      const r = await sb6.from('oncall_labs').select('data').eq('name_key','epcat|med').maybeSingle(); const d = r && r.data && r.data.data;
+      if(d && Array.isArray(d.items) && d.items.length){ EPC.items = d.items; EPC.v = d.v||0; EPC.at = Date.now(); EPC.idx = null; try{ localStorage.setItem('pdx_epcat', JSON.stringify({v:EPC.v, at:EPC.at, items:d.items})); }catch(e){} }
+      else EPC.at = Date.now(); }catch(e){} finally{ EPC.busy = null; } return EPC.items; })();
+    return EPC.busy;
+  };
+  // κάθε λέξη της αναζήτησης = αρχή κάποιας λέξης του ονόματος (BOOS → BOOSTRIX, «alg 600» → ALGOFREN 600MG)
+  window.pdxEpCatFind = function(q, n){
+    if(!EPC.items) return null; const W = EPN(q).split(/[^a-z0-9.]+/).map(w=>w.replace(/\.+$/,'')).filter(Boolean); if(!W.length || W[0].length < 2) return [];
+    if(!EPC.idx) EPC.idx = EPC.items.map(x=>{ const nm = EPN(x[0]); return [nm, nm.split(/[^a-z0-9.]+/).map(w=>w.replace(/\.+$/,''))]; });
+    const out = []; for(let i = 0; i < EPC.items.length && out.length < 400; i++){ const [nm, ws] = EPC.idx[i]; if(W.every(w=>ws.some(x=>x.indexOf(w)===0) || (w.length>=3 && nm.replace(/[^a-z0-9]/g,'').indexOf(w.replace(/[^a-z0-9]/g,''))===0))) out.push(i); }
+    out.sort((a,b)=>{ const A = EPC.idx[a][0], B = EPC.idx[b][0]; return (B.indexOf(W[0])===0) - (A.indexOf(W[0])===0) || A.length - B.length || (A<B?-1:1); });
+    return out.slice(0, n||12).map(i=>{ const x = EPC.items[i]; return {name:x[0], eof:x[1], id:x[2], form:x[3]||'', pack:x[4]||'', cat:1}; });
+  };
+  window.pdxEpCatInfo = ()=>({n: EPC.items ? EPC.items.length : 0, v: EPC.v});
+  setTimeout(()=>{ try{ window.pdxEpCatLoad(); }catch(e){} }, 9000);
   window.pdxEpMedNames = ()=>{ try{ return JSON.parse(localStorage.getItem('pdx_epmed_names')||'[]'); }catch(e){ return []; } };   // 8/11: μόνο ονόματα φαρμάκων (καμία πληροφορία ασθενή)
   window.pdxEpSearch = async function(what, q, opt){
     opt = opt || {}; q = String(q||'').replace(/\s+/g,' ').trim().slice(0,60); if(q.length<3) return {items:[]};
@@ -13922,10 +13949,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const item = (attr, a, b)=>'<button type="button" class="exl-it" '+attr+'><span>'+a+'</span><small>'+b+'</small></button>';
       const paint = st=>{ let h = loc.length ? '<div class="exl-h">Κατάλογος κλινικής</div>'+loc.map(d=>item('data-dloc="'+E(d.name)+'"', '<b>'+E(d.name)+'</b> '+E(d.s), '1×'+d.f+' · '+d.d+' ημ.')).join('') : '';
         if(mem.length && !(st && (st.items||[]).length)) h += '<div class="exl-h">Από προηγούμενες αναζητήσεις</div>'+mem.map(n=>item('data-dmem="'+E(n)+'"', E(n), '')).join('');
-        if(w0.length>=3){ h += '<div class="exl-h">e-prescription · συσκευασίες</div>';
+        if(w0.length>=3 || (st && st.cat)){ h += '<div class="exl-h">e-prescription · συσκευασίες'+(st && st.cat ? ' · ⚡' : '')+'</div>';
           if(!st) h += '<div class="exl-st">⏳ Αναζήτηση…</div>'; else if(st.err) h += '<div class="exl-st bad">⚠ '+E(st.err)+' — συνέχισε με τις επιλογές· τα κουτιά τα βρίσκει το bot</div>';
           else { const L = (st.items||[]).slice(0,8); h += L.length ? L.map((x,k)=>{ const n = window.pdxRxPackN(x.pack||x.name); return item('data-dep="'+k+'"', E(x.name), n ? n+' τεμ./κουτί' : (x.pack?E(x.pack):'')); }).join('') : '<div class="exl-st">Δεν βρέθηκε στο e-prescription</div>'; } }
         res.innerHTML = h; res._ep = st && st.items || []; };
+      // ⚡ κατάλογος στη συσκευή: ΑΜΕΣΑ (από 2 γράμματα, όλες οι λέξεις)· το bot ψάχνει μόνο αν δεν βρεθεί εδώ (ή δεν έχει φορτωθεί ο κατάλογος)
+      const qAll = /[α-ω]/.test(RXN(v)) ? RXN(v).replace(/ου/g,'ou').replace(/[α-ω]/g, c=>GL[c]||'') : v;
+      const cat = window.pdxEpCatFind ? pdxEpCatFind(qAll, 10) : null;
+      if(cat && cat.length){ paint({items:cat, cat:true}); return; }
+      if(!cat && window.pdxEpCatLoad) pdxEpCatLoad().then(()=>{ if(my===mSeq && window.pdxEpCatFind){ const c2 = pdxEpCatFind(qAll, 10); if(c2 && c2.length){ clearTimeout(mTm); paint({items:c2, cat:true}); } } });
       paint(null); clearTimeout(mTm); if(w0.length<3) return;
       mTm = setTimeout(async ()=>{ const inf = window.pdxAmkaInfo && S.amka ? pdxAmkaInfo(S.amka) : null; const st = await window.pdxEpSearch('med', w0, {stale:()=>my!==mSeq, age: inf && inf.age}); if(my!==mSeq || st.stale) return; paint(st); }, 350);
     }
