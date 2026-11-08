@@ -1,1 +1,1 @@
-{"version": "0.21.138", "zip": "ef-bot-0.21.138.zip", "sha256": "0fbfd875206e1f7a5c06830952d89cfcc00edf60ef2532f8e2fe5860b524dbcb", "notes": "npsprogmap: πρώτα τύπος (SOAP/ISBAR) μετά «Νέα καταχώρηση»"}
+{"version": "0.21.139", "zip": "ef-bot-0.21.139.zip", "sha256": "8bdcf65b89838e531b146e903caa75f619f8ffbe3c7ea2a1d589a7eac14e8ae3", "notes": "npsepmap φόρμα Προσθήκη (μόνο ανάγνωση) · epcat διόρθωση · dbinstall: κλείνει φύλακα CD, επαναφορά παλιού server αν αποτύχει"}
