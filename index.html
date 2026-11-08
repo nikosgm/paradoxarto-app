@@ -2257,7 +2257,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v211';
+const APP_VER = '2026-11-08z-v212';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -19103,7 +19103,7 @@ function ptHtml(){
       h += '<div class="ios-h">'+R.length+' '+(R.length===1?'εξιτήριο':'εξιτήρια')+' · ΝΠΣ</div>';
       h += R.length ? '<div class="ptx-g">'+R.map(d=>'<div class="ptx-r nt"'+(d.cancelled?' style="opacity:.55"':'')+'><b>'+E(d.type||'Εξιτήριο')+' · '+E(dt(d.at)||'—')+(d.cancelled ? ' · <span style="color:#B42318">ακυρωμένο</span>' : '')+'</b><small>'+[d.outcome, d.drg && 'DRG '+d.drg].filter(Boolean).map(E).join(' · ')+'</small></div>').join('')+'</div>' : empty('Κανένα εξιτήριο στο ΝΠΣ.');
     }
-    if(H && H.nps && (H.nps.adm || H.nps.err)) h += '<div class="ios-f">Από το ΝΠΣ (μόνο ανάγνωση)'+(H.nps.byName && H.nps.amka ? ' · ταύτιση με όνομα — ΑΜΚΑ ΝΠΣ '+E(maskAmka(H.nps.amka)) : '')+(H.nps.clinicNow ? ' · τώρα: '+E(H.nps.clinicNow) : '')+'. Το bot βρίσκει ασθενείς μόνο από τη λίστα της κλινικής στο ΝΠΣ.</div>';
+    // 8/11 (χρήστης): χωρίς υποσημείωση (ταύτιση/κλινική/τεχνικές σημειώσεις) — μόνο τα δεδομένα
   } else if(M.tab==='hist'){
     if(!H) h += '<div class="ptx-busy"><span class="ptx-sp"></span><span>Φορτώνει το ιστορικό…</span></div>';
     else {
