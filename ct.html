@@ -1792,7 +1792,11 @@ if(DESK && DESK.evo){
   const ref = $('srvBtn'); if(ref) ref.parentNode.insertBefore(b, ref); b.onclick=()=>evoPanel();
   document.addEventListener('keydown', e=>{ if((e.key==='e'||e.key==='E'||e.key==='ε'||e.key==='Ε'||e.code==='KeyE') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'') && !document.getElementById('evoOv')) { e.preventDefault(); evoPanel(); } });
   // άνοιγμα από τη γραμμή εντολών / από το κινητό (τηλεχειρισμός): {sur, fn, amka, examid} → αναζήτηση ή κατευθείαν η εξέταση
-  const evoArgsOpen = ev=>{ if(!ev) return; const q = {sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''};
+  const evoArgsOpen = ev=>{ if(!ev) return;
+    // 📱 8/11: ζεύξη τηλεχειριστηρίου — το κινητό στέλνει «PDXRC<κλειδί>» στο πεδίο fn (χωρίς στοιχεία ασθενή)
+    { const m = /PDXRC([A-Za-z0-9]{24,40})/.exec(String(ev.fn||'')); if(m){ RC.pair(m[1]); ev = Object.assign({}, ev, {fn: String(ev.fn||'').replace(m[0],'').trim()}); } }
+    if(!ev.examid && !ev.sur && !ev.amka && !ev.fn) return;
+    const q = {sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''};
     if(!ev.examid){ evoPanel(q); return; }
     { const o0 = document.getElementById('evoOv'); if(o0) o0.remove(); } status('Evorad: ανοίγω την εξέταση…');
     // 8/11: ΚΑΤΕΥΘΕΙΑΝ οι σειρές της εξέτασης (getSeries) — χωρίς αναζήτηση/getExams· μετά φόρτωση όλων (η μεγαλύτερη πρώτη)
@@ -1801,6 +1805,59 @@ if(DESK && DESK.evo){
   DESK.info().then(i=>evoArgsOpen(i && i.evo)).catch(()=>{});
   if(DESK.onEvo) DESK.onEvo(evoArgsOpen);
 }
+
+/* ================= 📱 Τηλεχειριστήριο από το κινητό (8/11) =================
+   Κανάλι Supabase Realtime «broadcast» ctrc-<κλειδί>: το κινητό στέλνει ΜΟΝΟ εντολές προβολής (τομή, zoom, μετακίνηση, αντίθεση,
+   σειρά, επίπεδο) και κείμενο πληκτρολογίου. Ο υπολογιστής απαντά μόνο αριθμούς τομής/σειράς — ΚΑΝΕΝΑ στοιχείο ασθενή. */
+const RC = (()=>{
+  if(!DESK) return {pair(){}};
+  const KEY='nct_rc', U='https://evspmufooxgqxhbhydgc.supabase.co', K='sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
+  let toks = []; try{ toks = JSON.parse(localStorage.getItem(KEY)||'[]').filter(t=>/^[A-Za-z0-9]{24,40}$/.test(t)).slice(-6); }catch(e){}
+  const chans = new Map(); let cli = null, lib = null, badge = null, lastAt = 0;
+  const load = ()=> lib || (lib = new Promise(res=>{ if(window.supabase) return res(true); const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'; sc.onload=()=>res(!!window.supabase); sc.onerror=()=>{ lib=null; res(false); }; document.head.appendChild(sc); }));
+  const showBadge = on=>{ if(!badge){ badge=document.createElement('div'); badge.style.cssText='position:fixed;right:10px;bottom:10px;z-index:50;background:#14532D;color:#DCFCE7;border-radius:999px;padding:5px 11px;font:600 12.5px system-ui;opacity:.92;pointer-events:none;transition:opacity .4s'; document.body.appendChild(badge); }
+    badge.textContent = on ? '📱 τηλεχειριστήριο' : '📱 σε αναμονή'; badge.style.opacity = on ? '.92' : '.35'; };
+  const center = ()=>{ const r=view.getBoundingClientRect(); return [r.width/2, r.height/2]; };
+  const serList = ()=>{ const main=S.series.filter(isMain); return (main.length && !S.showAll) ? main.concat(S.series.filter(x=>!isMain(x) && x===S.cur)) : S.series; };
+  let stT = 0; const state = (ch)=>{ clearTimeout(stT); stT = setTimeout(()=>{ try{ const L=serList(), i=L.indexOf(S.cur);
+    ch.send({type:'broadcast', event:'s', payload:{ i:(S.cur?S.ix[S.view]+1:0), n:(S.cur?count(S.view):0), v:S.view, si:i+1, sn:L.length, ww:Math.round(S.ww), wc:Math.round(S.wc), z:+S.zoom.toFixed(2), evo:!!document.getElementById('evoOv'), ld:!!(S.load && S.load.end==null) }}); }catch(e){} }, 60); };
+  const typeText = (t, enter)=>{
+    let el = document.activeElement; const isIn = el && /INPUT|TEXTAREA/.test(el.tagName) && el.type!=='range';
+    if(!isIn){ const ov=document.getElementById('evoOv'); el = ov && ov.querySelector('input:not([type=date]):not([type=range])'); }
+    if(!el){ if(t) evoPanel({sur:t, fn:'', amka:'', from:'', to:''}); return; }
+    el.focus(); if(t!=null){ el.value = t; el.dispatchEvent(new Event('input',{bubbles:true})); }
+    if(enter){ ['keydown','keyup'].forEach(ty=>el.dispatchEvent(new KeyboardEvent(ty,{key:'Enter',code:'Enter',bubbles:true}))); const fm=el.closest('form'); if(fm && fm.requestSubmit) try{ fm.requestSubmit(); }catch(e){} }
+  };
+  const key = k=>{ const tgt = document.getElementById('evoOv') || document; tgt.dispatchEvent(new KeyboardEvent('keydown',{key:k, code:k, bubbles:true})); };
+  const act = (m, ch)=>{
+    lastAt = Date.now(); showBadge(true);
+    const o = m && m.o; S.touched = true;
+    if(o==='step') step(Math.max(-500,Math.min(500, m.n|0)));
+    else if(o==='zoom' && isFinite(m.f)){ const [x,y]=center(); zoomAt(Math.max(.5,Math.min(2,+m.f)), x, y); }
+    else if(o==='pan' && isFinite(m.dx)){ S.panX += Math.max(-400,Math.min(400,+m.dx)); S.panY += Math.max(-400,Math.min(400,+m.dy||0)); draw(); }
+    else if(o==='win' && isFinite(m.dx)){ const k=Math.max(1,S.ww)/300; S.ww=Math.max(1,S.ww+(+m.dx)*k*1.5); S.wc=S.wc+(+m.dy||0)*k; draw(); }
+    else if(o==='preset') applyPreset(Math.max(0,Math.min(4,m.i|0)));
+    else if(o==='plane' && /^(ax|cor|sag)$/.test(m.p)) setPlane(m.p);
+    else if(o==='mip') setMip(S.mip===0?10:S.mip===10?30:0);
+    else if(o==='reset') $('reset').click();
+    else if(o==='ser'){ const L=serList(); if(L.length){ const i=Math.max(0,L.indexOf(S.cur)); select(L[(i+(m.d>0?1:-1)+L.length)%L.length]); } }
+    else if(o==='text') typeText(String(m.s||'').slice(0,80), !!m.enter);
+    else if(o==='key' && /^(Enter|Escape|Backspace|ArrowUp|ArrowDown)$/.test(m.k)){ if(m.k==='Escape'){ const ov=document.getElementById('evoOv'); if(ov) ov.remove(); } else if(m.k==='Enter') typeText(null, true); else key(m.k); }
+    else if(o==='evo') evoPanel();
+    else if(o==='hello'){}
+    if(ch) state(ch);
+  };
+  const sub = async t=>{
+    if(chans.has(t)) return; if(!(await load())) return;
+    if(!cli) cli = window.supabase.createClient(U, K, {auth:{persistSession:false, autoRefreshToken:false}});
+    const ch = cli.channel('ctrc-'+t, {config:{broadcast:{self:false}}}); chans.set(t, ch);
+    ch.on('broadcast', {event:'c'}, ({payload})=>{ try{ (Array.isArray(payload)?payload:[payload]).slice(0,40).forEach(m=>act(m, null)); state(ch); }catch(e){} });
+    ch.subscribe(st=>{ if(st==='SUBSCRIBED'){ showBadge(Date.now()-lastAt<60000); state(ch); } });
+  };
+  setInterval(()=>{ if(badge && Date.now()-lastAt>60000) showBadge(false); }, 15000);
+  toks.forEach(sub);
+  return { pair(t){ if(!/^[A-Za-z0-9]{24,40}$/.test(t)) return; toks = toks.filter(x=>x!==t).concat(t).slice(-6); try{ localStorage.setItem(KEY, JSON.stringify(toks)); }catch(e){} sub(t); status('📱 Τηλεχειριστήριο κινητού: συνδέθηκε'); } };
+})();
 
 window.__ct = {VK:()=>VK, unNct, nctStream, V3, set3d, render3,skel, nameScore, lev, idScore, amkaDob, setQ:q=>{Q=q;}, get S(){ return S; }, ingest, setMip, setPlane, frame, drawNow};
 })();

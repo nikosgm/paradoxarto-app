@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08p-v180';
+const APP_VER = '2026-11-08q-v181';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -12061,12 +12061,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           : !L.length ? '<div style="color:#475569;font-size:14.5px;padding:14px 0">Καμία εξέταση'+(st.flt!=='*'?' αυτού του είδους':'')+'.</div>'
           : L.map(x=>'<button data-ex="'+E(x.examid)+'" style="display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid #EEF1F4;background:'+(st.sent===String(x.examid)?'#EAF6EE':'#fff')+';padding:12px 2px;font-size:15px;color:#1F2933"><span style="font-size:20px">'+(isXr(x.mod)?'🫁':/^US$/i.test(x.mod)?'🔊':'🩻')+'</span><span style="flex:1;min-width:0"><b>'+E(String(x.date||'').slice(0,10).split('-').reverse().join('/'))+'</b> · '+E(x.mod)+(st.free?'<br><b style="font-size:14px">'+E(((x.last||'')+' '+(x.first||'')).trim())+'</b>'+(x.birth?' <span style="color:#64748B;font-size:12.5px">γ. '+E(String(x.birth).slice(0,10).split('-').reverse().join('/'))+'</span>':''):'')+'<br><span style="color:#475569;font-size:13.5px">'+E(x.desc||'')+'</span></span><span style="color:var(--mp,#1D4E80);font-weight:700;font-size:14px">'+(st.sent===String(x.examid)?'✓ στάλθηκε':'Άνοιγμα ›')+'</span></button>').join(''))
         + '</div>'
-        + '<button data-search style="margin-top:10px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:14px;padding:12px;font-size:15px;font-weight:700"'+(pc?'':' disabled')+'>🔎 Μόνο αναζήτηση του ασθενή στον υπολογιστή</button></div>';
+        + '<button data-search style="margin-top:10px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:14px;padding:12px;font-size:15px;font-weight:700"'+(pc?'':' disabled')+'>🔎 Μόνο αναζήτηση του ασθενή στον υπολογιστή</button>'
+        + '<button data-pad style="margin-top:8px;border:0;background:#0F172A;color:#fff;border-radius:14px;padding:13px;font-size:15.5px;font-weight:700"'+(pc?'':' disabled')+'>🎮 Τηλεχειριστήριο (trackpad + πληκτρολόγιο)</button></div>';
     };
     const send = async (examid, desc)=>{
       if(!pc){ toast('Διάλεξε υπολογιστή'); return; }
       const sur = String((st.free && st.q) || d.name || '').trim().split(/\s+/)[0] || '';
-      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctremote', name:'🖥 '+(d.name||''), room:null, kind:'ctremote', payload:{only:pc, examid:examid?String(examid):'', sur, amka: st.free ? '' : amka, desc:desc||'', quiet:true}, status:'new'}).select('id').single();
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctremote', name:'🖥 '+(d.name||''), room:null, kind:'ctremote', payload:{only:pc, examid:examid?String(examid):'', sur, fn:'PDXRC'+pdxRcTok(pc), amka: st.free ? '' : amka, desc:desc||'', quiet:true}, status:'new'}).select('id').single();
       if(ins.error){ toast('Σφάλμα: '+ins.error.message); return; }
       st.sent = examid ? String(examid) : ''; draw(); toast('🖥 Ανοίγει στον '+(BN[pc]||'υπολογιστή')+'…');
       const id = ins.data.id, t0 = Date.now();
@@ -12080,6 +12081,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const f = t.closest('[data-f]'); if(f){ st.flt = f.dataset.f; return draw(); }
       const x = t.closest('[data-ex]'); if(x){ const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); return send(x.dataset.ex, ex ? (ex.mod+' '+(ex.desc||'')).trim() : ''); }
       if(t.closest('[data-search]')) return send('', '');
+      if(t.closest('[data-pad]')) return window.pdxCtPad && pdxCtPad(pc, BN[pc]||'υπολογιστής');
     });
     // 🔎 8/11: ελεύθερη αναζήτηση στον Evorad από το κινητό (όταν δεν βρίσκεται ο ασθενής ή για άλλον)
     ov.addEventListener('submit', e=>{ e.preventDefault(); const i = ov.querySelector('[data-q]'); const q = String(i && i.value || '').trim(); if(q.length < 2){ toast('Γράψε τουλάχιστον 2 γράμματα'); return; }
@@ -12102,6 +12104,81 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(my===seq && st.exams===null){ st.err = 'Το bot δεν απάντησε (ο Evorad μπορεί να θέλει σύνδεση στους υπολογιστές).'; draw(); }
     };
     list({name:d.name, fname:d.fname||'', ad:d.admitDate||'', am, amka, listOnly:true, quiet:true});
+  };
+
+  // 📱 8/11: κλειδί τηλεχειριστηρίου ανά υπολογιστή (μένει στο κινητό· ο υπολογιστής το παίρνει με το άνοιγμα από το κινητό)
+  window.pdxRcTok = function(pc){ const k='pdx_rc_'+pc; let t=''; try{ t=localStorage.getItem(k)||''; }catch(e){}
+    if(!/^[A-Za-z0-9]{32}$/.test(t)){ const A='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789', r=new Uint8Array(32); crypto.getRandomValues(r); t=[...r].map(x=>A[x%A.length]).join(''); try{ localStorage.setItem(k,t); }catch(e){} }
+    return t; };
+  // 🎮 Τηλεχειριστήριο Νίκος CT Viewer: Supabase Realtime broadcast (άμεσο, ~50–150 ms) — μόνο εντολές προβολής και κείμενο
+  window.pdxCtPad = function(pc, pcName){
+    if(!pc || typeof sb6==='undefined') return;
+    const tok = pdxRcTok(pc), ch = sb6.channel('ctrc-'+tok, {config:{broadcast:{self:false}}});
+    const old = document.getElementById('ctPadOv'); if(old) old.remove();
+    const ov = document.createElement('div'); ov.id='ctPadOv';
+    ov.style.cssText='position:fixed;inset:0;z-index:9800;background:#0B1220;color:#E2E8F0;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));font-family:system-ui;-webkit-user-select:none;user-select:none';
+    const B = (attr, t, ex)=>'<button '+attr+' style="flex:1;min-width:0;border:0;border-radius:11px;background:#1E293B;color:#E2E8F0;padding:11px 4px;font-size:14.5px;font-weight:700;'+(ex||'')+'">'+t+'</button>';
+    let mode = 'sl';
+    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><b style="font-size:16.5px;flex:1">🎮 '+String(pcName).replace(/[<>&]/g,'')+'</b><span data-st style="font-size:13px;color:#94A3B8">σύνδεση…</span><button data-x style="border:0;background:#334155;color:#fff;border-radius:10px;padding:8px 12px;font-size:15px">✕</button></div>'
+      + '<div data-modes style="display:flex;gap:6px;margin:8px 0 6px">'+B('data-m="sl"','↕ Τομές')+B('data-m="zp"','🔍 Zoom')+B('data-m="wl"','☀ Αντίθεση')+'</div>'
+      + '<div data-pad style="flex:1;min-height:160px;border-radius:16px;background:#111C2E;border:1.5px solid #24324A;touch-action:none;display:flex;align-items:center;justify-content:center;text-align:center;color:#475569;font-size:13.5px;line-height:1.5">σύρε με 1 δάχτυλο<br>2 δάχτυλα: zoom (τσίμπημα) / μετακίνηση</div>'
+      + '<div style="display:flex;gap:6px;margin-top:8px">'+B('data-s="-10"','⏫ 10')+B('data-s="-1"','▲')+B('data-s="1"','▼')+B('data-s="10"','⏬ 10')+'</div>'
+      + '<div style="display:flex;gap:6px;margin-top:6px">'+B('data-p="ax"','Αξον.')+B('data-p="cor"','Στεφ.')+B('data-p="sag"','Οβελ.')+B('data-sr="-1"','◀ σειρά')+B('data-sr="1"','σειρά ▶')+'</div>'
+      + '<div style="display:flex;gap:6px;margin-top:6px">'+B('data-pr="0"','Auto')+B('data-pr="1"','ΜΜ')+B('data-pr="2"','Οστά')+B('data-pr="3"','Πνεύμ.')+B('data-pr="4"','Εγκ.')+B('data-rs','↺')+'</div>'
+      + '<form data-kf style="display:flex;gap:6px;margin-top:8px"><input data-kb enterkeyhint="send" autocomplete="off" placeholder="⌨ πληκτρολόγιο → υπολογιστής" style="flex:1;min-width:0;border:1.5px solid #334155;background:#0F172A;color:#fff;border-radius:11px;padding:10px 11px;font-size:16px"><button style="border:0;border-radius:11px;background:#2563EB;color:#fff;padding:0 13px;font-size:14.5px;font-weight:700">Γράψε ⏎</button></form>'
+      + '<div style="display:flex;gap:6px;margin-top:6px">'+B('data-k="Enter"','⏎ Enter')+B('data-k="Escape"','Esc')+B('data-evo','🩻 Evorad')+'</div>';
+    document.body.appendChild(ov);
+    const $o = q=>ov.querySelector(q), stEl = $o('[data-st]'), pad = $o('[data-pad]');
+    const paintModes = ()=>ov.querySelectorAll('[data-m]').forEach(b=>{ const on=b.dataset.m===mode; b.style.background=on?'#2563EB':'#1E293B'; });
+    paintModes();
+    // ουρά εντολών: μία αποστολή ανά ~33 ms (οι κινήσεις συγχωνεύονται)
+    let Q = [], acc = {step:0, zoom:1, px:0, py:0, wx:0, wy:0}, flT = 0, live = false, lastS = 0, paired = false;
+    const flush = ()=>{ flT = 0; const L = Q; Q = [];
+      if(acc.step){ L.push({o:'step', n:Math.round(acc.step)}); acc.step -= Math.round(acc.step); }
+      if(Math.abs(acc.zoom-1)>.005){ L.push({o:'zoom', f:+acc.zoom.toFixed(3)}); acc.zoom = 1; }
+      if(acc.px||acc.py){ L.push({o:'pan', dx:Math.round(acc.px), dy:Math.round(acc.py)}); acc.px = acc.py = 0; }
+      if(acc.wx||acc.wy){ L.push({o:'win', dx:Math.round(acc.wx), dy:Math.round(acc.wy)}); acc.wx = acc.wy = 0; }
+      if(L.length && live) ch.send({type:'broadcast', event:'c', payload:L}); };
+    const q = m=>{ if(m) Q.push(m); if(!flT) flT = setTimeout(flush, 33); };
+    ch.on('broadcast', {event:'s'}, ({payload:s})=>{ lastS = Date.now(); paired = true;
+      const V = {ax:'Αξονικό', cor:'Στεφανιαίο', sag:'Οβελιαίο'}[s.v]||'';
+      stEl.style.color = '#86EFAC'; stEl.textContent = s.n ? ('Τομή '+s.i+'/'+s.n+' · '+V+(s.sn>1?' · σειρά '+s.si+'/'+s.sn:'')+(s.ld?' · φορτώνει':'')) : (s.evo?'Evorad ανοιχτό':'✓ συνδέθηκε · καμία εικόνα'); });
+    ch.subscribe(st=>{ if(st==='SUBSCRIBED'){ live = true; ch.send({type:'broadcast', event:'c', payload:[{o:'hello'}]});
+      // ο υπολογιστής δεν απάντησε → ζεύξη: άνοιγμα/εμφάνιση του Νίκος CT Viewer με το κλειδί (μέσω bot, μία φορά)
+      setTimeout(async ()=>{ if(paired || !document.body.contains(ov)) return; stEl.textContent = 'ζεύξη με τον υπολογιστή…';
+        const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctremote', name:'🎮 τηλεχειριστήριο', room:null, kind:'ctremote', payload:{only:pc, examid:'', sur:'', amka:'', fn:'PDXRC'+tok, quiet:true}, status:'new'}).select('id').single();
+        if(ins.error){ stEl.textContent = '✗ '+ins.error.message; return; }
+        const t0 = Date.now(); while(!paired && Date.now()-t0 < 40000 && document.body.contains(ov)){ await new Promise(r=>setTimeout(r,2000)); ch.send({type:'broadcast', event:'c', payload:[{o:'hello'}]}); }
+        if(!paired && document.body.contains(ov)){ stEl.style.color='#FCA5A5'; stEl.textContent = '✗ ο υπολογιστής δεν απαντά (ανοιχτό το Νίκος CT Viewer;)'; }
+      }, 2500); } });
+    const close = ()=>{ try{ sb6.removeChannel(ch); }catch(e){} ov.remove(); };
+    // trackpad
+    const P = new Map(); let last = null;
+    pad.addEventListener('pointerdown', e=>{ pad.setPointerCapture(e.pointerId); P.set(e.pointerId, {x:e.clientX, y:e.clientY}); last = null; e.preventDefault(); });
+    pad.addEventListener('pointermove', e=>{ const p0 = P.get(e.pointerId); if(!p0) return; e.preventDefault();
+      if(P.size >= 2){ const a = [...P.values()]; const d0 = Math.hypot(a[0].x-a[1].x, a[0].y-a[1].y), m0 = [(a[0].x+a[1].x)/2, (a[0].y+a[1].y)/2];
+        P.set(e.pointerId, {x:e.clientX, y:e.clientY}); const b = [...P.values()]; const d1 = Math.hypot(b[0].x-b[1].x, b[0].y-b[1].y), m1 = [(b[0].x+b[1].x)/2, (b[0].y+b[1].y)/2];
+        if(d0 > 10) acc.zoom *= d1/d0; acc.px += (m1[0]-m0[0])*2; acc.py += (m1[1]-m0[1])*2; q(); return; }
+      const dx = e.clientX-p0.x, dy = e.clientY-p0.y; P.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if(mode==='sl') acc.step += dy/9; else if(mode==='zp'){ acc.px += dx*2; acc.py += dy*2; } else { acc.wx += dx*1.2; acc.wy += dy*1.2; }
+      q(); });
+    const up = e=>{ P.delete(e.pointerId); };
+    pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+    // κουμπιά (κράτημα ▲▼ = συνεχής κύλιση)
+    let rep = 0; const stopRep = ()=>{ clearInterval(rep); rep = 0; };
+    ov.addEventListener('pointerdown', e=>{ const s = e.target.closest('[data-s]'); if(!s) return; const n = +s.dataset.s; q({o:'step', n}); stopRep(); if(Math.abs(n)===1) rep = setInterval(()=>q({o:'step', n}), 90); });
+    ['pointerup','pointercancel','pointerleave'].forEach(t=>ov.addEventListener(t, stopRep));
+    ov.addEventListener('click', e=>{ const t = e.target;
+      if(t.closest('[data-x]')) return close();
+      const m = t.closest('[data-m]'); if(m){ mode = m.dataset.m; return paintModes(); }
+      const p = t.closest('[data-p]'); if(p) return q({o:'plane', p:p.dataset.p});
+      const sr = t.closest('[data-sr]'); if(sr) return q({o:'ser', d:+sr.dataset.sr});
+      const pr = t.closest('[data-pr]'); if(pr) return q({o:'preset', i:+pr.dataset.pr});
+      if(t.closest('[data-rs]')) return q({o:'reset'});
+      const k = t.closest('[data-k]'); if(k) return q({o:'key', k:k.dataset.k});
+      if(t.closest('[data-evo]')) return q({o:'evo'});
+    });
+    ov.addEventListener('submit', e=>{ e.preventDefault(); const i = $o('[data-kb]'); const v = String(i.value||'').trim(); if(!v) return; q({o:'text', s:v, enter:true}); i.value=''; try{ navigator.vibrate && navigator.vibrate(15); }catch(x){} });
   };
   window.pdxEvoradOpen = async function(k){
     const d = recOf(k); if(!d || typeof sb6==='undefined') return;
