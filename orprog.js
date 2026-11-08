@@ -273,6 +273,7 @@
           + box("Αναισθησία", ANS.map((a) => ch("an", a, p.an === a)).join(""))
           + box("Αίμα", BLOOD.map((a) => ch("bl", a, (p.bl || "") === a, a || "—")).join("") + '<button data-ca style="margin-left:10px;min-height:36px;padding:6px 12px;border-radius:18px;border:1px solid ' + (p.ca ? "#0A84FF" : "#C7CDD4") + ";background:" + (p.ca ? "#0A84FF" : "#fff") + ";color:" + (p.ca ? "#fff" : "#1F2933") + ';font-weight:600">c-ARM ' + (p.ca ? "ΝΑΙ" : "—") + "</button>")
           + box("Χειρουργός", SURGEONS().map((s) => ch("sg", s, p.surg === s, s.replace(/^κ /, ""))).join("") + inp("surg", p.surg, "κ ΕΠΩΝΥΜΟ"))
+          + (window.pdxOpNote ? box("Πρακτικό χειρουργείου", '<button data-opn style="width:100%;text-align:left;min-height:44px;border:1px solid #C7CDD4;border-radius:10px;background:#fff;padding:8px 10px;font-size:15px">📝 ' + (p.opnote ? "<b>Αποθηκευμένο</b> · " + E(String(p.opnote).slice(0, 60)) + "…" : "Από τα πρακτικά της κλινικής ›") + "</button>") : "")
           + '<div style="display:flex;gap:8px;margin-top:14px"><button data-del style="flex:1;min-height:46px;border:0;border-radius:12px;background:#FDECEC;color:#B42318;font-weight:700">Αφαίρεση</button><button data-x style="flex:2;min-height:46px;border:0;border-radius:12px;background:#0A84FF;color:#fff;font-weight:700">Τέλος</button></div>';
         if (!ov) ov = sheet(inner); else ov.querySelector("#orpSh").innerHTML = inner;
       };
@@ -282,6 +283,7 @@
         const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
         if (d.x !== undefined) { ov.remove(); touch(); return; }
         if (d.del !== undefined) { if (!confirm("Αφαίρεση από το πρόγραμμα;")) return; P.pts = P.pts.filter((x) => x !== p); renum(p.room); ov.remove(); touch(); return; }
+        if (d.opn !== undefined && window.pdxOpNote) { const proc = [p.t, p.t2].filter(Boolean).join(" + ") || p.dx || ""; window.pdxOpNote({ name: p.nm, proc, side: p.side || "", surg: p.opsurg || "", text: p.opnote || "", onSave: (r) => { p.opnote = r.text; p.opsurg = r.surg; dirty = true; render(); touch(); } }); return; }
         if (d.rm) { const old = p.room; p.room = d.rm; p.n = P.pts.filter((q) => q.room === d.rm && q !== p).length + 1; renum(old); }
         else if (d.sd !== undefined) p.side = d.sd;
         else if (d.sd2 !== undefined) p.side2 = d.sd2;

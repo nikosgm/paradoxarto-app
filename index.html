@@ -2257,7 +2257,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v212';
+const APP_VER = '2026-11-08z-v213';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -9275,7 +9275,8 @@ document.head.appendChild(st);
         + row('📄','Ιστορικό εισαγωγής', hpd ? 'νέο ●' : d.caseHist ? '✓' : '', "__histOpenPending('"+xk+"',"+_x+")", hpd)
         + row('🧪','Εξετάσεις', warn ? '●' : '', "mobAct('"+xk+"','labs')", warn)
         + (window.pdxCtOpen ? row('🩻','Απεικονίσεις', '', "pdxCtOpen('"+xk+"')") : '')
-        + (window.pdxComorbOpen ? row('🩺','Συννοσηρότητες', cc ? String(cc) : '', "pdxComorbOpen('"+xk+"')") : '') + '</div>';
+        + (window.pdxComorbOpen ? row('🩺','Συννοσηρότητες', cc ? String(cc) : '', "pdxComorbOpen('"+xk+"')") : '')
+        + row('📂','Φάκελος νοσηλείας (ΝΠΣ)', '', "pdxDossierOpen('"+esc(String(d.name||'').replace(/'/g,''))+"','"+esc(String(d.amka||''))+"')") + '</div>';
       h += secs(k2=>HIST.indexOf(k2)>=0);
       { const ck=calcKind(d); if(ck.length){ h+='<div class="msec" onclick="mobCalc(\''+xk+'\')" style="cursor:pointer"><h3>Υπολογιστές<em>›</em></h3><div class="mbig">'+ck.map(x=>x==='renal'?'R.E.N.A.L.':x==='egfr'?'eGFR':x==='eau'?'EAU risk':'Partin').join(' · ')+'</div></div>'; } }
     } else {
@@ -17559,6 +17560,34 @@ function applyFs(){ ov.style.setProperty('--fs', fsScale()); }
 
 /* ---------- Public entry points ---------- */
 window.__chClose = function(){ closeOv(); };
+// 📂 8/11: ΦΑΚΕΛΟΣ ΝΟΣΗΛΕΙΑΣ από το ΝΠΣ (εντολή npsdossier: κάθε βράδυ αργά + «Φέρε τώρα») — αποκρυπτογράφηση στη συσκευή
+window.pdxDossierOpen = async function(name, amka){
+  if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
+  const E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const st = {d:null, at:0, busy:'', err:''};
+  const T = {dx:'🩺 Διαγνώσεις', consult:'📞 Κλήσεις για εκτίμηση', orOrder:'🔪 Εντολές για επέμβαση', opNote:'📝 Πρακτικά επέμβασης', acts:'⚕️ Ιατρικές πράξεις', course:'📈 Πορεία νόσου', info:'ℹ️ Ενημερωτικά σημειώματα', dc:'📄 Εξιτήρια', meds:'💊 Φαρμακευτική αγωγή'};
+  const draw = ()=>{ let h = '';
+    if(st.busy) h += '<div style="margin:12px 16px;color:#6B7280">⏳ '+E3(st.busy)+'</div>';
+    if(st.err) h += '<div style="margin:12px 16px;color:#B42318">⚠ '+E3(st.err)+'</div>';
+    if(!st.d && !st.busy) h += '<div style="margin:12px 16px;color:#6B7280">Δεν υπάρχει ακόμα φάκελος. Έρχεται αυτόματα κάθε βράδυ (23:00) ή πάτα «Φέρε τώρα».</div>';
+    if(st.d){ const S = st.d.sec || {};
+      h += '<div style="margin:4px 16px 8px;font-size:13px;color:#6B7280">ΝΠΣ · '+new Date(st.d.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>';
+      Object.keys(T).forEach(k=>{ const x = S[k]; if(!x || x.miss) return; const R = x.rows||[]; if(!R.length) return;
+        h += iosGroup(T[k]+' · '+R.length, R.map((r,i)=>{ const v = (x.views||[])[i]; const sub = v && v.fields && v.fields.length ? '<details style="margin-top:6px"><summary style="cursor:pointer;color:#0A84FF;font-size:13px">Τι γράφει</summary>'+v.fields.map(f=>'<div style="margin:6px 0;font-size:13.5px"><b style="color:#6B7280;font-weight:600">'+E3(f.l||'—')+'</b><div style="white-space:pre-wrap">'+E3(f.v)+'</div></div>').join('')+'</details>' : '';
+          return {t:'<span style="font-size:14.5px">'+E3(r.filter(Boolean).join(' · '))+'</span>'+sub}; })); });
+    }
+    h += iosGroup('', [{t:'<b style="color:#0A84FF">↻ Φέρε τώρα από το ΝΠΣ</b>', on:'window.__dosNow && __dosNow()'}]);
+    return h + '<div style="height:40px"></div>'; };
+  const pg = iosPage('Φάκελος νοσηλείας', '', draw);
+  const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','npsdossier').eq('status','done').eq('name', name).order('id',{ascending:false}).limit(1);
+      const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && j.payload.result.enc){ st.d = await pdxCK.decrypt(j.payload.result.enc); } }catch(e){ st.err = 'Αποκρυπτογράφηση: '+(e.message||e); } pg.redraw(); };
+  window.__dosNow = async ()=>{ if(st.busy) return; st.busy = 'Στάλθηκε στον υπολογιστή του νοσοκομείου…'; st.err=''; pg.redraw();
+    try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_dos', name, room:null, kind:'npsdossier', payload:{name, amka:amka||'', quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+      const id = ins.data.id; for(;;){ await new Promise(r=>setTimeout(r, 2000)); if(!pg.el.isConnected) return; const q = await sb6.from('oncall_jobs').select('status,note').eq('id', id).maybeSingle(); const x = q.data; if(!x) continue;
+        if(x.status==='done'){ st.busy=''; await load(); return; } if(/^(failed|cancelled|dismissed)$/.test(x.status)){ st.busy=''; st.err = x.note||'απέτυχε'; pg.redraw(); return; } if(x.note){ st.busy = x.note.slice(0,120); pg.redraw(); } } }catch(e){ st.busy=''; st.err = e.message||String(e); pg.redraw(); } };
+  try{ await (window.pdxCK && pdxCK.ready()); }catch(e){}
+  load();
+};
 window.pdxCloseCaseHist = function(){ closeOv(); };   // κλείσιμο ιστορικού (π.χ. δοκιμές πλοήγησης)
 window.openCaseHist = function(key, isExtra){
   try{ if(window.mobSaveScroll) window.mobSaveScroll(key); }catch(e){}
@@ -19097,6 +19126,7 @@ function ptHtml(){
       // 8/11 (εντολή χρήστη): χωριστά ΣΤΗΝ ΚΛΙΝΙΚΗ ΜΑΣ / σε άλλες κλινικές· πάτημα → λεπτομέρειες της νοσηλείας
       const row = a=>{ const n = days(toIso(a.from), toIso(a.to)), ix = R.indexOf(a); return '<button class="ptx-r" data-admx="'+ix+'"><b>'+E(a.type||'Επεισόδιο')+(a.to ? (n ? ' · '+n+' ημέρ'+(n===1?'α':'ες') : '') : ' · <span style="color:#1F7A3A">σε εξέλιξη</span>')+'</b><small>'+E(dt(a.from)||'?')+' → '+E(a.to ? dt(a.to) : 'σε εξέλιξη')+((a.depts||[]).length ? ' · '+E(a.depts.slice(0,3).join(' → ')) : '')+' · <span class="lk">Λεπτομέρειες ›</span></small></button>'; };
       const RO = R.filter(a=>a.ours), RX = R.filter(a=>!a.ours);
+      h += '<div class="ptx-g"><button class="ptx-r" data-dossier><b>📂 Φάκελος τρέχουσας νοσηλείας (ΝΠΣ)</b><small>διαγνώσεις · εκτιμήσεις · χειρουργεία · πρακτικά · πορεία νόσου · εξιτήριο · φάρμακα · <span class="lk">Άνοιγμα ›</span></small></button></div>';
       h += '<div class="ios-h">🩺 Στην κλινική μας · '+RO.length+'</div>' + (RO.length ? '<div class="ptx-g">'+RO.map(row).join('')+'</div>' : empty('Καμία νοσηλεία στην κλινική μας.'));
       if(RX.length) h += '<div class="ios-h">🏥 Σε άλλες κλινικές · '+RX.length+'</div><div class="ptx-g">'+RX.map(row).join('')+'</div>';
     } else { const R = H.nps.dc;
@@ -19231,6 +19261,7 @@ window.pdxPatients = function(opt){
     const ad = t.closest('[data-adm]'); if(ad){ openDc(+ad.dataset.adm); return; }
     if(t.closest('[data-npsre]') && M.pt && M.H){ const pt = M.pt, H = M.H; H.nps = {busy:true, note:'', sec:0}; redraw(); npsLoad(pt, H).then(v=>{ if(M.pt===pt && M.H===H){ H.nps = v; redraw(); } }, e=>{ if(M.H===H){ H.nps = {err:'ΝΠΣ: '+(e.message||e), retry:true}; redraw(); } }); return; }
     if(t.closest('[data-labpid]') && M.pt && M.pt.pid){ const p = M.pt; pg.close(); window.labsFullOpenPid ? labsFullOpenPid(p.pid, p.name, reopen) : TOAST('Τα εργαστηριακά δεν είναι διαθέσιμα'); return; }
+    if(t.closest('[data-dossier]') && M.pt){ window.pdxDossierOpen(String(M.pt.name||M.pt.d && M.pt.d.name||'').trim(), M.pt.amka||''); return; }
     const ax = t.closest('[data-admx]'); if(ax && M.H && M.H.nps && M.H.nps.adm){ const a = M.H.nps.adm[+ax.dataset.admx]; if(!a) return;
       // 🏥 λεπτομέρειες νοσηλείας (από το ΝΠΣ): κλινικές, ημερομηνίες, ό,τι γράφει το επεισόδιο· σύντομα: εξιτήριο, εκτιμήσεις, διαγνώσεις, χειρουργεία, πρακτικά, πορεία νόσου
       const ln = String(a.det||'').replace(/\s*(Επεισόδιο\s*:|Ημ\.Εισαγωγής|Ημ\.Εξόδου|Κλινική|Τμήμα|Θάλαμος|Κλίνη|Ιατρός|Διάγνωση)/g, '\n$1').split('\n').map(x=>x.trim()).filter(Boolean).slice(0, 40);
@@ -20618,8 +20649,8 @@ window.CLS_MODE='A';
   window.pdxScanDevCount = async function(){ try{ const r = await sb6.from('oncall_scan_devices').select('id').eq('approved', false); return (r.data||[]).length; }catch(e){ return 0; } };
   // 🗓 8/11: Πρόγραμμα χειρουργείου — φορτώνεται μόνο όταν ανοίξει (orprog-data.js + orprog.js)
   window.pdxOrProgOpen = async function(date){
-    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v=206'; s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
-    try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); return window.pdxOrProg(date); }catch(e){ alert('⚠ '+(e.message||e)); }
+    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v=213'; s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
+    try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{}); return window.pdxOrProg(date); }catch(e){ alert('⚠ '+(e.message||e)); }
   };
   window.pdxScanDevices = function(){
     let rows = null, err = '', note = ''; const can = ['attending','admin'].indexOf(window.authRole)>=0;
