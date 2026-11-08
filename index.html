@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v196';
+const APP_VER = '2026-11-08z-v197';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20195,7 +20195,7 @@ window.CLS_MODE='A';
       + '<div data-msg style="position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14.5px;text-shadow:0 1px 3px #000"></div>'
       + '<img data-prev style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111">'
       + '<div data-cd style="display:none;position:absolute;left:0;right:0;bottom:0;padding:18px 16px 22px;background:linear-gradient(transparent,#000c 30%);text-align:center"></div></div>'
-      + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><label data-gal aria-label="Από τη συλλογή ή αρχείο" style="flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer">🖼<input data-galf type="file" accept="image/*" multiple style="display:none"></label><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_APP()+'" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
+      + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><button data-gal aria-label="Από τις φωτογραφίες του κινητού" style="flex:0 0 auto;width:56px;height:56px;border:0;border-radius:14px;background:#ffffff26;color:#fff;font-size:28px;cursor:pointer">🖼</button><input data-galf type="file" accept="image/*" multiple style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0"><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_APP()+'" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
     document.body.appendChild(ov);
     // 8/11: «κανένα κουμπί»: πάντα Αυτόματα (Claude) — το πρόγραμμα το αναγνωρίζει το Claude και το στέλνει μόνο του (5″ για ακύρωση).
     // Ο τρόπος «πρόγραμμα → email χωρίς Claude» μένει μόνο με pdxScanOpen('prog') (εφεδρικός).
@@ -20226,14 +20226,18 @@ window.CLS_MODE='A';
       countdown(pdf, ckP);
     }
     // 🖼 Από τη συλλογή / Αρχεία / άλλη εφαρμογή (πολλές μαζί στο «Αυτόματα»)
+    // 8/11: κουμπί → input.click() (στο iPhone, <label> με κρυφό input δεν άνοιγε τίποτα)
+    $('[data-gal]').onclick = ()=>{ const fi = $('[data-galf]'); fi.value = ''; fi.click(); };
     $('[data-galf]').onchange = async (e)=>{ const fs = [...(e.target.files||[])]; e.target.value = ''; if(!fs.length || !st) return;
       const list = st.mode==='auto' ? fs.slice(0, Math.max(0, 4 - st.pages.length)) : fs.slice(0, 1); st.multi = list.length > 1;
       if(!list.length) return toast('Έως 4 σελίδες — πάτα «Στο Claude»');
       for(const f of list){ if(!st) return; st.busy = true; try{ const bmp = await createImageBitmap(f); await take(bmp, bmp.width, bmp.height, null); }catch(er){ st.busy = false; toast('⚠ '+(f.name||'εικόνα')+': δεν διαβάστηκε ('+(er && er.message || er)+')'); } } };
     // 📱 iPhone/iPad: η εφαρμογή στην αρχική οθόνη ΔΕΝ θυμάται την άδεια κάμερας (ρωτά κάθε φορά) → η κάμερα του iPhone
     // (χωρίς ερώτηση άδειας): πατάς τον κύκλο → τραβάς → «Χρήση φωτογραφίας»
-    const MOB = /iPhone|iPad|iPod|Android/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-    if((MOB || window.__pdxScanNative) && !window.__pdxScanLive){
+    // iPhone: η εφαρμογή αρχικής οθόνης ρωτά άδεια για ζωντανή κάμερα σε ΚΑΘΕ άνοιγμα → κάμερα του iPhone.
+    // Android: θυμάται την άδεια → ζωντανή κάμερα που ανοίγει ΑΜΕΣΩΣ με το άνοιγμα της εφαρμογής (ένα πάτημα για λήψη).
+    const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if((IOS || window.__pdxScanNative) && !window.__pdxScanLive){
       st.native = true;
       v.style.display = 'none'; $('[data-g]').style.display = 'none'; $('[data-rot]').style.visibility = 'hidden';
       const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.setAttribute('capture', 'environment'); fi.style.display = 'none'; fi.setAttribute('data-file', ''); ov.appendChild(fi);
@@ -20241,6 +20245,8 @@ window.CLS_MODE='A';
       const hint = ()=>{ $('[data-msg]').innerHTML = '<div style="font-size:64px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.75;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή (πολλές σελίδες μαζί)</div><div style="opacity:.75;font-size:14px">Ιστορικό, πόρισμα ή πρόγραμμα — το Claude βρίσκει τι είναι</div>'; };
       hint(); ov.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click', ()=>setTimeout(hint, 0)));
       $('[data-shot]').onclick = ()=>{ if(!st || st.busy) return; if(st.mode==='auto' && st.pages.length >= 4) return toast('Έως 4 σελίδες — πάτα «Στο Claude»'); fi.value = ''; fi.click(); };
+      // δοκιμή: άνοιγμα της κάμερας αμέσως (το iOS συνήθως το επιτρέπει μόνο μετά από πάτημα — τότε μένει ο πράσινος κύκλος)
+      setTimeout(()=>{ try{ if(st && !st.pages.length && !window.__pdxScanNoAuto) fi.click(); }catch(e){} }, 150);
       fi.onchange = async ()=>{ const f = fi.files && fi.files[0]; if(!f || !st) return; st.busy = true;
         try{ const bmp = await createImageBitmap(f); await take(bmp, bmp.width, bmp.height, null); }
         catch(e){ st.busy = false; toast('⚠ Η φωτογραφία δεν διαβάστηκε: '+(e.message||e)); } };
