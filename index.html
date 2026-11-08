@@ -2257,7 +2257,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v213';
+const APP_VER = '2026-11-08z-v214';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -17834,6 +17834,7 @@ function importParsed(parsed){
   try{ rulesApply(parsed); }catch(e){}
   var raw0 = JSON.parse(JSON.stringify(parsed));
   try{ ctx.lexNote = lexApply(parsed); }catch(e){}
+  try{ var sf = smartFix(parsed); if(sf.length) ctx.lexNote = (ctx.lexNote||[]).concat(sf); }catch(e){}
   ctx.h = { v:1, at:Date.now(), imgId:meta._imgId || null, d:parsed };
   ctx.orig = raw0;
   ctx.imgs = null; ctx.pendingImgs = null;
@@ -18586,6 +18587,9 @@ function lexFetch(){
 }
 function lexPrompt(){
   var pe = histRules().prompt_extra ? '\n\n' + String(histRules().prompt_extra) : '';
+  try{ var FULL = window.THERAPIST_FULL || {'Αν':'Αναστασίου','Αδ':'Αδαμάκης','Στρ':'Στραβοδήμος','Φρ':'Φραγκιάδης','Μουλ':'Μουλαβασίλης','Λεβ':'Λεβής','Δουρ':'Δουρούμης'};
+    pe += '\n\nΘΕΡΑΠΟΝΤΕΣ ΤΗΣ ΚΛΙΝΙΚΗΣ (ο «θεράπων» είναι ΠΑΝΤΑ ένας από αυτούς — διάλεξε τον πιο κοντινό): ' + Object.keys(FULL).map(function(k){ return FULL[k]; }).join(', ') + '.'
+      + '\nΦΑΡΜΑΚΑ: γράψε το εμπορικό όνομα όπως υπάρχει στην Ελλάδα (π.χ. Blockatens, Eliquis, Concor, Lasix)· αν η γραφή μοιάζει με γνωστό φάρμακο, γράψε το γνωστό.'; }catch(e){}
   var rl = pe + (HAND_RULES.length ? '\n\nΟΔΗΓΙΕΣ ΓΙΑ ΤΟ ΓΡΑΦΙΚΟ ΧΑΡΑΚΤΗΡΑ ΤΗΣ ΚΛΙΝΙΚΗΣ (από διορθώσεις του γιατρού, ισχύουν πάντα):\n- ' + HAND_RULES.join('\n- ') : '');
   if(!LEX.length) return rl;
   return rl + '\n\nΛΕΞΙΚΟ ΤΗΣ ΚΛΙΝΙΚΗΣ (από προηγούμενες διορθώσεις του γιατρού· όταν η γραφή μοιάζει με το αριστερό, το σωστό είναι το δεξί): ' +
@@ -18628,6 +18632,40 @@ function mergeWorkup(d){
   d.workup = out;
   return n;
 }
+// 🧠 8/11 (εντολή χρήστη: «θεράπων λεθής → Λεβής», «blocktens → Blockatens»): ΕΞΥΠΝΗ διόρθωση ανάγνωσης χειρόγραφου —
+// θεράπων → το πιο κοντινό όνομα γιατρού της κλινικής· λατινικές λέξεις (φάρμακα) → το πιο κοντινό εμπορικό όνομα που ξέρουμε
+// (κατάλογος e-prescription της συσκευής + ονόματα από αναζητήσεις + βασική λίστα). Μόνο όταν η απόσταση είναι μικρή και μοναδική.
+var DRUG_BASE = ['Blockatens','Lasix','Aldactone','Concor','Tenormin','Norvasc','Amlor','Coversyl','Triatec','Micardis','Aprovel','Cozaar','Atacand','Diovan','Exforge','Lipitor','Crestor','Zocor','Lipidil','Eliquis','Xarelto','Pradaxa','Sintrom','Clexane','Innohep','Plavix','Brilique','Salospir','Aspirin','Glucophage','Galvus','Januvia','Jardiance','Forxiga','Trajenta','Lantus','Toujeo','Novorapid','Humalog','Euthyrox','Thyrohormone','Omnic','Xatral','Avodart','Duodart','Proscar','Vesicare','Betmiga','Toviaz','Detrusitol','Cialis','Viagra','Zytiga','Xtandi','Casodex','Eligard','Firmagon','Zoladex','Nexium','Losec','Controloc','Ciproxin','Augmentin','Zinnat','Monurol','Furadantin','Lyrica','Neurontin','Depon','Panadol','Lonarid','Algofren','Voltaren','Apotel','Tramal','Xanax','Lexotanil','Stilnox','Seroquel','Zyprexa','Risperdal','Cipralex','Seroxat','Zoloft','Trittico','Ventolin','Seretide','Symbicort','Spiriva','Medrol','Prezolon','Euglucon','Diamicron','Amaryl','Vastarel','Monosordil','Nitrolingual','Lanoxin','Cordarone','Multaq','Inderal','Dilatrend','Lopressor','Zanidip','Lercanidipine','Hygroton','Fludex','Natrilix','Allopurinol','Zyloric','Adenuric','Colchicine','Fosamax','Prolia','Xgeva','Zometa','Kaleorid','Slow-K','Ferrum','Folic'];
+function levD(a, b){ a = String(a); b = String(b); if(Math.abs(a.length-b.length) > 3) return 9; var m = a.length, n = b.length, D = [], i, j;   // Damerau (αντιμετάθεση = 1)
+  for(i=0;i<=m;i++){ D[i] = [i]; } for(j=0;j<=n;j++) D[0][j] = j;
+  for(i=1;i<=m;i++) for(j=1;j<=n;j++){ var c = a[i-1]===b[j-1]?0:1; D[i][j] = Math.min(D[i-1][j]+1, D[i][j-1]+1, D[i-1][j-1]+c); if(i>1 && j>1 && a[i-1]===b[j-2] && a[i-2]===b[j-1]) D[i][j] = Math.min(D[i][j], D[i-2][j-2]+1); }
+  return D[m][n]; }
+function smartFix(d){
+  var done = []; if(!d || typeof d!=='object') return done;
+  var nz = function(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ'); };
+  // θεράπων
+  try{ var FULL = window.THERAPIST_FULL || {'Αν':'Αναστασίου','Αδ':'Αδαμάκης','Στρ':'Στραβοδήμος','Φρ':'Φραγκιάδης','Μουλ':'Μουλαβασίλης','Λεβ':'Λεβής','Δουρ':'Δουρούμης'};
+    var names = Object.keys(FULL).map(function(k){ return FULL[k]; });
+    ['attending','therapist'].forEach(function(f){ var v = String(d[f]||'').trim(); if(!v) return;
+      var w = v.replace(/^(κ\.?|κος|θεράπων)\s*/i,''); var best = null, bd = 9, tie = false;
+      names.forEach(function(n){ var dd = levD(nz(w), nz(n)); if(dd < bd){ bd = dd; best = n; tie = false; } else if(dd===bd) tie = true; });
+      if(best && !tie && w !== best && bd <= Math.max(1, Math.floor(nz(best).length/3))){ d[f] = best; done.push(v+' → '+best); } }); }catch(e){}
+  // φάρμακα (λατινικές λέξεις ≥5 γραμμάτων)
+  try{ var L = {}; DRUG_BASE.forEach(function(n){ L[n.toLowerCase()] = n; });
+    (window.pdxEpMedNames ? pdxEpMedNames() : []).forEach(function(n){ var b = String(n).split(/[^A-Za-z\-]+/)[0]; if(b && b.length>=4) L[b.toLowerCase()] = b.charAt(0)+b.slice(1).toLowerCase(); });
+    try{ var C = JSON.parse(localStorage.getItem('pdx_epcat')||'null'); (C && C.items || []).forEach(function(x){ var b = String(x[0]).split(/[^A-Za-z\-]+/)[0]; if(b && b.length>=4) L[b.toLowerCase()] = b.charAt(0)+b.slice(1).toLowerCase(); }); }catch(e){}
+    var keys = Object.keys(L);
+    var fixTok = function(tok){ var t = tok.toLowerCase(); if(L[t]) return tok; var best = null, bd = 9, tie = false;
+      for(var i=0;i<keys.length;i++){ var k = keys[i]; if(k[0]!==t[0] || Math.abs(k.length-t.length)>2) continue; var dd = levD(t, k); if(dd < bd){ bd = dd; best = k; tie = false; } else if(dd===bd && L[k]!==L[best]) tie = true; }
+      if(best && !tie && bd <= (t.length >= 8 ? 2 : 1)){ done.push(tok+' → '+L[best]); return L[best]; } return tok; };
+    var walk = function(o, key){ if(key==='suggestions' || key==='uncertain' || key==='at' || key==='attending' || key==='therapist') return o;
+      if(typeof o==='string') return o.replace(/\b[A-Za-z][A-Za-z\-]{4,}\b/g, fixTok);
+      if(Array.isArray(o)) return o.map(function(v){ return walk(v, key); });
+      if(o && typeof o==='object'){ Object.keys(o).forEach(function(k){ o[k] = walk(o[k], k); }); } return o; };
+    walk(d, ''); }catch(e){}
+  return done;
+}
+window.pdxSmartFix = smartFix;
 function lexApply(d){
   var done = [];
   if(!LEX.length) return done;
@@ -18742,6 +18780,7 @@ function onFiles(files){
       rulesApply(parsed);
       var raw = JSON.parse(JSON.stringify(parsed));
       var applied = lexApply(parsed);
+      try{ applied = (applied||[]).concat(smartFix(parsed)); }catch(e){}
       var id = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
       var rec = getRec();
       if(!rec) throw new Error('Ο ασθενής δεν βρέθηκε πια στη λίστα.');
