@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v193';
+const APP_VER = '2026-11-08z-v194';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20175,7 +20175,7 @@ window.CLS_MODE='A';
     const ov = document.createElement('div'); ov.id = 'pdxScanOv';
     ov.style.cssText = 'position:fixed;inset:0;z-index:100001;background:#000;color:#fff;display:flex;flex-direction:column;font-family:-apple-system,system-ui,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
     ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px"><button data-x style="'+B+'background:transparent;color:#fff">✕</button><b style="flex:1;font-size:16px">📷 Σάρωση</b><button data-rot style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px"></button></div>'
-      + '<div style="display:flex;gap:8px;padding:0 10px 8px"><button data-mode="auto" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🤖 Αυτόματα (Claude)</button><button data-mode="prog" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🗓 Πρόγραμμα → email</button></div>'
+      + '<div data-modes style="display:none;gap:8px;padding:0 10px 8px"><button data-mode="auto" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🤖 Αυτόματα (Claude)</button><button data-mode="prog" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🗓 Πρόγραμμα → email</button></div>'
       + '<div data-cam style="position:relative;flex:1;overflow:hidden"><video data-v playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
       + '<div data-g style="position:absolute;border:3px solid #34C759;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>'
       + '<div data-msg style="position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14.5px;text-shadow:0 1px 3px #000"></div>'
@@ -20183,7 +20183,9 @@ window.CLS_MODE='A';
       + '<div data-cd style="display:none;position:absolute;left:0;right:0;bottom:0;padding:18px 16px 22px;background:linear-gradient(transparent,#000c 30%);text-align:center"></div></div>'
       + '<div data-bar style="display:flex;justify-content:center;align-items:center;gap:14px;padding:12px 10px 20px;min-height:104px"><div data-pages style="display:none;gap:6px;flex:1;min-width:0;overflow-x:auto"></div><label data-gal aria-label="Από τη συλλογή ή αρχείο" style="flex:0 0 auto;width:52px;height:52px;border-radius:14px;background:#ffffff22;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer">🖼<input data-galf type="file" accept="image/*" multiple style="display:none"></label><button data-shot aria-label="Σάρωση" style="flex:0 0 auto;width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button><a data-send href="'+CLAUDE_URL()+'" target="_blank" rel="noopener" style="display:none;flex:1;text-align:center;text-decoration:none;'+B+'background:#34C759;color:#fff;font-size:15px;padding:13px 8px"></a></div>';
     document.body.appendChild(ov);
-    const m0 = mode==='prog' || mode==='auto' ? mode : modePref();
+    // 8/11: «κανένα κουμπί»: πάντα Αυτόματα (Claude) — το πρόγραμμα το αναγνωρίζει το Claude και το στέλνει μόνο του (5″ για ακύρωση).
+    // Ο τρόπος «πρόγραμμα → email χωρίς Claude» μένει μόνο με pdxScanOpen('prog') (εφεδρικός).
+    const m0 = mode==='prog' ? 'prog' : 'auto';
     st = { ov, mode: m0, land: landPref(m0), pages: [] };
     const $ = s=>ov.querySelector(s), v = $('[data-v]');
     $('[data-x]').onclick = close;
@@ -20211,18 +20213,18 @@ window.CLS_MODE='A';
     }
     // 🖼 Από τη συλλογή / Αρχεία / άλλη εφαρμογή (πολλές μαζί στο «Αυτόματα»)
     $('[data-galf]').onchange = async (e)=>{ const fs = [...(e.target.files||[])]; e.target.value = ''; if(!fs.length || !st) return;
-      const list = st.mode==='auto' ? fs.slice(0, Math.max(0, 4 - st.pages.length)) : fs.slice(0, 1);
+      const list = st.mode==='auto' ? fs.slice(0, Math.max(0, 4 - st.pages.length)) : fs.slice(0, 1); st.multi = list.length > 1;
       if(!list.length) return toast('Έως 4 σελίδες — πάτα «Στο Claude»');
       for(const f of list){ if(!st) return; st.busy = true; try{ const bmp = await createImageBitmap(f); await take(bmp, bmp.width, bmp.height, null); }catch(er){ st.busy = false; toast('⚠ '+(f.name||'εικόνα')+': δεν διαβάστηκε ('+(er && er.message || er)+')'); } } };
     // 📱 iPhone/iPad: η εφαρμογή στην αρχική οθόνη ΔΕΝ θυμάται την άδεια κάμερας (ρωτά κάθε φορά) → η κάμερα του iPhone
     // (χωρίς ερώτηση άδειας): πατάς τον κύκλο → τραβάς → «Χρήση φωτογραφίας»
-    const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-    if(IOS || window.__pdxScanNative){
+    const MOB = /iPhone|iPad|iPod|Android/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+    if((MOB || window.__pdxScanNative) && !window.__pdxScanLive){
       st.native = true;
       v.style.display = 'none'; $('[data-g]').style.display = 'none'; $('[data-rot]').style.visibility = 'hidden';
       const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.setAttribute('capture', 'environment'); fi.style.display = 'none'; fi.setAttribute('data-file', ''); ov.appendChild(fi);
       $('[data-msg]').style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;font-size:16px;padding:20px';
-      const hint = ()=>{ $('[data-msg]').innerHTML = '<div style="font-size:64px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> → τράβηξε → «Χρήση φωτογραφίας»</div><div style="opacity:.75;font-size:14px">'+(st.mode==='prog'?'Πρόγραμμα: όλο το Α4 στη φωτογραφία':'Ιστορικό/πόρισμα: μία φωτογραφία ανά σελίδα (έως 4)')+'</div>'; };
+      const hint = ()=>{ $('[data-msg]').innerHTML = '<div style="font-size:64px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.75;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή (πολλές σελίδες μαζί)</div><div style="opacity:.75;font-size:14px">Ιστορικό, πόρισμα ή πρόγραμμα — το Claude βρίσκει τι είναι</div>'; };
       hint(); ov.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click', ()=>setTimeout(hint, 0)));
       $('[data-shot]').onclick = ()=>{ if(!st || st.busy) return; if(st.mode==='auto' && st.pages.length >= 4) return toast('Έως 4 σελίδες — πάτα «Στο Claude»'); fi.value = ''; fi.click(); };
       fi.onchange = async ()=>{ const f = fi.files && fi.files[0]; if(!f || !st) return; st.busy = true;
@@ -20264,6 +20266,15 @@ window.CLS_MODE='A';
       await S0.chain;
     }catch(e){ pg.err = String(e.message||e).slice(0, 60); }
     if(st===S0) pagesDraw();
+    if(st===S0 && pg.ok && !S0.pages.some(x=>!x.ok && !x.err)) goClaude(S0);
+  }
+  // όλα ανέβηκαν → η σελίδα του Claude ανοίγει μόνη της (μικρή καθυστέρηση: αν διαλέχτηκαν πολλές από τη συλλογή, ανεβαίνουν όλες πρώτα)
+  function goClaude(S0){
+    clearTimeout(S0.goT);
+    S0.goT = setTimeout(()=>{ if(st!==S0 || S0.pages.some(x=>!x.ok && !x.err) || S0.gone) return; S0.gone = true;
+      const m = S0.ov.querySelector('[data-msg]'); if(m) m.innerHTML = '<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div>';
+      const u = CLAUDE_URL(); if(window.__pdxNoNav){ window.__pdxNav = u; close(); return; }
+      close(); try{ location.href = u; }catch(e){ window.open(u, '_blank'); } }, S0.multi ? 400 : 250);
   }
   function countdown(pdf, ckP){
     const $ = s=>st.ov.querySelector(s), cd = $('[data-cd]'); let n = WAIT;
