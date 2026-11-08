@@ -1,1 +1,1 @@
-{"version": "0.21.146", "zip": "ef-bot-0.21.146.zip", "sha256": "7e730b0f225d8858fe6127da2c7d3de1cda911d28b999340f587d79fbeec2510", "notes": "npsmedorder (παραγγελία φαρμάκου ΝΠΣ — μόνο έλεγχος) · epcat απάντηση API"}
+{"version": "0.21.147", "zip": "ef-bot-0.21.147.zip", "sha256": "91ab8e43092c644a2fb3a84b282dbffc091cefaf55295c3d905962d0f78a155c", "notes": "e-prescription: ληγμένη σύνδεση καρτέλας → αυτόματη σύνδεση · npsmedorder διάγνωση πεδίου φαρμάκου · npsprogmap: παρακολούθηση window.open/νέων καρτελών"}
