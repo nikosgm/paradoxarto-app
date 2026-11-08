@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08y-v189';
+const APP_VER = '2026-11-08z-v190';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8090,7 +8090,7 @@ document.head.appendChild(st);
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"}
     ]);
     if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Αρχείο Ασθενών', [{ic:'🗂', t:'Βάση δεδομένων', sub:'κατάσταση · εγκρίσεις CD · ρυθμίσεις', on:"pdxDbPage()"}, {ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη', on:"pdxMdtOpen()"}]);
-    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Πρόγραμμα χειρουργείου', [{ic:'📷', t:'Σάρωση & αποστολή', sub:'υπογεγραμμένο Α4 → email «Πρόγραμμα χειρουργείου»', on:"pdxScanOpen()"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
+    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Πρόγραμμα χειρουργείου', [{ic:'📷', t:'Σάρωση & αποστολή', sub:'υπογεγραμμένο Α4 → email «Πρόγραμμα χειρουργείου»', on:"pdxScanOpen()"}, adm && {ic:'🔐', t:'Κωδικός Kerio', sub:'κρυπτογραφημένα από το κινητό → μόνο στον υπολογιστή του bot', on:"pdxCredOpen('kerio')"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
     h += adm ? iosGroup('', [{ic:'🛠', t:'Διαχείριση', sub:'Χρήστες · Bot · Υπολογιστές · Ασφάλεια · JSON', v:'admin', on:"pdxSetMore()"}])
              : iosGroup('', [{ic:'⚙️', t:'Περισσότερα', sub:'Εκκρεμότητες · Ενέργειες bot · Κρυπτογράφηση', on:"pdxSetMore()"}]);
     return h + '<div style="height:120px"></div></div>' + tabs();
@@ -15905,7 +15905,7 @@ Z99.2:C|αιμοκάθαρση
 // τυχαίο κλειδί AES-GCM 256 κρυπτογραφεί {σύστημα, όνομα, κωδικό}, και το κλειδί AES «κλειδώνεται» με RSA-OAEP-256.
 // Στη βάση πηγαίνει μόνο κρυπτογραφημένο κείμενο· ο κωδικός δεν αποθηκεύεται πουθενά εδώ (ούτε στη συσκευή).
 (function(){
-  const SYS = [['emr','ΝΠΣ / φάκελος'],['epres','ΑΗΦΥ / e-prescription'],['medilabi','Medilabi'],['evorad','Evorad (αξονικές)'],['pdx','Παραδόχαρτο']];
+  const SYS = [['emr','ΝΠΣ / φάκελος'],['epres','ΑΗΦΥ / e-prescription'],['medilabi','Medilabi'],['evorad','Evorad (αξονικές)'],['kerio','📧 Kerio (email)'],['pdx','Παραδόχαρτο']];
   const E = s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const b64 = u8=>{ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); };
   async function fpOf(jwk){ const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(jwk.n+'.'+jwk.e))); return [...h.slice(0,8)].map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase().replace(/(.{4})(?=.)/g,'$1-'); }
@@ -15936,7 +15936,7 @@ Z99.2:C|αιμοκάθαρση
     }
     return null;
   };
-  window.pdxCredOpen = async function(){
+  window.pdxCredOpen = async function(pre){
     if(window.authRole!=='admin'){ alert('Μόνο για διαχειριστή.'); return; }
     let ov = document.getElementById('credOv'); if(ov) ov.remove();
     ov = document.createElement('div'); ov.id='credOv';
@@ -16034,6 +16034,7 @@ Z99.2:C|αιμοκάθαρση
         }, 3000);
       }catch(er){ msg('⚠ '+E(String(er && er.message || er)), '#B42318'); go.disabled=false; go.style.opacity='1'; }
     });
+    if(typeof pre==='string' && pre){ const b = ov.querySelector('[data-sys="'+pre+'"]'); if(b) b.click(); }
   };
 })();
 
