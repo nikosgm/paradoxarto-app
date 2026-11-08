@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08x-v188';
+const APP_VER = '2026-11-08y-v189';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8090,6 +8090,7 @@ document.head.appendChild(st);
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"}
     ]);
     if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Αρχείο Ασθενών', [{ic:'🗂', t:'Βάση δεδομένων', sub:'κατάσταση · εγκρίσεις CD · ρυθμίσεις', on:"pdxDbPage()"}, {ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη', on:"pdxMdtOpen()"}]);
+    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Πρόγραμμα χειρουργείου', [{ic:'📷', t:'Σάρωση & αποστολή', sub:'υπογεγραμμένο Α4 → email «Πρόγραμμα χειρουργείου»', on:"pdxScanOpen()"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
     h += adm ? iosGroup('', [{ic:'🛠', t:'Διαχείριση', sub:'Χρήστες · Bot · Υπολογιστές · Ασφάλεια · JSON', v:'admin', on:"pdxSetMore()"}])
              : iosGroup('', [{ic:'⚙️', t:'Περισσότερα', sub:'Εκκρεμότητες · Ενέργειες bot · Κρυπτογράφηση', on:"pdxSetMore()"}]);
     return h + '<div style="height:120px"></div></div>' + tabs();
@@ -19765,6 +19766,8 @@ window.histUploadOpen = function(){
     encrypt: async obj=>{ if(!S.key) throw new Error('χωρίς κλειδί'); return {e:1, kid:S.kid, d: await sealWith(S.key, enc.encode(JSON.stringify(obj)))}; },
     decrypt: async env=>{ if(!env || env.e!==1) return env; if(!S.key) throw new Error('χωρίς κλειδί'); if(env.kid!==S.kid) throw new Error('άλλο κλειδί'); return JSON.parse(dec.decode(await openWith(S.key, env.d))); },
     // δυαδικά (iv(12)+ct), π.χ. τα κομμάτια απεικονιστικών που κρυπτογράφησε το bot με το κλειδί κλινικής
+    // δυαδικά → iv(12)+ct (π.χ. σάρωση PDF για το bot)
+    sealBytes: async u8=>{ if(!S.key) throw new Error('χωρίς κλειδί'); const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, S.key, u8)); const o = new Uint8Array(12+ct.length); o.set(iv); o.set(ct,12); return o; },
     openBytes: async u8=>{ if(!S.key) throw new Error('χωρίς κλειδί'); u8 = u8 instanceof Uint8Array ? u8 : new Uint8Array(u8); return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM', iv:u8.slice(0,12)}, S.key, u8.slice(12))); },
     refresh
   };
@@ -20077,6 +20080,157 @@ window.CLS_MODE='A';
   try{ decorate(); }catch(e){}
 })();
 
+</script>
+<script>
+// 📷 8/11: «Σάρωση προγράμματος» — κάμερα με πλαίσιο Α4 → ένα κουμπί → PDF → κρυπτογράφηση (κλειδί κλινικής)
+// → img-enc/scan/<id>.bin → εργασία «kmail» → το bot το στέλνει από το Kerio της κλινικής στην ομάδα «Πρόγραμμα χειρουργείου».
+// Μετά τη λήψη: 5″ για «Ακύρωση», μετά αποστέλλεται χωρίς άλλη ερώτηση. Συντόμευση: scan.html (→ ?scan=1).
+(function(){
+  'use strict';
+  const GROUP = 'Πρόγραμμα χειρουργείου', WAIT = 5;
+  const enc = new TextEncoder();
+  const pad2 = n=>String(n).padStart(2,'0');
+  // ---- PDF μίας σελίδας Α4 με JPEG (DCTDecode) ----
+  function jpegPdf(jpg, w, h, land){
+    const W = land ? 841.89 : 595.28, H = land ? 595.28 : 841.89;
+    const s = Math.min(W/w, H/h), dw = +(w*s).toFixed(2), dh = +(h*s).toFixed(2), dx = +((W-dw)/2).toFixed(2), dy = +((H-dh)/2).toFixed(2);
+    const parts = [], offs = []; let len = 0;
+    const put = x=>{ const u = typeof x==='string' ? enc.encode(x) : x; parts.push(u); len += u.length; };
+    const obj = (n, body)=>{ offs[n] = len; put(n+' 0 obj\n'); body(); put('\nendobj\n'); };
+    put('%PDF-1.4\n'); put(new Uint8Array([0x25,0xE2,0xE3,0xCF,0xD3,0x0A]));
+    obj(1, ()=>put('<< /Type /Catalog /Pages 2 0 R >>'));
+    obj(2, ()=>put('<< /Type /Pages /Kids [3 0 R] /Count 1 >>'));
+    obj(3, ()=>put('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>'));
+    obj(4, ()=>{ put('<< /Type /XObject /Subtype /Image /Width '+w+' /Height '+h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpg.length+' >>\nstream\n'); put(jpg); put('\nendstream'); });
+    const cs = 'q '+dw+' 0 0 '+dh+' '+dx+' '+dy+' cm /Im0 Do Q';
+    obj(5, ()=>put('<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream'));
+    const xref = len; let x = 'xref\n0 6\n0000000000 65535 f \n'; for(let i=1;i<=5;i++) x += String(offs[i]).padStart(10,'0')+' 00000 n \n';
+    put(x+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF\n');
+    const out = new Uint8Array(len); let o = 0; for(const p of parts){ out.set(p, o); o += p.length; } return out;
+  }
+  // ---- «έγγραφο»: γκρι + τέντωμα επιπέδων (χαρτί → λευκό, μελάνι/υπογραφές → σκούρα) ----
+  function enhance(img){   // img: ImageData (αλλάζει επί τόπου)
+    const d = img.data, n = d.length/4, hist = new Uint32Array(256), L = new Uint8Array(n);
+    for(let i=0,j=0;i<n;i++,j+=4){ const y = (d[j]*77 + d[j+1]*150 + d[j+2]*29)>>8; L[i] = y; hist[y]++; }
+    const pct = p=>{ let c = 0, t = n*p; for(let v=0; v<256; v++){ c += hist[v]; if(c>=t) return v; } return 255; };
+    const lo = pct(0.02), hi = Math.max(lo+40, pct(0.80)), k = 255/(hi-lo);
+    for(let i=0,j=0;i<n;i++,j+=4){ let v = (L[i]-lo)*k; v = v<0?0:v>255?255:v; v = 255*Math.pow(v/255, 1.35); d[j]=d[j+1]=d[j+2]=v; }
+    return img;
+  }
+  // περιοχή του πλαισίου (συντεταγμένες οθόνης) → εικονοστοιχεία του βίντεο (object-fit:cover)
+  function cropOf(vw, vh, bw, bh, g){
+    const s = Math.max(bw/vw, bh/vh), ox = (vw*s-bw)/2, oy = (vh*s-bh)/2;
+    const x = Math.max(0, (g.x+ox)/s), y = Math.max(0, (g.y+oy)/s);
+    return { x, y, w: Math.min(vw-x, g.w/s), h: Math.min(vh-y, g.h/s) };
+  }
+  // πλαίσιο Α4 μέσα στην οθόνη (περιθώριο 6%)
+  function guide(bw, bh, land){
+    const r = land ? 297/210 : 210/297; let w = bw*0.94, h = w/r; if(h > bh*0.80){ h = bh*0.80; w = h*r; }
+    return { x:(bw-w)/2, y:(bh-h)/2 - bh*0.04, w, h };
+  }
+  window.pdxScanLib = { jpegPdf, enhance, cropOf, guide };
+
+  let st = null;
+  function close(){ if(!st) return; try{ st.stream && st.stream.getTracks().forEach(t=>t.stop()); }catch(e){} clearInterval(st.cd); st.ov.remove(); st = null; }
+  function landPref(){ try{ return localStorage.getItem('pdx_scan_land')!=='0'; }catch(e){ return true; } }
+  function layout(){
+    if(!st) return; const box = st.ov.querySelector('[data-cam]'), r = box.getBoundingClientRect(), g = guide(r.width, r.height, st.land);
+    const f = st.ov.querySelector('[data-g]'); f.style.left = g.x+'px'; f.style.top = g.y+'px'; f.style.width = g.w+'px'; f.style.height = g.h+'px'; st.g = g;
+    st.ov.querySelector('[data-rot]').textContent = st.land ? '⇆ Οριζόντιο' : '⇅ Κάθετο';
+  }
+  const B = 'border:0;border-radius:14px;padding:12px 16px;font-size:16px;font-weight:700;';
+  window.pdxScanOpen = async function(){
+    if(st) return;
+    const ov = document.createElement('div'); ov.id = 'pdxScanOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100001;background:#000;color:#fff;display:flex;flex-direction:column;font-family:-apple-system,system-ui,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
+    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px"><button data-x style="'+B+'background:transparent;color:#fff">✕</button><b style="flex:1;font-size:16px">📷 Πρόγραμμα χειρουργείου → email</b><button data-rot style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px"></button></div>'
+      + '<div data-cam style="position:relative;flex:1;overflow:hidden"><video data-v playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
+      + '<div data-g style="position:absolute;border:3px solid #34C759;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>'
+      + '<div data-msg style="position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:14.5px;text-shadow:0 1px 3px #000">Βάλε το υπογεγραμμένο Α4 μέσα στο πράσινο πλαίσιο</div>'
+      + '<img data-prev style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#111">'
+      + '<div data-cd style="display:none;position:absolute;left:0;right:0;bottom:0;padding:18px 16px 22px;background:linear-gradient(transparent,#000c 30%);text-align:center"></div></div>'
+      + '<div data-bar style="display:flex;justify-content:center;align-items:center;padding:16px 0 22px"><button data-shot aria-label="Σάρωση" style="width:78px;height:78px;border-radius:50%;border:5px solid #fff;background:#34C759"></button></div>';
+    document.body.appendChild(ov);
+    st = { ov, land: landPref() };
+    const $ = s=>ov.querySelector(s), v = $('[data-v]');
+    $('[data-x]').onclick = close;
+    $('[data-rot]').onclick = ()=>{ st.land = !st.land; try{ localStorage.setItem('pdx_scan_land', st.land?'1':'0'); }catch(e){} layout(); };
+    window.addEventListener('resize', layout);
+    layout();
+    // κλειδί κλινικής από πριν (για να μην περιμένει μετά τη λήψη)
+    const ckP = window.pdxCK ? window.pdxCK.ready().catch(()=>null) : Promise.resolve(null);
+    try{
+      st.stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ideal:'environment'}, width:{ideal:3840}, height:{ideal:2160} } });
+      v.srcObject = st.stream; await v.play().catch(()=>{});
+      try{ const tr = st.stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if(cap.focusMode && cap.focusMode.includes('continuous')) await tr.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
+    }catch(e){ $('[data-msg]').innerHTML = '⚠ Η κάμερα δεν άνοιξε: '+esc(e.message||e)+'<br>Δώσε άδεια κάμερας στο Παραδόχαρτο.'; return; }
+    $('[data-shot]').onclick = async ()=>{
+      if(!st || st.busy || !v.videoWidth) return; st.busy = true;
+      const box = $('[data-cam]').getBoundingClientRect(), c = cropOf(v.videoWidth, v.videoHeight, box.width, box.height, st.g);
+      const sc = Math.min(1, 2400/Math.max(c.w, c.h)), cw = Math.round(c.w*sc), ch = Math.round(c.h*sc);
+      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const x = cv.getContext('2d', {willReadFrequently:true});
+      x.drawImage(v, c.x, c.y, c.w, c.h, 0, 0, cw, ch);
+      x.putImageData(enhance(x.getImageData(0,0,cw,ch)), 0, 0);
+      const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', 0.8));
+      const jpg = new Uint8Array(await blob.arrayBuffer()), pdf = jpegPdf(jpg, cw, ch, st.land);
+      $('[data-prev]').src = URL.createObjectURL(blob); $('[data-prev]').style.display = ''; $('[data-g]').style.display = 'none'; $('[data-bar]').style.display = 'none';
+      countdown(pdf, ckP);
+    };
+  };
+  function countdown(pdf, ckP){
+    const $ = s=>st.ov.querySelector(s), cd = $('[data-cd]'); let n = WAIT;
+    const back = ()=>{ clearInterval(st.cd); st.busy = false; cd.style.display = 'none'; $('[data-prev]').style.display = 'none'; $('[data-g]').style.display = ''; $('[data-bar]').style.display = 'flex'; };
+    // τα κουμπιά ΔΕΝ ξαναζωγραφίζονται κάθε δευτερόλεπτο (ένα πάτημα πάνω στην αλλαγή χανόταν) — αλλάζει μόνο ο αριθμός
+    cd.innerHTML = '<div style="font-size:17px;margin-bottom:12px">Αποστολή στο «'+GROUP+'» σε <b data-n style="font-size:24px">'+n+'</b>″</div><div style="display:flex;gap:10px;justify-content:center"><button data-no style="'+B+'background:#FF3B30;color:#fff;flex:1;max-width:200px">Ακύρωση</button><button data-now style="'+B+'background:#34C759;color:#fff;flex:1;max-width:200px">Στείλε τώρα</button></div>';
+    let gone = false;
+    const go = ()=>{ if(gone) return; gone = true; clearInterval(st.cd); send(pdf, ckP); };
+    cd.querySelector('[data-no]').onclick = ()=>{ if(gone) return; gone = true; back(); };
+    cd.querySelector('[data-now]').onclick = go;
+    cd.style.display = '';
+    clearInterval(st.cd); st.cd = setInterval(()=>{ n--; if(n<=0) go(); else { const e = cd.querySelector('[data-n]'); if(e) e.textContent = n; } }, 1000);
+  }
+  async function send(pdf, ckP){
+    const cd = st.ov.querySelector('[data-cd]'), say = (h, btn)=>{ if(!st) return; cd.innerHTML = '<div style="font-size:17px;line-height:1.5">'+h+'</div>'+(btn?'<div style="margin-top:12px"><button data-ok style="'+B+'background:#fff;color:#000;min-width:160px">'+btn+'</button></div>':''); const b = cd.querySelector('[data-ok]'); if(b) b.onclick = close; };
+    say('⏳ Κρυπτογράφηση & ανέβασμα…');
+    try{
+      await ckP; if(!window.pdxCK || !(await pdxCK.ready())) throw new Error('🔐 '+((window.pdxCK && pdxCK.why()) || 'χωρίς κλειδί κλινικής'));
+      const sealed = await pdxCK.sealBytes(pdf), id = (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2)), path = 'scan/'+id+'.bin';
+      const up = await sb6.storage.from('img-enc').upload(path, new Blob([sealed], {type:'application/octet-stream'}), {upsert:true, contentType:'application/octet-stream'});
+      if(up.error) throw new Error('ανέβασμα: '+up.error.message);
+      const d = new Date(), stamp = pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad2(d.getHours())+':'+pad2(d.getMinutes());
+      const who = String(window.authName||'').replace(/@paradoxarto\.app$/,'');
+      const payload = { path, group: GROUP, subject: 'Πρόγραμμα χειρουργείου', fname: 'Programma_xeirourgeiou_'+d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.pdf',
+        text: 'Σας αποστέλλεται το υπογεγραμμένο πρόγραμμα χειρουργείου (σάρωση '+stamp+').\n\nΟυρολογική Κλινική', by: who };
+      const ins = await sb6.from('oncall_jobs').insert({ name_key:'kmail', name:'📧 Πρόγραμμα χειρουργείου', room:null, kind:'kmail', payload, status:'new' }).select('id').single();
+      if(ins.error) throw new Error(ins.error.message);
+      say('📤 Στάλθηκε στο bot — αποστολή από το Kerio…');
+      const t0 = Date.now();
+      while(st && Date.now()-t0 < 120000){
+        await new Promise(r=>setTimeout(r, 1500));
+        const r = await sb6.from('oncall_jobs').select('status,note').eq('id', ins.data.id).maybeSingle();
+        const j = r.data || {};
+        if(j.status==='done'){ say('✅ '+esc(j.note||'Στάλθηκε'), 'OK'); return; }
+        if(j.status==='failed' || j.status==='cancelled'){ say('⚠ ΔΕΝ στάλθηκε: '+esc(j.note||j.status), 'Κλείσιμο'); return; }
+        if(j.status==='running') say('📤 Το bot στέλνει από το Kerio…');
+      }
+      if(st) say('⏳ Το bot δεν απάντησε ακόμα — θα έρθει ειδοποίηση όταν σταλεί.', 'OK');
+    }catch(e){ say('⚠ ΔΕΝ στάλθηκε: '+esc(e.message||e), 'Κλείσιμο'); }
+  }
+  // 🔎 έλεγχος Kerio χωρίς αποστολή (σύνδεση + ομάδα)
+  window.pdxKerioCheck = async function(){
+    try{ toast('📧 Έλεγχος Kerio…');
+      const ins = await sb6.from('oncall_jobs').insert({ name_key:'zzz_kmail', name:'📧 έλεγχος Kerio', room:null, kind:'kmail', payload:{ dry:true, group:GROUP, test:true, quiet:true }, status:'new' }).select('id').single();
+      if(ins.error) throw new Error(ins.error.message);
+      for(let i=0;i<60;i++){ await new Promise(r=>setTimeout(r, 1500)); const r = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); const j = r.data||{};
+        if(j.status==='done' || j.status==='failed'){ const g = ((j.payload||{}).result||{}).groups; alert((j.note||j.status) + (g && g.length ? '\n\nΟμάδες: '+g.join(', ') : '')); return; } }
+      alert('Το bot δεν απάντησε ακόμα.');
+    }catch(e){ alert('⚠ '+(e.message||e)); }
+  };
+  // συντόμευση: ?scan=1 → η κάμερα ανοίγει μόλις μπει ο χρήστης
+  if(/[?&]scan=1\b/.test(location.search)){
+    const t = setInterval(()=>{ if(window.__pdxIn && typeof sb6!=='undefined'){ clearInterval(t); setTimeout(()=>window.pdxScanOpen(), 300); try{ history.replaceState(null, '', location.pathname); }catch(e){} } }, 300);
+  }
+})();
 </script>
 </body>
 </html>

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="el"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Σάρωση</title>
+<link rel="manifest" href="scan-manifest.json">
+<link rel="apple-touch-icon" href="scan-icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Σάρωση">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
+<style>body{margin:0;background:#000;color:#fff;font:16px -apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}</style>
+</head><body>
+<div id="m">📷 Άνοιγμα κάμερας…</div>
+<script>
+// Συντόμευση «Σάρωση»: ανοίγει το Παραδόχαρτο κατευθείαν στην κάμερα (?scan=1).
+// Στο κινητό: άνοιξε αυτή τη σελίδα → Κοινή χρήση → «Προσθήκη στην οθόνη Αφετηρίας» (iPhone) / ⋮ → «Προσθήκη στην αρχική οθόνη» (Android).
+var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+if (standalone || /[?&]go=1\b/.test(location.search)) location.replace('./?scan=1');
+else document.getElementById('m').innerHTML = '<div style="padding:24px;line-height:1.5"><div style="font-size:54px">📷</div><b>Συντόμευση «Σάρωση»</b><br><br>iPhone: <b>Κοινή χρήση ⬆︎ → Προσθήκη στην οθόνη Αφετηρίας</b><br>Android: <b>⋮ → Προσθήκη στην αρχική οθόνη</b><br><br><a href="./?scan=1" style="color:#34C759;font-weight:700">ή άνοιξε την κάμερα τώρα ›</a></div>';
+</script>
+</body></html>
