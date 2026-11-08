@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v206';
+const APP_VER = '2026-11-08z-v207';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8397,7 +8397,13 @@ document.head.appendChild(st);
   }
   function nvLine(d){ return [surg(d), d.dx].filter(Boolean).join(' · '); }
   // «ΕΠΩΝΥΜΟ Ο.» όταν το πλήρες όνομα δεν χωράει στην κάρτα
-  function nvName2(n){ const w = String(n||'—').trim().split(/\s+/); return '<span class="nl">'+esc(w[0])+'</span>'+(w.length>1?'<span class="nl">'+esc(w.slice(1).join(' '))+'</span>':''); }
+  // 8/11 (χρήστης): στην κάρτα ΜΟΝΟ το επώνυμο
+  function nvName2(n){ const w = String(n||'—').trim().split(/\s+/); return '<span class="nl">'+esc(w[0])+'</span>'; }
+  // θεράπων με τα κλασικά αρχικά (Αν, Αδ, Στρ, Φρ, Μουλ, Λεβ, Δουρ)· ολόκληρο όνομα → αρχικά
+  function nvTher(t){ t = String(t||'').trim(); if(!t) return ''; if((typeof THERAPISTS!=='undefined'?THERAPISTS:[]).includes(t)) return t;
+    const F = window.THERAPIST_FULL || {'Αν':'Αναστασίου','Αδ':'Αδαμάκης','Στρ':'Στραβοδήμος','Φρ':'Φραγκιάδης','Μουλ':'Μουλαβασίλης','Λεβ':'Λεβής','Δουρ':'Δουρούμης'};
+    const z = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/Σ$/,'Σ').trim();
+    const k = Object.keys(F).find(a=>z(F[a])===z(t) || z(t).indexOf(z(F[a]))===0 || z(F[a]).indexOf(z(t))===0 && z(t).length>=3); return k || t; }
   function nvShort(n){ const w = String(n||'').trim().split(/\s+/); return w.length>1 ? w[0]+' '+w[1].charAt(0)+'.' : ''; }
   try{ window.addEventListener('resize', ()=>{ clearTimeout(window.__nvFitT); window.__nvFitT = setTimeout(()=>{ try{ window.nvFitNames(); }catch(x){} }, 120); }); }catch(x){}
   window.nvFitNames = function(){
@@ -8432,7 +8438,7 @@ document.head.appendChild(st);
         // όλες οι κάρτες ίδιο πλάτος, στη θέση του κρεβατιού: κρεβάτια 1 και 3 → κάρτα, κενό, κάρτα (αριθμός κρεβατιών από ROOMS)
         const card = e=>{ const d = e.d, s = nvStat(e);
           return '<div class="mcard mrow nvt'+(s.att?' att':'')+'" onclick="mobOpen(\''+esc(e.k)+'\')"><div class="nvt-h"><span class="nv-bed mroom">'+nvBedLbl(e)+'</span><span class="mnm nm2" title="'+esc(d.name||'')+'">'+nvName2(d.name)+'</span></div>'
-            + '<div class="nv-ft">'+nvPills(d)+(d.therapist?'<span class="nv-th">'+esc(d.therapist)+'</span>':'')+'</div></div>'; };
+            + '<div class="nv-ft">'+nvPills(d)+(d.therapist?'<span class="nv-th" title="'+esc(((window.THERAPIST_FULL||{})[d.therapist])||d.therapist)+'">'+esc(nvTher(d.therapist))+'</span>':'')+'</div></div>'; };
         const rm = (typeof ROOMS!=='undefined'?ROOMS:[]).find(r=>String(r.num)===String(g.r)), nb = rm ? (rm.beds||0) : 0;
         let cells = '', rest = g.es.slice();
         if(nb){ const last = Math.max(0, ...rest.filter(e=>String(e.k).indexOf('extra')!==0).map(e=>+e.bed||0));
