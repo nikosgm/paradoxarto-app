@@ -1,1 +1,1 @@
-{"version": "0.21.127", "zip": "ef-bot-0.21.127.zip", "sha256": "57d41cb5f07c18fefa90c2ebb890749b1a9c78023a46f14be6509fb232c11d14", "notes": "e-prescription: λήξη κωδικού ≠ λάθος κωδικός · καθάρισμα σελίδας στην αλλαγή λογαριασμού · epaccs"}
+{"version": "0.21.128", "zip": "ef-bot-0.21.128.zip", "sha256": "2032ad8d3254ec51bb7cc1cca732205523edbaaa7a5b4ad9478ca8e8c32c895c", "notes": "e-prescription: παλιό μήνυμα σφάλματος ≠ νέα απόρριψη · epaccs περιμένει φόρμα"}
