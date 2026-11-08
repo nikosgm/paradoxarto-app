@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v199';
+const APP_VER = '2026-11-08z-v200';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8113,7 +8113,7 @@ document.head.appendChild(st);
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"}
     ]);
     if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Αρχείο Ασθενών', [{ic:'🗂', t:'Βάση δεδομένων', sub:'κατάσταση · εγκρίσεις CD · ρυθμίσεις', on:"pdxDbPage()"}, {ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη', on:"pdxMdtOpen()"}]);
-    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Σάρωση', [{ic:'📷', t:'Σάρωση', sub:'ιστορικό · πόρισμα · πρόγραμμα (→ Claude ή → email)', on:"pdxScanOpen()"}, {ic:'📋', t:'Πορίσματα για έλεγχο', sub:'από τη σελίδα του Claude → ασθενής → βάση', v:(window.__pdxRepN?String(window.__pdxRepN):''), on:"pdxRepQueue()"}, adm && {ic:'🔐', t:'Κωδικός Kerio', sub:'κρυπτογραφημένα από το κινητό → μόνο στον υπολογιστή του bot', on:"pdxCredOpen('kerio')"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
+    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Σάρωση', [{ic:'📷', t:'Σάρωση', sub:'ιστορικό · πόρισμα · πρόγραμμα (→ Claude ή → email)', on:"pdxScanOpen()"}, {ic:'📱', t:'Συσκευές σάρωσης', sub:'έγκριση της εφαρμογής «Σάρωση» στα κινητά', v:(window.__pdxScanDevN?'<b style="color:#FF3B30">'+window.__pdxScanDevN+' νέα</b>':''), on:"pdxScanDevices()"}, {ic:'📋', t:'Πορίσματα για έλεγχο', sub:'από τη σελίδα του Claude → ασθενής → βάση', v:(window.__pdxRepN?String(window.__pdxRepN):''), on:"pdxRepQueue()"}, adm && {ic:'🔐', t:'Κωδικός Kerio', sub:'κρυπτογραφημένα από το κινητό → μόνο στον υπολογιστή του bot', on:"pdxCredOpen('kerio')"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
     h += adm ? iosGroup('', [{ic:'🛠', t:'Διαχείριση', sub:'Χρήστες · Bot · Υπολογιστές · Ασφάλεια · JSON', v:'admin', on:"pdxSetMore()"}])
              : iosGroup('', [{ic:'⚙️', t:'Περισσότερα', sub:'Εκκρεμότητες · Ενέργειες bot · Κρυπτογράφηση', on:"pdxSetMore()"}]);
     return h + '<div style="height:120px"></div></div>' + tabs();
@@ -20353,6 +20353,31 @@ window.CLS_MODE='A';
       if(st) say('⏳ Το bot δεν απάντησε ακόμα — θα έρθει ειδοποίηση όταν σταλεί.', 'OK');
     }catch(e){ say('⚠ ΔΕΝ στάλθηκε: '+esc(e.message||e), 'Κλείσιμο'); }
   }
+  // 📱 8/11: συσκευές της ελαφριάς εφαρμογής «Σάρωση» (scan.html) — έγκριση/αφαίρεση (επιμελητές/διαχειριστές)
+  window.pdxScanDevCount = async function(){ try{ const r = await sb6.from('oncall_scan_devices').select('id').eq('approved', false); return (r.data||[]).length; }catch(e){ return 0; } };
+  window.pdxScanDevices = function(){
+    let rows = null, err = '', note = ''; const can = ['attending','admin'].indexOf(window.authRole)>=0;
+    const when = t=>t ? new Date(t).toLocaleString('el-GR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+    const pg = iosPage('Συσκευές σάρωσης', 'Ρυθμίσεις', ()=>{
+      if(err) return iosGroup('', [{t:'⚠ '+esc(err)}]);
+      if(!rows) return iosGroup('', [{t:'Φόρτωση…'}]);
+      const pend = rows.filter(r=>!r.approved), ok = rows.filter(r=>r.approved);
+      const B = (a, id, t, bg, c)=>'<button data-sd="'+a+'" data-id="'+esc(id)+'" '+(can?'':'disabled')+' style="border:0;border-radius:9px;padding:7px 11px;font-size:14px;font-weight:700;background:'+bg+';color:'+c+';opacity:'+(can?1:.4)+'">'+t+'</button>';
+      let h = note ? '<div style="margin:12px 16px 0;font-size:14px">'+note+'</div>' : '';
+      h += iosGroup('Περιμένουν έγκριση ('+pend.length+')', pend.length ? pend.map(r=>({ic:'⏳', t:esc(r.label||'Συσκευή'), sub:'ζήτησε '+when(r.created_at), raw:'<span style="display:flex;gap:6px">'+B('ok', r.id, 'Έγκριση', '#34C759', '#fff')+B('rm', r.id, '✕', '#F2F2F7', '#B42318')+'</span>'})) : [{t:'Καμία', sub:'Η εφαρμογή «Σάρωση» → «Ζήτα έγκριση» την πρώτη φορά'}], can ? 'Εγκρίνετε μόνο συσκευές που ξέρετε (το όνομα το γράφει όποιος ζήτησε).' : 'μόνο επιμελητές εγκρίνουν');
+      h += iosGroup('Εγκεκριμένες ('+ok.length+')', ok.map(r=>({ic:'📷', t:esc(r.label||'Συσκευή'), sub:'τελευταία σάρωση: '+when(r.last_used), raw: B('rm', r.id, 'Αφαίρεση', '#F2F2F7', '#B42318')})), 'Εγκεκριμένη συσκευή στέλνει ΜΟΝΟ σαρώσεις — δεν βλέπει ασθενείς ούτε τίποτα άλλο.');
+      h += iosGroup('Εγκατάσταση στο κινητό', [{ic:'🔗', t:'paradoxarto.urol.workers.dev/scan.html', sub:'Άνοιγμα → Κοινή χρήση → Προσθήκη στην οθόνη Αφετηρίας', on:"window.open('scan.html','_blank')"}]);
+      return h + '<div style="height:60px"></div>';
+    });
+    const load = async ()=>{ try{ const r = await sb6.from('oncall_scan_devices').select('id,label,approved,created_at,approved_at,last_used').order('created_at', {ascending:false}); if(r.error) throw new Error(r.error.message); rows = r.data||[]; err = ''; }catch(e){ err = e.message||String(e); } pg.redraw(); };
+    pg.el.addEventListener('click', async e=>{ const b = e.target.closest('[data-sd]'); if(!b || b.disabled) return; const id = b.dataset.id, a = b.dataset.sd;
+      if(a==='rm' && !confirm('Αφαίρεση συσκευής σάρωσης;')) return;
+      b.disabled = true;
+      const r = a==='ok' ? await sb6.from('oncall_scan_devices').update({approved:true, approved_at:new Date().toISOString()}).eq('id', id).select('id') : await sb6.from('oncall_scan_devices').delete().eq('id', id).select('id');
+      note = r.error || !(r.data||[]).length ? '⚠ '+esc((r.error && r.error.message) || 'χωρίς δικαίωμα') : (a==='ok' ? '✓ Εγκρίθηκε — η κάμερα ανοίγει μόνη της στο κινητό' : '✓ Αφαιρέθηκε');
+      window.__pdxScanDevN = await pdxScanDevCount(); await load(); });
+    load(); return pg;
+  };
   // 🔎 έλεγχος Kerio χωρίς αποστολή (σύνδεση + ομάδα)
   window.pdxKerioCheck = async function(){
     try{ toast('📧 Έλεγχος Kerio…');
@@ -20461,7 +20486,10 @@ window.CLS_MODE='A';
     }catch(e){ if(!quiet) toast('⚠ '+(e.message||e)); }
   };
   // μετρητής για το μενού (κάθε 2′ και όταν ξαναγυρνάς στην εφαρμογή)
-  const repTick = async ()=>{ if(!window.__pdxIn || typeof sb6==='undefined' || document.hidden) return; window.__pdxRepN = await pdxRepCount(); };
+  const repTick = async ()=>{ if(!window.__pdxIn || typeof sb6==='undefined' || document.hidden) return; window.__pdxRepN = await pdxRepCount();
+    const n0 = window.__pdxScanDevN || 0; window.__pdxScanDevN = window.pdxScanDevCount ? await pdxScanDevCount() : 0;
+    if(window.__pdxScanDevN > n0 && ['attending','admin'].indexOf(window.authRole)>=0) toast('📱 Νέα συσκευή σάρωσης περιμένει έγκριση — Ρυθμίσεις → Σάρωση'); };
+  setInterval(()=>{ if(window.__pdxScanDevWait) repTick(); }, 20000);
   setInterval(repTick, 120000); setTimeout(repTick, 8000); document.addEventListener('visibilitychange', ()=>setTimeout(repTick, 800));
   if(location.hash === '#pdxrep' || location.hash === '#pdxhist'){
     const which = location.hash; try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}

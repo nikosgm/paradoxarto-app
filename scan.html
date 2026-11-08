@@ -1,21 +1,141 @@
 <!doctype html>
 <html lang="el"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Σάρωση</title>
 <link rel="manifest" href="scan-manifest.json">
 <link rel="apple-touch-icon" href="scan-icon-180.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Σάρωση">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#000000">
-<style>body{margin:0;background:#000;color:#fff;font:16px -apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center}</style>
+<style>
+/* 📷 8/11: ΕΛΑΦΡΙΑ εφαρμογή «Σάρωση» — ΔΕΝ φορτώνει το Παραδόχαρτο, ΔΕΝ ζητά κωδικό.
+   1η φορά: «Ζήτα έγκριση» → έγκριση από το Παραδόχαρτο (Ρυθμίσεις → Σάρωση → Συσκευές σάρωσης).
+   Μετά: ανοίγει κατευθείαν η κάμερα → λήψη → σελίδες κρυπτογραφημένες με κλειδί ΜΙΑΣ ΧΡΗΣΗΣ → scan_put (μόνο εγκεκριμένη συσκευή)
+   → η εφαρμογή Claude ανοίγει με τον σύνδεσμο #s<αριθμός>k<κλειδί> (το κλειδί δεν πάει ποτέ στη βάση). */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:#fff;font-family:-apple-system,system-ui,sans-serif;-webkit-user-select:none;user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.cam{position:relative;flex:1;overflow:hidden}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;font-size:16px;line-height:1.45}
+.bar{display:flex;align-items:center;justify-content:center;gap:28px;padding:14px 10px 22px;min-height:110px}
+.shot{width:80px;height:80px;border-radius:50%;border:5px solid #fff;background:#34C759}
+.shot:active{transform:scale(.94)}
+.gal{width:56px;height:56px;border:0;border-radius:14px;background:#ffffff26;color:#fff;font-size:28px}
+.btn{border:0;border-radius:14px;padding:14px 18px;font-size:17px;font-weight:800;background:#34C759;color:#fff;min-width:220px}
+.btn.sec{background:#ffffff26}
+input[type=text]{font-size:17px;padding:12px;border-radius:12px;border:0;width:260px;max-width:90vw;text-align:center}
+.spin{width:30px;height:30px;border:3px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:r .8s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+a.go{display:block;text-align:center;text-decoration:none;background:#34C759;color:#fff;border-radius:14px;padding:15px;font-weight:800;font-size:17px;width:280px;max-width:90vw}
+a.go2{color:#9fd4ff;font-size:14px}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .15s}
+</style>
 </head><body>
-<div id="m">📷 Άνοιγμα κάμερας…</div>
+<div id="app">
+  <div class="cam"><video id="v" playsinline muted autoplay></video><div class="flash" id="fl"></div><div class="msg" id="msg"><div class="spin"></div></div></div>
+  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><span style="width:56px"></span></div>
+</div>
+<input id="gf" type="file" accept="image/*" multiple style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px">
+<input id="cf" type="file" accept="image/*" capture="environment" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px">
 <script>
-// Συντόμευση «Σάρωση»: ανοίγει το Παραδόχαρτο κατευθείαν στην κάμερα (?scan=1): ιστορικό/πόρισμα → Claude · πρόγραμμα → email.
-// Στο κινητό: άνοιξε αυτή τη σελίδα → Κοινή χρήση → «Προσθήκη στην οθόνη Αφετηρίας» (iPhone) / ⋮ → «Προσθήκη στην αρχική οθόνη» (Android).
-var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
-if (standalone || /[?&]go=1\b/.test(location.search)) location.replace('./?scan=1');
-else document.getElementById('m').innerHTML = '<div style="padding:24px;line-height:1.5"><div style="font-size:54px">📷</div><b>Συντόμευση «Σάρωση»</b><br><br>iPhone: <b>Κοινή χρήση ⬆︎ → Προσθήκη στην οθόνη Αφετηρίας</b><br>Android: <b>⋮ → Προσθήκη στην αρχική οθόνη</b><br><br><a href="./?scan=1" style="color:#34C759;font-weight:700">ή άνοιξε την κάμερα τώρα ›</a></div>';
+'use strict';
+const SB = 'https://evspmufooxgqxhbhydgc.supabase.co', KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
+const CLAUDE = 'https://claude.ai/artifact/7WCs97EfWrAuqWokMGWLbd', CLAUDE_APP = CLAUDE.replace(/^https:\/\//, 'claude://');
+const TK = 'pdx_scan_token', $ = (id)=>document.getElementById(id);
+const E = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tok = { get(){ try{ return localStorage.getItem(TK) || ''; }catch(e){ return ''; } }, set(v){ try{ localStorage.setItem(TK, v); }catch(e){} }, del(){ try{ localStorage.removeItem(TK); }catch(e){} } };
+async function rpc(fn, args){
+  const r = await fetch(SB + '/rest/v1/rpc/' + fn, { method:'POST', headers:{ apikey: KEY, 'Content-Type':'application/json' }, body: JSON.stringify(args || {}) });
+  const j = await r.json().catch(()=>null);
+  if(!r.ok) throw new Error((j && j.message) || ('HTTP ' + r.status));
+  return j;
+}
+const msg = (h)=>{ $('msg').style.display = 'flex'; $('msg').innerHTML = h; };
+const devName = ()=>{ const u = navigator.userAgent; return (/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':'Συσκευή'); };
+
+// ---------- 1η φορά: έγκριση ----------
+async function setup(){
+  $('bar').style.visibility = 'hidden';
+  msg('<div style="font-size:56px">📷</div><b style="font-size:20px">Σάρωση — πρώτη φορά</b><div style="opacity:.8">Η συσκευή χρειάζεται μία έγκριση από το Παραδόχαρτο.</div>'
+    + '<input type="text" id="nm" placeholder="Όνομα (π.χ. iPhone Νίκου)" value="'+E(devName())+'"><button class="btn" id="req">📱 Ζήτα έγκριση</button>');
+  $('req').onclick = async ()=>{
+    $('req').disabled = true; $('req').textContent = '⏳…';
+    try{ const r = await rpc('scan_device_request', { p_label: ($('nm').value || devName()).trim().slice(0, 60) }); const x = Array.isArray(r) ? r[0] : r; tok.set(x.token); waitApproval(); }
+    catch(e){ $('req').disabled = false; $('req').textContent = '📱 Ζήτα έγκριση'; alertMsg('⚠ ' + e.message); }
+  };
+}
+function alertMsg(t){ const d = document.createElement('div'); d.style.cssText = 'margin-top:8px;color:#ff8a80'; d.textContent = t; $('msg').appendChild(d); }
+async function waitApproval(){
+  msg('<div class="spin"></div><b style="font-size:19px">Περιμένει έγκριση</b><div style="opacity:.85;max-width:320px">Στο Παραδόχαρτο: <b>Ρυθμίσεις → Σάρωση → 📱 Συσκευές σάρωσης → Έγκριση</b><br>Μόλις εγκριθεί, ανοίγει μόνη της η κάμερα.</div><button class="btn sec" id="re" style="min-width:0;font-size:14px;padding:9px 14px">Νέο αίτημα</button>');
+  $('re').onclick = ()=>{ tok.del(); setup(); };
+  for(;;){
+    let s = 'pending'; try{ s = await rpc('scan_device_status', { p_token: tok.get() }); }catch(e){}
+    if(s === 'approved') return camera();
+    if(s === 'unknown'){ tok.del(); return setup(); }
+    await new Promise(r=>setTimeout(r, document.hidden ? 15000 : 3000));
+  }
+}
+
+// ---------- κάμερα ----------
+let stream = null, busy = false;
+async function camera(){
+  $('bar').style.visibility = 'visible';
+  msg('<div class="spin"></div>');
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:3840 }, height:{ ideal:2160 } } });
+    const v = $('v'); v.srcObject = stream; await v.play().catch(()=>{});
+    $('msg').style.display = 'none';
+    try{ const tr = stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if(cap.focusMode && cap.focusMode.includes('continuous')) await tr.applyConstraints({ advanced:[{ focusMode:'continuous' }] }); }catch(e){}
+    $('shot').onclick = ()=>{ if(busy || !v.videoWidth) return; $('fl').style.opacity = '.8'; setTimeout(()=>{ $('fl').style.opacity = '0'; }, 120); send([v], v.videoWidth, v.videoHeight); };
+  }catch(e){
+    // δεν επιτράπηκε η ζωντανή κάμερα → η κάμερα του κινητού
+    msg('<div style="font-size:60px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.7;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή</div>');
+    $('shot').onclick = ()=>{ if(busy) return; $('cf').value = ''; $('cf').click(); };
+  }
+  $('gal').onclick = ()=>{ if(busy) return; $('gf').value = ''; $('gf').click(); };
+}
+async function fromFiles(fs){ fs = [...(fs || [])].slice(0, 4); if(!fs.length) return; const bm = []; for(const f of fs){ try{ bm.push(await createImageBitmap(f)); }catch(e){} } if(bm.length) send(bm); }
+$('gf').onchange = (e)=>fromFiles(e.target.files);
+$('cf').onchange = (e)=>fromFiles(e.target.files);
+
+// σελίδες → JPEG (≤1800px) → κλειδί μιας χρήσης → scan_put → Claude
+async function send(srcs, w0, h0){
+  busy = true; const v = $('v');
+  msg('<div class="spin"></div><div>Ανέβασμα…</div>');
+  try{
+    const raw = crypto.getRandomValues(new Uint8Array(16)), key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), pages = [];
+    for(const src of srcs){
+      const w = w0 || src.width, h = h0 || src.height, sc = Math.min(1, 1800 / Math.max(w, h));
+      const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      const jpg = new Uint8Array(await (await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.8))).arrayBuffer());
+      const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, jpg)), o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12);
+      let s = ''; for(let i = 0; i < o.length; i += 0x8000) s += String.fromCharCode.apply(null, o.subarray(i, i + 0x8000)); pages.push(btoa(s));
+      w0 = h0 = 0;
+    }
+    const id = await rpc('scan_put', { p_token: tok.get(), p_payload: { pages } });
+    const tag = '#s' + id + 'k' + [...raw].map(b=>b.toString(16).padStart(2, '0')).join('');
+    window.__scanNav = CLAUDE_APP + tag;
+    msg('<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div><a class="go" href="' + CLAUDE_APP + tag + '">Άνοιγμα στην εφαρμογή Claude</a><a class="go2" href="' + CLAUDE + tag + '" target="_blank" rel="noopener">ή στον browser</a>');
+    if(!window.__scanNoNav){ try{ location.href = CLAUDE_APP + tag; }catch(e){} }
+    setTimeout(()=>{ busy = false; }, 1500);
+    // όταν ξαναγυρίσεις στην εφαρμογή: πάλι κάμερα
+    const back = ()=>{ if(document.hidden) return; document.removeEventListener('visibilitychange', back); if(stream) $('msg').style.display = 'none'; else camera(); };
+    setTimeout(()=>document.addEventListener('visibilitychange', back), 800);
+  }catch(e){
+    busy = false;
+    if(/έγκριση/.test(e.message)){ tok.del(); return setup(); }
+    msg('<div style="font-size:40px">⚠</div><div>Δεν ανέβηκε: ' + E(e.message) + '</div><button class="btn" id="again">Ξανά</button>'); $('again').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+  }
+}
+
+// ---------- εκκίνηση ----------
+(async ()=>{
+  if(!tok.get()) return setup();
+  let s = 'approved'; try{ s = await rpc('scan_device_status', { p_token: tok.get() }); }catch(e){ s = 'approved'; }   // χωρίς δίκτυο: δοκίμασε κάμερα
+  if(s === 'approved') return camera();
+  if(s === 'pending') return waitApproval();
+  tok.del(); setup();
+})();
 </script>
 </body></html>
