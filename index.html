@@ -2224,7 +2224,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08s-v183';
+const APP_VER = '2026-11-08t-v184';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -13311,7 +13311,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const u = t.closest('[data-u]'); if(u){ st.urg = u.dataset.u; return draw(); }
       const pa = t.closest('[data-pat]'); if(pa){ const prev = st.pat; st.pat = pa.dataset.pat; try{ localStorage.setItem('pdx_print_at', st.pat); }catch(x){}
         // ⚡ 8/11: άλλαξε ο υπολογιστής εκτύπωσης → η φόρμα ετοιμάζεται ΕΚΕΙ (αλλιώς η παραγγελία ξεκινούσε από την αρχή: +10–20″)
-        if(st.pat && st.pat!==prev && !MULTI) try{ sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload:{printAt:st.pat}}).then(()=>{}, ()=>{}); try{ sessionStorage.setItem('pdx_oprep_'+nrm(d.name), String(Date.now())); }catch(x){} }catch(x){}
+        // ⚡ 8/11: ΜΙΑ προετοιμασία μετά από 1,5″ χωρίς νέα αλλαγή (πριν: 1 ανά πάτημα → 5 εργασίες σε 15″ έπιαναν τα bots)· οι προηγούμενες που δεν ξεκίνησαν ακυρώνονται
+        if(st.pat && st.pat!==prev && !MULTI){ clearTimeout(window.__pdxOprepT); const nk = nrm(d.name), pat = st.pat;
+          window.__pdxOprepT = setTimeout(async ()=>{ try{ if(st.pat!==pat) return;
+            await sb6.from('oncall_jobs').update({status:'cancelled', note:'νέα επιλογή υπολογιστή εκτύπωσης'}).eq('kind','orderprep').eq('name_key', nk).eq('status','new');
+            await sb6.from('oncall_jobs').insert({name_key:nk, name:d.name, room:k, kind:'orderprep', payload:{printAt:pat}}); try{ sessionStorage.setItem('pdx_oprep_'+nk, String(Date.now())); }catch(x){} }catch(x){} }, 1500); }
         return draw(); }
       if(t.closest('[data-go]')){
         if(!st.sel.length && !st.pks.length){ st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
