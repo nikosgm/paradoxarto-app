@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v200';
+const APP_VER = '2026-11-08z-v201';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8113,6 +8113,7 @@ document.head.appendChild(st);
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"}
     ]);
     if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Αρχείο Ασθενών', [{ic:'🗂', t:'Βάση δεδομένων', sub:'κατάσταση · εγκρίσεις CD · ρυθμίσεις', on:"pdxDbPage()"}, {ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη', on:"pdxMdtOpen()"}]);
+    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Χειρουργείο', [{ic:'🗓', t:'Πρόγραμμα χειρουργείου', sub:'αίθουσες · σειρά · έτοιμα σετ · πρόχειρο · υποβολή', on:"pdxOrProgOpen()"}]);
     if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Σάρωση', [{ic:'📷', t:'Σάρωση', sub:'ιστορικό · πόρισμα · πρόγραμμα (→ Claude ή → email)', on:"pdxScanOpen()"}, {ic:'📱', t:'Συσκευές σάρωσης', sub:'έγκριση της εφαρμογής «Σάρωση» στα κινητά', v:(window.__pdxScanDevN?'<b style="color:#FF3B30">'+window.__pdxScanDevN+' νέα</b>':''), on:"pdxScanDevices()"}, {ic:'📋', t:'Πορίσματα για έλεγχο', sub:'από τη σελίδα του Claude → ασθενής → βάση', v:(window.__pdxRepN?String(window.__pdxRepN):''), on:"pdxRepQueue()"}, adm && {ic:'🔐', t:'Κωδικός Kerio', sub:'κρυπτογραφημένα από το κινητό → μόνο στον υπολογιστή του bot', on:"pdxCredOpen('kerio')"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
     h += adm ? iosGroup('', [{ic:'🛠', t:'Διαχείριση', sub:'Χρήστες · Bot · Υπολογιστές · Ασφάλεια · JSON', v:'admin', on:"pdxSetMore()"}])
              : iosGroup('', [{ic:'⚙️', t:'Περισσότερα', sub:'Εκκρεμότητες · Ενέργειες bot · Κρυπτογράφηση', on:"pdxSetMore()"}]);
@@ -20355,6 +20356,11 @@ window.CLS_MODE='A';
   }
   // 📱 8/11: συσκευές της ελαφριάς εφαρμογής «Σάρωση» (scan.html) — έγκριση/αφαίρεση (επιμελητές/διαχειριστές)
   window.pdxScanDevCount = async function(){ try{ const r = await sb6.from('oncall_scan_devices').select('id').eq('approved', false); return (r.data||[]).length; }catch(e){ return 0; } };
+  // 🗓 8/11: Πρόγραμμα χειρουργείου — φορτώνεται μόνο όταν ανοίξει (orprog-data.js + orprog.js)
+  window.pdxOrProgOpen = async function(date){
+    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v=200b'; s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
+    try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); return window.pdxOrProg(date); }catch(e){ alert('⚠ '+(e.message||e)); }
+  };
   window.pdxScanDevices = function(){
     let rows = null, err = '', note = ''; const can = ['attending','admin'].indexOf(window.authRole)>=0;
     const when = t=>t ? new Date(t).toLocaleString('el-GR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
