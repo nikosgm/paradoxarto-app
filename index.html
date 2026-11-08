@@ -384,13 +384,13 @@
 /* «html body» = μεγαλύτερη ισχύς: αλλιώς τα στυλ που προσθέτει ο κώδικας αργότερα (γλασέ θέμα) τα ακύρωναν */
 html body #mobView .mtabs{bottom:max(calc(env(safe-area-inset-bottom) + 30px), 44px)!important}   /* 7/11: λίγο πιο πάνω */
 html body #mobView .isl{bottom:calc(max(env(safe-area-inset-bottom), 16px) + 104px)!important}
-html body #mobView .isl.solo,html body #chIsl{bottom:max(calc(env(safe-area-inset-bottom) + 20px), 34px)!important}
+html body #mobView .isl.solo,html body #chIsl{bottom:max(calc(env(safe-area-inset-bottom) + 46px), 60px)!important}   /* 8/11: πιο ψηλά — μακριά από τη γραμμή Home/Siri του iPhone */
 html body #mobView.desk .mtabs{bottom:10px!important}
 html body #mobView.desk .isl,html body #mobView.desk .isl.solo{bottom:12px!important}
 /* «👀 για έγκριση»: πάνω από την κάτω μπάρα (και πάνω από το island στην καρτέλα ασθενή), όχι πάνω τους */
 body:has(#mobView.on:not(.desk)) #pdxReviewPill{bottom:calc(max(env(safe-area-inset-bottom), 16px) + 90px)!important}
 body:has(#mobView.on:not(.desk) .isl:not(.solo)) #pdxReviewPill{bottom:calc(max(env(safe-area-inset-bottom), 16px) + 176px)!important}
-body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:max(calc(env(safe-area-inset-bottom) + 92px), 106px)!important}
+body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:max(calc(env(safe-area-inset-bottom) + 118px), 132px)!important}
 /* υπολογιστής: η «Αναίρεση» πάνω δεξιά, μικρή, για να μη σκεπάζει τα κουμπιά στο κάτω μέρος */
 @media (min-width:900px) and (hover:hover){
   #undoToast,#mobToast{left:auto!important;right:20px!important;top:84px!important;bottom:auto!important;width:auto!important;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v207';
+const APP_VER = '2026-11-08z-v208';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -7746,9 +7746,13 @@ document.head.appendChild(st);
     return {pts:'Κλινική', tools:'Εργαλεία', me:'Ρυθμίσεις', todo:'Εκκρεμότητες', today:'Σήμερα'}[tab] || ''; }catch(e){ return ''; } };
   window.pdxIosBackLabel = ()=>{ const t = document.getElementById('iosPg'); return iosShort(t && !t.__closing && t.__ttl ? t.__ttl : iosCtx()); };
   const iosShort = t=>{ t = String(t||'').trim(); return t.length > 16 ? t.slice(0,15)+'…' : t; };
+  if(!window.__pdxTapHook){ window.__pdxTapHook = 1; const tr = e=>{ window.__pdxTapEl = e.target; window.__pdxTapPg = (e.target && e.target.closest) ? e.target.closest('#iosPg,.iosPgU') : null; }; document.addEventListener('pointerdown', tr, true); document.addEventListener('touchstart', tr, {capture:true, passive:true}); document.addEventListener('click', tr, true); }
   window.iosPage = function(title, back, draw){
     let top = document.getElementById('iosPg'); if(top && top.__closing) top = [...document.querySelectorAll('#iosPg')].find(x=>!x.__closing) || null;
     if(top && top.__ttl===title){ top.remove(); top = [...document.querySelectorAll('.iosPgU')].pop() || null; if(top){ top.classList.remove('iosPgU'); top.id = 'iosPg'; } }
+    // 8/11: στοίβα ΜΟΝΟ όταν η νέα σελίδα ανοίγει από ΜΕΣΑ στην ανοιχτή (πάτημα μέσα της). Αν ανοίγει από αλλού
+    // (κάτω μπάρα, αρχική, μενού, ειδοποίηση) → οι παλιές σελίδες κλείνουν: το «πίσω» ποτέ δεν βγάζει ξεχασμένες σελίδες.
+    if(top && window.__pdxTapPg !== top){ document.querySelectorAll('#iosPg,.iosPgU').forEach(g=>g.remove()); top = null; }
     const under = top;   // ανοιχτή σελίδα με άλλο τίτλο → μένει από κάτω
     const GEN = /^(Πίσω|Ρυθμίσεις|Εργαλεία|Κλινική|)$/;
     const label = iosShort(under ? under.__ttl : (back && !GEN.test(back) ? back : (iosCtx() || back || 'Πίσω')));
@@ -8282,7 +8286,7 @@ document.head.appendChild(st);
   #mobView .nv-chs{display:flex;gap:6px;flex-wrap:wrap}
   #mobView .nv-ch{font-size:13px;font-weight:600;padding:6px 10px;border-radius:14px;background:#fff;color:#1C1C1E;border:0;font-family:inherit;line-height:1.2}
   #mobView button.nv-ch{cursor:pointer}#mobView .nv-ch.w{background:#FFF4E0;color:#8A5300}#mobView .nv-ch.on{box-shadow:inset 0 0 0 1.5px currentColor}
-  #mobView .nv-tb{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);height:62px;border-radius:31px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-around;z-index:50;max-width:520px;margin:0 auto}
+  #mobView .nv-tb{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 30px);height:62px;border-radius:31px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-around;z-index:50;max-width:520px;margin:0 auto}
   #mobView .nv-tb button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:#6B6B70;background:none;border:0;cursor:pointer;position:relative;padding:4px 10px;font-family:inherit}
   #mobView .nv-tb button.on{color:#1D4E80;font-weight:700}
   #mobView .nv-tb em{position:absolute;top:-2px;right:2px;min-width:18px;height:18px;border-radius:9px;background:#1D4E80;color:#fff;font-size:11px;font-style:normal;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box}
@@ -8581,7 +8585,7 @@ document.head.appendChild(st);
       h = nvHeader(all, es) + (showF ? filterBar() : '') + (qf==='todos' ? todoBoard(es) : nvBody(es));
       h += '<div id="mNoRes" class="msec" style="display:none">Δεν βρέθηκε ασθενής.</div>';
       if(!es.length) h += '<div class="msec">'+((fRooms.size||fTher.size||qf!=='all')?'Κανένας ασθενής με τα επιλεγμένα φίλτρα.':'Κανένας ασθενής.')+'</div>';
-      return h + '<div style="height:96px"></div>' + nvTabs();
+      return h + '<div style="height:118px"></div>' + nvTabs();
     }
     if((window.pdxIsBotUser&&window.pdxIsBotUser())) h += '<div id="mBotStrip">'+botStripHtml()+'</div>';
     h += quickBar(all);   // 8/11: «Χρειάζονται προσοχή» μόνο στις 🔔 Ειδοποιήσεις
@@ -10212,6 +10216,7 @@ document.head.appendChild(st);
   window.mobSaveList = ()=>{ try{ if(!openKey) window.__listY = {tab:tab, y:view.scrollTop, t:Date.now()}; }catch(e){} };
   const listRestore = ()=>{ const L=window.__listY; if(!L || L.tab!==tab || Date.now()-L.t>60*60000) return; const set=()=>{ if(!openKey) view.scrollTop=L.y; }; set(); requestAnimationFrame(set); setTimeout(set,80); };
   window.mobOpen = k=>{ if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; } closePops(); window.mobSaveList(); if(openKey!==k){ window.__qkOpen=false; window.__ptTab=null; } openKey=k; window.__tp=false; render(); view.scrollTop=window.mobTakeScroll(k); };   // άνοιγμα από τη λίστα: πάντα στην καρτέλα «Σήμερα»
+  window.__pdxNavState = ()=>({tab, openKey, ptTab:(window.__ptTab && window.__ptTab.k===openKey) ? window.__ptTab.t : (openKey?'today':''), tp:!!window.__tp});   // για τις δοκιμές πλοήγησης
   window.mobBack = ()=>{ closePops(); if(window.__tp){ window.__tp=false; render(); view.scrollTop=window.mobTakeScroll(openKey); return; } window.__dret=null; openKey=null; window.__qkOpen=false; render(); listRestore(); };
   // ---- νυχτερινή λειτουργία ----
   (function(){
@@ -10352,7 +10357,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // περιεχόμενο κάτω από τη σειρά καρτελών (μόνο αυτό γλιστρά στην αλλαγή καρτέλας)
     const below=()=>{ const seg=view.querySelector('.ptseg'); if(!seg) return []; const out=[]; let n=seg.nextElementSibling; while(n){ out.push(n); n=n.nextElementSibling; } return out; };
     let sx=0, sy=0, ok=false, dragging=false, dir=0, g=null, k0=null, scr=0, lx=0, lt=0, vx=0, mode='', els=[], edge=false;
-    const undo=()=>{ mobOpen(k0); view.scrollTop=scr; };
+    let pt0=null;
+    const undo=()=>{ mobOpen(k0); if(pt0 && pt0.k===k0 && window.mobPtTab){ try{ window.mobPtTab(k0, pt0.t); }catch(e){} } view.scrollTop=scr; };   // ακυρωμένο «πίσω»: ίδια καρτέλα (όχι πάντα «Σήμερα»)
     let tgt=null;
     const unbind=()=>{ if(tgt){ tgt.removeEventListener('touchmove',onMove); tgt.removeEventListener('touchend',onEnd); tgt.removeEventListener('touchcancel',onCancel); tgt=null; } };
     view.addEventListener('touchstart', e=>{ unbind(); tgt=e.target; tgt.addEventListener('touchmove',onMove,{passive:true}); tgt.addEventListener('touchend',onEnd,{passive:true}); tgt.addEventListener('touchcancel',onCancel,{passive:true}); ok = !!openKey && !g && !document.getElementById('qeOv')?.classList.contains('on') && !sheet.classList.contains('on') && !e.target.closest('input,textarea,select') && !window.pdxInHScroll(e.target); dragging=false; const t=e.touches[0]; sx=lx=t.clientX; sy=t.clientY; lt=e.timeStamp; vx=0; edge=t.clientX<=28; },{passive:true});
@@ -10365,7 +10371,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           else if(dir>0 && i>0){ mode='tab'; }                               // προηγούμενη καρτέλα
           else if(dir<0 && i<PT_TABS.length-1){ mode='tab'; }                // επόμενη καρτέλα
           else { ok=false; return; }
-          dragging=true; k0=openKey; scr=view.scrollTop;
+          dragging=true; k0=openKey; scr=view.scrollTop; pt0=window.__ptTab ? {...window.__ptTab} : null;
           if(mode==='back'){ g=window.pdxGhost(view); mobBack(); window.pdxPar(g, movers(), dir); }
           else { els=below(); els.forEach(el=>{ el.style.transition='none'; el.style.willChange='transform'; }); }
         } else return;
@@ -16844,7 +16850,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
       cl.addEventListener('click', e=>{ const kids = [...cl.children], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
       document.body.appendChild(cl); };
     new MutationObserver(()=>setTimeout(sync, 60)).observe(box, {attributes:true, attributeFilter:['class']});
-    const st = document.createElement('style'); st.textContent = '#labsFull.on{padding-bottom:calc(env(safe-area-inset-bottom) + 84px)}'; document.head.appendChild(st); })();
+    const st = document.createElement('style'); st.textContent = '#labsFull.on{padding-bottom:calc(env(safe-area-inset-bottom) + 100px)}'; document.head.appendChild(st); })();
   // σύρσιμο δεξιά (από την αριστερή άκρη) → πίσω (στην καρτέλα του ασθενή αν ήρθαμε από εκεί)
   (function(){ let x0 = 0, y0 = 0, ok = false;
     // από οπουδήποτε (όχι μόνο την άκρη), εκτός από πίνακες που κυλάνε οριζόντια
@@ -17458,6 +17464,7 @@ function applyFs(){ ov.style.setProperty('--fs', fsScale()); }
 
 /* ---------- Public entry points ---------- */
 window.__chClose = function(){ closeOv(); };
+window.pdxCloseCaseHist = function(){ closeOv(); };   // κλείσιμο ιστορικού (π.χ. δοκιμές πλοήγησης)
 window.openCaseHist = function(key, isExtra){
   try{ if(window.mobSaveScroll) window.mobSaveScroll(key); }catch(e){}
   try{ if(window.mobClosePops) window.mobClosePops(); }catch(e){}
