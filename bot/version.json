@@ -1,1 +1,1 @@
-{"version": "0.21.140", "zip": "ef-bot-0.21.140.zip", "sha256": "cb0a4990076fca07a4df7f588daae91a1dcd3dda2817cc6a4ea7aa84d3790446", "notes": "epcat probe: μήνυμα σφάλματος API"}
+{"version": "0.21.141", "zip": "ef-bot-0.21.141.zip", "sha256": "ab4606f2017972e90d95b2be8537c52f23aeb7bfbdcad56c954218a47e4bc37f", "notes": "emrQuiet: δυναμική αναμονή ΝΠΣ (μπάρα φόρτωσης/ajax/DOM) στα npsprogmap/npsepmap · epsearch patientAge"}
