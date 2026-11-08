@@ -192,6 +192,7 @@
       h += '<div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" data-f="date" value="' + E(P.date) + '"><select data-f="kind">' + ["ΠΡΟΓΡΑΜΜΑ", "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ", "ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΠΡΟΓΡΑΜΜΑ"].map((k) => "<option" + (P.kind === k ? " selected" : "") + ">" + k + "</option>").join("") + "</select>"
         + '<span style="color:#6B7280;font-size:13px">' + (P.status === "submitted" ? "✅ υποβλήθηκε" + (P.file ? " · " + E(P.file) : "") : dirty ? "● μη αποθηκευμένο" : P.at ? "💾 πρόχειρο " + new Date(P.at).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" }) + (P.by ? " · " + E(P.by) : "") : "νέο") + "</span></div>";
       h += '<div style="margin-top:8px;font-weight:700">Υπεύθυνος προγράμματος</div><div>' + (cfg.residents || []).map((n) => chip("data-resp", n, P.resp === n)).join("") + chip("data-resp-add", "+", false, "＋ όνομα") + "</div>";
+      h += (P.pts.length && window.pdxXrQueue ? '<button class="chip" data-act="xr" style="margin-top:8px;background:#0F172A;color:#fff;border-color:#0F172A">🫁 Ακτινογραφίες θώρακα (' + P.pts.length + ') → Νίκος CT Viewer</button>' : "");
       h += '<div style="margin-top:8px;font-weight:700">Αίθουσες</div><div>' + ROOMS_ALL.map((r) => chip("data-room", r, P.rooms.indexOf(r) >= 0, E(ORP.roomLabel(r).replace("ΑΙΘΟΥΣΑ ", "")))).join("") + "</div></div>";
       for (const R of ORP.rooms(P)) {
         h += '<div class="rm">' + E(R.label) + " · " + R.pts.length + "</div>";
@@ -229,6 +230,7 @@
       if (ds.act === "save") { try { await saveDraft(P); dirty = false; say("💾 Αποθηκεύτηκε (πρόχειρο)"); redraw(); } catch (er) { say("⚠ " + er.message); } return; }
       if (ds.act === "print") { printLocal(P); return; }
       if (ds.act === "submit") { submit(); return; }
+      if (ds.act === "xr") { xrQueue(); return; }
     });
     // ---- επιλογή ασθενή ----
     function sheet(inner) { const ov = document.createElement("div"); ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:flex-end"; ov.innerHTML = '<div style="background:#F2F2F7;width:100%;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:12px 12px calc(16px + env(safe-area-inset-bottom));font:15px -apple-system,system-ui;color:#1F2933" id="orpSh">' + inner + "</div>"; ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); }); document.body.appendChild(ov); return ov; }
@@ -314,6 +316,17 @@
       show("");
       ov.querySelector("[data-q]").addEventListener("input", (e) => show(e.target.value));
       ov.addEventListener("click", (e) => { if (e.target.closest("[data-x]")) { ov.remove(); return; } const r = e.target.closest("[data-i]"); if (r) { done(items[+r.dataset.i]); ov.remove(); } });
+    }
+    // ---- 🫁 ακτινογραφίες θώρακα στη σειρά του προγράμματος (για την καρδιολογική εκτίμηση) ----
+    function xrQueue() {
+      const items = [];
+      for (const R of ORP.rooms(P)) for (const p of R.pts) {
+        let d = null; try { d = p.key ? ((typeof data !== "undefined" && data[p.key]) || (typeof extraPatients !== "undefined" && extraPatients[p.key]) || null) : null; } catch (e) {}
+        const am = (/\b(\d{8})\b/.exec(p.nm || "") || [])[1] || (d && d.am) || "";
+        const name = d && d.name ? d.name : String(p.nm || "").replace(/\s+ΤΟΥ\s.*$/, "").replace(/\s*\d{8}.*$/, "").trim();
+        items.push({ key: p.key || "", name, am, amka: (d && d.amka) || "", ad: (d && d.admitDate) || p.adm || "", label: R.label.replace("ΑΙΘΟΥΣΑ ", "Αίθ. ") + (p.bed ? " · " + p.bed : "") });
+      }
+      window.pdxXrQueue(items);
     }
     // ---- υποβολή: Excel στο δίκτυο + εκτύπωση (bot Μεσαίου) ----
     async function submit() {
