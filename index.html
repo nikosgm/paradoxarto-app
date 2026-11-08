@@ -2235,7 +2235,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-08z-v195';
+const APP_VER = '2026-11-08z-v196';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8019,7 +8019,7 @@ document.head.appendChild(st);
   };
   const pdxDbAgo = iso=>{ const s = Math.max(0, Math.round((Date.now()-Date.parse(String(iso).replace(' ','T')+(/Z|[+-]\d\d:?\d\d$/.test(iso)?'':'Z')))/1000)); return s<60 ? s+'″' : s<3600 ? Math.round(s/60)+'′' : s<86400 ? Math.round(s/3600)+' ώρ.' : Math.round(s/86400)+' ημ.'; };
   const pdxDbDate = d=>{ const m = String(d||'').match(/^(\d{4})-?(\d{2})-?(\d{2})/); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; };
-  const PDX_DB_ACT = {bulk:'Τωρινοί ασθενείς', settings:'Ρυθμίσεις', 'cd-accept':'Αξονική αποθηκεύτηκε', 'cd-reject':'Αξονική απορρίφθηκε', assign:'Αξονική σε ασθενή', mdt:'Συμβούλιο', 'mdt-delete':'Συμβούλιο: αφαίρεση', onc:'Ογκολογικός', patient:'Ασθενής', events:'Ιστορικό', import:'Εισαγωγή'};
+  const PDX_DB_ACT = {'mirror-run':'Αντιγραφή στο δίκτυο', bulk:'Τωρινοί ασθενείς', settings:'Ρυθμίσεις', 'cd-accept':'Αξονική αποθηκεύτηκε', 'cd-reject':'Αξονική απορρίφθηκε', assign:'Αξονική σε ασθενή', mdt:'Συμβούλιο', 'mdt-delete':'Συμβούλιο: αφαίρεση', onc:'Ογκολογικός', patient:'Ασθενής', events:'Ιστορικό', import:'Εισαγωγή'};
   // ⚙️ Ρυθμίσεις → 🗂 Βάση δεδομένων
   window.pdxDbPage = function(){
     const att = ['attending','admin'].indexOf(window.authRole)>=0;
@@ -8044,20 +8044,32 @@ document.head.appendChild(st);
       ], lock || (S.cdMode==='auto' ? 'Αυτόματα: κάθε αξονική αποθηκεύεται αμέσως στον ασθενή.' : 'Με έγκριση: καμία αξονική δεν αποθηκεύεται πριν πατηθεί «Αποθήκευση».'));
       h += iosGroup('Ογκολογικοί', [{t:'Αυτόματος χαρακτηρισμός', sub:'από διαγνώσεις C / D0x / D37–D44, κακοήθη βιοψία ή συμβούλιο', sw:S.oncAuto!==false, data:att?'data-db="onc"':''}], lock || 'Κλειστό: ογκολογικός μόνο όταν τον ορίσει γιατρός.');
       h += iosGroup('Συγχρονισμός', [{ic:'🔄', t:'Τωρινοί ασθενείς → βάση', sub: syncNote ? esc(syncNote) : 'Παραδόχαρτο + λίστα ΝΠΣ (όνομα, ΑΜΚΑ, ΑΜ, πατρώνυμο, διαγνώσεις)', data:'data-db="sync"', on:'void 0'}], 'Μπαίνουν όσοι έχουν ΑΜΚΑ ή ΑΜ· ξανά = ενημέρωση, όχι διπλοί.');
+      // 🌙 νυχτερινή αντιγραφή στον φάκελο δικτύου (ανοίγουν γρήγορα από τον Μεσαίο)
+      const M = ov.mirror || {}, ML = M.last || {}, hh = n=>String(n).padStart(2,'0')+':00';
+      if(ov.mirror) h += iosGroup('Αντιγραφή στο δίκτυο', [
+        {t:'Κάθε βράδυ', sw:M.on!==false, data:att?'data-db="mir"':''},
+        {t:'Ώρα', raw:'<select data-db-hour '+(att?'':'disabled')+' style="font-size:15px;border:0;background:rgba(118,118,128,.12);border-radius:8px;padding:5px 8px">'+[0,1,2,3,4,5,22,23].map(x=>'<option value="'+x+'"'+(x===M.hour?' selected':'')+'>'+hh(x)+'</option>').join('')+'</select>'},
+        {ic:'📁', t:'Αντιγραμμένες: '+(M.done||0)+(M.pending?' · <b style="color:#B26A00">εκκρεμούν '+M.pending+'</b>':' · όλες'), sub: M.running ? '⏳ αντιγράφεται τώρα… '+(M.running.done||0)+'/'+(M.running.total||0) : ML.at ? 'τελευταία: πριν από '+pdxDbAgo(ML.at)+' · '+(ML.studies||0)+' νέες'+((ML.errors||[]).length?' · <span style="color:#B42318">⚠ '+esc(ML.errors[0])+'</span>':'') : 'δεν έχει γίνει ακόμα'},
+        att && {ic:'⚡', t:'Αντιγραφή τώρα', sub:'π.χ. για αξονική που μπήκε σήμερα', data:'data-db="mirnow"', on:'void 0'}
+      ], esc(M.path||'')+' — ο φάκελος φαίνεται από όλους τους υπολογιστές της κλινικής.');
       h += iosGroup('Συμβούλιο', [{ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη · tablet', on:'pdxMdtOpen()'}]);
       if((ov.audit||[]).length) h += iosGroup('Πρόσφατες ενέργειες', ov.audit.slice(0,8).map(a=>({t:esc(PDX_DB_ACT[a.action]||a.action), sub:esc(String(a.who||'').replace(/^bot:/,''))+' · πριν από '+pdxDbAgo(a.ts)})));
-      h += iosGroup('Σύντομα', [{t:'<span style="color:#8E8E93">Αυτόματη ενημέρωση από τα bots</span>', sub:'νοσηλείες, εργαστηριακά, βιοψίες, χειρουργεία'}, {t:'<span style="color:#8E8E93">Νυχτερινό αντίγραφο ασφαλείας</span>'}]);
+      h += iosGroup('Σύντομα', [{t:'<span style="color:#8E8E93">Αυτόματη ενημέρωση από τα bots</span>', sub:'νοσηλείες, εργαστηριακά, βιοψίες, χειρουργεία'}, {t:'<span style="color:#8E8E93">Νυχτερινό αντίγραφο ασφαλείας της βάσης</span>'}]);
       return h + '<div style="height:60px"></div>';
     });
     const load = async ()=>{ try{ ov = await pdxDbCall('GET', '/api/overview'); err = ''; }catch(e){ err = e.message; } busy = ''; pg.redraw(); };
     const set = async (o, label)=>{ if(!att || busy) return; busy = 'set'; Object.assign(ov.settings, o); msg = '⏳ '+label+'…'; pg.redraw();
       try{ ov.settings = await pdxDbCall('POST', '/api/settings', o); msg = '✓ '+label; }catch(e){ msg = '⚠ '+e.message; await load(); } busy = ''; pg.redraw(); };
+    pg.el.addEventListener('change', async e=>{ const sl = e.target.closest('[data-db-hour]'); if(!sl) return; await set({mirrorHour: +sl.value}, 'Ώρα αντιγραφής '+String(sl.value).padStart(2,'0')+':00'); await load(); });
     pg.el.addEventListener('click', async e=>{
       const b = e.target.closest('[data-db]'); if(!b || b.disabled) return; const a = b.dataset.db, id = b.dataset.id;
       if(a==='reload'){ err = ''; pg.redraw(); return load(); }
       if(a==='cd') return set({cdMode:b.dataset.v}, b.dataset.v==='auto' ? 'Εισαγωγή CD: αυτόματα' : 'Εισαγωγή CD: με έγκριση');
       if(a==='eject') return set({eject: ov.settings.eject===false}, 'Αποβολή CD');
       if(a==='onc') return set({oncAuto: ov.settings.oncAuto===false}, 'Αυτόματος χαρακτηρισμός');
+      if(a==='mir'){ await set({mirrorOn: !(ov.mirror && ov.mirror.on!==false)}, 'Νυχτερινή αντιγραφή'); return load(); }
+      if(a==='mirnow'){ if(busy) return; busy = 'mir'; msg = '⏳ αντιγραφή στο δίκτυο…'; pg.redraw();
+        try{ const r = await pdxDbCall('POST', '/api/mirror/run', {}); ov.mirror = r; msg = r.running ? '✓ ξεκίνησε η αντιγραφή ('+(r.running.total||0)+' αξονικές)' : '✓ τίποτα για αντιγραφή'; }catch(er){ msg = '⚠ '+er.message; } busy = ''; pg.redraw(); return; }
       if(a==='sync'){ if(busy) return; busy = 'sync'; syncNote = '⏳ στάλθηκε στο Παράθυρο…'; pg.redraw();
         try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_pdxsync', name:'🗂 τωρινοί ασθενείς', room:null, kind:'pdxsync', payload:{only:PDX_DB_BOT, quiet:true}, status:'new'}).select('id').single();
           if(ins.error) throw new Error(ins.error.message); const t0 = Date.now();
