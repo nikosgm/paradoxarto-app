@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09e-v219';
+const APP_VER = '2026-11-09f-v220';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -17656,20 +17656,29 @@ window.pdxDictate = function(k){
 };
 // 💊 9/11: ηλεκτρονική παραγγελία φαρμάκου νοσηλευομένου στο ΝΠΣ («Φαρμακευτική Αγωγή → Προσθήκη»).
 // Προς το παρόν ΕΛΕΓΧΟΣ: το bot συμπληρώνει τη φόρμα στο ΝΠΣ, τη διαβάζει πίσω και φεύγει ΧΩΡΙΣ «Ενημέρωση».
+// 📚 9/11: κατάλογος φαρμάκων ΝΠΣ (oncall_labs «npsmed|cat», από το bot) για άμεση αναζήτηση «Δραστικής Ουσίας»
+window.pdxNpsMedCat = window.pdxNpsMedCat || {items:null, at:0};
+window.pdxNpsMedLoad = async function(){ const C = window.pdxNpsMedCat; if(C.items && Date.now()-C.at < 6*3600e3) return C.items;
+  try{ if(!C.items){ const j = JSON.parse(localStorage.getItem('pdx_npsmed')||'null'); if(j && Array.isArray(j.items)){ C.items = j.items; C.at = 0; } } }catch(e){}
+  try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','npsmed|cat').maybeSingle(); const d = r.data && r.data.data; if(d && Array.isArray(d.items)){ C.items = d.items; C.at = Date.now(); try{ localStorage.setItem('pdx_npsmed', JSON.stringify({items:d.items})); }catch(e){} } }catch(e){}
+  return C.items || []; };
+window.pdxNpsMedFind = function(q, L){ const N = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase(); const W = N(q).split(/[\s,()/:]+/).filter(Boolean); if(!W.length) return [];
+  const out = []; for(const it of (L||[])){ const T = N(it), toks = T.split(/[\s,()/:]+/); if(W.every(w=>toks.some(t=>t.indexOf(w)===0))){ out.push(it); if(out.length>=40) break; } }
+  const w0 = W[0]; return out.sort((x,y)=>(N(y).indexOf(w0)===0)-(N(x).indexOf(w0)===0) || x.length-y.length).slice(0,12); };
 window.pdxMedOrder = function(k){
   const isX = String(k).indexOf('extra')===0, rec = (isX ? extraPatients : data)[k]; if(!rec) return;
   const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const TF = window.THERAPIST_FULL || {};
   const docs = Object.values(TF).filter(Boolean); const doc0 = TF[rec.therapist] || docs[0] || '';
-  const st = {f:{drug:'', product:'', form:'', doctor:doc0, dose:'1', perDay:'3', days:'2'}, busy:'', msg:'', ok:false, res:null, last:null, saved:false};
+  const st = {f:{drug:'', product:'', form:'', doctor:doc0, dose:'1', perDay:'3', days:'2'}, busy:'', msg:'', ok:false, res:null, last:null, saved:false}; window.__pdxMedSt = st;
   const FORMS = ['', 'TABLE', 'CAPS', 'INFUS', 'INJ', 'SOL', 'SUPP'];
   const inp = 'min-width:0;width:100%;box-sizing:border-box;min-height:42px;font-size:16px;padding:7px 10px;border:1px solid #C7CDD4;border-radius:10px;background:#fff';
   const L = t=>'<div style="margin:10px 0 3px;font-size:13px;font-weight:700;color:#374151">'+t+'</div>';
   const pg = iosPage('Φάρμακο · ΝΠΣ', '', ()=>{ const f = st.f;
     let h = '<div style="margin:6px 16px 0;font-size:14px;color:#6B7280">'+E5(rec.name||'')+'</div><div style="margin:0 16px">';
-    h += L('Δραστική ουσία *')+'<input data-mf="drug" value="'+E5(f.drug)+'" placeholder="π.χ. PARACETAMOL" autocapitalize="characters" style="'+inp+'">';
+    h += L('Δραστική ουσία *')+'<input data-mf="drug" value="'+E5(f.drug)+'" placeholder="π.χ. PARACETAMOL ή APOTEL" autocapitalize="characters" autocomplete="off" style="'+inp+'"><div data-msug style="margin-top:4px"></div>';
     h += '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">'+'<div>'+L('Σκεύασμα (προαιρετικό)')+'<input data-mf="product" value="'+E5(f.product)+'" placeholder="π.χ. APOTEL MAX" autocapitalize="characters" style="'+inp+'"></div>'
-      +'<div>'+L('Μορφή')+'<select data-mf="form" style="'+inp+'">'+FORMS.map(x=>'<option value="'+x+'"'+(x===f.form?' selected':'')+'>'+(x||'—')+'</option>').join('')+'</select></div></div>';
+      +'<div>'+L('Μορφή')+'<select data-mf="form" style="'+inp+'">'+(FORMS.indexOf(f.form)<0?[f.form].concat(FORMS):FORMS).map(x=>'<option value="'+x+'"'+(x===f.form?' selected':'')+'>'+(x||'—')+'</option>').join('')+'</select></div></div>';
     h += L('Εντέλλων ιατρός *')+'<select data-mf="doctor" style="'+inp+'">'+docs.map(x=>'<option'+(x===f.doctor?' selected':'')+'>'+E5(x)+'</option>').join('')+'</select>';
     h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+[['dose','Δόση'],['perDay','Δόσεις/ημέρα'],['days','Ημέρες']].map(([key,l])=>'<div>'+L(l)+'<input data-mf="'+key+'" inputmode="decimal" value="'+E5(f[key])+'" style="'+inp+'"></div>').join('')+'</div></div>';
     h += '<button data-mgo '+(st.busy?'disabled':'')+' style="display:block;width:calc(100% - 32px);margin:16px 16px 6px;min-height:48px;border:0;border-radius:12px;background:'+(st.busy?'#9CA3AF':'#0A84FF')+';color:#fff;font-weight:700;font-size:15.5px">'+(st.busy?'⏳ '+E5(st.busy):'🔎 Έλεγχος στο ΝΠΣ')+'</button>';
@@ -17679,9 +17688,17 @@ window.pdxMedOrder = function(k){
       if(!st.saved && st.ok && st.last) h += '<button data-mok '+(st.busy?'disabled':'')+' style="display:block;width:calc(100% - 32px);margin:6px 16px 4px;min-height:50px;border:0;border-radius:12px;background:'+(st.busy?'#9CA3AF':'#1A7F37')+';color:#fff;font-weight:800;font-size:16px">✅ Καταχώριση στο ΝΠΣ</button><div style="margin:0 16px;font-size:12px;color:#8E8E93">Το bot ξαναγεμίζει τη φόρμα, ελέγχει ότι είναι ΙΔΙΑ με την παραπάνω και πατά «Ενημέρωση».</div>'; }
     h += '<div style="margin:6px 16px;font-size:12.5px;color:#8E8E93">Το bot ανοίγει τον ασθενή (έλεγχος ΑΜΚΑ) → Φαρμακευτική Αγωγή → Προσθήκη, συμπληρώνει και διαβάζει πίσω. Η «Ενημέρωση» στο ΝΠΣ πατιέται μόνο όταν πατήσεις «Καταχώριση».</div>';
     return h + '<div style="height:40px"></div>'; });
-  pg.el.addEventListener('input', e=>{ const t = e.target; if(t.dataset && t.dataset.mf) st.f[t.dataset.mf] = t.value; });
-  pg.el.addEventListener('change', e=>{ const t = e.target; if(t.dataset && t.dataset.mf) st.f[t.dataset.mf] = t.value; });
-  pg.el.addEventListener('click', async e=>{ if(e.target.closest('[data-mok]') && !st.busy && st.last && st.res && st.res.form){ const F = st.res.form;
+  const sug = ()=>{ const box = pg.el.querySelector('[data-msug]'); if(!box) return; const q = st.f.drug; const L = (window.pdxNpsMedCat||{}).items;
+    const R = q && q.length>=2 && L ? pdxNpsMedFind(q, L) : [];
+    box.innerHTML = R.map(x=>'<div data-mpick="'+E5(x)+'" style="padding:9px 10px;border-bottom:1px solid #EEF0F3;font-size:14.5px;background:#fff;cursor:pointer">'+E5(x)+'</div>').join('');
+    box.style.cssText = R.length ? 'margin-top:4px;border:1px solid #C7CDD4;border-radius:10px;overflow:hidden;max-height:300px;overflow-y:auto' : ''; };
+  pdxNpsMedLoad().then(()=>sug());
+  pg.el.addEventListener('input', e=>{ const t = e.target; if(!t.isConnected) return; if(t.dataset && t.dataset.mf){ st.f[t.dataset.mf] = t.value; if(t.dataset.mf==='drug') sug(); } });
+  pg.el.addEventListener('change', e=>{ const t = e.target; if(t.dataset && t.dataset.mf && t.tagName==='SELECT') st.f[t.dataset.mf] = t.value; });
+  pg.el.addEventListener('mousedown', e=>{ if(e.target.closest('[data-mpick]')) e.preventDefault(); });
+  pg.el.addEventListener('click', async e=>{ const pk = e.target.closest('[data-mpick]'); if(pk){ try{ document.activeElement && document.activeElement.blur(); }catch(x){} /* η αυτόματη διόρθωση στο focusout γράφει πρώτα — μετά η επιλογή */ const v = pk.dataset.mpick; const m = /^(.*?)\s*\(([^)]*)\)\s*:\s*(.*)$/.exec(v);
+      if(m){ st.f.drug = m[1].trim(); st.f.form = m[2].trim(); st.f.product = m[3].trim(); } else st.f.drug = v; st.picked = v; pg.redraw(); return; }
+    if(e.target.closest('[data-mok]') && !st.busy && st.last && st.res && st.res.form){ const F = st.res.form;
       return run(Object.assign({}, st.last, {approved:true, expect:{type:F.type, drug:F.drug, units:F.units, doc:F.doc, dose:F.dose, perDay:F.perDay, days:F.days}}), true); }
     if(!e.target.closest('[data-mgo]') || st.busy) return; const f = st.f;
     if(!String(f.drug).trim() || !String(f.doctor).trim()){ st.msg = 'Συμπλήρωσε ουσία και εντέλλοντα'; st.ok = false; pg.redraw(); return; }
