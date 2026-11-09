@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v233';
+const APP_VER = '2026-11-09r-v234';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13610,6 +13610,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxBot = function(k, id, pre){
     const d = recOf(k); if(!d) return;
     if(id==='labs'){ const p=document.getElementById('mobSubPop'); if(p) p.remove(); return window.labsFullOpen && labsFullOpen(k); }
+    // 🔥 9/11: εκτίμηση/εξιτήριο → το bot ανοίγει ήδη τον ασθενή στο ΝΠΣ (μόνο άνοιγμα, τίποτα δεν γράφεται)
+    if((id==='dcx' || id==='consult') && window.pdxNpsWarm) window.pdxNpsWarm(d, k, 'pt');
     if(id==='dcx'){ const p=document.getElementById('mobSubPop'); if(p) p.remove(); return typeof showDischarge==='function' && showDischarge(k); }
     if(id==='comorb'){ const p=document.getElementById('mobSubPop'); if(p) p.remove(); return window.pdxComorbOpen && pdxComorbOpen(k); }
     if(id==='ahfylabs'){ const p=document.getElementById('mobSubPop'); if(p) p.remove(); return window.pdxAhfyLabsOpen && pdxAhfyLabsOpen(k); }
@@ -17919,7 +17921,7 @@ window.pdxDossierOpen = async function(name, amka){
   if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
   const E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const st = {d:null, at:0, busy:'', err:''};
-  const T = {dx:'🩺 Διαγνώσεις', consult:'📞 Κλήσεις για εκτίμηση', orOrder:'🔪 Εντολές για επέμβαση', opNote:'📝 Πρακτικά επέμβασης', acts:'⚕️ Ιατρικές πράξεις', course:'📈 Πορεία νόσου', info:'ℹ️ Ενημερωτικά σημειώματα', dc:'📄 Εξιτήρια', meds:'💊 Φαρμακευτική αγωγή'};
+  const T = {dx:'🩺 Διαγνώσεις', consult:'📞 Κλήσεις για εκτίμηση', orOrder:'🔪 Εντολές για επέμβαση', opNote:'📝 Πρακτικά επέμβασης', acts:'⚕️ Ιατρικές πράξεις', course:'📈 Πορεία νόσου', info:'ℹ️ Ενημερωτικά σημειώματα', dc:'📄 Εξιτήρια', meds:'💊 Φαρμακευτική αγωγή', adm:'🏥 Προηγούμενες νοσηλείες (★ δική μας)'};
   const draw = ()=>{ let h = '';
     if(st.busy) h += '<div style="margin:12px 16px;color:#6B7280">⏳ '+E3(st.busy)+'</div>';
     if(st.err) h += '<div style="margin:12px 16px;color:#B42318">⚠ '+E3(st.err)+'</div>';
