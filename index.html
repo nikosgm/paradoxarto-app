@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v236';
+const APP_VER = '2026-11-09r-v237';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8146,6 +8146,20 @@ document.head.appendChild(st);
     return pg;
   };
   // 🎗 Ογκολογικό συμβούλιο (tablet): η σελίδα mdt.html μέσα στο Παραδόχαρτο — σύνδεση = ο γιατρός του Παραδόχαρτου, αιτήματα μέσω pdxDbCall
+  // 🧪 9/11: σειρές τιμών από τον πλήρη πίνακα Medilabi του ασθενή (oncall_labs, όπως τον ανεβάζει το bot) — για τον φάκελο του συμβουλίου
+  // όνομα «ΕΠΩΝΥΜΟ ΟΝΟΜΑ» → {psa, fpsa, cr, hb: [{d:'dd/mm/yy', v}] παλαιότερη πρώτη}
+  window.pdxLabSeries = async function(name){
+    if(typeof sb6==='undefined' || !name) return {};
+    const nk = String(name).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/\s+/g,' ').trim();
+    let D = null; try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key', nk).maybeSingle(); D = r.data && r.data.data; }catch(e){}
+    if(!D || !Array.isArray(D.dates) || !Array.isArray(D.rows)) return {};
+    const nz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+    const num = v=>{ const m = /-?\d+(?:[.,]\d+)?/.exec(String(v||'').replace(/[<>↑↓]/g,'')); return m ? parseFloat(m[0].replace(',','.')) : null; };
+    const ts = d=>{ const m = /^(\d{2})\/(\d{2})\/(\d{2})/.exec(d||''); return m ? +('20'+m[3]+m[2]+m[1]) : 0; };
+    const pick = re=>{ const row = D.rows.find(r=>r.t && re.test(nz(r.t))); if(!row) return [];
+      return Object.entries(row.v||{}).map(([i,v])=>({d:String(D.dates[+i]||'').slice(0,8), t:ts(D.dates[+i]), v:num(v)})).filter(o=>o.v!=null && o.t).sort((a,b)=>a.t-b.t).map(o=>({d:o.d, v:o.v})); };
+    return { psa: pick(/^(t-?psa|psa)(\b| ολικ| total|$)(?!.*(free|ελευθ))/), fpsa: pick(/(f-?psa|free psa|psa ελευθ)/), cr: pick(/^(κρεατινινη|creat)/), hb: pick(/^(hgb|hb)\b/) };
+  };
   window.pdxMdtOpen = function(){
     if(document.getElementById('pdxMdtOv')) return;
     const ov = document.createElement('div'); ov.id = 'pdxMdtOv';
