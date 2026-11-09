@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v266';
+const APP_VER = '2026-11-09y-v267';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7886,7 +7886,7 @@ document.head.appendChild(st);
       ['ord','🧾','Παραγγελίες (ΝΠΣ → Medilabi)', /^(order|orderprep)$/],
       ['med','🧪','Medilabi (εργαστηριακά, βιοψίες)', /^(medlabs|bxscan|bxfind|bxget|bxpdf)$/],
       ['ahfy','🩺','ΑΗΦΥ (εργαστηριακά, διαγνώσεις)', /^(ehrlabs|ehrdx)$/],
-      ['ep','💊','e-prescription (συνταγές)', /^(rx|rxname)$/],
+      ['ep','💊','e-prescription (συνταγές)', /^(rx|rxname|ephist|epdoc|epprint|eprxcancel)$/],
       ['evo','🩻','Evorad (ακτινογραφίες)', /^(evoradimg|evoradfind)$/],
       ['fs','📂','Αρχεία απεικονιστικών', /^(fsls|fsfind|imgdir|imgget|imgmap)$/]
     ];
@@ -11466,6 +11466,87 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     try{ ch = sb6.channel('jobw-'+id+'-'+Date.now()).on('postgres_changes',{event:'UPDATE',schema:'public',table:'oncall_jobs',filter:'id=eq.'+id},(m)=>{ const n=m&&m.new; if(n && END.indexOf(n.status)>=0){ if(n.payload) finish(n); else check(); } }).subscribe(); }catch(e){}
     poll = setInterval(check, 5000); to = setTimeout(()=>finish(null), ms); setTimeout(check, 1200);
   });
+  // ===== 🗂 e-prescription: ιστορικό ασθενή (συνταγές · παραπεμπτικά) → λεπτομέρειες · 🖨 εκτύπωση · ✖ ακύρωση (9/11) =====
+  // Όλα απευθείας από το API του e-prescription μέσω bot (1–3″). Η ακύρωση ΜΟΝΟ μετά από «Οριστική ακύρωση» εδώ.
+  const epxJob = async (kind, payload, label)=>{
+    const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_'+kind, name:label||('Α.Μ.Κ.Α. ··'+String(payload.amka||'').slice(-2)), room:null, kind, payload:Object.assign({quiet:true}, payload), status:'new'}).select('id').single();
+    if(ins.error) throw new Error(ins.error.message); return ins.data.id;
+  };
+  const epxWaitSt = (id, want, ms)=>new Promise(res=>{ const t0=Date.now(); const iv=setInterval(async()=>{ try{ const q=await sb6.from('oncall_jobs').select('status,note,payload').eq('id',id).maybeSingle(); const j=q&&q.data;
+    if(j && (want.indexOf(j.status)>=0 || ['done','failed','cancelled','dismissed','approved'].indexOf(j.status)>=0)){ clearInterval(iv); res(j); } else if(Date.now()-t0>ms){ clearInterval(iv); res(null); } }catch(e){} }, 1500); });
+  const epxD = s=>{ const m = String(s||'').match(/(\d{4})-(\d{2})-(\d{2})/); return m ? m[3]+'/'+m[2]+'/'+m[1].slice(2) : String(s||'').slice(0,10); };
+  const epxStC = s=>/ακυρ/i.test(s)?'#B42318':/εκτελ|ολοκλ/i.test(s)?'#1F6F43':/μερικ/i.test(s)?'#8A4B00':'#0A66C2';
+  window.pdxEpHist = function(amka, name){
+    amka = String(amka||'').replace(/\D/g,''); if(!/^\d{11}$/.test(amka)) return;
+    const S = {st:'load', r:null, tab:'rx', err:''};
+    const css = '<style>.eph .tabs{display:flex;gap:6px;margin:4px 0 10px}.eph .tabs button{flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:600;background:#EEF1F4;color:#333}.eph .tabs button.on{background:#0A66C2;color:#fff}'
+      +'.eph .it{display:flex;gap:10px;align-items:center;padding:12px 4px;border-bottom:1px solid #EEF0F2;min-height:44px}.eph .it b{font-size:16px}.eph .sm{font-size:13px;color:#6B6B70}.eph .st{font-size:12px;font-weight:700;white-space:nowrap}'
+      +'.eph .hd{background:#F6F8FA;border-radius:12px;padding:10px 12px;margin-bottom:10px}.eph .msg{color:#8A4B00;font-size:13px;margin-top:4px}.eph .ld{padding:30px;text-align:center;color:#6B6B70}</style>';
+    const pg = window.iosPage('Ιστορικό e-prescription', 'Πίσω', ()=>{
+      let h = css+'<div class="eph">';
+      if(S.st==='load') return h+'<div class="ld">⏳ Διαβάζω από το e-prescription…</div></div>';
+      if(S.st==='err') return h+'<div class="ld" style="color:#B42318">⚠ '+E(S.err)+'<br><br><button data-ep="re" style="min-height:44px">Ξανά</button></div></div>';
+      const P = S.r.patient||{};
+      h += '<div class="hd"><b style="font-size:18px">'+E(P.name||name||'')+'</b><div class="sm">ΑΜΚΑ '+E(amka)+(P.ins?' · '+E(P.ins):'')+(P.insExp?' · ασφ. έως '+E(epxD(P.insExp)):'')+(P.lastRx?' · τελ. συνταγή '+E(epxD(P.lastRx)):'')+'</div>'
+        + (P.msgs||[]).map(m=>'<div class="msg">⚠ '+E(m)+'</div>').join('')+'</div>';
+      h += '<div class="tabs"><button data-tab="rx" class="'+(S.tab==='rx'?'on':'')+'">💊 Συνταγές · '+(S.r.rxs||[]).length+'</button><button data-tab="ref" class="'+(S.tab==='ref'?'on':'')+'">🧾 Παραπεμπτικά · '+(S.r.refs||[]).length+'</button></div>';
+      const L = S.tab==='rx' ? (S.r.rxs||[]) : (S.r.refs||[]);
+      if(!L.length) h += '<div class="ld">Τίποτα τον τελευταίο χρόνο</div>';
+      h += L.map(x=>'<div class="it" data-doc="'+E(x.bc)+'"><div style="flex:1;min-width:0"><b>'+E(S.tab==='rx' ? (x.med||'—') : (x.group||'—'))+'</b><div class="sm">'+E(epxD(x.date))+' · '+E(x.bc)+(S.tab==='rx' && x.q!=null ? ' · '+E(x.used||0)+'/'+E(x.q)+' εκτελ.' : '')+(x.ins?' · '+E(x.ins):'')+'</div></div><span class="st" style="color:'+epxStC(x.st)+'">'+E(x.st||'')+'</span><span style="color:#C7C7CC">›</span></div>').join('');
+      return h+'</div>';
+    });
+    const load = async ()=>{ S.st='load'; pg.redraw(); try{ const id = await epxJob('ephist', {amka}, name);
+      const j = await jobWait(id, 120000); if(!j){ S.st='err'; S.err='το bot δεν απάντησε σε 2′'; }
+      else if(j.status!=='done'){ S.st='err'; S.err=j.note||'απέτυχε'; } else { S.st='ok'; S.r=(j.payload||{}).result||{}; }
+    }catch(e){ S.st='err'; S.err=e.message; } if(pg.el.isConnected) pg.redraw(); };
+    pg.el.addEventListener('click', e=>{ const t = e.target;
+      const tb = t.closest('[data-tab]'); if(tb){ S.tab = tb.dataset.tab; pg.redraw(); return; }
+      if(t.closest('[data-ep=re]')){ load(); return; }
+      const d = t.closest('[data-doc]'); if(d){ window.__pdxTapPg = pg.el; pdxEpDoc(amka, d.dataset.doc, S.tab, name, load); }
+    });
+    load();
+  };
+  window.pdxEpDoc = function(amka, bc, type, name, onChange){
+    const S = {st:'load', d:null, err:'', busy:'', msg:''};
+    const row = (l, v)=> v ? '<div class="it"><span class="sm" style="width:110px;flex:none">'+E(l)+'</span><span style="flex:1">'+v+'</span></div>' : '';
+    const pg = window.iosPage(type==='ref'?'Παραπεμπτικό':'Συνταγή', 'Ιστορικό', ()=>{
+      let h = '<div class="eph">';
+      if(S.st==='load') return h+'<div class="ld">⏳ Ανοίγω '+(type==='ref'?'το παραπεμπτικό':'τη συνταγή')+'…</div></div>';
+      if(S.st==='err') return h+'<div class="ld" style="color:#B42318">⚠ '+E(S.err)+'</div></div>';
+      const d = S.d;
+      h += '<div class="hd"><b style="font-size:18px">'+E(type==='ref' ? (d.group||'Παραπεμπτικό') : (d.meds||[]).map(m=>m.name).join(', '))+'</b><div class="sm">'+E(bc)+' · <b style="color:'+epxStC(d.status)+'">'+E(d.status)+'</b>'+(d.nopaper?' · 📲 άυλη':' · 📄 χαρτί')+'</div></div>';
+      h += '<div class="g">'+row('Έκδοση', E(epxD(d.issued)))+row('Λήξη', E(epxD(d.expiry)))+row('Γιατρός', E(d.doctor+(d.spec?' · '+d.spec:'')))+row('Τύπος', E(d.kind||''))+row('Διάγνωση', (d.dx||[]).map(E).join('<br>'))
+        + (type==='ref' ? row('Εξετάσεις', (d.exams||[]).map(x=>E(x.name)+(x.status?' <span class="sm">· '+E(x.status)+'</span>':'')).join('<br>'))+row('Αιτιολογία', E(d.just||''))+row('Εκτελέστηκε', E(d.dispenser||''))
+          : row('Φάρμακα', (d.meds||[]).map(m=>'<b>'+E(m.name)+'</b> '+E(m.content||'')+' <span class="sm">· '+E(m.qty)+' τεμ.'+(m.dose?' · '+E(m.dose):'')+(m.days?' · '+E(m.days)+' ημ.':'')+(m.pct!=null?' · '+E(m.pct)+'%':'')+((m.executed||[]).length?' · ✅ εκτελέστηκε '+E(epxD(m.executed[0])):'')+'</span>').join('<br>'))
+            + row('Πληρωτέο', d.payable!=null ? E(d.payable)+' €' : ''))+'</div>';
+      const exec = type!=='ref' && (d.meds||[]).some(m=>(m.executed||[]).length);
+      h += '<div style="display:flex;gap:10px;margin-top:14px">'
+        + '<button data-ep="print" class="go" style="flex:1;min-height:48px;border:0;border-radius:12px;background:#0A66C2;color:#fff;font-size:16px;font-weight:600"'+(S.busy?' disabled':'')+'>'+(S.busy==='print'?'⏳ Εκτύπωση…':'🖨 Εκτύπωση')+'</button>'
+        + (type!=='ref' && !exec && !/ακυρ/i.test(d.status) ? '<button data-ep="cancel" style="flex:1;min-height:48px;border:0;border-radius:12px;background:#FDECEC;color:#B42318;font-size:16px;font-weight:600"'+(S.busy?' disabled':'')+'>'+(S.busy==='cancel'?'⏳ …':'✖ Ακύρωση')+'</button>' : '')
+        + '</div>';
+      if(S.msg) h += '<div class="f" style="margin-top:10px">'+S.msg+'</div>';
+      if(type!=='ref') h += '<div class="f" style="margin-top:8px">🖨 Τυπώνει στον εκτυπωτή του υπολογιστή του bot.'+(exec?' Η συνταγή έχει εκτελεστεί στο φαρμακείο — δεν ακυρώνεται.':'')+'</div>';
+      return h+'</div>';
+    });
+    const load = async ()=>{ try{ const id = await epxJob('epdoc', {amka, bc, type}, name); const j = await jobWait(id, 90000);
+      if(!j || j.status!=='done'){ S.st='err'; S.err = (j && j.note) || 'το bot δεν απάντησε'; } else { S.st='ok'; S.d = ((j.payload||{}).result||{}).doc||{}; } }catch(e){ S.st='err'; S.err=e.message; } if(pg.el.isConnected) pg.redraw(); };
+    pg.el.addEventListener('click', async e=>{
+      if(e.target.closest('[data-ep=print]') && !S.busy){ S.busy='print'; S.msg=''; pg.redraw();
+        try{ const id = await epxJob('epprint', {amka, bc, type}, name); const j = await jobWait(id, 120000); S.msg = j ? E(j.note||'') : '⚠ το bot δεν απάντησε'; }catch(err){ S.msg='⚠ '+E(err.message); }
+        S.busy=''; if(pg.el.isConnected) pg.redraw(); return; }
+      if(e.target.closest('[data-ep=cancel]') && !S.busy){ S.busy='cancel'; S.msg='⏳ Έλεγχος της συνταγής…'; pg.redraw();
+        try{ const id = await epxJob('eprxcancel', {amka, bc}, name); const j = await epxWaitSt(id, ['review'], 120000);
+          if(!j){ S.msg='⚠ το bot δεν απάντησε'; }
+          else if(j.status!=='review'){ S.msg='⚠ '+E(j.note||'δεν ακυρώθηκε'); }
+          else if(!confirm('ΟΡΙΣΤΙΚΗ ακύρωση της συνταγής '+bc+'\n'+((S.d.meds||[]).map(m=>m.name).join(', '))+'\n\nΔεν αναιρείται.')){ await sb6.from('oncall_jobs').update({status:'dismissed', note:'✖ η ακύρωση δεν έγινε (ο γιατρός πάτησε «Όχι»)'}).eq('id', id); S.msg='Δεν έγινε ακύρωση.'; }
+          else { await sb6.from('oncall_jobs').update({status:'approve'}).eq('id', id).eq('status','review'); S.msg='⏳ Ακύρωση…'; pg.redraw();
+            const k = await epxWaitSt(id, ['approved','failed'], 150000); S.msg = k ? E(k.note||'') : '⚠ δεν ήρθε απάντηση — ελέγξτε στο e-prescription';
+            if(k && k.status==='approved'){ S.d.status='Ακυρωμένη'; onChange && onChange(); } }
+        }catch(err){ S.msg='⚠ '+E(err.message); }
+        S.busy=''; if(pg.el.isConnected) pg.redraw(); return; }
+    });
+    load();
+  };
   // ΑΜΚΑ → ημ. γέννησης / ηλικία / φύλο, τοπικά (6 πρώτα ψηφία ΗΗΜΜΕΕ· φύλο από το 10ο ψηφίο: μονό = άνδρας)
   window.pdxAmkaInfo = function(a){
     a = String(a||''); if(!/^\d{11}$/.test(a)) return null;
@@ -14123,7 +14204,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const d = S.k ? recOf(S.k) : null;
       let h = '<div class="seg"><button data-mode="rx" class="'+(S.mode==='rx'?'on':'')+'">💊 Συνταγή</button><button data-mode="ref" class="'+(S.mode==='ref'?'on':'')+'">🧾 Παραπεμπτικό</button></div>';
       // 1) Ασθενής
-      h += '<div class="h">Ασθενής'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g">';
+      h += '<div class="h">Ασθενής<span style="display:flex;gap:16px"><button data-a="ephist" style="min-height:44px">🗂 Ιστορικό</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</span></div><div class="g">';
       if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
       else h += '<div class="r"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'"></div><div class="who" data-who></div>';
       h += '</div>';
@@ -14431,6 +14512,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       else if(a.dataset.a==='goref') goRef();
       else if(a.dataset.a==='exadd'){ const q = root.querySelector('[data-exq]'); exAdd(q && q.value); }
       else if(a.dataset.a==='unk'){ S.k=''; draw(); }
+      else if(a.dataset.a==='ephist'){ const d0 = S.k ? recOf(S.k) : null, am = String((d0 && d0.amka) || S.amka || '').replace(/\D/g,''); if(!/^\d{11}$/.test(am)){ alert('Γράψε πρώτα τον ΑΜΚΑ (11 ψηφία)'); return; } window.__pdxTapPg = pg.el; pdxEpHist(am, (d0 && d0.name) || (S.who && S.who.name) || ''); }
       else if(a.dataset.a==='refedit'){ window.pdxRefFavEdit(()=>drawEx()); }
       else if(a.dataset.a==='packs' && window.pdxPacksApply){ const d = S.k ? recOf(S.k) : null;   // 📦 πακέτο → μόνο προσθήκη στη λίστα· η αποστολή μένει στο «Ετοίμασε…» (έλεγχος στο κινητό)
         pdxPacksApply({fam:'rx', k:S.k, who: d ? d.name : (S.who&&S.who.name) || (S.amka?'ΑΜΚΑ ••••'+S.amka.slice(-4):''), onApply:r=>{ let nm = 0, nx = 0;
