@@ -1,1 +1,1 @@
-{"version": "0.21.174", "zip": "ef-bot-0.21.174.zip", "sha256": "6b5726472be99ba022d2c5a4da119a18c0465ed481e4fa021cc03ff6f996e914", "notes": "CT viewer στο προσκήνιο · firewall 8780 στον κεντρικό"}
+{"version": "0.21.175", "zip": "ef-bot-0.21.175.zip", "sha256": "bd4c9b0ee266e6f29ab5cdc1ca962b5c1841271745d9bdc6c2584eea5a0be9e0", "notes": "βιοψίες → βάση (χωρίς χαρακτηρισμό) · ώρα δείγματος στις κρίσιμες τιμές"}
