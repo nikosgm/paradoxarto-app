@@ -1,1 +1,1 @@
-{"version": "0.21.177", "zip": "ef-bot-0.21.177.zip", "sha256": "37cb1d1ba75c45a2ab6596dae39fe1af57ccef4607435863d8caaa2fd73aae97", "notes": "botctl replkey (διάγνωση κλειδιού αντιγράφου)"}
+{"version": "0.21.178", "zip": "ef-bot-0.21.178.zip", "sha256": "121d8a97b6ac373f463350aa9d823938371504456b7bdf1687be8b9deece1e33", "notes": "βάση: διπλό τριγωνικό + άμεση ειδοποίηση μέσω Supabase"}
