@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v245';
+const APP_VER = '2026-11-09r-v246';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13531,21 +13531,30 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const txOf = s1=>(s1 && s1.txt!=null && !isDef(s1.txt)) ? s1.txt : dtext(s1);
     // κατάσταση των εξιτηρίων που στάλθηκαν (μέχρι να εγκριθούν/αποτύχουν)
     const ST = {new:'⏳ στην ουρά', seen:'⏳ στην ουρά', running:'⏳ το bot συμπληρώνει…', review:'👀 περιμένει τον έλεγχό σου', approve:'⏳ εγκρίθηκε — αποθήκευση…', approved:'✅ εγκρίθηκε', done:'✅ ολοκληρώθηκε', failed:'✗ απέτυχε', cancelled:'✗ ακυρώθηκε', dismissed:'✗ ακυρώθηκε'};
+    // ⚠ 9/11 (χρήστης: «απέτυχαν αλλά φαίνονται σαν εγκρίθηκε και δεν μπορώ να τα ξανακάνω»): «εγκρίθηκε» ΧΩΡΙΣ επιβεβαίωση
+    // αποθήκευσης από το bot (παλιό bot: «η αποθήκευση γίνεται ακόμα από τον υπολογιστή») = ΔΕΝ αποθηκεύτηκε → ξανά.
+    const stOf = j=>{ const nt = String(j.note||'');
+      if(j.status==='approved' || j.status==='done'){ if(/αποθηκε[υύ]τηκε στο ΝΠΣ/.test(nt)) return '✅ αποθηκεύτηκε στο ΝΠΣ'; if(/πατήθηκε «/.test(nt)) return '✅ '+nt.slice(0,140); return '⚠ ΔΕΝ αποθηκεύτηκε — ξαναστείλ\'το'+(nt?' ('+nt.slice(0,80)+')':''); }
+      return (ST[j.status]||j.status)+(j.status==='failed'&&nt?': '+nt.slice(0,140):''); };
+    // 📱 9/11 (χρήστης: στο κινητό η λίστα «χάλασε» — τα ✓/καταστάσεις ήταν ΜΟΝΟ στη συσκευή που τα έστειλε):
+    // τα σημερινά εξιτήρια Ημέρας διαβάζονται από τη βάση (ίδια σε όλες τις συσκευές) → ✅ φεύγουν, ⚠/✗ ξανά
+    const syncJobs = async ()=>{ if(!rows || !rows.length) return;
+      let r = null; try{ r = await sb6.from('oncall_jobs').select('id,name_key,status,note,du:payload->dayunit').eq('kind','discharge').gte('created_at', day0.toISOString()).order('id',{ascending:true}).limit(300); }catch(e){}
+      const L = ((r && r.data)||[]).filter(j=>j && j.du); if(!L.length) return; let ch = false;
+      rows.forEach((row,i)=>{ const k = nrm(row.name||''); const js = L.filter(j=>j.name_key===k); const j = js[js.length-1]; if(!j) return;
+        const s1 = sel[i] || (sel[i] = {on:false, proc:0, doc:(C.docs||[])[0]||''});
+        if(!s1.job || s1.job < j.id || !s1.st){ s1.job = j.id; s1.st = stOf(j); s1.rev = j.status==='review'; ch = true; } });
+      if(ch){ selSave(); pg.redraw(); poll(); } };
     let polling = false;
     const poll = async ()=>{ if(polling) return; polling = true;
       try{ for(let n = 0; n < 400; n++){ if(!pg.el.isConnected) break;
         // 1ο πέρασμα: ΟΛΕΣ (και όσες έγραφαν «✅ εγκρίθηκε» — μπορεί να μην αποθηκεύτηκαν), μετά μόνο οι ανοιχτές
         const ids = Object.values(sel).filter(x=>x && x.job && (n===0 || !/^(✅|✗|⚠)/.test(x.st||''))).map(x=>x.job); if(!ids.length) break;
         let r = null; try{ r = await sb6.from('oncall_jobs').select('id,status,note').in('id', ids); }catch(e){}
-        // ⚠ 9/11 (χρήστης: «απέτυχαν αλλά φαίνονται σαν εγκρίθηκε και δεν μπορώ να τα ξανακάνω»): «εγκρίθηκε» ΧΩΡΙΣ επιβεβαίωση
-        // αποθήκευσης από το bot (παλιό bot: «η αποθήκευση γίνεται ακόμα από τον υπολογιστή») = ΔΕΝ αποθηκεύτηκε → ξανά.
-        const stOf = j=>{ const nt = String(j.note||'');
-          if(j.status==='approved' || j.status==='done'){ if(/αποθηκε[υύ]τηκε στο ΝΠΣ/.test(nt)) return '✅ αποθηκεύτηκε στο ΝΠΣ'; if(/πατήθηκε «/.test(nt)) return '✅ '+nt.slice(0,140); return '⚠ ΔΕΝ αποθηκεύτηκε — ξαναστείλ\'το'+(nt?' ('+nt.slice(0,80)+')':''); }
-          return (ST[j.status]||j.status)+(j.status==='failed'&&nt?': '+nt.slice(0,140):''); };
         let ch = false; ((r && r.data)||[]).forEach(j=>{ const x = Object.values(sel).find(y=>y && y.job===j.id); if(!x) return; const st = stOf(j); const rev = j.status==='review'; if(x.st!==st || !!x.rev!==rev){ x.st = st; x.rev = rev; ch = true; } });
         if(ch){ selSave(); pg.redraw(); } await new Promise(ok=>setTimeout(ok, 4000)); } }
       finally{ polling = false; } };
-    setTimeout(poll, 300);
+    setTimeout(()=>{ syncJobs().finally(poll); }, 300);
     const save = async ()=>{ const r = await sb6.from('oncall_config').upsert({key:'dayunit', value:C, updated_at:new Date().toISOString()}, {onConflict:'key'}); msg = r.error ? 'Δεν αποθηκεύτηκε: '+r.error.message : '✓ Αποθηκεύτηκε'; pg.redraw(); };
     const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px;background:var(--card,#fff);color:inherit"';
     const pg = iosPage('Ουρολογικό Ημέρας', 'Εργαλεία', ()=>{
@@ -13617,7 +13626,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           if(q.status==='done'){ const old = rows || [], nr = ((q.payload||{}).result||{}).rows || [];
             // ανανέωση: οι επιλογές μένουν στους ΙΔΙΟΥΣ ασθενείς (ταίριασμα με όνομα), όχι με τη θέση στη λίστα
             const keyOf = r=>String((r && (r.name || (r.cells||[]).join(' '))) || '').trim(), byName = {}; old.forEach((r,i)=>{ if(sel[i]) byName[keyOf(r)] = sel[i]; });
-            rows = nr; sel = {}; nr.forEach((r,i)=>{ const o = byName[keyOf(r)]; if(o) sel[i] = o; }); selSave(); loadedAt = Date.now(); busy = ''; msg = ''; return pg.redraw(); }
+            rows = nr; sel = {}; nr.forEach((r,i)=>{ const o = byName[keyOf(r)]; if(o) sel[i] = o; }); selSave(); loadedAt = Date.now(); busy = ''; msg = ''; pg.redraw(); syncJobs(); return; }
           if(['failed','cancelled','dismissed'].indexOf(q.status)>=0){ busy = ''; msg = String(q.note||'απέτυχε'); return pg.redraw(); }
           busy = (q.status==='new' ? 'περιμένει τον υπολογιστή…' : 'ΝΠΣ: '+String(q.note||'σε εξέλιξη').slice(0,60))+' · '+Math.round((Date.now()-t0)/1000)+'″'; pg.redraw(); }
         if(job===id){ busy = ''; msg = 'Ο υπολογιστής δεν απάντησε σε 4′ (χρειάζεται bot 0.20.71 ή νεότερο).'; pg.redraw(); } }
