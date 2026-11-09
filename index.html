@@ -1243,7 +1243,7 @@ async function enterApp0(){
   const r = await sb6.from('oncall_profiles').select('role,active,full_name').eq('user_id', u.id).maybeSingle();
   if(r.error && pdxNetErr(r.error)){ try{ toast('📶 Χωρίς σύνδεση — ξαναδοκιμάζω…'); }catch(x){} clearTimeout(pdxEnterRetry); pdxEnterRetry = setTimeout(enterApp, 5000); return; }
   if(r.error || !r.data || !r.data.active){ showLogin(true, true); return; }
-  window.authRole = r.data.role; window.authName = r.data.full_name || u.email;
+  window.authRole = r.data.role; window.authName = r.data.full_name || u.email; window.authUid = u.id;
   try{ document.documentElement.classList.toggle('pdx-nobot', !(window.pdxIsBotUser&&window.pdxIsBotUser())); }catch(e){}
   try{ window.pdxMineLoad(u); setTimeout(()=>{ try{ window.pdxPushRoomsSync(); }catch(e){} }, 4000); }catch(e){ console.error('mine', e); }
   document.documentElement.setAttribute('data-role', r.data.role);
@@ -2268,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v264';
+const APP_VER = '2026-11-09x-v265';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18437,9 +18437,15 @@ function histPendRefresh(){
         rec.caseHist = { v:1, at:Date.now(), imgId:null, d:parsed, reviewed:false, auto:true };
         saveEntryToStorage(k, it.extra, rec, true);
         delete m[k]; histInboxDone(it.row.id);
-        try{ toast('✓ Ιστορικό '+String(rec.name||it.row.label||'').slice(0,40)+' μπήκε αυτόματα', 2500); }catch(e){}
+        try{ if(!d0._uid || d0._uid === window.authUid) toast('✓ Ιστορικό '+String(rec.name||it.row.label||'').slice(0,40)+' μπήκε αυτόματα', 2500); }catch(e){}
       }catch(e){} });
-      window.HIST_PEND = m; window.HIST_UNASSIGNED = un; window.HIST_LAST = list;
+      // 👤 9/11 (χρήστης: «κάθε ειδικευόμενος βλέπει ως ειδοποίηση ΜΟΝΟ τα ιστορικά που ανέβασε ο ίδιος»): ό,τι έχει ανεβάσει άλλος λογαριασμός
+      // (data._uid ≠ εμένα) δεν εμφανίζεται εδώ. Παλιά χωρίς _uid → σε όλους (όπως πριν). Η αυτόματη καταχώριση στον ασθενή γίνεται για όλα.
+      var mine = function(r){ var u = r && r.data && r.data._uid; return !u || !window.authUid || u === window.authUid; };
+      Object.keys(m).forEach(function(k){ if(!mine(m[k].row)) delete m[k]; });
+      un = list.filter(function(r){ return mine(r) && !Object.keys(m).some(function(k){ return m[k].row.id===r.id; }) && !(window.__histAuto||{})[r.id]; }).length;
+      window.HIST_PEND = m; window.HIST_UNASSIGNED = un; window.HIST_LAST = list.filter(mine);
+      sig = Object.keys(m).sort().map(function(k){ return k+':'+m[k].row.id+':'+m[k].level; }).join('|') + '#' + un;
       if(sig !== histPendSig){ histPendSig = sig; histPendPaint(); }
     }).catch(function(){});
 }
