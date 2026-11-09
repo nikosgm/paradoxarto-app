@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v248';
+const APP_VER = '2026-11-09r-v249';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12459,12 +12459,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(j.status==='done'){ toast('✓ Άνοιξε στον '+(BN[pc]||'υπολογιστή')); return; } if(j.status==='failed'){ toast('✗ '+(j.note||'δεν άνοιξε')); return; } }
       toast('⏳ Ο υπολογιστής δεν απάντησε ακόμα');
     };
+    ov.addEventListener('contextmenu', e=>{ const x = e.target.closest('[data-ex]'); if(!x) return; e.preventDefault(); const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); serList(x.dataset.ex, ex ? (String(ex.date||'').slice(0,10).split('-').reverse().join('/')+' · '+ex.mod+' '+(ex.desc||'')).trim() : ''); });
     ov.addEventListener('click', e=>{ const t = e.target;
       if(t===ov || t.closest('[data-x]')) return ov.remove();
       const p = t.closest('[data-pc]'); if(p){ pc = p.dataset.pc; try{ localStorage.setItem('pdx_ct_pc', pc); }catch(x){} return draw(); }
       const f = t.closest('[data-f]'); if(f){ st.flt = f.dataset.f; return draw(); }
       // 📱 9/11 (χρήστης): πάτημα εξέτασης → ΛΙΣΤΑ ΑΚΟΛΟΥΘΙΩΝ από τον Evorad → επιλογή → ο υπολογιστής ανοίγει ΜΟΝΟ αυτή (όλες τις τομές της)
-      const x = t.closest('[data-ex]'); if(x){ const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); return serList(x.dataset.ex, ex ? (String(ex.date||'').slice(0,10).split('-').reverse().join('/')+' · '+ex.mod+' '+(ex.desc||'')).trim() : ''); }
+      // 9/11 15:31 (χρήστης): «καλύτερα να ανοίγει ΟΛΕΣ τις ακολουθίες στον υπολογιστή απευθείας» → πάτημα = όλες· η λίστα ακολουθιών μένει μόνο με παρατεταμένο πάτημα (contextmenu)
+      const x = t.closest('[data-ex]'); if(x){ const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); return send(x.dataset.ex, ex ? (ex.mod+' '+(ex.desc||'')).trim() : ''); }
       if(t.closest('[data-serback]')){ st.ser = null; serSeq++; return draw(); }
       const sb = t.closest('[data-ser]'); if(sb && st.ser){ const it = (st.ser.list||[]).find(z=>String(z.ri)===sb.dataset.ser); return send(st.ser.examid+' s'+sb.dataset.ser+' n'+sb.dataset.n, (st.ser.title+' · '+(it ? (it.desc||it.prot||'') : '')).trim(), st.ser.examid+' s'+sb.dataset.ser); }
       if(t.closest('[data-serall]') && st.ser) return send(st.ser.examid, st.ser.title);

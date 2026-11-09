@@ -1493,7 +1493,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-09a';
+const CT_VER = '2026-11-09b';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
@@ -1746,14 +1746,29 @@ async function evoOpen(list){
   S.src = 'Evorad · '+(x ? x.last+' '+x.first+' · '+x.date.slice(0,10) : '');
   const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
   const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
-  // 8/11 (ταχύτητα): η ΠΡΩΤΗ εικόνα μόνη της (εμφανίζεται αμέσως), μετά 6 παράλληλες ροές των 8 εικόνων
-  let i=0, bad=0, bytes=0; const t0=performance.now(); let tFirst=0;
-  const lane = async (B)=>{ while(i<urls.length){ const a=i, part = urls.slice(a, a+B); i+=B; const r = await DESK.evo.bin(part).catch(()=>[]);
-      r.forEach((y,j)=>{ if(y && y.b){ bytes+=y.b.byteLength||0; st.buf.push(new File([y.b], 'evo'+(a+j)+'.dcm', {type:'application/dicom'})); } else bad++; }); if(!tFirst) tFirst=performance.now()-t0; wake(); } };
-  const one = async ()=>{ if(i>=urls.length) return; const a=i; i+=1; const r = await DESK.evo.bin([urls[a]]).catch(()=>[]); const y=r[0]; if(y && y.b){ bytes+=y.b.byteLength||0; st.buf.push(new File([y.b], 'evo'+a+'.dcm', {type:'application/dicom'})); } else bad++; tFirst=performance.now()-t0; wake(); };
-  (async ()=>{ await Promise.all([one().then(()=>lane(8)), ...[8,8,8,8,8].map(b=>lane(b))]); st.done=true; wake();
-    const sec=(performance.now()-t0)/1000; EVO.lastDl = 'λήψη '+(bytes/1048576).toFixed(0)+' MB σε '+sec.toFixed(1)+' s (πρώτη σε '+(tFirst/1000).toFixed(1)+' s)';
-    if(bad) status('Evorad: '+bad+' εικόνες δεν ήρθαν', true); else setTimeout(()=>{ try{ const el=$('status'); if(el && !/λήψη/.test(el.textContent)) el.textContent += ' · Evorad '+EVO.lastDl; }catch(e){} }, 400); })();
+  // 9/11 ΔΙΟΡΘΩΣΗ (χρήστης: «όλες οι ακολουθίες ανοίγουν με 41 εικόνες» = 1 + 5 ροές × 8): ένα αίτημα που δεν απαντούσε ή γύριζε
+  // σελίδα σύνδεσης αντί για εικόνα σταματούσε τη ροή για πάντα. Τώρα: όριο 25″ ανά αίτημα · έλεγχος «DICM» · σελίδα σύνδεσης → αυτόματη
+  // σύνδεση και ξανά · έως 3 προσπάθειες ανά εικόνα · στο τέλος «ήρθαν X/Y».
+  let bad=0, bytes=0, html=0, relog=0; const t0=performance.now(); let tFirst=0;
+  const tries = new Array(urls.length).fill(0), Q = urls.map((_,k)=>k);
+  const isDcm = y=>{ if(!y || !y.b) return false; const u = y.b instanceof Uint8Array ? y.b : new Uint8Array(y.b.buffer ? y.b.buffer : y.b); if(u.length < 140) return false;
+    if(u[128]===68 && u[129]===73 && u[130]===67 && u[131]===77) return true;   // «DICM»
+    return !/html|text\//i.test(y.ct||'') && u[0]!==60; };                           // χωρίς προοίμιο αλλά όχι HTML
+  const binT = part=>Promise.race([DESK.evo.bin(part).catch(()=>[]), new Promise(r=>setTimeout(()=>r(null), window.__evoTO || 25000))]);
+  let relogging = null;
+  const lane = async (B)=>{ while(Q.length){ const ks = Q.splice(0, B); const r = await binT(ks.map(k=>urls[k]));
+      let needLogin = false;
+      ks.forEach((k,j)=>{ const y = r && r[j];
+        if(isDcm(y)){ bytes+=y.b.byteLength||0; st.buf.push(new File([y.b], 'evo'+k+'.dcm', {type:'application/dicom'})); return; }
+        if(y && (/html|text\//i.test(y.ct||'') || y.ok===false)) { html++; needLogin = true; }
+        if(++tries[k] < 3) Q.push(k); else bad++; });
+      if(needLogin && relog < 2){ relogging = relogging || (async ()=>{ relog++; status('Evorad: ξανά σύνδεση…'); try{ if(DESK.evo.auto) await DESK.evo.auto(); }catch(e){} relogging = null; })(); await relogging; }
+      if(!tFirst && st.buf.length) tFirst=performance.now()-t0; wake(); } };
+  (async ()=>{ const k0 = Q.shift(); if(k0!=null){ const r = await binT([urls[k0]]); const y = r && r[0]; if(isDcm(y)){ bytes+=y.b.byteLength||0; st.buf.push(new File([y.b], 'evo'+k0+'.dcm', {type:'application/dicom'})); tFirst=performance.now()-t0; wake(); } else { tries[k0]++; Q.push(k0); } }
+    await Promise.all([8,8,8,8,8,8].map(b=>lane(b))); st.done=true; wake();
+    const got = urls.length - bad, sec=(performance.now()-t0)/1000; EVO.lastDl = 'ήρθαν '+got+'/'+urls.length+' εικόνες · '+(bytes/1048576).toFixed(0)+' MB σε '+sec.toFixed(1)+' s'+(relog?' · ξανά σύνδεση '+relog+'×':'');
+    if(bad) status('Evorad: ήρθαν '+got+' από '+urls.length+' εικόνες'+(html?' (ο Evorad ζήτησε σύνδεση '+html+' φορές)':'')+' — πάτα ξανά «Άνοιγμα» για τις υπόλοιπες', true);
+    else setTimeout(()=>{ try{ const el=$('status'); if(el && !/ήρθαν/.test(el.textContent)) el.textContent += ' · Evorad '+EVO.lastDl; }catch(e){} }, 400); })();
   if(await ingest([], st)) verifyPatient();
 }
 function evoPanel(pre){
