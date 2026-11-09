@@ -1493,7 +1493,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-08b';
+const CT_VER = '2026-11-09a';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
@@ -1733,7 +1733,7 @@ function evoPaint(){
 async function evoSeries(x){
   EVO.sel = x; EVO.series = null; status('Evorad: σειρές της εξέτασης…');
   try{ const d = await evoJSON('/api/getSeries?examuid='+encodeURIComponent(x.examid));
-    EVO.series = d.map(s=>({ref:s.examinationref, folder:s.imagefoldercode, jfx:s.jfxuid, imgs:(s.imageNames||[]).map(o=>o && o.jfxuid).filter(Boolean), n:(s.imageNames||[]).length, desc:s.description||'', prot:s.protocolname||'', thumb: s.img ? 'data:image/png;base64,'+String(s.img).replace(/^(url:|data:[^,]+,)/,'') : ''}))
+    EVO.series = d.map((s,ri)=>({ri, ref:s.examinationref, folder:s.imagefoldercode, jfx:s.jfxuid, imgs:(s.imageNames||[]).map(o=>o && o.jfxuid).filter(Boolean), n:(s.imageNames||[]).length, desc:s.description||'', prot:s.protocolname||'', thumb: s.img ? 'data:image/png;base64,'+String(s.img).replace(/^(url:|data:[^,]+,)/,'') : ''}))
       .filter(s=>s.n).sort((a,b)=>b.n-a.n);
     status(''); }
   catch(e){ status(e.login ? 'Evorad: χρειάζεται σύνδεση' : 'Evorad: '+e.message, true); EVO.series = null; }
@@ -1802,10 +1802,16 @@ if(DESK && DESK.evo){
     if(!ev.examid && !ev.sur && !ev.amka && !ev.fn) return;
     const q = {sur:ev.sur||'', fn:ev.fn||'', amka:ev.amka||'', from:'', to:''};
     if(!ev.examid){ evoPanel(q); return; }
+    // 📱 9/11 (χρήστης): επιλογή ΑΚΟΛΟΥΘΙΑΣ από το κινητό → «EXAMID s<θέση στο getSeries> n<εικόνες>» στο ίδιο πεδίο (η εφαρμογή/το βοηθητικό περνούν μόνο αυτά τα 4 πεδία)
+    let want = null; { const m = /^(\S+)\s+s(\d+)(?:\s+n(\d+))?$/.exec(String(ev.examid).trim()); if(m){ ev = Object.assign({}, ev, {examid:m[1]}); want = {ri:+m[2], n:m[3]?+m[3]:0}; } }
     { const o0 = document.getElementById('evoOv'); if(o0) o0.remove(); } status('Evorad: ανοίγω την εξέταση…');
     // 8/11: ΚΑΤΕΥΘΕΙΑΝ οι σειρές της εξέτασης (getSeries) — χωρίς αναζήτηση/getExams· μετά φόρτωση όλων (η μεγαλύτερη πρώτη)
     if(ev.examid){ const ex = {examid:String(ev.examid), date:'', mod:'', desc:'', first:'', last:String(ev.sur||''), amka:String(ev.amka||''), pid:'', pid2:'', birth:''};
-      evoSeries(ex).then(()=>{ if(EVO.series && EVO.series.length && EVO.sel===ex) evoOpen(EVO.series); else { evoPanel(q); if(EVO.logged===false) status('Evorad: χρειάζεται σύνδεση — πάτα «🔑 Σύνδεση»', true); else status('Evorad: η εξέταση δεν άνοιξε'+(EVO.raw?' ('+EVO.raw.slice(0,80)+')':''), true); } }); } };
+      evoSeries(ex).then(()=>{
+        if(want && EVO.series && EVO.sel===ex){ const s = EVO.series.find(x=>x.ri===want.ri && (!want.n || x.n===want.n)) || (want.n ? EVO.series.find(x=>x.n===want.n) : null);
+          if(s){ status('Evorad: ακολουθία «'+(s.desc||s.prot||('Σειρά '+(s.ri+1)))+'» · '+s.n+' εικόνες'); evoOpen([s]); return; }
+          status('Evorad: δεν βρέθηκε η ακολουθία που διάλεξες — ανοίγουν όλες', true); }
+        if(EVO.series && EVO.series.length && EVO.sel===ex) evoOpen(EVO.series); else { evoPanel(q); if(EVO.logged===false) status('Evorad: χρειάζεται σύνδεση — πάτα «🔑 Σύνδεση»', true); else status('Evorad: η εξέταση δεν άνοιξε'+(EVO.raw?' ('+EVO.raw.slice(0,80)+')':''), true); } }); } };
   DESK.info().then(i=>{ let pend = null; try{ pend = JSON.parse(sessionStorage.getItem('nct_pend')||'null'); sessionStorage.removeItem('nct_pend'); }catch(e){} evoArgsOpen(pend || (i && i.evo)); }).catch(()=>{});
   if(DESK.onEvo) DESK.onEvo(evoArgsOpen);
 }

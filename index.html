@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v247';
+const APP_VER = '2026-11-09r-v248';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12422,7 +12422,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div style="font-size:12.5px;font-weight:700;color:#64748B;margin:6px 0 5px">ΕΞΕΤΑΣΕΙΣ ΣΤΟΝ EVORAD</div><div>'+F.map(([v,t])=>chip(st.flt===v,'data-f="'+v+'"',t)).join('')+'</div>'
         + '<form data-qf style="display:flex;gap:6px;margin:2px 0 6px"><input data-q type="search" enterkeyhint="search" autocomplete="off" value="'+E(st.q)+'" placeholder="Αναζήτηση στον Evorad: επώνυμο (όνομα)" style="flex:1;min-width:0;border:1.5px solid #CBD5E1;border-radius:12px;padding:10px 12px;font-size:16px"><button style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:0 14px;font-size:15px;font-weight:700">🔎</button></form>'
         + '<div style="flex:1;overflow:auto;margin-top:4px">'
-        + (st.err ? '<div style="color:#B42318;font-size:14.5px;padding:10px 0">✗ '+E(st.err)+'<div style="color:#475569;margin-top:6px">Γράψτε επώνυμο (και όνομα) στο πεδίο αναζήτησης για να ψάξετε μόνοι σας.</div></div>'
+        + (st.ser ? '<div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px"><button data-serback style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px;font-size:14.5px;font-weight:700">‹ Εξετάσεις</button><b style="font-size:14.5px;flex:1">'+E(st.ser.title)+'</b></div>'
+            + (st.ser.err ? '<div style="color:#B42318;font-size:14.5px;padding:10px 0">✗ '+E(st.ser.err)+'</div>'
+              : !st.ser.list ? '<div style="color:#475569;font-size:14.5px;padding:14px 0">🔎 Το bot φέρνει τις ακολουθίες από τον Evorad…</div>'
+              : st.ser.list.map(x=>'<button data-ser="'+x.ri+'" data-n="'+x.n+'" style="display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid #EEF1F4;background:'+(st.sent===st.ser.examid+' s'+x.ri?'#EAF6EE':'#fff')+';padding:12px 2px;font-size:15px;color:#1F2933"><span style="flex:1;min-width:0"><b>'+E(x.desc||x.prot||('Ακολουθία '+(x.ri+1)))+'</b>'+(x.prot&&x.desc&&x.prot!==x.desc?'<br><span style="color:#64748B;font-size:13px">'+E(x.prot)+'</span>':'')+'</span><span style="color:#475569;font-size:13.5px;white-space:nowrap">'+x.n+' εικ.</span><span style="color:var(--mp,#1D4E80);font-weight:700;font-size:14px;white-space:nowrap">'+(st.sent===st.ser.examid+' s'+x.ri?'✓ στάλθηκε':'Άνοιγμα ›')+'</span></button>').join('')
+                + '<button data-serall style="margin-top:8px;width:100%;border:1.5px solid #CBD5E1;background:#fff;border-radius:12px;padding:10px;font-size:14.5px;font-weight:700">Όλες οι ακολουθίες μαζί</button>')
+          : st.err ? '<div style="color:#B42318;font-size:14.5px;padding:10px 0">✗ '+E(st.err)+'<div style="color:#475569;margin-top:6px">Γράψτε επώνυμο (και όνομα) στο πεδίο αναζήτησης για να ψάξετε μόνοι σας.</div></div>'
           : st.exams===null ? '<div style="color:#475569;font-size:14.5px;padding:14px 0">🔎 '+(st.free?'Αναζήτηση «'+E(st.q)+'» στον Evorad…':'Το bot ψάχνει τις εξετάσεις του ασθενή στον Evorad (ταυτοποίηση με ΑΜΚΑ/ΑΜ)…')+'</div>'
           : !L.length ? '<div style="color:#475569;font-size:14.5px;padding:14px 0">Καμία εξέταση'+(st.flt!=='*'?' αυτού του είδους':'')+'.</div>'
           : L.map(x=>'<button data-ex="'+E(x.examid)+'" style="display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid #EEF1F4;background:'+(st.sent===String(x.examid)?'#EAF6EE':'#fff')+';padding:12px 2px;font-size:15px;color:#1F2933"><span style="font-size:20px">'+(isXr(x.mod)?'🫁':/^US$/i.test(x.mod)?'🔊':'🩻')+'</span><span style="flex:1;min-width:0"><b>'+E(String(x.date||'').slice(0,10).split('-').reverse().join('/'))+'</b> · '+E(x.mod)+(st.free?'<br><b style="font-size:14px">'+E(((x.last||'')+' '+(x.first||'')).trim())+'</b>'+(x.birth?' <span style="color:#64748B;font-size:12.5px">γ. '+E(String(x.birth).slice(0,10).split('-').reverse().join('/'))+'</span>':''):'')+'<br><span style="color:#475569;font-size:13.5px">'+E(x.desc||'')+'</span></span><span style="color:var(--mp,#1D4E80);font-weight:700;font-size:14px">'+(st.sent===String(x.examid)?'✓ στάλθηκε':'Άνοιγμα ›')+'</span></button>').join(''))
@@ -12430,12 +12435,25 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<button data-search style="margin-top:10px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:14px;padding:12px;font-size:15px;font-weight:700"'+(pc?'':' disabled')+'>🔎 Μόνο αναζήτηση του ασθενή στον υπολογιστή</button>'
         + '<button data-pad style="margin-top:8px;border:0;background:#0F172A;color:#fff;border-radius:14px;padding:13px;font-size:15.5px;font-weight:700"'+(pc?'':' disabled')+'>🎮 Τηλεχειριστήριο (trackpad + πληκτρολόγιο)</button></div>';
     };
-    const send = async (examid, desc)=>{
+    let serSeq = 0;
+    const serList = async (examid, title)=>{
+      const my = ++serSeq; st.ser = {examid:String(examid), title, list:null, err:''}; draw();
+      try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_evoradser', name:'Evorad', room:null, kind:'evoradser', payload:{examid:String(examid), quiet:true}, status:'new'}).select('id').single();
+        if(ins.error) throw new Error(ins.error.message);
+        const t0 = Date.now();
+        while(Date.now()-t0 < 90000 && document.body.contains(ov) && my===serSeq){ await new Promise(r=>setTimeout(r,1200));
+          const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id',ins.data.id).maybeSingle(); const j = q && q.data; if(!j || my!==serSeq) continue;
+          if(j.status==='failed' || j.status==='cancelled') throw new Error(j.note || 'δεν ήρθαν οι ακολουθίες');
+          if(j.status==='done'){ const L = ((j.payload||{}).result||{}).series || []; if(my===serSeq && st.ser){ st.ser.list = L; draw(); } return; } }
+        if(my===serSeq && st.ser && !st.ser.list) throw new Error('το bot δεν απάντησε');
+      }catch(e){ if(my===serSeq && st.ser){ st.ser.err = String(e.message||e).slice(0,140); draw(); } }
+    };
+    const send = async (examid, desc, mark)=>{
       if(!pc){ toast('Διάλεξε υπολογιστή'); return; }
       const sur = String((st.free && st.q) || d.name || '').trim().split(/\s+/)[0] || '';
       const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctremote', name:'🖥 '+(d.name||''), room:null, kind:'ctremote', payload:{only:pc, examid:examid?String(examid):'', sur, fn:'PDXRC'+pdxRcTok(pc), amka: st.free ? '' : amka, desc:desc||'', quiet:true}, status:'new'}).select('id').single();
       if(ins.error){ toast('Σφάλμα: '+ins.error.message); return; }
-      st.sent = examid ? String(examid) : ''; draw(); toast('🖥 Ανοίγει στον '+(BN[pc]||'υπολογιστή')+'…');
+      st.sent = mark ? String(mark) : examid ? String(examid) : ''; draw(); toast('🖥 Ανοίγει στον '+(BN[pc]||'υπολογιστή')+'…');
       const id = ins.data.id, t0 = Date.now();
       while(Date.now()-t0 < 30000){ await new Promise(r=>setTimeout(r,1500)); const q = await sb6.from('oncall_jobs').select('status,note').eq('id',id).maybeSingle(); const j = q && q.data; if(!j) continue;
         if(j.status==='done'){ toast('✓ Άνοιξε στον '+(BN[pc]||'υπολογιστή')); return; } if(j.status==='failed'){ toast('✗ '+(j.note||'δεν άνοιξε')); return; } }
@@ -12445,7 +12463,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(t===ov || t.closest('[data-x]')) return ov.remove();
       const p = t.closest('[data-pc]'); if(p){ pc = p.dataset.pc; try{ localStorage.setItem('pdx_ct_pc', pc); }catch(x){} return draw(); }
       const f = t.closest('[data-f]'); if(f){ st.flt = f.dataset.f; return draw(); }
-      const x = t.closest('[data-ex]'); if(x){ const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); return send(x.dataset.ex, ex ? (ex.mod+' '+(ex.desc||'')).trim() : ''); }
+      // 📱 9/11 (χρήστης): πάτημα εξέτασης → ΛΙΣΤΑ ΑΚΟΛΟΥΘΙΩΝ από τον Evorad → επιλογή → ο υπολογιστής ανοίγει ΜΟΝΟ αυτή (όλες τις τομές της)
+      const x = t.closest('[data-ex]'); if(x){ const ex = (st.exams||[]).find(z=>String(z.examid)===x.dataset.ex); return serList(x.dataset.ex, ex ? (String(ex.date||'').slice(0,10).split('-').reverse().join('/')+' · '+ex.mod+' '+(ex.desc||'')).trim() : ''); }
+      if(t.closest('[data-serback]')){ st.ser = null; serSeq++; return draw(); }
+      const sb = t.closest('[data-ser]'); if(sb && st.ser){ const it = (st.ser.list||[]).find(z=>String(z.ri)===sb.dataset.ser); return send(st.ser.examid+' s'+sb.dataset.ser+' n'+sb.dataset.n, (st.ser.title+' · '+(it ? (it.desc||it.prot||'') : '')).trim(), st.ser.examid+' s'+sb.dataset.ser); }
+      if(t.closest('[data-serall]') && st.ser) return send(st.ser.examid, st.ser.title);
       if(t.closest('[data-search]')) return send('', '');
       if(t.closest('[data-pad]')) return window.pdxCtPad && pdxCtPad(pc, BN[pc]||'υπολογιστής');
     });
@@ -12456,7 +12478,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // λίστα εξετάσεων από το bot (μόνο κείμενο)· νεότερη αναζήτηση ακυρώνει την παλιότερη
     let seq = 0;
     const list = async (payload)=>{
-      const my = ++seq; st.exams = null; st.err = ''; st.sent = ''; draw();
+      const my = ++seq; st.exams = null; st.err = ''; st.sent = ''; st.ser = null; serSeq++; draw();
       const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_evoradlist', name:payload.name, room:null, kind:'evoradimg', payload, status:'new'}).select('id').single();
       if(my!==seq) return;
       if(ins.error){ st.err = ins.error.message; return draw(); }
