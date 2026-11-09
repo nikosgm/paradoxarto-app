@@ -2259,7 +2259,10 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09m-v227';
+const APP_VER = '2026-11-09n-v228';
+// 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
+window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
+  return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -5979,7 +5982,7 @@ function buildPatientRow(label, d, clickInfo){
     const labsMonitorText = (isPrint || PARAMS.instrNewLine===false)
       ? [vitalsText, monitorHtml, instrHtml].filter(Boolean).join(', ')
       : [[vitalsText, monitorHtml].filter(Boolean).join(', '), instrHtml].filter(Boolean).join('<br>');
-    const allergyHtml = d.allergy ? '<b>⚠ '+d.allergy+'</b>' : '';
+    const allergyHtml = pdxAlReal(d.allergy) ? '<b>⚠ '+pdxAlReal(d.allergy)+'</b>' : '';
     const mobText = d.mobilization==='Κανονικά' ? RPT.mobNorm : d.mobilization==='Επί κλίνης' ? RPT.mobBed : (d.mobilization||'');
     const side2Abbr = d.side2==='Δεξιά' ? 'ΔΕ' : d.side2==='Αριστερά' ? 'ΑΡ' : (d.side2||'');
     const surgery2Body = [d.surgery2||'', side2Abbr].filter(Boolean).join(' ');
@@ -7029,7 +7032,7 @@ document.head.appendChild(st);
     const tf=flagOf('temp',d.temp);
     const T={hct:lt('Ht','hct',d.hct,d.hctPrev),wbc:lt('WBC','wbc',d.wbc,d.wbcPrev),crp:lt('CRP','crp',d.crp,d.crpPrev),cr:lt('Cr','cr',d.cr,d.crPrev),
       temp:tf.c?'<span class="mtag bad">🌡 '+esc(d.temp)+'</span>':'',
-      allergy:d.allergy&&'<span class="mtag red">Αλλεργία</span>',anticoag:(d.anticoagList||[]).length&&'<span class="mtag red">'+esc(d.anticoagList.join(', '))+'</span>',
+      allergy:pdxAlReal(d.allergy)&&'<span class="mtag red">Αλλεργία</span>',anticoag:(d.anticoagList||[]).length&&'<span class="mtag red">'+esc(d.anticoagList.join(', '))+'</span>',
       stale:false,   // η ετικέτα «δεν ενημ. σήμερα» καταργήθηκε (αίτημα χρήστη 3/11)
       todos:todos(d).length&&'<span class="mtag red">⏳ '+todos(d).length+(todos(d).length>1?' εκκρεμότητες':' εκκρεμότητα')+'</span>'};
     // όχι διπλά: αν υπάρχει warning από το Medilabi για την ίδια εξέταση, κρύβεται η απλή ετικέτα
@@ -8477,7 +8480,7 @@ document.head.appendChild(st);
     const out = [], st = (d.anticoagStopped && typeof d.anticoagStopped==='object') ? d.anticoagStopped : {};
     (d.anticoagList||[]).forEach(t=>out.push('<span class="nv-p r'+(st[t]?' st':'')+'">'+esc(t)+(st[t]?' STOP':'')+'</span>'));
     if(d.anticoagCustom) out.push('<span class="nv-p r'+(d.anticoagCustomStopped?' st':'')+'">'+esc(String(d.anticoagCustom).slice(0,24))+(d.anticoagCustomStopped?' STOP':'')+'</span>');
-    if(String(d.allergy||'').trim()) out.push('<span class="nv-p al">⚠ '+esc(String(d.allergy).trim().slice(0,30))+'</span>');
+    if(pdxAlReal(d.allergy)) out.push('<span class="nv-p al">⚠ '+esc(pdxAlReal(d.allergy).slice(0,30))+'</span>');
     return out.join('');
   }
   const nvBedLbl = e=>e.bed ? esc(e.bed) : nvAirRoom(e) ? '<span class="nv-air">'+nvAirTag(e.d)+'</span>' : (String(e.k).indexOf('extra')===0 ? esc(e.d.assignedWard && !/^\d+$/.test(String(e.d.assignedWard)) ? e.d.assignedWard : 'Εκτός') : '•');
@@ -9122,7 +9125,7 @@ document.head.appendChild(st);
   // κρίσιμα στοιχεία κάτω από το όνομα: αλλεργία, αντιπηκτικά, συννοσηρότητες (πάτημα → η αντίστοιχη ενότητα)
   function hdrChips(k, d){
     const c = [];
-    if(d.allergy) c.push('<span class="r" onclick="qeOpenSheet(\''+esc(k)+'\',\'al\',true)">⚠ '+esc(String(d.allergy).slice(0,40))+'</span>');
+    if(pdxAlReal(d.allergy)) c.push('<span class="r" onclick="qeOpenSheet(\''+esc(k)+'\',\'al\',true)">⚠ '+esc(pdxAlReal(d.allergy).slice(0,40))+'</span>');
     const ac = window.mobAcSum ? window.mobAcSum(d) : []; if(ac.length) c.push('<span class="r" onclick="qeOpenSheet(\''+esc(k)+'\',\'ac\',true)">'+esc(ac.join(', ').slice(0,48))+'</span>');
     if(d.admitDate || d.am){ const m = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(d.admitDate||'')); let t = '';
       if(m){ const dt = new Date(+m[3], +m[2]-1, +m[1]); const n = Math.floor((new Date().setHours(0,0,0,0) - dt.getTime())/864e5)+1; t = '📅 Εισ. '+m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+(n>0?' · '+n+'η ημέρα':''); }
@@ -9263,7 +9266,7 @@ document.head.appendChild(st);
       today:()=>'<div class="msec"><h3>Σήμερα (πάτα για αλλαγή)<button class="mchartbtn" onclick="pdxPtLabChart(\''+esc(k)+'\')">📈 Γράφημα</button></h3>'+(m?'<div class="mgrid">'+m+'</div>':'')+tAdd+drainCards(d)+'</div>',
       catheters:()=>sec('Καθετήρες / παροχέτευση', esc([foleyTxt(d), d.drainType&&('Drain '+d.drainType)].filter(Boolean).join(' · ')),'cath'),
       history:()=>sec('Ατομικό ιστορικό', esc(window.mobHxSum(d)),'hx'),
-      allergy:()=>sec('Αλλεργία', d.allergy?'<b style="color:#B23A3A">'+esc(d.allergy)+'</b>':'','al'),
+      allergy:()=>sec('Αλλεργία', pdxAlReal(d.allergy)?'<b style="color:#B23A3A">'+esc(d.allergy)+'</b>':(d.allergy?'<span style="color:#6B7280">Καμία ('+esc(d.allergy)+')</span>':''),'al'),
       anticoag:()=>sec('Αντιπηκτικά / Clexane', window.mobAcSum(d).length?'<b style="color:#B23A3A">'+esc(window.mobAcSum(d).join(', '))+'</b>':'','ac'),
       onc:()=>sec('Ογκολογικό', esc(window.mobOncSum(d)),'onc'),
       misc:()=>sec('Λοιπά / Εξετάσεις', esc(window.mobMiscSum(d)),'misc'),
@@ -13012,7 +13015,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(surg) L.push((/^\d+$/.test(pod) ? 'Υπεβλήθη σε '+surg+' ('+(pod==='0'?'ημέρα επέμβασης':pod+'η μετεγχειρητική ημέρα')+').' : 'Προγραμματισμένη/πραγματοποιηθείσα επέμβαση: '+surg+'.'));
     if(hx) L.push('Ατομικό αναμνηστικό: '+hx+'.');
     if(ac) L.push('Αντιπηκτική/αντιαιμοπεταλιακή αγωγή: '+ac+'.');
-    if(d.allergy) L.push('Αλλεργίες: '+d.allergy+'.');
+    if(pdxAlReal(d.allergy)) L.push('Αλλεργίες: '+d.allergy+'.');
     L.push('Παρακαλούμε για '+(String(reason||'').trim() || 'εκτίμηση')+'.');
     return L.join(' ').replace(/\.\./g,'.');
   };
@@ -17792,14 +17795,18 @@ window.pdxOpNotesOpen = async function(k){
   const today = ()=>{ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
   const fmt = d=>{ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d||'')); return m ? m[3]+'/'+m[2]+'/'+m[1] : String(d||''); };
   const st = {f:null, msg:''};
+  const TUBES = ['Foley 3-way','Foley 2-way','JJ stent','Νεφροστομία','Κυστεοστομία','Παροχέτευση','Ουρητηρικός καθετήρας','Κανένας'];
+  const tubesHas = (t,x)=>String(t||'').split(/\s*,\s*/).indexOf(x)>=0;
   const toDb = n=>{ if(!window.pdxDbCall) return Promise.resolve(false);
-    return pdxDbCall('POST', '/api/events', {rows:[{patient:{name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,'')}, date:n.date, kind:'opnote', title:n.op||'Επέμβαση', body:{text:n.text, surg:n.surg, by:n.by}, ext_id:'opnote:'+n.id}]}).then(()=>true, e=>{ st.msg = '⚠ Βάση: '+(e.message||e)+' — κρατήθηκε στην καρτέλα· θα ξανασταλεί'; return false; }); };
+    return pdxDbCall('POST', '/api/events', {rows:[{patient:{name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,'')}, date:n.date, kind:'opnote', title:n.op||'Επέμβαση', body:{text:n.text, surg:n.surg, by:n.by, anesth:n.anesth||'', tubes:n.tubes||''}, ext_id:'opnote:'+n.id}]}).then(()=>true, e=>{ st.msg = '⚠ Βάση: '+(e.message||e)+' — κρατήθηκε στην καρτέλα· θα ξανασταλεί'; return false; }); };
   const save = ()=>{ try{ saveEntryToStorage(k, isX, rec, true); }catch(e){} };
   const pg = iosPage('Πρακτικά χειρουργείου', '', ()=>{
     let h = '<div style="margin:6px 16px 0;font-size:14px;color:#6B7280">'+E6(rec.name||'')+'</div>';
     if(st.f){ const f = st.f;
       h += '<div style="margin:12px 16px"><div style="font-size:13px;font-weight:700;color:#374151;margin:8px 0 3px">Ημερομηνία</div><input data-of="date" type="date" value="'+E6(f.date)+'" style="width:100%;box-sizing:border-box;min-height:42px;font-size:16px;padding:6px 10px;border:1px solid #C7CDD4;border-radius:10px">'
         + '<div style="font-size:13px;font-weight:700;color:#374151;margin:10px 0 3px">Επέμβαση</div><input data-of="op" value="'+E6(f.op)+'" placeholder="π.χ. TURBT" style="width:100%;box-sizing:border-box;min-height:42px;font-size:16px;padding:6px 10px;border:1px solid #C7CDD4;border-radius:10px">'
+        + '<div style="font-size:13px;font-weight:700;color:#374151;margin:10px 0 3px">Αναισθησία</div><div style="display:flex;gap:6px;flex-wrap:wrap">'+['Γενική','Ραχιαία','Τοπική','Μέθη'].map(x=>'<button data-oan="'+x+'" style="flex:1;min-height:40px;border-radius:10px;border:1px solid '+(f.anesth===x?'#0A84FF':'#C7CDD4')+';background:'+(f.anesth===x?'#0A84FF':'#fff')+';color:'+(f.anesth===x?'#fff':'#111')+';font-weight:700">'+x+'</button>').join('')+'</div>'
+        + '<div style="font-size:13px;font-weight:700;color:#374151;margin:10px 0 3px">Καθετήρες / παροχετεύσεις</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">'+TUBES.map(x=>'<button data-otb="'+E6(x)+'" style="border-radius:16px;border:1px solid '+(tubesHas(f.tubes,x)?'#1A7F37':'#C7CDD4')+';background:'+(tubesHas(f.tubes,x)?'#E8F5EC':'#fff')+';color:'+(tubesHas(f.tubes,x)?'#1A7F37':'#111')+';padding:6px 10px;font-size:14px">'+E6(x)+'</button>').join('')+'</div><input data-of="tubes" value="'+E6(f.tubes||'')+'" placeholder="π.χ. Foley 3-way 22Fr, JJ ΑΡ" style="width:100%;box-sizing:border-box;min-height:42px;font-size:16px;padding:6px 10px;border:1px solid #C7CDD4;border-radius:10px">'
         + '<button data-ogo style="display:block;width:100%;margin-top:14px;min-height:48px;border:0;border-radius:12px;background:#0A84FF;color:#fff;font-weight:700;font-size:15.5px">📝 '+(f.id?'Άνοιγμα κειμένου':'Επιλογή προτύπου & κείμενο')+'</button>'
         + '<button data-ox style="display:block;width:100%;margin-top:8px;min-height:44px;border:0;border-radius:12px;background:#EEF2F6;color:#374151;font-weight:700">Άκυρο</button></div>';
       return h; }
@@ -17807,7 +17814,7 @@ window.pdxOpNotesOpen = async function(k){
     if(st.msg) h += '<div style="margin:6px 16px;font-size:13.5px;color:'+(/⚠/.test(st.msg)?'#B42318':'#1A7F37')+'">'+E6(st.msg)+'</div>';
     const N = L().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)) || (b.at||0)-(a.at||0));
     if(!N.length) h += '<div style="margin:16px;color:#6B7280">Δεν υπάρχει ακόμα πρακτικό.</div>';
-    else h += iosGroup('Πρακτικά · '+N.length, N.map(n=>({t:'<div data-oid="'+E6(n.id)+'" style="cursor:pointer"><b>'+E6(fmt(n.date))+' · '+E6(n.op||'Επέμβαση')+'</b>'+(n.db?' <span style="color:#1A7F37;font-size:12px">βάση ✓</span>':' <span style="color:#B45309;font-size:12px">μόνο καρτέλα</span>')+'<div style="font-size:13px;color:#6B7280;margin-top:2px">'+E6(n.surg||'')+'</div><div style="font-size:13.5px;margin-top:4px;white-space:pre-wrap;max-height:4.2em;overflow:hidden">'+E6(n.text||'')+'</div>'
+    else h += iosGroup('Πρακτικά · '+N.length, N.map(n=>({t:'<div data-oid="'+E6(n.id)+'" style="cursor:pointer"><b>'+E6(fmt(n.date))+' · '+E6(n.op||'Επέμβαση')+'</b>'+(n.db?' <span style="color:#1A7F37;font-size:12px">βάση ✓</span>':' <span style="color:#B45309;font-size:12px">μόνο καρτέλα</span>')+'<div style="font-size:13px;color:#6B7280;margin-top:2px">'+E6([n.surg, n.anesth?'Αναισθησία: '+n.anesth:'', n.tubes?'Καθετήρες: '+n.tubes:''].filter(Boolean).join(' · '))+'</div><div style="font-size:13.5px;margin-top:4px;white-space:pre-wrap;max-height:4.2em;overflow:hidden">'+E6(n.text||'')+'</div>'
       +'<div style="display:flex;gap:8px;margin-top:8px"><button data-oed="'+E6(n.id)+'" style="flex:1;min-height:38px;border:0;border-radius:10px;background:#EEF2F6;color:#0A84FF;font-weight:700">✏️ Τροποποίηση</button><button data-odel="'+E6(n.id)+'" style="min-height:38px;border:0;border-radius:10px;background:#FDECEC;color:#B42318;font-weight:700;padding:0 14px">🗑</button></div></div>'})));
     h += '<div style="margin:6px 16px;font-size:12.5px;color:#8E8E93">Κάθε πρακτικό αποθηκεύεται στην καρτέλα και στη βάση της κλινικής (στον ασθενή). Η βάση κρατά και το συγκεντρωτικό «Πρακτικά_χειρουργείων.docx».</div>';
     return h + '<div style="height:40px"></div>'; });
@@ -17817,11 +17824,13 @@ window.pdxOpNotesOpen = async function(k){
       n.db = await toDb(n); if(n.db) st.msg = '✓ Αποθηκεύτηκε (καρτέλα + βάση)'; save(); pg.redraw(); } }); };
   pg.el.addEventListener('input', e=>{ const t = e.target; if(t.dataset && t.dataset.of && st.f) st.f[t.dataset.of] = t.value; });
   pg.el.addEventListener('click', async e=>{ const t = e.target;
-    if(t.closest('[data-onew]')){ st.f = {id:'', date: today(), op: String(rec.surgery||rec.surgeryCustom||'').trim()}; pg.redraw(); return; }
+    if(t.closest('[data-onew]')){ st.f = {id:'', date: today(), op: String(rec.surgery||rec.surgeryCustom||'').trim(), anesth:'Γενική', tubes:''}; pg.redraw(); return; }
     if(t.closest('[data-ox]')){ st.f = null; pg.redraw(); return; }
+    const an = t.closest('[data-oan]'); if(an && st.f){ st.f.anesth = an.dataset.oan; pg.redraw(); return; }
+    const tb = t.closest('[data-otb]'); if(tb && st.f){ const x = tb.dataset.otb; let L2 = String(st.f.tubes||'').split(/\s*,\s*/).filter(Boolean); if(x==='Κανένας') L2 = L2.indexOf(x)>=0 ? [] : [x]; else { L2 = L2.filter(y=>y!=='Κανένας'); const i = L2.indexOf(x); if(i>=0) L2.splice(i,1); else L2.push(x); } st.f.tubes = L2.join(', '); pg.redraw(); return; }
     if(t.closest('[data-ogo]')){ const f = st.f; if(!f.op.trim()){ toast && toast('Γράψε την επέμβαση'); return; }
-      const n = f.id ? L().find(x=>x.id===f.id) : {id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), text:'', surg:''}; n.date = f.date || today(); n.op = f.op.trim(); edit(n); return; }
-    const ed = t.closest('[data-oed]'); if(ed){ const n = L().find(x=>x.id===ed.dataset.oed); if(n){ st.f = {id:n.id, date:n.date, op:n.op}; pg.redraw(); } return; }
+      const n = f.id ? L().find(x=>x.id===f.id) : {id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), text:'', surg:''}; n.date = f.date || today(); n.op = f.op.trim(); n.anesth = f.anesth||''; n.tubes = String(f.tubes||'').trim(); edit(n); return; }
+    const ed = t.closest('[data-oed]'); if(ed){ const n = L().find(x=>x.id===ed.dataset.oed); if(n){ st.f = {id:n.id, date:n.date, op:n.op, anesth:n.anesth||'', tubes:n.tubes||''}; pg.redraw(); } return; }
     const dl = t.closest('[data-odel]'); if(dl){ if(!confirm('Διαγραφή του πρακτικού;')) return; const id = dl.dataset.odel; rec.opnotes = L().filter(x=>x.id!==id); save(); pg.redraw();
       if(window.pdxDbCall) pdxDbCall('POST', '/api/opnotes/delete', {ext_id:'opnote:'+id}).then(()=>{ st.msg = '✓ Διαγράφηκε και από τη βάση'; pg.redraw(); }, e2=>{ st.msg = '⚠ Βάση: '+(e2.message||e2); pg.redraw(); }); return; }
   });
