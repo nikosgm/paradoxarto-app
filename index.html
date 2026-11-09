@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v250';
+const APP_VER = '2026-11-09s-v251';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8384,7 +8384,7 @@ document.head.appendChild(st);
   #mobView .nv-hb button{width:40px;height:40px;border-radius:20px;border:0;background:#E3E3E8;color:#1C1C1E;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   #mobView .nv-hb button.p{background:#1D4E80;color:#fff}
   #mobView .nv-sg{display:flex;gap:8px}
-  #mobView .nv-sg button{flex:1;height:34px;border:0;border-radius:9px;background:transparent;font-size:14px;font-weight:600;color:#6B6B70;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+  #mobView .nv-sg button:first-child{flex:1.6}.nv-sg button{flex:1;height:34px;border:0;border-radius:9px;background:transparent;font-size:14px;font-weight:600;color:#6B6B70;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
   #mobView .nv-sg button.on{background:#fff;color:#1C1C1E;box-shadow:0 1px 2px rgba(0,0,0,.08)}
   #mobView .nv-chs{display:flex;gap:6px;flex-wrap:wrap}
   #mobView .nv-ch{font-size:13px;font-weight:600;padding:6px 10px;border-radius:14px;background:#fff;color:#1C1C1E;border:0;font-family:inherit;line-height:1.2}
@@ -8610,10 +8610,11 @@ document.head.appendChild(st);
     const A = window.__nvAct || '';
     const a = (t, on, act, n, id)=>{ const act2 = id ? "nvGo('"+id+"',function(){"+act.replace(/"/g,'&quot;')+"})" : "nvClearRight();window.__nvAct=null;"+act; return '<button class="dks-a'+((id ? A===id : (on && !A))?' on':'')+'" onclick="'+act2+'">'+t+(n?'<small>'+n+'</small>':'')+'</button>'; };
     let h = '<div style="display:flex;align-items:center;gap:10px;padding:0 4px 0 8px"><span style="width:30px;height:30px;border-radius:8px;background:#1D4E80;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">Π</span><b style="font-size:15px;flex:1;white-space:nowrap">Παραδόχαρτο</b><button class="nv-sidebtn" style="display:flex" aria-label="Απόκρυψη πλαϊνής μπάρας" title="Απόκρυψη" onclick="pdxSideToggle()">'+NVI.side+'</button></div>';
-    h += '<div><div class="dks-h">ΚΛΙΝΙΚΗ</div>' + a('Ασθενείς', tab==='pts', "mobTab('pts')", mine!==all ? mine+'/'+all : all) + a('Εκκρεμότητες', tab==='todo', "mobTab('todo')", nT) + '</div>';
+    const nN = window.pdxNpsCount ? pdxNpsCount() : null;   // 🏥 9/11 (χρήστης): «Ασθενείς ΝΠΣ» κάτω από τους «Ασθενείς»
+    h += '<div><div class="dks-h">ΚΛΙΝΙΚΗ</div>' + a('Ασθενείς', tab==='pts', "mobTab('pts')", mine!==all ? mine+'/'+all : all) + (bot ? a('Ασθενείς ΝΠΣ', false, "pdxNpsPatients()", nN==null?'':nN, 'npsp') : '') + a('Εκκρεμότητες', tab==='todo', "mobTab('todo')", nT) + '</div>';
     h += '<div><div class="dks-h">ΕΡΓΑΛΕΙΑ</div>' + a('Αναζήτηση ασθενών', false, "pdxPatients()", '', 'ptx') + a('Εργαστηριακά', false, "window.labsFullOpen ? labsFullOpen('') : pdxCmd()", '', 'labs')
       + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
-      + (bot ? a('Ασθενείς ΝΠΣ', false, "pdxNpsPatients()", '', 'npsp') : '') + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
+      + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
     h += '<div style="margin-top:auto">' + a('Πλήρης πίνακας', false, "mobFull()") + a('Ρυθμίσεις', tab==='me', "mobTab('me')") + '</div>';
     return h;
   }
@@ -8698,7 +8699,9 @@ document.head.appendChild(st);
     const nDc = all.filter(e=>/εξιτ/i.test(String(e.d.pod||''))).length, nOr = all.filter(e=>/προς|αύριο|αυριο|χε\b/i.test(String(e.d.pod||''))).length, nA = all.filter(e=>attVis(e).length).length;
     let h = '<div class="nv-hd"><div class="nv-hd1"><button class="nv-sidebtn" aria-label="Εμφάνιση πλαϊνής μπάρας" title="Πλαϊνή μπάρα" onclick="pdxSideToggle()">'+NVI.side+'</button><div style="flex:1;min-width:0"><h1>Κλινική</h1><span>'+es.length+(es.length!==all.length?' από '+all.length:'')+' ασθενείς · '+WD[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+'</span></div>'
       + '<div class="nv-hb">'+ntBell()+'<button aria-label="Εμφάνιση" onclick="pdxViewPick()">'+NVI.view+'</button><button aria-label="Αναζήτηση" onclick="pdxCmd()">'+NVI.search+'</button><button class="p" aria-label="Νέος ασθενής" onclick="mobNewChoice()">'+NVI.plus+'</button></div></div>';
-    h += '<div class="nv-sg"><button class="'+(mineOn&&!th?'on':'')+'" onclick="pdxMineToggle(true)">Οι θάλαμοί μου</button><button class="'+(!mineOn&&!th?'on':'')+'" onclick="'+(th?'mobClearF();':'')+'pdxMineToggle(false)">Όλοι</button><button class="'+(th?'on':'')+'" onclick="mobToggleF()">'+(th?esc([...fTher].join(', ')):'Θεράπων')+'</button></div>';
+    h += '<div class="nv-sg"><button class="'+(mineOn&&!th?'on':'')+'" onclick="pdxMineToggle(true)">Οι θάλαμοί μου</button><button class="'+(!mineOn&&!th?'on':'')+'" onclick="'+(th?'mobClearF();':'')+'pdxMineToggle(false)">Όλοι</button>' + ((!nv3on() && window.pdxIsBotUser && pdxIsBotUser() && !th) ? '' : '<button class="'+(th?'on':'')+'" onclick="mobToggleF()">'+(th?esc([...fTher].join(', ')):'Θεράπων')+'</button>')
+      // 🏥 9/11 (χρήστης): «ΝΠΣ» στην πάνω μπάρα → η λίστα νοσηλευομένων του ΝΠΣ· στο ΚΙΝΗΤΟ: «Οι θάλαμοί μου · Όλοι · ΝΠΣ» (ο Θεράπων μένει στον υπολογιστή)
+      + ((window.pdxIsBotUser && pdxIsBotUser()) ? '<button onclick="'+(nv3on() ? "nvGo('npsp',function(){pdxNpsPatients()})" : 'pdxNpsPatients()')+'">ΝΠΣ'+((window.pdxNpsCount && pdxNpsCount()!=null) ? ' '+pdxNpsCount() : '')+'</button>' : '')+'</div>';
     const ch = [];
     if(nDc) ch.push('<span class="nv-ch">'+nDc+' '+(nDc===1?'εξιτήριο':'εξιτήρια')+'</span>');
     { const nT = all.reduce((a,e)=>a+todos(e.d).length,0), nL = all.reduce((a,e)=>a+todos(e.d).filter(l=>{ const w = todoWhen(l); return w && w < new Date(); }).length,0);
@@ -13337,6 +13340,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const r = C.length===1 ? C[0] : C.find(x=>d.am && String(x.am)===String(d.am)); if(!r) return null;
       const x = NB.enr[nbNz(r.name)] || {}; return {full:(x.full && x.full.split(/\s+/).length > String(r.name).split(/\s+/).length ? x.full : r.name), am:x.am||r.am||'', amka:x.amka||r.amka||'', father:x.father||r.father||''}; }catch(e){ return null; } };
   // 🏥 8/11 (εντολή χρήστη): στα «σε πολλούς» (παραγγελία, εκκρεμότητα) και στην επιλογή ασθενή μπαίνουν ΚΑΙ οι ασθενείς του ΝΠΣ που δεν είναι στο Παραδόχαρτο
+  window.pdxNpsCount = function(){ if(!NB.rows){ nbLoad(false); return null; } return NB.rows.length; };
   window.pdxNpsBulkList = function(){ if(!NB.rows){ nbLoad(false); return []; } return nbMiss().map(r=>{ const x = NB.enr[nbNz(r.name)] || {}; return {k:'nps:'+r.name, nps:true, d:{name:r.name, am:x.am||r.am||'', amka:x.amka||r.amka||''}}; }); };
   // προσωρινή καρτέλα (δεν αποθηκεύεται) — ή μόνιμη «Εκτός θαλάμου» όταν πρέπει να κρατηθεί κάτι (εκκρεμότητα)
   window.pdxNpsKey = function(k, permanent){

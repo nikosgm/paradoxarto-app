@@ -159,7 +159,10 @@
       for (const [k, d] of [...Object.entries(D), ...Object.entries(X)]) { if (!d || !String(d.name || "").trim()) continue; L.push({ k, d }); }
     } catch (e) {}
     const pre = (x) => x.d.pod === "Προς Χ/Ο" ? 0 : 1;
-    return L.sort((a, b) => pre(a) - pre(b) || String(a.k).localeCompare(String(b.k), "el", { numeric: true }));
+    L.sort((a, b) => pre(a) - pre(b) || String(a.k).localeCompare(String(b.k), "el", { numeric: true }));
+    // 🏥 9/11 (χρήστης: «από όλο το ΝΠΣ, όχι μόνο Παραδόχαρτο»): + όσοι νοσηλεύονται στον ΝΠΣ αλλά δεν είναι στο Παραδόχαρτο (τελευταία λίστα ΝΠΣ 3449)
+    try { const N = (window.pdxNpsBulkList && window.pdxNpsBulkList()) || []; for (const x of N) if (x && x.d && String(x.d.name || "").trim()) L.push({ k: x.k, d: x.d, nps: true }); } catch (e) {}
+    return L;
   }
   function fromPatient(k, d) {
     const info = (window.pdxNpsInfo && window.pdxNpsInfo(d)) || {};
@@ -252,9 +255,11 @@
       const ov = sheet('<div style="display:flex;align-items:center;margin-bottom:8px"><b style="flex:1;font-size:17px">' + E(ORP.roomLabel(room)) + '</b><button data-x style="border:0;background:none;font-size:22px">✕</button></div><input data-q placeholder="Αναζήτηση ονόματος/κρεβατιού" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #C7CDD4;border-radius:10px">'
         + '<div data-list></div><button data-man style="margin-top:10px;width:100%;min-height:44px;border:0;border-radius:12px;background:#fff;color:#0A84FF;font-weight:700">✍ Χειροκίνητη προσθήκη</button>');
       const list = ov.querySelector("[data-list]");
-      const show = (q) => { const z = NZ(q); list.innerHTML = L.filter((x) => !z || NZ(x.d.name + " " + x.k).indexOf(z) >= 0).map((x) => '<div data-k="' + E(x.k) + '" style="background:#fff;margin-top:6px;padding:10px 12px;border-radius:10px;display:flex;gap:8px;align-items:center"><span style="flex:1"><b>' + E(x.d.name) + '</b><br><span style="color:#6B7280;font-size:13px">' + E([x.k.replace(/^extra-\d+$/, "εκτός θαλάμου"), x.d.therapist, x.d.surgery || x.d.surgeryCustom, x.d.pod === "Προς Χ/Ο" ? "προς Χ/Ο" : ""].filter(Boolean).join(" · ")) + "</span></span><span style=\"color:#0A84FF;font-weight:700\">＋</span></div>").join("") || '<div style="padding:12px;color:#6B7280">Κανένας</div>'; };
+      const show = (q) => { const z = NZ(q); list.innerHTML = L.filter((x) => !z || NZ(x.d.name + " " + x.k).indexOf(z) >= 0).map((x) => '<div data-k="' + E(x.k) + '" style="background:#fff;margin-top:6px;padding:10px 12px;border-radius:10px;display:flex;gap:8px;align-items:center"><span style="flex:1"><b>' + E(x.d.name) + '</b><br><span style="color:#6B7280;font-size:13px">' + E([x.nps ? "🏥 ΝΠΣ (όχι στο Παραδόχαρτο)" : x.k.replace(/^extra-\d+$/, "εκτός θαλάμου"), x.d.therapist, x.d.surgery || x.d.surgeryCustom, x.d.pod === "Προς Χ/Ο" ? "προς Χ/Ο" : ""].filter(Boolean).join(" · ")) + "</span></span><span style=\"color:#0A84FF;font-weight:700\">＋</span></div>").join("") || '<div style="padding:12px;color:#6B7280">Κανένας</div>'; };
       show("");
       ov.querySelector("[data-q]").addEventListener("input", (e) => show(e.target.value));
+      // η λίστα ΝΠΣ φορτώνει την 1η φορά → ξανά σε λίγο (χωρίς να χαθεί η αναζήτηση)
+      if (!L.some((x) => x.nps)) setTimeout(() => { if (!ov.isConnected) return; const add = inpatients().filter((x) => x.nps && !used.has(x.k) && !L.some((y) => y.k === x.k)); if (add.length) { L.push(...add); show(ov.querySelector("[data-q]").value); } }, 1800);
       ov.addEventListener("click", (e) => {
         if (e.target.closest("[data-x]")) { ov.remove(); return; }
         const r = e.target.closest("[data-k]");
