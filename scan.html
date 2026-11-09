@@ -328,13 +328,14 @@ async function send(srcs, w0, h0){
     // → ΣΥΖΗΤΗΣΗ Claude: νέα συζήτηση με έτοιμο μήνυμα «διάβασε τη σάρωση #s…k…» → εργαλεία scan_read/scan_save της σύνδεσης «Παραδόχαρτο».
     // Η σελίδα (artifact) μένει για τον διαχειριστή και το πρακτικό. Η συσκευή θυμάται τι πάτησε τελευταία (pdx_scan_via) και την επόμενη φορά ανοίγει μόνο του.
     const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο.';
-    const chatU = 'https://claude.ai/new?q=' + encodeURIComponent(ask);
+    // 9/11: μέσα στην εφαρμογή «Σάρωση» (PWA) το https://claude.ai άνοιγε ΜΕΣΑ στη Σάρωση → σχήμα claude:// (ανοίγει την εφαρμογή Claude, όπως η σελίδα)
+    const chatW = 'https://claude.ai/new?q=' + encodeURIComponent(ask), chatU = chatW.replace(/^https:\/\//, 'claude://');
     let via = ''; try{ via = localStorage.getItem('pdx_scan_via') || ''; }catch(e){}
     if(op) via = 'page';
     window.__scanNav = via === 'page' ? CLAUDE_APP + tag : via === 'chat' ? chatU : '';
     window.__scanAsk = ask;
     msg('<div style="font-size:54px">🤖</div><div>' + (via ? 'Ανοίγει το Claude…' : 'Πού να διαβαστεί;') + '</div>'
-      + (op ? '' : '<a class="go" id="vchat" href="' + chatU + '">💬 Συζήτηση Claude</a><div style="font-size:13px;opacity:.75;max-width:320px;text-align:center">με τη σύνδεση «Παραδόχαρτο» στον λογαριασμό σου (συνάδελφοι)· αν δεν γραφτεί μόνο του το μήνυμα: Επικόλληση</div>')
+      + (op ? '' : '<a class="go" id="vchat" href="' + chatU + '">💬 Συζήτηση Claude</a><a class="go2" href="' + chatW + '" target="_blank" rel="noopener">ή στον browser</a><div style="font-size:13px;opacity:.75;max-width:320px;text-align:center">με τη σύνδεση «Παραδόχαρτο» στον λογαριασμό σου (συνάδελφοι)· αν δεν γραφτεί μόνο του το μήνυμα: Επικόλληση</div>')
       + '<a class="go2" id="vpage" href="' + CLAUDE_APP + tag + '">📄 Σελίδα Σάρωσης (διαχειριστής)</a>');
     const remember = (v)=>{ try{ localStorage.setItem('pdx_scan_via', v); }catch(e){} };
     if($('vchat')) $('vchat').onclick = ()=>{ remember('chat'); try{ navigator.clipboard && navigator.clipboard.writeText(ask); }catch(e){} };
