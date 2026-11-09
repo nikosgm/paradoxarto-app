@@ -36,7 +36,7 @@
     const draw = () => {
       const all = q ? IDX().filter((x) => N(x.op + " " + x.t).includes(N(q))) : list;
       ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--t1,#1F2933);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));font:15px -apple-system,system-ui">'
-        + '<div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">📝 Πρακτικό · ' + E(o.name || "") + '</b><button data-x style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px">Κλείσιμο</button></div>'
+        + '<div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">📝 Πρακτικό · ' + E(o.name || "") + '</b><button data-x style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px">' + (cur && cur.op !== "αποθηκευμένο" ? "‹ Πρότυπα" : "Κλείσιμο") + '</button></div>'
         + '<div style="color:#6B7280;font-size:13px;margin:4px 0 8px">' + E(o.proc || "—") + (side ? " · " + side : "") + "</div>"
         + (cur ? (o.noSurg ? "" : '<div style="font-weight:700;margin-top:6px">Χειρουργοί</div><input data-sg value="' + E(surg) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #C7CDD4;border-radius:10px">')
           + '<div style="display:flex;gap:6px;margin:10px 0 4px;align-items:center"><b style="flex:1">Κείμενο</b><button data-sd="ΑΡ" style="border:1px solid #C7CDD4;background:#fff;border-radius:16px;padding:6px 12px">→ ΑΡ</button><button data-sd="ΔΕ" style="border:1px solid #C7CDD4;background:#fff;border-radius:16px;padding:6px 12px">→ ΔΕ</button><button data-back style="border:0;background:#EEF2F6;border-radius:16px;padding:6px 12px">Άλλο πρότυπο</button></div>'
@@ -52,6 +52,8 @@
     ov.addEventListener("input", (e) => { if (e.target.dataset.q != null) { q = e.target.value; const c = e.target.selectionStart; draw(); const i = ov.querySelector("[data-q]"); i.focus(); try { i.setSelectionRange(c, c); } catch (x) {} } if (e.target.dataset.t != null) text = e.target.value; if (e.target.dataset.sg != null) surg = e.target.value; });
     ov.addEventListener("click", (e) => {
       const t = e.target;
+      // 9/11 (χρήστης): «Κλείσιμο» μέσα σε πρότυπο → πίσω στη λίστα προτύπων (όχι έξω)· έξω μόνο από τη λίστα ή αν άνοιξε αποθηκευμένο κείμενο
+      if (t.closest("[data-x]") && cur && cur.op !== "αποθηκευμένο") { cur = null; text = o.text || ""; return draw(); }
       if (t === ov || t.closest("[data-x]")) return ov.remove();
       const pk = t.closest("[data-pick]"); if (pk) { cur = (window.PRAKTIKA || []).find((x) => x.n === +pk.dataset.pick); const cs = sideOf(cur.op) || sideOf(cur.t); text = side && cs && cs !== "ΑΜΦΩ" && cs !== side && side !== "ΑΜΦΩ" ? swapSide(cur.t, side) : cur.t; /* 9/11: συγχωνευμένα → πλευρά από το κείμενο */ if (!surg) surg = cur.surg; return draw(); }
       if (t.closest("[data-back]")) { cur = null; return draw(); }
