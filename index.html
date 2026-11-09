@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v240';
+const APP_VER = '2026-11-09r-v241';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13519,6 +13519,18 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     try{ const o = JSON.parse(localStorage.getItem(SK)||'null'); if(o && typeof o==='object') sel = o; }catch(e){}
     try{ Object.keys(localStorage).filter(k=>k.indexOf('pdx_du_sel_')===0 && k!==SK).forEach(k=>localStorage.removeItem(k)); }catch(e){}
     const selSave = ()=>{ try{ localStorage.setItem(SK, JSON.stringify(sel)); }catch(e){} };
+    const dtext = s1=>{ const pr = (C.procs||[])[+((s1||{}).proc)||0] || {}; return 'Ασθενής υπεβλήθη σε '+String(pr.name||'ιατρική πράξη').toLowerCase()+(pr.code?' ('+pr.code+')':'')+'. Εξέρχεται σε καλή γενική κατάσταση.'; };
+    // κατάσταση των εξιτηρίων που στάλθηκαν (μέχρι να εγκριθούν/αποτύχουν)
+    const ST = {new:'⏳ στην ουρά', seen:'⏳ στην ουρά', running:'⏳ το bot συμπληρώνει…', review:'👀 περιμένει τον έλεγχό σου', approve:'⏳ εγκρίθηκε — αποθήκευση…', approved:'✅ εγκρίθηκε', done:'✅ ολοκληρώθηκε', failed:'✗ απέτυχε', cancelled:'✗ ακυρώθηκε', dismissed:'✗ ακυρώθηκε'};
+    let polling = false;
+    const poll = async ()=>{ if(polling) return; polling = true;
+      try{ for(let n = 0; n < 400; n++){ if(!pg.el.isConnected) break;
+        const ids = Object.values(sel).filter(x=>x && x.job && !/^(✅|✗)/.test(x.st||'')).map(x=>x.job); if(!ids.length) break;
+        let r = null; try{ r = await sb6.from('oncall_jobs').select('id,status,note').in('id', ids); }catch(e){}
+        let ch = false; ((r && r.data)||[]).forEach(j=>{ const x = Object.values(sel).find(y=>y && y.job===j.id); if(!x) return; const st = (ST[j.status]||j.status)+(j.status==='failed'&&j.note?': '+String(j.note).slice(0,140):''); const rev = j.status==='review'; if(x.st!==st || !!x.rev!==rev){ x.st = st; x.rev = rev; ch = true; } });
+        if(ch){ selSave(); pg.redraw(); } await new Promise(ok=>setTimeout(ok, 4000)); } }
+      finally{ polling = false; } };
+    setTimeout(poll, 300);
     const save = async ()=>{ const r = await sb6.from('oncall_config').upsert({key:'dayunit', value:C, updated_at:new Date().toISOString()}, {onConflict:'key'}); msg = r.error ? 'Δεν αποθηκεύτηκε: '+r.error.message : '✓ Αποθηκεύτηκε'; pg.redraw(); };
     const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px;background:var(--card,#fff);color:inherit"';
     const pg = iosPage('Ουρολογικό Ημέρας', 'Εργαλεία', ()=>{
@@ -13535,10 +13547,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         rows.forEach((r,i)=>{ const s0 = sel[i] || (sel[i] = {on:false, proc:0, doc:(C.docs||[])[0]||''});
           h += '<div style="border-top:1px solid #EEF2F6;padding:10px 0"><label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" data-on="'+i+'"'+(s0.on?' checked':'')+' style="width:22px;height:22px"><b style="flex:1">'+E2(r.name||r.cells.join(' · '))+'</b><span style="font-size:13px;color:#6D6D72">'+E2(r.admit||'')+'</span></label>'
             + (s0.on ? '<div style="display:flex;gap:8px;margin-top:6px"><select data-pr="'+i+'" '+inp+'>'+C.procs.map((x,k)=>'<option value="'+k+'"'+(k===+s0.proc?' selected':'')+'>'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'</select>'
-              + '<select data-dc="'+i+'" '+inp+'>'+['<option value="">— θεράπων —</option>'].concat((C.docs||[]).map(d=>'<option'+(d===s0.doc?' selected':'')+'>'+E2(d)+'</option>')).join('')+'</select></div>' : '')
+              + '<select data-dc="'+i+'" '+inp+'>'+['<option value="">— θεράπων —</option>'].concat((C.docs||[]).map(d=>'<option'+(d===s0.doc?' selected':'')+'>'+E2(d)+'</option>')).join('')+'</select></div>'
+              + '<textarea data-tx="'+i+'" rows="2" placeholder="Κείμενο εξιτηρίου" '+inp.replace('padding:9px 10px','padding:9px 10px;margin-top:6px')+'>'+E2(s0.txt != null ? s0.txt : dtext(s0))+'</textarea>' : '')
+            + (s0.job ? '<div style="font-size:13.5px;margin-top:6px;color:'+(/✗|απέτυχε|ακυρώθ/.test(s0.st||'')?'#B42318':/εγκρίθηκε|✅/.test(s0.st||'')?'#15803D':'#1D4E80')+'">'+E2(s0.st||'📤 στάλθηκε στο bot')+(s0.rev ? ' <button data-rev="'+(+s0.job)+'" style="border:0;background:#1D4E80;color:#fff;border-radius:9px;padding:5px 10px;font-weight:700">👀 Έλεγχος</button>' : '')+'</div>' : '')
             + '</div>'; });
         const n = Object.keys(sel).filter(k=>sel[k].on && rows[k]).length;
-        if(rows.length) h += '<button disabled style="margin-top:10px;width:100%;height:46px;border:0;border-radius:12px;background:#E5E7EB;color:#6B7280;font-size:16px;font-weight:600">Εξιτήρια για '+n+' επιλεγμένους — σύντομα</button><div class="ios-f" style="margin:6px 0 0">Ενεργοποιείται μόλις το bot χαρτογραφήσει τη φόρμα «Συγκεντρωτικό Εξιτήριο» του ΝΠΣ. Πριν από κάθε καταχώριση θα βλέπεις προεπισκόπηση και θα πατάς «Έγκριση».</div>';
+        const nn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && !sel[k].job).length;
+        if(rows.length) h += '<button data-a="dc" '+(nn?'':'disabled ')+'style="margin-top:10px;width:100%;height:46px;border:0;border-radius:12px;background:'+(nn?'#1D4E80':'#E5E7EB')+';color:'+(nn?'#fff':'#6B7280')+';font-size:16px;font-weight:700">📄 Εξιτήρια για '+nn+' επιλεγμένους</button><div class="ios-f" style="margin:6px 0 0">Ένα-ένα, όπως της κλινικής: το bot μπαίνει με τον λογαριασμό του Ημέρας (3434), συμπληρώνει το εξιτήριο και περιμένει τον «👀 Έλεγχο». Μετά την έγκριση ακολουθεί ο επόμενος.</div><div style="display:none">Ενεργοποιείται μόλις το bot χαρτογραφήσει τη φόρμα «Συγκεντρωτικό Εξιτήριο» του ΝΠΣ. Πριν από κάθε καταχώριση θα βλέπεις προεπισκόπηση και θα πατάς «Έγκριση».</div>';
       }
       h += '</div>';
       return h + (msg?'<div style="margin:10px 16px;color:'+(/^✓/.test(msg)?'#15803D':'#B91C1C')+'">'+E2(msg)+'</div>':'') + '<div style="height:60px"></div>';
@@ -13547,12 +13562,25 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       q('[data-pn]').forEach(e=>{ C.procs[+e.dataset.pn].name = e.value.trim(); }); q('[data-pc]').forEach(e=>{ C.procs[+e.dataset.pc].code = e.value.trim(); });
       const d = pg.el.querySelector('[data-docs]'); if(d) C.docs = d.value.split('\n').map(x=>x.trim()).filter(Boolean);
       const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
-      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ sel[e.dataset.dc].doc = e.value; }); selSave(); };
+      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ sel[e.dataset.dc].doc = e.value; }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = e.value; }); selSave(); };
+    pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-tx]'); if(t){ sel[t.dataset.tx].txt = t.value; selSave(); } });
     pg.el.addEventListener('change', e=>{ rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); } });
-    pg.el.addEventListener('click', async e=>{ const b = e.target.closest('[data-a],[data-pdel]'); if(!b) return; rd();
+    pg.el.addEventListener('click', async e=>{ const rv = e.target.closest('[data-rev]'); if(rv){ if(window.pdxBotReview) pdxBotReview(+rv.dataset.rev); return; }
+      const b = e.target.closest('[data-a],[data-pdel]'); if(!b) return; rd();
       if(b.dataset.pdel!=null){ C.procs.splice(+b.dataset.pdel,1); if(!C.procs.length) C.procs.push({name:'',code:''}); return pg.redraw(); }
       const a = b.dataset.a;
       if(a==='padd'){ C.procs.push({name:'',code:''}); return pg.redraw(); }
+      if(a==='dc'){
+        // 📄 9/11 (χρήστης: «εξιτήριο γίνεται ένα-ένα όπως της κλινικής»): μία εντολή «discharge» ανά ασθενή, με τον λογαριασμό του Ημέρας
+        const L = Object.keys(sel).filter(k=>sel[k].on && rows[k] && !sel[k].job).map(Number);
+        if(!L.length) return; if(!confirm('Εξιτήρια για '+L.length+' ασθενείς; Το bot τα συμπληρώνει ένα-ένα και κάθε ένα περιμένει τον δικό σου «Έλεγχο» πριν την αποθήκευση.')) return;
+        for(const k of L){ const r = rows[k], s1 = sel[k], pr = C.procs[+s1.proc||0] || {};
+          const txt = String(s1.txt != null ? s1.txt : dtext(s1)).trim();
+          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:C.user||'KDOUROUMIS', proc:pr.name||'', code:pr.code||''}, amka:r.amka||''}}).select('id').single();
+            if(ins.error) throw ins.error; s1.job = ins.data.id; s1.st = '📤 στάλθηκε στο bot'; }catch(x){ s1.st = '✗ δεν στάλθηκε: '+(x.message||x); }
+        }
+        selSave(); pg.redraw(); poll(); return;
+      }
       if(a==='save'){ C.procs = C.procs.filter(x=>x.name||x.code); if(!C.procs.length) C.procs = DEF.procs.slice(); return save(); }
       if(a==='load'){ msg = ''; busy = 'στέλνω στον υπολογιστή…'; pg.redraw();
         let id = 0; try{ const ins = await sb6.from('oncall_jobs').insert({kind:'dayunit', name:'Ουρολογικό Ημέρας', name_key:'zzz_dayunit', status:'new', payload:{emrUser:C.user||'KDOUROUMIS', map:true, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message); id = ins.data.id; }
