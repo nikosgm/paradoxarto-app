@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09l-v226';
+const APP_VER = '2026-11-09m-v227';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -8036,7 +8036,8 @@ document.head.appendChild(st);
   async function pdxDbSend(batch){
     try{
       const calls = batch.map(x=>({method:x.method, path:x.path, body:x.body===undefined?null:x.body, who:pdxDbWho()}));
-      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_pdxdb', name:'🗂 Αρχείο Ασθενών', room:null, kind:'pdxdb', payload:{only:PDX_DB_BOT, calls, quiet:true}, status:'new'}).select('id').single();
+      const BOT = batch[0].bot || PDX_DB_BOT;
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_pdxdb', name:'🗂 Αρχείο Ασθενών', room:null, kind:'pdxdb', payload:{only:BOT, calls, quiet:true}, status:'new'}).select('id').single();
       if(ins.error) throw new Error(ins.error.message);
       const id = ins.data.id, t0 = Date.now(); let row = null;
       while(Date.now()-t0 < 75000){
@@ -8044,8 +8045,8 @@ document.head.appendChild(st);
         const r = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle();
         if(r.data && /^(done|failed|dismissed|cancelled)$/.test(r.data.status)){ row = r.data; break; }
       }
-      if(!row){ sb6.from('oncall_jobs').update({status:'cancelled', payload:{only:PDX_DB_BOT, wiped:true}}).eq('id', id).then(()=>{}, ()=>{}); throw new Error('Το Παράθυρο δεν απάντησε σε 75″ (κλειστό ή χωρίς bot;)'); }
-      sb6.from('oncall_jobs').update({status:'dismissed', payload:{only:PDX_DB_BOT, wiped:true}, note:'🗂 (καθαρίστηκε)'}).eq('id', id).then(()=>{}, ()=>{});
+      if(!row){ sb6.from('oncall_jobs').update({status:'cancelled', payload:{only:BOT, wiped:true}}).eq('id', id).then(()=>{}, ()=>{}); throw new Error((BOT===PDX_DB_BOT?'Το Παράθυρο':'Ο υπολογιστής')+' δεν απάντησε σε 75″ (κλειστό ή χωρίς bot;)'); }
+      sb6.from('oncall_jobs').update({status:'dismissed', payload:{only:BOT, wiped:true}, note:'🗂 (καθαρίστηκε)'}).eq('id', id).then(()=>{}, ()=>{});
       const out = (row.payload && row.payload.result && row.payload.result.out) || [];
       if(row.status !== 'done' && !out.length) throw new Error(String(row.note||'αποτυχία').replace(/^🗂\s*/,''));
       batch.forEach((x,i)=>{ const o = out[i]; if(!o) return x.no(new Error(String(row.note||'χωρίς απάντηση').replace(/^🗂\s*/,'')));
@@ -8053,6 +8054,8 @@ document.head.appendChild(st);
     }catch(e){ batch.forEach(x=>x.no(e)); }
   }
   // pdxDbCall('GET', '/api/overview') → Promise(json)
+  // 9/11: κλήση στη βάση ΣΥΓΚΕΚΡΙΜΕΝΟΥ υπολογιστή (κάθε υπολογιστής έχει τη δική του τοπική — π.χ. ρυθμίσεις CD)
+  window.pdxDbCallOn = function(bot, method, path, body){ return new Promise((ok, no)=>{ pdxDbSend([{bot, method:String(method||'GET').toUpperCase(), path, body, ok, no}]); }); };
   window.pdxDbCall = function(method, path, body){
     return new Promise((ok, no)=>{ pdxDbQ.push({method:String(method||'GET').toUpperCase(), path, body, ok, no});
       clearTimeout(pdxDbT); pdxDbT = setTimeout(()=>{ while(pdxDbQ.length) pdxDbSend(pdxDbQ.splice(0, 20)); }, 250); });
@@ -8062,6 +8065,7 @@ document.head.appendChild(st);
   const PDX_DB_ACT = {'mirror-run':'Αντιγραφή στο δίκτυο', bulk:'Τωρινοί ασθενείς', settings:'Ρυθμίσεις', 'cd-accept':'Αξονική αποθηκεύτηκε', 'cd-reject':'Αξονική απορρίφθηκε', assign:'Αξονική σε ασθενή', mdt:'Συμβούλιο', 'mdt-delete':'Συμβούλιο: αφαίρεση', onc:'Ογκολογικός', patient:'Ασθενής', events:'Ιστορικό', import:'Εισαγωγή'};
   // ⚙️ Ρυθμίσεις → 🗂 Βάση δεδομένων
   window.pdxDbPage = function(){
+    const PCS = [['bmw51w96b7zncz','Παράθυρο'],['bmw51nismmo82h','Μεσαίος'],['bmw51yicermfhw','Γωνιακός']], PCST = {};
     const att = ['attending','admin'].indexOf(window.authRole)>=0;
     let ov = null, err = '', busy = '', msg = '', syncNote = '';
     const pg = iosPage('Βάση δεδομένων', 'Ρυθμίσεις', ()=>{
@@ -8082,6 +8086,11 @@ document.head.appendChild(st);
         {t:'Λειτουργία', raw:'<span style="display:flex;background:rgba(118,118,128,.12);border-radius:9px;padding:2px">'+[['auto','⚡ Αυτόματα'],['manual','✋ Με έγκριση']].map(([v,l])=>'<button data-db="cd" data-v="'+v+'" style="border:0;border-radius:7px;padding:6px 10px;font-size:14px;font-weight:600;background:'+(S.cdMode===v?'var(--card,#fff);box-shadow:0 1px 3px #0002':'transparent')+';color:inherit"'+(att&&!busy?'':' disabled')+'>'+l+'</button>').join('')+'</span>'},
         {t:'Βγάζει το CD όταν τελειώσει', sw:S.eject!==false, data:att?'data-db="eject"':''}
       ], lock || (S.cdMode==='auto' ? 'Αυτόματα: κάθε αξονική αποθηκεύεται αμέσως στον ασθενή.' : 'Με έγκριση: καμία αξονική δεν αποθηκεύεται πριν πατηθεί «Αποθήκευση».'));
+      // 💿 9/11 (χρήστης): σε ποιους υπολογιστές γίνεται αυτόματη αποθήκευση αξονικών από CD και «βγάζει το CD» (κάθε υπολογιστής τη δική του ρύθμιση)
+      h += iosGroup('💿 CD ανά υπολογιστή', PCS.map(([bot, nm])=>{ const x = PCST[bot] || {}; const S2 = x.s;
+        return {t:'<b>'+nm+'</b>', sub: x.err ? '<span style="color:#FF3B30">⚠ '+esc(x.err)+'</span>' : !S2 ? '⏳ φόρτωση…' : (S2.cdOn!==false ? '💿 αποθηκεύει αξονικές' : '— δεν αγγίζει τα CD (ελεύθερο για άλλους)')+(S2.cdOn!==false ? ' · '+(S2.eject!==false ? '⏏ βγάζει το CD' : 'κρατά το CD') : ''),
+          raw: S2 ? '<span style="display:flex;gap:6px"><button data-db="pcon" data-id="'+bot+'" '+(att?'':'disabled')+' style="border:0;border-radius:8px;padding:6px 9px;font-size:13px;font-weight:700;background:'+(S2.cdOn!==false?'#34C759':'rgba(118,118,128,.16)')+';color:'+(S2.cdOn!==false?'#fff':'inherit')+'">💿</button><button data-db="pcej" data-id="'+bot+'" '+(att && S2.cdOn!==false?'':'disabled')+' style="border:0;border-radius:8px;padding:6px 9px;font-size:13px;font-weight:700;background:'+(S2.cdOn!==false && S2.eject!==false?'#34C759':'rgba(118,118,128,.16)')+';color:'+(S2.cdOn!==false && S2.eject!==false?'#fff':'inherit')+'">⏏</button></span>' : '' }; }),
+        lock || '💿 = αυτόματη αποθήκευση αξονικών από CD · ⏏ = βγάζει το CD όταν τελειώσει. Κλειστό 💿 → ο υπολογιστής δεν αγγίζει τα CD (π.χ. για αξονική άλλου).');
       h += iosGroup('Ογκολογικοί', [{t:'Αυτόματος χαρακτηρισμός', sub:'από διαγνώσεις C / D0x / D37–D44, κακοήθη βιοψία ή συμβούλιο', sw:S.oncAuto!==false, data:att?'data-db="onc"':''}], lock || 'Κλειστό: ογκολογικός μόνο όταν τον ορίσει γιατρός.');
       h += iosGroup('Συγχρονισμός', [{ic:'🔄', t:'Τωρινοί ασθενείς → βάση', sub: syncNote ? esc(syncNote) : 'Παραδόχαρτο + λίστα ΝΠΣ (όνομα, ΑΜΚΑ, ΑΜ, πατρώνυμο, διαγνώσεις)', data:'data-db="sync"', on:'void 0'}], 'Μπαίνουν όσοι έχουν ΑΜΚΑ ή ΑΜ· ξανά = ενημέρωση, όχι διπλοί.');
       // 🌙 νυχτερινή αντιγραφή στον φάκελο δικτύου (ανοίγουν γρήγορα από τον Μεσαίο)
@@ -8097,6 +8106,9 @@ document.head.appendChild(st);
       h += iosGroup('Σύντομα', [{t:'<span style="color:#8E8E93">Αυτόματη ενημέρωση από τα bots</span>', sub:'νοσηλείες, εργαστηριακά, βιοψίες, χειρουργεία'}, {t:'<span style="color:#8E8E93">Νυχτερινό αντίγραφο ασφαλείας της βάσης</span>'}]);
       return h + '<div style="height:60px"></div>';
     });
+    const loadPcs = ()=>PCS.forEach(([bot])=>{ pdxDbCallOn(bot, 'GET', '/api/settings').then(r=>{ PCST[bot] = {s:r}; pg.redraw(); }, e=>{ PCST[bot] = {err:e.message}; pg.redraw(); }); });
+    const setPc = async (bot, o, label)=>{ if(!att) return; const x = PCST[bot] || (PCST[bot] = {}); if(x.busy) return; x.busy = 1; x.s = Object.assign({}, x.s, o); msg = '⏳ '+label+'…'; pg.redraw();
+      try{ x.s = await pdxDbCallOn(bot, 'POST', '/api/settings', o); msg = '✓ '+label; }catch(e){ msg = '⚠ '+e.message; } x.busy = 0; pg.redraw(); };
     const load = async ()=>{ try{ ov = await pdxDbCall('GET', '/api/overview'); err = ''; }catch(e){ err = e.message; } busy = ''; pg.redraw(); };
     const set = async (o, label)=>{ if(!att || busy) return; busy = 'set'; Object.assign(ov.settings, o); msg = '⏳ '+label+'…'; pg.redraw();
       try{ ov.settings = await pdxDbCall('POST', '/api/settings', o); msg = '✓ '+label; }catch(e){ msg = '⚠ '+e.message; await load(); } busy = ''; pg.redraw(); };
@@ -8104,6 +8116,8 @@ document.head.appendChild(st);
     pg.el.addEventListener('click', async e=>{
       const b = e.target.closest('[data-db]'); if(!b || b.disabled) return; const a = b.dataset.db, id = b.dataset.id;
       if(a==='reload'){ err = ''; pg.redraw(); return load(); }
+      if(a==='pcon'){ const x = PCST[id]; if(!x || !x.s) return; const nm = (PCS.find(p2=>p2[0]===id)||[])[1]; return setPc(id, {cdOn: x.s.cdOn===false}, nm+': '+(x.s.cdOn===false?'αποθηκεύει αξονικές από CD':'δεν αγγίζει τα CD')); }
+      if(a==='pcej'){ const x = PCST[id]; if(!x || !x.s) return; const nm = (PCS.find(p2=>p2[0]===id)||[])[1]; return setPc(id, {eject: x.s.eject===false}, nm+': '+(x.s.eject===false?'βγάζει το CD':'κρατά το CD')); }
       if(a==='cd') return set({cdMode:b.dataset.v}, b.dataset.v==='auto' ? 'Εισαγωγή CD: αυτόματα' : 'Εισαγωγή CD: με έγκριση');
       if(a==='eject') return set({eject: ov.settings.eject===false}, 'Αποβολή CD');
       if(a==='onc') return set({oncAuto: ov.settings.oncAuto===false}, 'Αυτόματος χαρακτηρισμός');
@@ -8125,7 +8139,7 @@ document.head.appendChild(st);
         }catch(er){ msg = '⚠ '+er.message; }
         return load(); }
     });
-    load();
+    load(); loadPcs();
     return pg;
   };
   // 🎗 Ογκολογικό συμβούλιο (tablet): η σελίδα mdt.html μέσα στο Παραδόχαρτο — σύνδεση = ο γιατρός του Παραδόχαρτου, αιτήματα μέσω pdxDbCall
