@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="el"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Σύνδεση Claude — Παραδόχαρτο</title>
+<link rel="icon" href="favicon.ico">
+<style>
+/* 🔌 9/11: σελίδα έγκρισης (OAuth 2.1, Supabase Auth) — ο συνάδελφος συνδέει τον ΔΙΚΟ ΤΟΥ λογαριασμό Claude με το Παραδόχαρτο */
+:root{--bg:#F2F2F7;--card:#fff;--fg:#1C1C1E;--mut:#6B7280;--acc:#1D4E80;--bad:#B23A3A;--line:#D1D5DB;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1C1C1E;--fg:#F2F2F7;--mut:#9CA3AF;--acc:#5AA0E6;--bad:#FF8A80;--line:#3A3A3C;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:max(24px,env(safe-area-inset-top)) 16px 40px}
+main{max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.logo{width:56px;height:56px;border-radius:14px;background:var(--acc);color:#fff;font:800 28px system-ui;display:flex;align-items:center;justify-content:center;margin:0 auto}
+h1{font-size:21px;margin:0;text-align:center}.mut{color:var(--mut);font-size:14px}
+.card{background:var(--card);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+input{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);width:100%}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:13px;cursor:pointer}
+.pri{background:var(--acc);color:#fff}.sec{background:transparent;color:var(--fg);border:1.5px solid var(--line)}
+.err{color:var(--bad);font-weight:600}ul{margin:0;padding-left:20px}
+</style></head><body><main>
+<div class="logo">Π</div>
+<h1>Σύνδεση Claude με το Παραδόχαρτο</h1>
+<div id="box" class="card"><div class="mut">Μια στιγμή…</div></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SB = 'https://evspmufooxgqxhbhydgc.supabase.co', KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
+const sb = window.supabase.createClient(SB, KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});   // ίδια συνεδρία με την εφαρμογή (ίδιο origin)
+const AID = new URLSearchParams(location.search).get('authorization_id') || '';
+const box = document.getElementById('box'), E = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fail = m=>{ box.innerHTML = '<div class="err">⚠ '+E(m)+'</div><div class="mut">Κλείσε αυτό το παράθυρο και ξαναπάτα «Connect» στο Claude.</div>'; };
+async function api(method, path, body){
+  const { data: { session } } = await sb.auth.getSession(); if(!session) throw new Error('χωρίς σύνδεση');
+  const r = await fetch(SB + '/auth/v1' + path, { method, headers: { apikey: KEY, authorization: 'Bearer ' + session.access_token, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.msg || j.message || j.error_description || j.error || ('HTTP ' + r.status)); return j;
+}
+function login(msg){
+  box.innerHTML = '<div>Σύνδεση με τον λογαριασμό σου στο <b>Παραδόχαρτο</b>:</div>'
+    + '<input id="u" autocomplete="username" placeholder="Όνομα χρήστη" autocapitalize="none"><input id="p" type="password" autocomplete="current-password" placeholder="Κωδικός">'
+    + '<button class="pri" id="go">Σύνδεση</button><div id="m" class="'+(msg?'err':'mut')+'">'+E(msg||'')+'</div>';
+  const go = async ()=>{ let e = document.getElementById('u').value.trim(); const pw = document.getElementById('p').value; if(!e || !pw) return;
+    if(e.indexOf('@') < 0) e = e.toLowerCase() + '@paradoxarto.app';
+    document.getElementById('m').textContent = 'Μια στιγμή…';
+    const r = await sb.auth.signInWithPassword({ email: e, password: pw });
+    if(r.error) return login(/invalid login/i.test(r.error.message) ? 'Λάθος όνομα χρήστη ή κωδικός.' : r.error.message);
+    consent(); };
+  document.getElementById('go').onclick = go; document.getElementById('p').onkeydown = ev=>{ if(ev.key === 'Enter') go(); };
+}
+async function consent(){
+  if(!/^[\w-]{8,}$/.test(AID)) return fail('Λείπει το αίτημα σύνδεσης (authorization_id).');
+  const { data: { session } } = await sb.auth.getSession(); if(!session) return login();
+  let d; try{ d = await api('GET', '/oauth/authorizations/' + encodeURIComponent(AID)); }catch(e){ return /session|jwt|χωρίς/i.test(e.message) ? login() : fail(e.message); }
+  if(d && d.redirect_url && !d.authorization_id){ location.replace(d.redirect_url); return; }   // έχει ήδη εγκριθεί
+  const who = String(session.user.email || '').replace(/@paradoxarto\.app$/, ''), cl = (d.client && (d.client.name || d.client.client_name)) || 'Claude';
+  const ru = String(d.redirect_uri || ''), trusted = /^https:\/\/(claude\.ai|claude\.com)\//.test(ru);
+  box.innerHTML = '<div style="font-size:17px"><b>'+E(cl)+'</b> ζητά πρόσβαση στο Παραδόχαρτο με τον λογαριασμό σου <b>'+E(who)+'</b>.</div>'
+    + '<div class="mut">Θα μπορεί <b>μόνο</b> να κάνει ό,τι κάνει η σελίδα «Ανέβασμα ιστορικού»: να ανοίγει τις σαρώσεις σου, να βάζει ιστορικά στα «Νέα ιστορικά» και πορίσματα για έλεγχο, και να στέλνει το σαρωμένο πρόγραμμα χειρουργείου. Με τα ίδια δικαιώματα που έχεις στην εφαρμογή.</div>'
+    + (trusted ? '' : '<div class="err">⚠ Η επιστροφή δεν πάει στο claude.ai ('+E(ru.slice(0, 60))+') — μην εγκρίνεις αν δεν το ξεκίνησες εσύ.</div>')
+    + '<button class="pri" id="ok">Έγκριση</button><button class="sec" id="no">Άρνηση</button>'
+    + '<div class="mut" style="text-align:center">Δεν είσαι ο '+E(who)+'; <a href="#" id="out">Αποσύνδεση</a></div>';
+  const dec = async (action)=>{ box.querySelectorAll('button').forEach(b=>b.disabled = true);
+    try{ const r = await api('POST', '/oauth/authorizations/' + encodeURIComponent(AID) + '/consent', { action }); if(r.redirect_url) location.replace(r.redirect_url); else fail('Χωρίς απάντηση επιστροφής.'); }catch(e){ fail(e.message); } };
+  document.getElementById('ok').onclick = ()=>dec('approve'); document.getElementById('no').onclick = ()=>dec('deny');
+  document.getElementById('out').onclick = async ev=>{ ev.preventDefault(); await sb.auth.signOut(); login(); };
+}
+consent();
+</script>
+</body></html>
