@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v234';
+const APP_VER = '2026-11-09r-v235';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13491,6 +13491,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   };
   window.pdxOrderSheet = async function(k, pre){
     const d = recOf(k); if(!d) return;
+    // ⚡ 9/11 (χρήστης: «μέχρι να πατήσω τις εξετάσεις να ανοίγει την παραγγελία»): ΠΡΟΕΤΟΙΜΑΣΙΑ από ΚΑΘΕ είσοδο της παραγγελίας
+    // (μενού ενεργειών, κουμπί 🧾 του ασθενή, καρτέλα, ιστορικό) — το bot ανοίγει ήδη ασθενή + φόρμα Medilabi όσο διαλέγεις (1 φορά / 4′ ανά ασθενή)
+    if(!(pre && pre.multi)) try{ if(typeof sb6!=='undefined' && window.pdxIsBotUser && pdxIsBotUser()){ const K='pdx_oprep_'+nrm(d.name), last=+(sessionStorage.getItem(K)||0);
+      if(Date.now()-last > 240000){ sessionStorage.setItem(K, String(Date.now())); sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload: window.pdxPrintAt && window.pdxPrintAt() ? {printAt: window.pdxPrintAt()} : {}}).then(()=>{}, ()=>{}); } } }catch(e){}
     const P = await pdxOrderPacks(), cat = await pdxMedCatalog();
     const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
     let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t=>{ if(rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
@@ -13616,9 +13620,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(id==='comorb'){ const p=document.getElementById('mobSubPop'); if(p) p.remove(); return window.pdxComorbOpen && pdxComorbOpen(k); }
     if(id==='ahfylabs'){ const p=document.getElementById('mobSubPop'); if(p) p.remove(); return window.pdxAhfyLabsOpen && pdxAhfyLabsOpen(k); }
     if(id==='order'){
-      // ⚡ Προετοιμασία: το bot ανοίγει ήδη τον ασθενή και τη φόρμα του Medilabi όσο διαλέγεις εξετάσεις (σιωπηλά, 1 φορά / 4′ ανά ασθενή)
-      try{ if(typeof sb6!=='undefined' && window.pdxIsBotUser && pdxIsBotUser()){ const K='pdx_oprep_'+nrm(d.name), last=+(sessionStorage.getItem(K)||0);
-        if(Date.now()-last > 240000){ sessionStorage.setItem(K, String(Date.now())); sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload: window.pdxPrintAt() ? {printAt: window.pdxPrintAt()} : {}}).then(()=>{}, ()=>{}); } } }catch(e){}
+      // ⚡ η προετοιμασία γίνεται πλέον μέσα στο pdxOrderSheet (από όπου κι αν ανοίξει η παραγγελία)
       { const p=document.getElementById('mobSubPop'); if(p) p.remove(); }
       window.pdxOrderSheet(k, pre);
       return;
