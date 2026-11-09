@@ -2268,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v259';
+const APP_VER = '2026-11-09x-v260';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18409,6 +18409,22 @@ function histPendRefresh(){
       });
       var un = list.filter(function(r){ return !Object.keys(m).some(function(k){ return m[k].row.id===r.id; }); }).length;
       var sig = Object.keys(m).sort().map(function(k){ return k+':'+m[k].row.id+':'+m[k].level; }).join('|') + '#' + un;
+      // ⚡ 9/11 (χρήστης: «να μπαίνει αυτόματα στο Παραδόχαρτο, λιγότερα κλικ»): ιστορικό από σάρωση που ταιριάζει ΣΙΓΟΥΡΑ σε ασθενή
+      // ΧΩΡΙΣ ιστορικό → μπαίνει αμέσως στην καρτέλα του (με τα ίδια αυτόματα διορθωτικά). Τα «αβέβαια» μένουν σημειωμένα για έλεγχο
+      // (reviewed:false) — ο γιατρός τα βλέπει όταν ανοίξει το ιστορικό. Ασθενής με ήδη ιστορικό ή πολλοί πιθανοί → όπως πριν («Νέα ιστορικά»).
+      Object.keys(m).forEach(function(k){ try{
+        var it = m[k], rec = store(it.extra)[k], d0 = (it.row && it.row.data) || {};
+        if(!rec || rec.caseHist || !d0._scan || (window.__histAuto = window.__histAuto || {})[it.row.id]) return;
+        window.__histAuto[it.row.id] = 1;
+        var parsed = JSON.parse(JSON.stringify(d0)); Object.keys(parsed).forEach(function(x){ if(x.charAt(0)==='_') delete parsed[x]; });
+        try{ if(typeof rulesApply==='function') rulesApply(parsed); }catch(e){}
+        try{ if(typeof lexApply==='function') lexApply(parsed); }catch(e){}
+        try{ if(typeof smartFix==='function') smartFix(parsed); }catch(e){}
+        rec.caseHist = { v:1, at:Date.now(), imgId:null, d:parsed, reviewed:false, auto:true };
+        saveEntryToStorage(k, it.extra, rec, true);
+        delete m[k]; histInboxDone(it.row.id);
+        try{ toast('✓ Ιστορικό '+String(rec.name||it.row.label||'').slice(0,40)+' μπήκε αυτόματα', 2500); }catch(e){}
+      }catch(e){} });
       window.HIST_PEND = m; window.HIST_UNASSIGNED = un; window.HIST_LAST = list;
       if(sig !== histPendSig){ histPendSig = sig; histPendPaint(); }
     }).catch(function(){});
