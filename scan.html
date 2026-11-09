@@ -41,7 +41,7 @@ a.go2{color:#9fd4ff;font-size:14px}
 </head><body>
 <div id="app">
   <div class="cam"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas><div class="hint" id="hint" style="display:none"></div><div class="flash" id="fl"></div><div class="msg" id="msg"><div class="spin"></div></div></div>
-  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="prg" aria-label="Πρόγραμμα" style="width:auto;min-width:52px;padding:0 7px;font-size:12px;font-weight:800;line-height:1.15">🗓<br>Πρόγραμμα</button><button class="gal" id="opn" aria-label="Πρακτικό" style="width:auto;min-width:52px;padding:0 7px;font-size:12px;font-weight:800;line-height:1.15">📝<br>Πρακτικό</button><button class="gal" id="scn" aria-label="Σκάνερ" style="width:auto;min-width:52px;padding:0 7px;font-size:12px;font-weight:800;line-height:1.15">📄<br>Σκάνερ</button></div>
+  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="mod" aria-label="Τι σαρώνω" style="width:auto;min-width:96px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.2"></button></div>
 </div>
 <div id="ed"><div id="edw"><canvas id="edc"></canvas><canvas id="edo"></canvas><div class="hint">Σύρε τις μπλε γωνίες στις άκρες του χαρτιού</div></div>
   <div class="edb"><button class="btn sec" id="edx" style="min-width:0">↺ Ξανά</button><button class="btn sec" id="edf" style="min-width:0">Όλη η φωτό</button><button class="btn" id="edk" style="min-width:0;background:#0A84FF">✓ Σάρωση</button></div></div>
@@ -109,18 +109,21 @@ async function fromFiles(fs){ fs = [...(fs || [])].slice(0, 4); if(!fs.length) r
   if(scOn() && bm.length === 1){ const c = DS.grab(bm[0], bm[0].width, bm[0].height), q = DS.detectOn(c, c.width, c.height); if(q) return editor(c, q); }
   if(scOn()){ const out = bm.map(b=>{ const c = DS.grab(b, b.width, b.height), q = DS.detectOn(c, c.width, c.height); return q ? DS.warp(c, q) : b; }); return send(out); }
   send(bm); }
-// 🗓/📝 9/11 (χρήστης: «σβήσε το οριζόντιο· κουμπιά για πρόγραμμα και πρακτικό, να μη μπορούν να πατηθούν ταυτόχρονα»):
-// ΕΝΑΣ τρόπος τη φορά (pdx_scan_mode): «prog» = πρόγραμμα χειρουργείου (email, σελίδα πάντα ΟΡΙΖΟΝΤΙΑ) · «op» = πρακτικό → Claude ·
-// κανένα = αυτόματα (οριζόντιο χαρτί → πρόγραμμα, όρθιο → ιστορικό/πόρισμα στο Claude). Το ένα σβήνει το άλλο· ξανά πάτημα = σβήνει.
+// 🔄 9/11 (χρήστης: «μόνιμα σκάνερ· οριζόντιο Α4 = πρόγραμμα, όρθιο = ιστορικό· ή κουμπί επιλογής»): ΕΝΑ κουμπί «τι σαρώνω» (pdx_scan_mode):
+//  ""  = 🔄 Αυτόματα — οριζόντιο χαρτί → πρόγραμμα χειρουργείου (email) · όρθιο → ιστορικό/πόρισμα (Claude)
+//  "prog" = 🗓 Πρόγραμμα (πάντα, και όρθια φωτογραφία) · "hist" = 📄 Ιστορικό/πόρισμα (πάντα Claude) · "op" = 📝 Πρακτικό (βιβλίο → φωτογραφία, ΧΩΡΙΣ ανίχνευση φύλλου)
+// Ο ανιχνευτής φύλλου (σκάνερ) είναι ΠΑΝΤΑ ανοιχτός, εκτός από το Πρακτικό.
 const MODE = 'pdx_scan_mode';
-const modeGet = ()=>{ try{ const m = localStorage.getItem(MODE); if(m != null) return m;
+const MODES = { '': ['🔄', 'Αυτόματα', 'οριζόντιο χαρτί → πρόγραμμα · όρθιο → ιστορικό/πόρισμα'], prog: ['🗓', 'Πρόγραμμα', 'πρόγραμμα χειρουργείου → email'], hist: ['📄', 'Ιστορικό', 'ιστορικό ή πόρισμα (π.χ. αξονικής) → Claude'], op: ['📝', 'Πρακτικό', 'πρακτικό χειρουργείου από το βιβλίο → Claude'] };
+const modeGet = ()=>{ try{ const m = localStorage.getItem(MODE); if(m != null) return MODES[m] ? m : '';
   const old = localStorage.getItem('pdx_scan_op') === '1' ? 'op' : localStorage.getItem('pdx_scan_rot') === '1' ? 'prog' : ''; localStorage.setItem(MODE, old); return old; }catch(e){ return ''; } };
-const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog';
-const modePaint = ()=>{ const m = modeGet(), P = $('prg'), O = $('opn');
-  P.style.background = m === 'prog' ? '#34C759' : '#ffffff26'; P.innerHTML = m === 'prog' ? '🗓 ✓<br>Πρόγραμμα' : '🗓<br>Πρόγραμμα';
-  O.style.background = m === 'op' ? '#0A84FF' : '#ffffff26'; O.innerHTML = m === 'op' ? '📝 ✓<br>Πρακτικό' : '📝<br>Πρακτικό'; };
-const modeSet = (x)=>{ try{ localStorage.setItem(MODE, modeGet() === x ? '' : x); }catch(e){} modePaint(); };
-$('prg').onclick = ()=>modeSet('prog'); $('opn').onclick = ()=>modeSet('op'); modePaint();
+const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog', histOn = ()=>modeGet() === 'hist';
+const modePaint = ()=>{ const m = modeGet(), M = MODES[m], b = $('mod'); b.innerHTML = M[0] + ' ' + M[1] + ' ▾'; b.style.background = m ? (m === 'prog' ? '#34C759' : m === 'op' ? '#AF52DE' : '#0A84FF') : '#ffffff26'; };
+const modeSet = (x)=>{ try{ localStorage.setItem(MODE, x); }catch(e){} modePaint(); };
+$('mod').onclick = ()=>{ if(busy) return; const cur = modeGet();
+  msg('<b style="font-size:19px">Τι σαρώνω;</b>' + Object.keys(MODES).map(k=>'<button class="btn" data-m="' + k + '" style="width:100%;max-width:340px;text-align:left;background:' + (k === cur ? '#0A84FF' : '#ffffff1f') + '"><b>' + MODES[k][0] + ' ' + MODES[k][1] + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + MODES[k][2] + '</span></button>').join(''));
+  $('msg').querySelectorAll('[data-m]').forEach(x=>x.onclick = ()=>{ modeSet(x.dataset.m); $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); }); };
+modePaint();
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
 
@@ -128,9 +131,7 @@ $('cf').onchange = (e)=>fromFiles(e.target.files);
 // ================= 📄 ΣΚΑΝΕΡ ΕΓΓΡΑΦΩΝ (9/11, χρήστης: «κανονικό σκάνερ με τα μπλε, όχι σαν φωτό») =================
 // Χωρίς βιβλιοθήκες: μικρό αντίγραφο του καρέ → γκρι → κατώφλι Otsu → μεγαλύτερη φωτεινή περιοχή (το χαρτί) → 4 γωνίες.
 // Λήψη → μπλε γωνίες που σέρνονται → ίσιωμα (ομογραφία) σε Α4 (οριζόντιο αν το χαρτί είναι οριζόντιο) → «λεύκανση» σαν σκάνερ.
-const SCK = 'pdx_scan_doc', scOn = ()=>{ try{ return localStorage.getItem(SCK) !== '0'; }catch(e){ return true; } };
-const scPaint = ()=>{ const b = $('scn'); b.style.background = scOn() ? '#0A84FF' : '#ffffff26'; b.innerHTML = scOn() ? '📄 ✓<br>Σκάνερ' : '📄<br>Σκάνερ'; };
-$('scn').onclick = ()=>{ try{ localStorage.setItem(SCK, scOn() ? '0' : '1'); }catch(e){} scPaint(); }; scPaint();
+const scOn = ()=>!opOn();   // 9/11: σκάνερ πάντα (εκτός από το πρακτικό του βιβλίου)
 const DS = (()=>{
   // gray: Uint8Array w*h → τετράπλευρο [[x,y]×4] (πάνω-αρ, πάνω-δε, κάτω-δε, κάτω-αρ) σε συντεταγμένες της μικρής εικόνας ή null
   function quadGray(g, w, h){
@@ -302,7 +303,7 @@ async function progFlow(pages, raw){
   }
 }
 async function send(srcs, w0, h0){
-  busy = true; const v = $('v'); const turn = rotOn(), land = turn || isLand(srcs, w0, h0);
+  busy = true; const v = $('v'); const turn = rotOn(), land = turn || (!histOn() && isLand(srcs, w0, h0));
   // για «Δεν είναι πρόγραμμα → Claude»: κρατάμε τις πηγές (στιγμιότυπο του βίντεο σε καμβά)
   try{ window.__lastPages = { srcs: srcs.map(sr=>{ const w = w0 || sr.width, h = h0 || sr.height; const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(sr, 0, 0, w, h); return c; }), w:0, h:0 }; }catch(e){}
   msg('<div class="spin"></div><div>Ανέβασμα…</div>');
@@ -323,9 +324,23 @@ async function send(srcs, w0, h0){
     window.__scanForceClaude = false;
     const id = await rpc('scan_put', { p_token: tok.get(), p_payload: { pages } });
     const tag = '#s' + id + 'k' + [...raw].map(b=>b.toString(16).padStart(2, '0')).join('') + (op ? 'o' : '');
-    window.__scanNav = CLAUDE_APP + tag;
-    msg('<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div><a class="go" href="' + CLAUDE_APP + tag + '">Άνοιγμα στην εφαρμογή Claude</a><a class="go2" href="' + CLAUDE + tag + '" target="_blank" rel="noopener">ή στον browser</a>');
-    if(!window.__scanNoNav){ try{ location.href = CLAUDE_APP + tag; }catch(e){} }
+    // 💬 9/11 (συνάδελφος: «τον πέταξε στη σελίδα και δεν διάβασε»): η σελίδα-artifact ΔΕΝ δίνει τη σύνδεση «Παραδόχαρτο» σε άλλους λογαριασμούς Claude.
+    // → ΣΥΖΗΤΗΣΗ Claude: νέα συζήτηση με έτοιμο μήνυμα «διάβασε τη σάρωση #s…k…» → εργαλεία scan_read/scan_save της σύνδεσης «Παραδόχαρτο».
+    // Η σελίδα (artifact) μένει για τον διαχειριστή και το πρακτικό. Η συσκευή θυμάται τι πάτησε τελευταία (pdx_scan_via) και την επόμενη φορά ανοίγει μόνο του.
+    const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο.';
+    const chatU = 'https://claude.ai/new?q=' + encodeURIComponent(ask);
+    let via = ''; try{ via = localStorage.getItem('pdx_scan_via') || ''; }catch(e){}
+    if(op) via = 'page';
+    window.__scanNav = via === 'page' ? CLAUDE_APP + tag : via === 'chat' ? chatU : '';
+    window.__scanAsk = ask;
+    msg('<div style="font-size:54px">🤖</div><div>' + (via ? 'Ανοίγει το Claude…' : 'Πού να διαβαστεί;') + '</div>'
+      + (op ? '' : '<a class="go" id="vchat" href="' + chatU + '">💬 Συζήτηση Claude</a><div style="font-size:13px;opacity:.75;max-width:320px;text-align:center">με τη σύνδεση «Παραδόχαρτο» στον λογαριασμό σου (συνάδελφοι)· αν δεν γραφτεί μόνο του το μήνυμα: Επικόλληση</div>')
+      + '<a class="go2" id="vpage" href="' + CLAUDE_APP + tag + '">📄 Σελίδα Σάρωσης (διαχειριστής)</a>');
+    const remember = (v)=>{ try{ localStorage.setItem('pdx_scan_via', v); }catch(e){} };
+    if($('vchat')) $('vchat').onclick = ()=>{ remember('chat'); try{ navigator.clipboard && navigator.clipboard.writeText(ask); }catch(e){} };
+    $('vpage').onclick = ()=>{ if(!op) remember('page'); };
+    if(via === 'chat'){ try{ navigator.clipboard && navigator.clipboard.writeText(ask).catch(()=>{}); }catch(e){} }
+    if(via && !window.__scanNoNav){ try{ location.href = window.__scanNav; }catch(e){} }
     setTimeout(()=>{ busy = false; }, 1500);
     // όταν ξαναγυρίσεις στην εφαρμογή: πάλι κάμερα
     const back = ()=>{ if(document.hidden) return; document.removeEventListener('visibilitychange', back); if(stream) $('msg').style.display = 'none'; else camera(); };
