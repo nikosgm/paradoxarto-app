@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09f-v220';
+const APP_VER = '2026-11-09g-v221';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20675,7 +20675,7 @@ window.CLS_MODE='A';
     if(st) return;
     const ov = document.createElement('div'); ov.id = 'pdxScanOv';
     ov.style.cssText = 'position:fixed;inset:0;z-index:100001;background:#000;color:#fff;display:flex;flex-direction:column;font-family:-apple-system,system-ui,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
-    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px"><button data-x style="'+B+'background:transparent;color:#fff">✕</button><b style="flex:1;font-size:16px">📷 Σάρωση</b><button data-rot style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px"></button></div>'
+    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px"><button data-x style="'+B+'background:transparent;color:#fff">✕</button><b style="flex:1;font-size:16px">📷 Σάρωση</b><button data-turn aria-label="Περιστροφή εικόνας" style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px">↻ 0°</button><button data-rot style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px"></button></div>'
       + '<div data-modes style="display:none;gap:8px;padding:0 10px 8px"><button data-mode="auto" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🤖 Αυτόματα (Claude)</button><button data-mode="prog" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🗓 Πρόγραμμα → email</button></div>'
       + '<div data-cam style="position:relative;flex:1;overflow:hidden"><video data-v playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
       + '<div data-g style="position:absolute;border:3px solid #34C759;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>'
@@ -20690,6 +20690,8 @@ window.CLS_MODE='A';
     st = { ov, mode: m0, land: landPref(m0), pages: [] };
     const $ = s=>ov.querySelector(s), v = $('[data-v]');
     $('[data-x]').onclick = close;
+    // ↻ 9/11 (χρήστης): περιστροφή της εικόνας ανά 90° — ισχύει για τις επόμενες λήψεις (και από τη συλλογή / κάμερα iPhone)
+    st.turn = 0; $('[data-turn]').onclick = ()=>{ st.turn = (st.turn + 90) % 360; $('[data-turn]').textContent = '↻ '+st.turn+'°'; $('[data-turn]').style.background = st.turn ? '#34C759' : '#ffffff22'; };
     $('[data-rot]').onclick = ()=>{ st.land = !st.land; try{ localStorage.setItem('pdx_scan_land_'+st.mode, st.land?'1':'0'); }catch(e){} layout(); };
     ov.querySelectorAll('[data-mode]').forEach(b=>b.onclick = ()=>{ if(st.pages.length && b.dataset.mode!==st.mode) return toast('Στείλε πρώτα τις σελίδες που τράβηξες'); st.mode = b.dataset.mode; st.land = landPref(st.mode); try{ localStorage.setItem(MODEFILE, st.mode); }catch(e){} layout(); });
     // «Στο Claude ›»: απλός σύνδεσμος (ανοίγει την εφαρμογή Claude) — όλα έχουν ήδη ανέβει· μετά η κάμερα κλείνει
@@ -20703,12 +20705,14 @@ window.CLS_MODE='A';
       const auto = st.mode==='auto';
       const c = crop || {x:0, y:0, w:sw, h:sh};
       const sc = Math.min(1, (auto ? 1800 : 2400)/Math.max(c.w, c.h)), cw = Math.round(c.w*sc), ch = Math.round(c.h*sc);
-      const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; const x = cv.getContext('2d', {willReadFrequently:true});
-      x.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, cw, ch);
-      if(!auto) x.putImageData(enhance(x.getImageData(0,0,cw,ch)), 0, 0);   // στα χειρόγραφα κρατάμε το χρώμα (μπλε στυλό, μολύβι)
+      const tn = st.turn || 0, sw2 = tn===90 || tn===270;
+      const cv = document.createElement('canvas'); cv.width = sw2 ? ch : cw; cv.height = sw2 ? cw : ch; const x = cv.getContext('2d', {willReadFrequently:true});
+      if(tn){ x.translate(cv.width/2, cv.height/2); x.rotate(tn*Math.PI/180); x.drawImage(src, c.x, c.y, c.w, c.h, -cw/2, -ch/2, cw, ch); x.setTransform(1,0,0,1,0,0); }
+      else x.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, cw, ch);
+      if(!auto) x.putImageData(enhance(x.getImageData(0,0,cv.width,cv.height)), 0, 0);   // στα χειρόγραφα κρατάμε το χρώμα (μπλε στυλό, μολύβι)
       const blob = await new Promise(r=>cv.toBlob(r, 'image/jpeg', 0.8));
       if(auto){ st.busy = false; const pg = { url: URL.createObjectURL(blob) }; st.pages.push(pg); pagesDraw(); flash(); queuePage(pg, blob, ckP); return; }
-      const jpg = new Uint8Array(await blob.arrayBuffer()), pdf = jpegPdf(jpg, cw, ch, cw > ch);
+      const jpg = new Uint8Array(await blob.arrayBuffer()), pdf = jpegPdf(jpg, cv.width, cv.height, cv.width > cv.height);
       $('[data-prev]').src = URL.createObjectURL(blob); $('[data-prev]').style.display = ''; $('[data-g]').style.display = 'none'; $('[data-bar]').style.display = 'none';
       countdown(pdf, ckP);
     }
