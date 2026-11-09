@@ -292,6 +292,8 @@ async function progFlow(pages, raw){
       for(const r of keys || []){ try{ const pub = typeof r.pub === 'string' ? JSON.parse(r.pub) : r.pub; const k = await crypto.subtle.importKey('jwk', { kty:'RSA', n:pub.n, e:pub.e, alg:'RSA-OAEP-256', ext:true }, { name:'RSA-OAEP', hash:'SHA-256' }, false, ['encrypt']); wk[r.fp] = b64(new Uint8Array(await crypto.subtle.encrypt({ name:'RSA-OAEP' }, k, raw))); }catch(e){} }
       if(!Object.keys(wk).length) throw new Error('δεν βρέθηκε κλειδί υπολογιστή του bot');
       const id = await rpc('scan_prog', { p_token: tok.get(), p_payload: { pages, wk } });
+      // ⚡ 9/11: άμεσο σήμα στα bots (το email του προγράμματος ξεκινά αμέσως, όχι στον επόμενο έλεγχο)
+      try{ fetch(SB + '/realtime/v1/api/broadcast', { method:'POST', headers:{ apikey: KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ messages:[{ topic:'efbot-ping', event:'job', payload:{ at: Date.now() } }] }) }).catch(()=>{}); }catch(e){}
       window.__scanProgId = id;
       msg('<div class="spin"></div><div>Το bot στέλνει από το Kerio…</div><div style="opacity:.7;font-size:14px">μπορείς να κλείσεις — έρχεται ειδοποίηση όταν σταλεί</div>');
       const t0 = Date.now();

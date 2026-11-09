@@ -975,7 +975,8 @@ const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
   window.pdxJobPing = function(){ clearTimeout(t); t = setTimeout(()=>{ try{ const ch = (window.__efbotPingCh && window.__efbotPingCh.state === 'joined') ? window.__efbotPingCh : (window.__pdxJobPingCh || (window.__pdxJobPingCh = sb6.channel('efbot-ping')));
     ch.send({type:'broadcast', event:'job', payload:{at:Date.now()}}).catch(()=>{}); }catch(e){} }, 60); };
   window.fetch = function(u, o){ const p = F.apply(this, arguments); try{ const url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
-    if(m === 'POST' && /\/rest\/v1\/oncall_jobs(\?|$)/.test(url)) p.then(r=>{ if(r && r.ok) window.pdxJobPing(); }, ()=>{}); }catch(e){} return p; };
+    // 9/11: και ΑΛΛΑΓΕΣ εντολών (έγκριση/ακύρωση από το κινητό: PATCH) → άμεσο σήμα (όχι αναμονή της ειδοποίησης της βάσης)
+    if((m === 'POST' || m === 'PATCH') && /\/rest\/v1\/oncall_jobs(\?|$)/.test(url)) p.then(r=>{ if(r && r.ok) window.pdxJobPing(); }, ()=>{}); }catch(e){} return p; };
 }catch(e){} })();
 const sb6 = window.supabase.createClient(SB6_URL, SB6_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});
 // Παλιά σημεία της εφαρμογής μιλούν στη βάση με το δημόσιο κλειδί (ανώνυμα): αρχείο, εισερχόμενα ιστορικά/εργαστηριακά,
