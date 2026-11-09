@@ -330,7 +330,8 @@ async function send(srcs, w0, h0){
     const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο.';
     // 9/11: μέσα στην εφαρμογή «Σάρωση» (PWA) το https://claude.ai άνοιγε ΜΕΣΑ στη Σάρωση → σχήμα claude:// (ανοίγει την εφαρμογή Claude, όπως η σελίδα)
     const chatW = 'https://claude.ai/new?q=' + encodeURIComponent(ask), chatU = chatW.replace(/^https:\/\//, 'claude://');
-    let via = ''; try{ via = localStorage.getItem('pdx_scan_via') || ''; }catch(e){}
+    // 9/11 (χρήστης: «το πάτημα της λήψης να είναι και εντολή αποστολής στο Claude, χωρίς κουμπί»): προεπιλογή = συζήτηση Claude ΑΜΕΣΑ
+    let via = 'chat'; try{ via = localStorage.getItem('pdx_scan_via') || 'chat'; }catch(e){}
     if(op) via = 'page';
     window.__scanNav = via === 'page' ? CLAUDE_APP + tag : via === 'chat' ? chatU : '';
     window.__scanAsk = ask;
