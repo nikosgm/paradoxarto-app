@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v256';
+const APP_VER = '2026-11-09x-v257';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8166,7 +8166,7 @@ document.head.appendChild(st);
   };
   // 🔑 9/11 (χρήστης: «βάλε ρύθμιση έλεγχος κωδικών»): μπαίνει το bot με τους αποθηκευμένους κωδικούς; — ανά υπολογιστή
   // ΝΠΣ / ΑΗΦΥ / e-prescription / Medilabi (εντολή logins) + κάθε λογαριασμός e-prescription (epaccs). Καμία ενέργεια σε ασθενή.
-  // Ρύθμιση: αυτόματος έλεγχος κάθε πρωί (06:40–06:59) — ειδοποίηση ΜΟΝΟ αν κάτι δεν δουλεύει (oncall_config «credcheck»).
+  // Ρύθμιση: αυτόματος έλεγχος κάθε πρωί (05:00–05:59) — ειδοποίηση ΜΟΝΟ αν κάτι δεν δουλεύει (oncall_config «credcheck»).
   window.pdxCredCheck = async function(){
     if(typeof sb6==='undefined') return;
     const E2 = x=>esc(String(x==null?'':x));
@@ -8176,7 +8176,7 @@ document.head.appendChild(st);
     let bots = []; try{ const r = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); bots = (r.data||[]).map(x=>({id:x.name_key.slice(9), at:Date.parse(x.updated_at)||0})).filter(b=>Date.now()-b.at < 30*60e3).sort((a,b)=>String(N[a.id]||'~').localeCompare(String(N[b.id]||'~'))); }catch(e){}
     const RES = {}, BUSY = {};
     const pg = iosPage('Έλεγχος κωδικών', 'Ρυθμίσεις', ()=>{
-      let h = iosGroup('', [{t:'Αυτόματα κάθε πρωί (06:40)', sub:'ειδοποίηση μόνο αν κάποιος κωδικός δεν δουλεύει', sw:!!C.auto, data:'data-auto'}], 'Κάθε υπολογιστής ελέγχει μόνος του αν μπαίνει σε ΝΠΣ, ΑΗΦΥ, e-prescription και Medilabi. Δεν ανοίγει κανέναν ασθενή.');
+      let h = iosGroup('', [{t:'Αυτόματα κάθε πρωί (05:00)', sub:'ειδοποίηση μόνο αν κάποιος κωδικός δεν δουλεύει', sw:!!C.auto, data:'data-auto'}], 'Κάθε υπολογιστής ελέγχει μόνος του αν μπαίνει σε ΝΠΣ, ΑΗΦΥ, e-prescription και Medilabi. Δεν ανοίγει κανέναν ασθενή.');
       h += '<div style="margin:6px 16px 0"><button data-all '+(Object.keys(BUSY).length?'disabled ':'')+'style="width:100%;height:46px;border:0;border-radius:12px;background:var(--acc,#0A84FF);color:#fff;font-size:16.5px;font-weight:700">🔑 Έλεγχος τώρα σε όλους ('+bots.length+')</button></div>';
       if(!bots.length) h += '<div style="margin:16px;color:#8E8E93">Κανένας υπολογιστής bot ενεργός την τελευταία μισή ώρα.</div>';
       bots.forEach(b=>{ const k = b.id;
