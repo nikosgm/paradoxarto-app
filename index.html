@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v238';
+const APP_VER = '2026-11-09r-v239';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8160,6 +8160,44 @@ document.head.appendChild(st);
       return Object.entries(row.v||{}).map(([i,v])=>({d:String(D.dates[+i]||'').slice(0,8), t:ts(D.dates[+i]), v:num(v)})).filter(o=>o.v!=null && o.t).sort((a,b)=>a.t-b.t).map(o=>({d:o.d, v:o.v})); };
     return { psa: pick(/^(t-?psa|psa)(\b| ολικ| total|$)(?!.*(free|ελευθ))/), fpsa: pick(/(f-?psa|free psa|psa ελευθ)/), cr: pick(/^(κρεατινινη|creat)/), hb: pick(/^(hgb|hb)\b/) };
   };
+  // 🔑 9/11 (χρήστης: «βάλε ρύθμιση έλεγχος κωδικών»): μπαίνει το bot με τους αποθηκευμένους κωδικούς; — ανά υπολογιστή
+  // ΝΠΣ / ΑΗΦΥ / e-prescription / Medilabi (εντολή logins) + κάθε λογαριασμός e-prescription (epaccs). Καμία ενέργεια σε ασθενή.
+  // Ρύθμιση: αυτόματος έλεγχος κάθε πρωί (06:40–06:59) — ειδοποίηση ΜΟΝΟ αν κάτι δεν δουλεύει (oncall_config «credcheck»).
+  window.pdxCredCheck = async function(){
+    if(typeof sb6==='undefined') return;
+    const E2 = x=>esc(String(x==null?'':x));
+    const say = t=>{ const d = document.createElement('div'); d.textContent = t; d.style.cssText = 'position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100001;background:#1F2933;color:#fff;border-radius:12px;padding:10px 16px;font-size:15px;max-width:90vw;text-align:center'; document.body.appendChild(d); setTimeout(()=>d.remove(), 2200); };
+    const N = Object.assign({}, window.pdxBotNames ? await pdxBotNames(true) : {});
+    let C = {auto:false}; try{ const r = await sb6.from('oncall_config').select('value').eq('key','credcheck').maybeSingle(); if(r.data && r.data.value) C = Object.assign(C, r.data.value); }catch(e){}
+    let bots = []; try{ const r = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); bots = (r.data||[]).map(x=>({id:x.name_key.slice(9), at:Date.parse(x.updated_at)||0})).filter(b=>Date.now()-b.at < 30*60e3).sort((a,b)=>String(N[a.id]||'~').localeCompare(String(N[b.id]||'~'))); }catch(e){}
+    const RES = {}, BUSY = {};
+    const pg = iosPage('Έλεγχος κωδικών', 'Ρυθμίσεις', ()=>{
+      let h = iosGroup('', [{t:'Αυτόματα κάθε πρωί (06:40)', sub:'ειδοποίηση μόνο αν κάποιος κωδικός δεν δουλεύει', sw:!!C.auto, data:'data-auto'}], 'Κάθε υπολογιστής ελέγχει μόνος του αν μπαίνει σε ΝΠΣ, ΑΗΦΥ, e-prescription και Medilabi. Δεν ανοίγει κανέναν ασθενή.');
+      h += '<div style="margin:6px 16px 0"><button data-all '+(Object.keys(BUSY).length?'disabled ':'')+'style="width:100%;height:46px;border:0;border-radius:12px;background:var(--acc,#0A84FF);color:#fff;font-size:16.5px;font-weight:700">🔑 Έλεγχος τώρα σε όλους ('+bots.length+')</button></div>';
+      if(!bots.length) h += '<div style="margin:16px;color:#8E8E93">Κανένας υπολογιστής bot ενεργός την τελευταία μισή ώρα.</div>';
+      bots.forEach(b=>{ const k = b.id;
+        const rows = ['logins','epaccs'].map(kind=>{ const r = RES[k+'|'+kind], bz = BUSY[k+'|'+kind];
+          const lbl = kind==='logins' ? '🔑 Συνδέσεις (ΝΠΣ · ΑΗΦΥ · e-prescription · Medilabi)' : '💊 Κάθε λογαριασμός e-prescription';
+          return '<div style="padding:10px 14px;border-top:1px solid #EEF2F6"><div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-weight:600;font-size:14.5px">'+lbl+'</span><button data-run="'+E2(kind)+'" data-id="'+E2(k)+'" '+(bz?'disabled ':'')+'style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px;font-weight:700;font-size:14px">'+(bz?'⏳ '+E2(bz):'Έλεγχος')+'</button></div>'
+            + (r ? '<div style="white-space:pre-line;font-size:13.5px;margin-top:6px;color:'+(/✗|απέτυχε|δεν απάντησε/.test(r)?'#B42318':'#15803D')+'">'+E2(r)+'</div>' : '')+'</div>'; }).join('');
+        h += '<div class="ios-h">💻 '+E2(N[k]||'Υπολογιστής ···'+k.slice(-5))+'</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;overflow:hidden">'+rows+'</div>'; });
+      return h + '<div style="height:60px"></div>'; });
+    const run = async (id, kind)=>{ const key = id+'|'+kind; if(BUSY[key]) return; BUSY[key] = 'στέλνω…'; delete RES[key]; pg.redraw();
+      let jid = 0; try{ const r = await sb6.from('oncall_jobs').insert({name_key: kind==='epaccs'?'zzz_epaccs':'zzz_credchk', name:'🔑 Έλεγχος κωδικών', room:null, kind, payload:{only:id, bot:id, quiet:1}, status:'new'}).select('id').single(); if(r.error) throw r.error; jid = r.data.id; }
+      catch(e){ delete BUSY[key]; RES[key] = '✗ '+(e.message||e); return pg.redraw(); }
+      const t0 = Date.now();
+      while(Date.now()-t0 < 360e3){ await new Promise(r=>setTimeout(r, 3000)); if(!pg.el.isConnected) return;
+        let q = null; try{ q = (await sb6.from('oncall_jobs').select('status,note').eq('id', jid).maybeSingle()).data; }catch(e){}
+        if(q && !/^(new|seen|running)$/.test(q.status)){ delete BUSY[key]; RES[key] = (q.status==='done' ? '' : '✗ ')+String(q.note||q.status); return pg.redraw(); }
+        BUSY[key] = (q && q.status==='new' ? 'περιμένει' : 'έλεγχος')+' '+Math.round((Date.now()-t0)/1000)+'″'; pg.redraw(); }
+      delete BUSY[key]; RES[key] = '✗ δεν απάντησε σε 6′ (κλειστός ή απασχολημένος υπολογιστής;)'; pg.redraw(); };
+    pg.el.addEventListener('click', async e=>{
+      const a = e.target.closest('[data-auto]'); if(a){ C.auto = !C.auto; pg.redraw(); const r = await sb6.from('oncall_config').upsert({key:'credcheck', value:C, updated_at:new Date().toISOString()}, {onConflict:'key'}); if(r.error){ C.auto = !C.auto; pg.redraw(); say('Δεν αποθηκεύτηκε: '+r.error.message); } else say(C.auto ? '✓ Αυτόματος έλεγχος κάθε πρωί' : 'Αυτόματος έλεγχος: όχι'); return; }
+      const b = e.target.closest('[data-run]'); if(b) return run(b.dataset.id, b.dataset.run);
+      if(e.target.closest('[data-all]')) bots.forEach(x=>run(x.id, 'logins'));
+    });
+    return pg;
+  };
   window.pdxMdtOpen = function(){
     if(document.getElementById('pdxMdtOv')) return;
     const ov = document.createElement('div'); ov.id = 'pdxMdtOv';
@@ -8208,6 +8246,7 @@ document.head.appendChild(st);
         {ic:'🩺', t:'Κατάσταση συστημάτων', on:go("pdxHealth()")},
         adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:go("pdxAutoApprove()")},
         adm && {ic:'🔐', t:'Κωδικοί του bot', on:go("pdxDo('cred')")},
+        bot && {ic:'🔑', t:'Έλεγχος κωδικών', on:go("pdxCredCheck()")},
         adm && {ic:'🎛', t:'Κέντρο ελέγχου bot', on:go("pdxBotsPage()")},
         adm && {ic:'⬇️', t:'Κατέβασμα / ενημέρωση bot', on:go("pdxBotDownload()")}
       ]);
