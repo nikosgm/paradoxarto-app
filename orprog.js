@@ -158,11 +158,11 @@
       const D = typeof data !== "undefined" ? data : {}, X = typeof extraPatients !== "undefined" ? extraPatients : {};
       for (const [k, d] of [...Object.entries(D), ...Object.entries(X)]) { if (!d || !String(d.name || "").trim()) continue; L.push({ k, d }); }
     } catch (e) {}
-    const pre = (x) => x.d.pod === "Προς Χ/Ο" ? 0 : 1;
-    L.sort((a, b) => pre(a) - pre(b) || String(a.k).localeCompare(String(b.k), "el", { numeric: true }));
     // 🏥 9/11 (χρήστης: «από όλο το ΝΠΣ, όχι μόνο Παραδόχαρτο»): + όσοι νοσηλεύονται στον ΝΠΣ αλλά δεν είναι στο Παραδόχαρτο (τελευταία λίστα ΝΠΣ 3449)
     try { const N = (window.pdxNpsBulkList && window.pdxNpsBulkList()) || []; for (const x of N) if (x && x.d && String(x.d.name || "").trim()) L.push({ k: x.k, d: x.d, nps: true }); } catch (e) {}
-    return L;
+    // 🔤 9/11 (χρήστης): η λίστα επιλογής ΑΛΦΑΒΗΤΙΚΑ (επώνυμο) — Παραδόχαρτο και ΝΠΣ μαζί
+    const C = new Intl.Collator("el", { sensitivity: "base", numeric: true });
+    return L.sort((a, b) => C.compare(String(a.d.name || "").trim(), String(b.d.name || "").trim()) || C.compare(String(a.k), String(b.k)));
   }
   function fromPatient(k, d) {
     const info = (window.pdxNpsInfo && window.pdxNpsInfo(d)) || {};
