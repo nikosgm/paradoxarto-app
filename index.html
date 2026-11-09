@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v246';
+const APP_VER = '2026-11-09r-v247';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13527,6 +13527,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const prOf = s1=>(C.procs||[])[+((s1||{}).proc)||0] || {};
     const dtext = s1=>{ const pr = prOf(s1), sd = needSide(pr) && s1 && s1.side ? ' ('+String(s1.side).toLowerCase()+')' : ''; return 'Ασθενής υπεβλήθη σε '+String(pr.name||'ιατρική πράξη').toLowerCase()+(pr.code?' ('+pr.code+')':'')+sd+'. Εξέρχεται σε καλή γενική κατάσταση.'; };
     // το κείμενο ακολουθεί την πράξη/πλευρά όσο είναι το αυτόματο (οποιασδήποτε πράξης)· αν το άλλαξες με το χέρι, μένει το δικό σου
+    // 🕘 9/11 (χρήστης): ημ. εκτέλεσης πράξης = σήμερα 09:00 + 20′ × θέση στη λίστα (09:00, 09:20, 09:40…) — ίδια και στην επανάληψη
+    const actAt = k=>{ const m = 9*60 + 20*(+k||0), d = new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
     const isDef = t=>{ const x = String(t==null?'':t).trim(); if(!x) return true; return (C.procs||[]).some((p,k)=>[undefined].concat(SIDES).some(sd=>dtext({proc:k, side:sd}).trim()===x)); };
     const txOf = s1=>(s1 && s1.txt!=null && !isDef(s1.txt)) ? s1.txt : dtext(s1);
     // κατάσταση των εξιτηρίων που στάλθηκαν (μέχρι να εγκριθούν/αποτύχουν)
@@ -13610,7 +13612,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(!confirm('Εξιτήρια για '+L.length+' ασθενείς; Το bot τα συμπληρώνει ένα-ένα και κάθε ένα περιμένει τον δικό σου «Έλεγχο» πριν την αποθήκευση.')) return;
         for(const k of L){ const r = rows[k], s1 = sel[k], pr = C.procs[+s1.proc||0] || {};
           const txt = String(txOf(s1)).trim();
-          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:C.user||'KDOUROUMIS', proc:pr.name||'', code:pr.code||'', side:needSide(pr) ? (s1.side||'') : ''}, amka:r.amka||''}}).select('id').single();
+          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:C.user||'KDOUROUMIS', proc:pr.name||'', code:pr.code||'', side:needSide(pr) ? (s1.side||'') : '', actAt:actAt(k)}, amka:r.amka||''}}).select('id').single();
             if(ins.error) throw ins.error; s1.job = ins.data.id; s1.st = '📤 στάλθηκε στο bot'; }catch(x){ s1.st = '✗ δεν στάλθηκε: '+(x.message||x); }
         }
         selSave(); pg.redraw(); poll(); return;
