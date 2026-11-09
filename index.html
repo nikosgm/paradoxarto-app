@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v241';
+const APP_VER = '2026-11-09r-v242';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13552,7 +13552,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
             + (s0.job ? '<div style="font-size:13.5px;margin-top:6px;color:'+(/✗|απέτυχε|ακυρώθ/.test(s0.st||'')?'#B42318':/εγκρίθηκε|✅/.test(s0.st||'')?'#15803D':'#1D4E80')+'">'+E2(s0.st||'📤 στάλθηκε στο bot')+(s0.rev ? ' <button data-rev="'+(+s0.job)+'" style="border:0;background:#1D4E80;color:#fff;border-radius:9px;padding:5px 10px;font-weight:700">👀 Έλεγχος</button>' : '')+'</div>' : '')
             + '</div>'; });
         const n = Object.keys(sel).filter(k=>sel[k].on && rows[k]).length;
-        const nn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && !sel[k].job).length;
+        const nn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && (!sel[k].job || /^✗/.test(sel[k].st||''))).length;
         if(rows.length) h += '<button data-a="dc" '+(nn?'':'disabled ')+'style="margin-top:10px;width:100%;height:46px;border:0;border-radius:12px;background:'+(nn?'#1D4E80':'#E5E7EB')+';color:'+(nn?'#fff':'#6B7280')+';font-size:16px;font-weight:700">📄 Εξιτήρια για '+nn+' επιλεγμένους</button><div class="ios-f" style="margin:6px 0 0">Ένα-ένα, όπως της κλινικής: το bot μπαίνει με τον λογαριασμό του Ημέρας (3434), συμπληρώνει το εξιτήριο και περιμένει τον «👀 Έλεγχο». Μετά την έγκριση ακολουθεί ο επόμενος.</div><div style="display:none">Ενεργοποιείται μόλις το bot χαρτογραφήσει τη φόρμα «Συγκεντρωτικό Εξιτήριο» του ΝΠΣ. Πριν από κάθε καταχώριση θα βλέπεις προεπισκόπηση και θα πατάς «Έγκριση».</div>';
       }
       h += '</div>';
@@ -13572,7 +13572,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(a==='padd'){ C.procs.push({name:'',code:''}); return pg.redraw(); }
       if(a==='dc'){
         // 📄 9/11 (χρήστης: «εξιτήριο γίνεται ένα-ένα όπως της κλινικής»): μία εντολή «discharge» ανά ασθενή, με τον λογαριασμό του Ημέρας
-        const L = Object.keys(sel).filter(k=>sel[k].on && rows[k] && !sel[k].job).map(Number);
+        const L = Object.keys(sel).filter(k=>sel[k].on && rows[k] && (!sel[k].job || /^✗/.test(sel[k].st||''))).map(Number);   // ✗ απέτυχε → ξανά
         if(!L.length) return; if(!confirm('Εξιτήρια για '+L.length+' ασθενείς; Το bot τα συμπληρώνει ένα-ένα και κάθε ένα περιμένει τον δικό σου «Έλεγχο» πριν την αποθήκευση.')) return;
         for(const k of L){ const r = rows[k], s1 = sel[k], pr = C.procs[+s1.proc||0] || {};
           const txt = String(s1.txt != null ? s1.txt : dtext(s1)).trim();
