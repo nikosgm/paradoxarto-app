@@ -968,6 +968,15 @@ window.pdxToast = function(t){ try{ let el=document.getElementById('pdxToastG');
 // Το shim `fbDb` κρατά το ίδιο API (ref/once/set/update) ώστε ο υπόλοιπος κώδικας να μείνει ίδιος.
 const SB6_URL = 'https://evspmufooxgqxhbhydgc.supabase.co';
 const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
+// ⚡ 9/11 (χρήστης: «άμεσο σήμα αντί να κοιτάνε κάθε τόσο»): κάθε νέα εντολή (insert στο oncall_jobs) → ΑΜΕΣΟ σήμα broadcast «job»
+// στο κανάλι των bots (efbot-ping). Η ειδοποίηση της βάσης (postgres_changes) μετρήθηκε να αργεί 8–18″· το broadcast φτάνει σε <1″.
+// Πρέπει να μπει ΠΡΙΝ το createClient (το supabase-js κρατά το fetch της στιγμής της δημιουργίας).
+(function(){ try{ const F = window.fetch; let t = 0;
+  window.pdxJobPing = function(){ clearTimeout(t); t = setTimeout(()=>{ try{ const ch = (window.__efbotPingCh && window.__efbotPingCh.state === 'joined') ? window.__efbotPingCh : (window.__pdxJobPingCh || (window.__pdxJobPingCh = sb6.channel('efbot-ping')));
+    ch.send({type:'broadcast', event:'job', payload:{at:Date.now()}}).catch(()=>{}); }catch(e){} }, 60); };
+  window.fetch = function(u, o){ const p = F.apply(this, arguments); try{ const url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
+    if(m === 'POST' && /\/rest\/v1\/oncall_jobs(\?|$)/.test(url)) p.then(r=>{ if(r && r.ok) window.pdxJobPing(); }, ()=>{}); }catch(e){} return p; };
+}catch(e){} })();
 const sb6 = window.supabase.createClient(SB6_URL, SB6_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});
 // Παλιά σημεία της εφαρμογής μιλούν στη βάση με το δημόσιο κλειδί (ανώνυμα): αρχείο, εισερχόμενα ιστορικά/εργαστηριακά,
 // λεξικό, ρυθμίσεις. Η βάση πλέον δίνει αυτά τα δεδομένα μόνο σε συνδεδεμένους, οπότε απαντούσε κενό ή «permission denied».
@@ -2259,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v257';
+const APP_VER = '2026-11-09x-v259';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -2282,7 +2291,7 @@ let lastRemoteSync = Date.now();
 function syncRemote(force){
   try{
     if(!fbReady || !fbDb || !FX('syncRemote')) return;
-    if(!force && Date.now()-lastRemoteSync < 45000) return;
+    if(!force && Date.now()-lastRemoteSync < 5*60000) return;   // 9/11 (υπέρβαση Egress): κάθε ανάγνωση = ΟΛΟΙ οι ασθενείς· η ζωντανή σύνδεση κρατά ήδη τα δεδομένα ενημερωμένα
     if(document.visibilityState==='hidden') return;
     if(document.getElementById('entry').classList.contains('open')) return;
     if(pendingWrite) { flushPendingSave(); return; }
@@ -2303,7 +2312,7 @@ function syncRemote(force){
     }).catch(()=>{});
   }catch(e){ console.error('syncRemote', e); }
 }
-setInterval(()=>syncRemote(false), 120000);
+setInterval(()=>syncRemote(false), 10*60000);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncRemote(false); });
 window.addEventListener('focus', ()=>syncRemote(false));
 window.syncRemote = syncRemote;
@@ -7137,7 +7146,10 @@ document.head.appendChild(st);
   }
   setInterval(()=>{ if(!document.hidden) botRefresh(); }, 30000);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) botRefresh(true); });
-  setTimeout(()=>{ try{ sb6.channel('pdx-jobs-mob').on('postgres_changes',{event:'*',schema:'public',table:'oncall_jobs'},()=>{ setTimeout(()=>botRefresh(true), 400); try{ if(window.__ahfyKick) window.__ahfyKick(); }catch(e){} }).subscribe(); }catch(e){} }, 3000);
+  // 9/11 (υπέρβαση Egress): ΜΟΝΟ νέες εντολές + αλλαγές κατάστασης — ΟΧΙ τα «σημάδια ζωής» (hb) των εντολών σε εξέλιξη (κάθε λίγα δευτ. όλη η γραμμή σε κάθε κινητό)
+  setTimeout(()=>{ try{ const _jm = ()=>{ setTimeout(()=>botRefresh(true), 400); try{ if(window.__ahfyKick) window.__ahfyKick(); }catch(e){} };
+    sb6.channel('pdx-jobs-mob').on('postgres_changes',{event:'INSERT',schema:'public',table:'oncall_jobs'},_jm)
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'oncall_jobs',filter:'status=in.(new,seen,review,approve,done,failed,cancelled,dismissed)'},_jm).subscribe(); }catch(e){} }, 3000);
   const JOB_IC = {evoradimg:'🫁', evoradfind:'🩻', botcfg:'⚙️', emrmedmap:'💊', evoradprobe:'🩻', findpacs:'🔎', rxname:'🔎', cred:'🔐', order:'🧾', rx:'💊', consult:'📞', discharge:'📄', comorb:'🩺', ehrdx:'🩺', ehrlabs:'📈', labs:'🧪', medlabs:'🧪'};
   const JOB_T = {evoradimg:'Ακτινογραφία θώρακος (κρυπτογραφημένη)', evoradfind:'Evorad: εξετάσεις ασθενή', botcfg:'Ρυθμίσεις bot', emrmedmap:'ΝΠΣ φάρμακα: χαρτογράφηση (μόνο ανάγνωση)', evoradprobe:'Evorad: χαρτογράφηση (μόνο ανάγνωση)', findpacs:'Αναζήτηση Evorad / PACS', rxname:'ΑΜΚΑ → όνομα (e-prescription)', cred:'Κωδικός για το bot (κρυπτογραφημένος)', order:'Παραγγελία εξετάσεων', rx:'Συνταγογράφηση', consult:'Κλήση για εκτίμηση', discharge:'Εξιτήριο στον φάκελο', comorb:'Συννοσηρότητες → ιστορικό', ehrdx:'Διαγνώσεις από ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά Medilabi (νοσοκομείο)'};
   const JOB_S = {new:['περιμένει','w'], seen:['παραλήφθηκε','w'], running:['τρέχει','run'], done:['✓ έγινε','ok'], review:['για έγκριση','w'], approve:['έγκριση στάλθηκε','w'], approved:['✓ εγκρίθηκε','ok'], failed:['✗ απέτυχε','bad'], cancelled:['ακυρώθηκε','mu']};
@@ -8108,7 +8120,13 @@ document.head.appendChild(st);
         {ic:'📁', t:'Αντιγραμμένες: '+(M.done||0)+(M.pending?' · <b style="color:#B26A00">εκκρεμούν '+M.pending+'</b>':' · όλες'), sub: M.running ? '⏳ αντιγράφεται τώρα… '+(M.running.done||0)+'/'+(M.running.total||0) : ML.at ? 'τελευταία: πριν από '+pdxDbAgo(ML.at)+' · '+(ML.studies||0)+' νέες'+((ML.errors||[]).length?' · <span style="color:#B42318">⚠ '+esc(ML.errors[0])+'</span>':'') : 'δεν έχει γίνει ακόμα'},
         att && {ic:'⚡', t:'Αντιγραφή τώρα', sub:'π.χ. για αξονική που μπήκε σήμερα', data:'data-db="mirnow"', on:'void 0'}
       ], esc(M.path||'')+' — ο φάκελος φαίνεται από όλους τους υπολογιστές της κλινικής.');
-      h += iosGroup('Συμβούλιο', [{ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη · tablet', on:'pdxMdtOpen()'}]);
+      // 🎗 9/11 (χρήστης): αυτόματη διαφάνεια με «🎗 Κακοήθεια» → αρχείο της επόμενης Πέμπτης: νέο «…_2.pptx» ή μέσα στο υπάρχον
+      const seg = (a, cur, opts)=>'<span style="display:flex;background:rgba(118,118,128,.12);border-radius:9px;padding:2px">'+opts.map(([v,l])=>'<button data-db="'+a+'" data-v="'+v+'" style="border:0;border-radius:7px;padding:6px 8px;font-size:13px;font-weight:600;background:'+(cur===v?'var(--card,#fff);box-shadow:0 1px 3px #0002':'transparent')+';color:inherit"'+(att&&!busy?'':' disabled')+'>'+l+'</button>').join('')+'</span>';
+      const pA = S.pptAuto||'off', pT = S.pptTarget==='same'?'same':'new';
+      h += iosGroup('Συμβούλιο', [{ic:'🎗', t:'Ογκολογικό συμβούλιο', sub:'Τρίτη & Πέμπτη · tablet', on:'pdxMdtOpen()'},
+        {t:'Αυτόματη διαφάνεια', raw:seg('pptA', pA, [['off','Όχι'],['test','Δοκιμή'],['on','Ναι']])},
+        {t:'Αρχείο', raw:seg('pptT', pT, [['new','Νέο …_2'],['same','Στο υπάρχον']])}],
+        lock || ('Με «🎗 Κακοήθεια» μπαίνει διαφάνεια με το ιστορικό στο PowerPoint της επόμενης Πέμπτης — '+(pT==='same' ? 'μέσα στο αρχείο της Πέμπτης' : 'σε ξεχωριστό αρχείο «ΟΓΚΟΛΟΓΙΚΟ ηη.μμ.εεεε_2.pptx» δίπλα του (το αρχείο της κλινικής μένει ανέγγιχτο)')+'. Δοκιμή = στον υποφάκελο «_ΔΟΚΙΜΗ».'));
       if((ov.audit||[]).length) h += iosGroup('Πρόσφατες ενέργειες', ov.audit.slice(0,8).map(a=>({t:esc(PDX_DB_ACT[a.action]||a.action), sub:esc(String(a.who||'').replace(/^bot:/,''))+' · πριν από '+pdxDbAgo(a.ts)})));
       h += iosGroup('Σύντομα', [{t:'<span style="color:#8E8E93">Αυτόματη ενημέρωση από τα bots</span>', sub:'νοσηλείες, εργαστηριακά, βιοψίες, χειρουργεία'}, {t:'<span style="color:#8E8E93">Νυχτερινό αντίγραφο ασφαλείας της βάσης</span>'}]);
       return h + '<div style="height:60px"></div>';
@@ -8128,6 +8146,8 @@ document.head.appendChild(st);
       if(a==='cd') return set({cdMode:b.dataset.v}, b.dataset.v==='auto' ? 'Εισαγωγή CD: αυτόματα' : 'Εισαγωγή CD: με έγκριση');
       if(a==='eject') return set({eject: ov.settings.eject===false}, 'Αποβολή CD');
       if(a==='onc') return set({oncAuto: ov.settings.oncAuto===false}, 'Αυτόματος χαρακτηρισμός');
+      if(a==='pptA') return set({pptAuto: b.dataset.v}, 'Αυτόματη διαφάνεια: '+({off:'όχι', test:'δοκιμή (_ΔΟΚΙΜΗ)', on:'ναι'}[b.dataset.v]));
+      if(a==='pptT') return set({pptTarget: b.dataset.v}, b.dataset.v==='same' ? 'Διαφάνεια μέσα στο αρχείο της Πέμπτης' : 'Διαφάνεια σε νέο αρχείο …_2');
       if(a==='mir'){ await set({mirrorOn: !(ov.mirror && ov.mirror.on!==false)}, 'Νυχτερινή αντιγραφή'); return load(); }
       if(a==='mirnow'){ if(busy) return; busy = 'mir'; msg = '⏳ αντιγραφή στο δίκτυο…'; pg.redraw();
         try{ const r = await pdxDbCall('POST', '/api/mirror/run', {}); ov.mirror = r; msg = r.running ? '✓ ξεκίνησε η αντιγραφή ('+(r.running.total||0)+' αξονικές)' : '✓ τίποτα για αντιγραφή'; }catch(er){ msg = '⚠ '+er.message; } busy = ''; pg.redraw(); return; }
@@ -11022,7 +11042,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return sb6.from('oncall_labs').select('data').eq('name_key','efbot|alive').maybeSingle().then(r=>{
       const seen = (r && r.data && r.data.data && r.data.data.seen) || 0, perf = (r && r.data && r.data.data && r.data.data.perf) || null;
       const D0 = (r && r.data && r.data.data) || {}, out = D0.out && D0.out.at >= seen - 5000 ? D0.out : null;
-      return {ok: out ? false : seen ? (Date.now()-seen < 3*60000) : null, seen, perf, medilabi: perf && perf.medilabi || null, vault: perf && perf.vault || '', noaccess: (perf && Array.isArray(perf.noaccess)) ? perf.noaccess : null, par: perf && perf.par || null, emrAcc: perf && perf.emrAcc || null, by: D0.by || '', out};
+      return {ok: out ? false : seen ? (Date.now()-seen < 6*60000) : null, seen, perf, medilabi: perf && perf.medilabi || null, vault: perf && perf.vault || '', noaccess: (perf && Array.isArray(perf.noaccess)) ? perf.noaccess : null, par: perf && perf.par || null, emrAcc: perf && perf.emrAcc || null, by: D0.by || '', out};
     }, ()=>({ok:null, seen:0}));
   };
   // γιατί δεν απαντά ο υπολογιστής του bot (σύντομο κείμενο για ταινίες/μηνύματα)
@@ -13022,7 +13042,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const ov=document.getElementById('mobSubPop'); ov && ov.querySelectorAll('[data-rv]').forEach(b=>b.addEventListener('click',()=>{ ov.remove(); pdxBotReview(+b.getAttribute('data-rv')); })); };
   window.pdxBotRefreshPill = refreshPill;
   // ζωντανή ενημέρωση από τη βάση + έλεγχος κάθε λεπτό
-  setTimeout(()=>{ refreshPill(); try{ sb6.channel('pdx-jobs-ui').on('postgres_changes',{event:'*',schema:'public',table:'oncall_jobs'},()=>refreshPill()).subscribe(); }catch(e){} }, 2500);
+  // 9/11 (υπέρβαση Egress): ΧΩΡΙΣ ζωντανή συνδρομή σε ΚΑΘΕ αλλαγή εντολής (έστελνε όλη τη γραμμή σε κάθε κινητό + 1 ανάγνωση κάθε φορά) — η ένδειξη είναι κρυφή (νησί)
+  setTimeout(()=>{ refreshPill(); }, 2500);
   setInterval(()=>{ if(!document.hidden) refreshPill(); }, 60000);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshPill(); });
 
