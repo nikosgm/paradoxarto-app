@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09g-v221';
+const APP_VER = '2026-11-09h-v222';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -20655,7 +20655,7 @@ window.CLS_MODE='A';
   function layout(){
     if(!st) return; const box = st.ov.querySelector('[data-cam]'), r = box.getBoundingClientRect(), g = guide(r.width, r.height, st.land);
     const f = st.ov.querySelector('[data-g]'); f.style.left = g.x+'px'; f.style.top = g.y+'px'; f.style.width = g.w+'px'; f.style.height = g.h+'px'; st.g = g;
-    st.ov.querySelector('[data-rot]').textContent = st.land ? '⇆ Οριζόντιο' : '⇅ Κάθετο';
+    { const rb = st.ov.querySelector('[data-rot]'); rb.textContent = st.land ? '↻ Οριζόντιο ✓' : '↻ Οριζόντιο'; rb.style.background = st.land ? '#34C759' : '#ffffff22'; }
     st.ov.querySelectorAll('[data-mode]').forEach(b=>{ const on = b.dataset.mode===st.mode; b.style.background = on ? '#fff' : '#ffffff22'; b.style.color = on ? '#000' : '#fff'; });
     if(!st.native) st.ov.querySelector('[data-msg]').textContent = st.mode==='prog' ? 'Βάλε το υπογεγραμμένο πρόγραμμα μέσα στο πράσινο πλαίσιο' : 'Ιστορικό, πόρισμα ή πρόγραμμα — το Claude βρίσκει τι είναι';
     pagesDraw();
@@ -20675,7 +20675,7 @@ window.CLS_MODE='A';
     if(st) return;
     const ov = document.createElement('div'); ov.id = 'pdxScanOv';
     ov.style.cssText = 'position:fixed;inset:0;z-index:100001;background:#000;color:#fff;display:flex;flex-direction:column;font-family:-apple-system,system-ui,sans-serif;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
-    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px"><button data-x style="'+B+'background:transparent;color:#fff">✕</button><b style="flex:1;font-size:16px">📷 Σάρωση</b><button data-turn aria-label="Περιστροφή εικόνας" style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px">↻ 0°</button><button data-rot style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px"></button></div>'
+    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px"><button data-x style="'+B+'background:transparent;color:#fff">✕</button><b style="flex:1;font-size:16px">📷 Σάρωση</b><button data-rot style="'+B+'background:#ffffff22;color:#fff;font-size:14px;padding:9px 12px"></button></div>'
       + '<div data-modes style="display:none;gap:8px;padding:0 10px 8px"><button data-mode="auto" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🤖 Αυτόματα (Claude)</button><button data-mode="prog" style="'+B+'flex:1;font-size:14px;padding:9px 8px">🗓 Πρόγραμμα → email</button></div>'
       + '<div data-cam style="position:relative;flex:1;overflow:hidden"><video data-v playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'
       + '<div data-g style="position:absolute;border:3px solid #34C759;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)"></div>'
@@ -20690,8 +20690,6 @@ window.CLS_MODE='A';
     st = { ov, mode: m0, land: landPref(m0), pages: [] };
     const $ = s=>ov.querySelector(s), v = $('[data-v]');
     $('[data-x]').onclick = close;
-    // ↻ 9/11 (χρήστης): περιστροφή της εικόνας ανά 90° — ισχύει για τις επόμενες λήψεις (και από τη συλλογή / κάμερα iPhone)
-    st.turn = 0; $('[data-turn]').onclick = ()=>{ st.turn = (st.turn + 90) % 360; $('[data-turn]').textContent = '↻ '+st.turn+'°'; $('[data-turn]').style.background = st.turn ? '#34C759' : '#ffffff22'; };
     $('[data-rot]').onclick = ()=>{ st.land = !st.land; try{ localStorage.setItem('pdx_scan_land_'+st.mode, st.land?'1':'0'); }catch(e){} layout(); };
     ov.querySelectorAll('[data-mode]').forEach(b=>b.onclick = ()=>{ if(st.pages.length && b.dataset.mode!==st.mode) return toast('Στείλε πρώτα τις σελίδες που τράβηξες'); st.mode = b.dataset.mode; st.land = landPref(st.mode); try{ localStorage.setItem(MODEFILE, st.mode); }catch(e){} layout(); });
     // «Στο Claude ›»: απλός σύνδεσμος (ανοίγει την εφαρμογή Claude) — όλα έχουν ήδη ανέβει· μετά η κάμερα κλείνει
@@ -20705,7 +20703,8 @@ window.CLS_MODE='A';
       const auto = st.mode==='auto';
       const c = crop || {x:0, y:0, w:sw, h:sh};
       const sc = Math.min(1, (auto ? 1800 : 2400)/Math.max(c.w, c.h)), cw = Math.round(c.w*sc), ch = Math.round(c.h*sc);
-      const tn = st.turn || 0, sw2 = tn===90 || tn===270;
+      // ↻ 9/11 (χρήστης): «Οριζόντιο» ενεργό → κάθε κάθετη λήψη γυρίζει 90° ώστε η σελίδα να βγαίνει ΟΡΙΖΟΝΤΙΑ (πρόγραμμα)
+      const tn = st.land && c.h > c.w ? 90 : 0, sw2 = tn===90;
       const cv = document.createElement('canvas'); cv.width = sw2 ? ch : cw; cv.height = sw2 ? cw : ch; const x = cv.getContext('2d', {willReadFrequently:true});
       if(tn){ x.translate(cv.width/2, cv.height/2); x.rotate(tn*Math.PI/180); x.drawImage(src, c.x, c.y, c.w, c.h, -cw/2, -ch/2, cw, ch); x.setTransform(1,0,0,1,0,0); }
       else x.drawImage(src, c.x, c.y, c.w, c.h, 0, 0, cw, ch);
@@ -20733,7 +20732,7 @@ window.CLS_MODE='A';
     // Κάμερα → Να επιτρέπεται» ΔΕΝ ρωτά ποτέ. Αν η ζωντανή κάμερα αποτύχει/απορριφθεί → κάμερα του κινητού (nativeMode).
     const nativeMode = ()=>{
       st.native = true;
-      v.style.display = 'none'; $('[data-g]').style.display = 'none'; $('[data-rot]').style.visibility = 'hidden';
+      v.style.display = 'none'; $('[data-g]').style.display = 'none';
       const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; fi.setAttribute('capture', 'environment'); fi.style.display = 'none'; fi.setAttribute('data-file', ''); ov.appendChild(fi);
       $('[data-msg]').style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;font-size:16px;padding:20px';
       const hint = ()=>{ $('[data-msg]').innerHTML = '<div style="font-size:64px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.75;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή (πολλές σελίδες μαζί)</div><div style="opacity:.75;font-size:14px">Ιστορικό, πόρισμα ή πρόγραμμα — το Claude βρίσκει τι είναι</div>'; };
