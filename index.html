@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09t-v252';
+const APP_VER = '2026-11-09u-v253';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21232,8 +21232,9 @@ window.CLS_MODE='A';
   // 📱 8/11: συσκευές της ελαφριάς εφαρμογής «Σάρωση» (scan.html) — έγκριση/αφαίρεση (επιμελητές/διαχειριστές)
   window.pdxScanDevCount = async function(){ try{ const r = await sb6.from('oncall_scan_devices').select('id').eq('approved', false); return (r.data||[]).length; }catch(e){ return 0; } };
   // 🗓 8/11: Πρόγραμμα χειρουργείου — φορτώνεται μόνο όταν ανοίξει (orprog-data.js + orprog.js)
+  // 9/11: τα αρχεία του προγράμματος ανά έκδοση (πριν σταθερό ?v=213 → έμενε παλιό orprog.js στην cache)
   window.pdxOrProgOpen = async function(date){
-    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v='+encodeURIComponent(typeof APP_VER !== 'undefined' ? APP_VER : '213');   // 9/11: ανά έκδοση (πριν σταθερό v=213 → έμενε παλιό orprog.js στην cache) s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
+    const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v='+encodeURIComponent(typeof APP_VER !== 'undefined' ? APP_VER : '213'); s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
     try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{}); return window.pdxOrProg(date); }catch(e){ alert('⚠ '+(e.message||e)); }
   };
   window.pdxScanDevices = function(){
