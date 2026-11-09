@@ -219,7 +219,15 @@
       catch (e) { say("⚠ " + (e.message || e)); P = { date, kind: "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }; }
       loaded = true; redraw();
     };
-    const touch = () => { dirty = true; if (P.status === "submitted") P.status = "changed"; redraw(); };
+    // 💾 9/11 (χρήστης: «με το που προσθέτω ασθενή να κάνει αυτόματα πρόχειρο — να μη χαθεί τίποτα»): αποθήκευση 0,6″ μετά από κάθε αλλαγή
+    let asT = 0, asBusy = false, asAgain = false;
+    function autoSave() { clearTimeout(asT); asT = setTimeout(async () => { if (!dirty || !loaded) return; if (asBusy) { asAgain = true; return; } asBusy = true;
+      try { await saveDraft(P); dirty = false; window.__orpAutoAt = Date.now(); } catch (er) { say("⚠ αυτόματη αποθήκευση: " + (er.message || er)); }
+      asBusy = false; if (asAgain) { asAgain = false; autoSave(); } }, 600); }
+    const flush = () => { if (dirty && loaded && !asBusy) { clearTimeout(asT); saveDraft(P).then(() => { dirty = false; }, () => {}); } };
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+    window.addEventListener("pagehide", flush);
+    const touch = () => { dirty = true; autoSave(); if (P.status === "submitted") P.status = "changed"; redraw(); };
     const renum = (room) => P.pts.filter((p) => p.room === room).sort((a, b) => (a.n || 0) - (b.n || 0)).forEach((p, i) => { p.n = i + 1; });
     pg.el.addEventListener("change", async (e) => { const f = e.target.dataset.f; if (!f) return;
       if (f === "resp" && e.target.value === "__add") { const n = UP(prompt("Επώνυμο ειδικευόμενου:") || "").trim(); if (n) { cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; } touch(); return; } if (f === "date") { if (dirty && !confirm("Αλλαγή ημερομηνίας χωρίς αποθήκευση;")) { e.target.value = P.date; return; } load(e.target.value); return; } P[f] = e.target.value; touch(); });
@@ -278,12 +286,12 @@
         if (!ov) ov = sheet(inner); else ov.querySelector("#orpSh").innerHTML = inner;
       };
       render();
-      ov.addEventListener("input", (e) => { const f = e.target.dataset.e; if (!f) return; p[f] = f === "surg" || f === "dx" || f === "nm" ? e.target.value.toUpperCase().replace(/^Κ /, "κ ") : e.target.value; dirty = true; });
+      ov.addEventListener("input", (e) => { const f = e.target.dataset.e; if (!f) return; p[f] = f === "surg" || f === "dx" || f === "nm" ? e.target.value.toUpperCase().replace(/^Κ /, "κ ") : e.target.value; dirty = true; autoSave(); });
       ov.addEventListener("click", (e) => {
         const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
         if (d.x !== undefined) { ov.remove(); touch(); return; }
         if (d.del !== undefined) { if (!confirm("Αφαίρεση από το πρόγραμμα;")) return; P.pts = P.pts.filter((x) => x !== p); renum(p.room); ov.remove(); touch(); return; }
-        if (d.opn !== undefined && window.pdxOpNote) { const proc = [p.t, p.t2].filter(Boolean).join(" + ") || p.dx || ""; window.pdxOpNote({ name: p.nm, proc, side: p.side || "", surg: p.opsurg || "", text: p.opnote || "", onSave: (r) => { p.opnote = r.text; p.opsurg = r.surg; dirty = true; render(); touch(); } }); return; }
+        if (d.opn !== undefined && window.pdxOpNote) { const proc = [p.t, p.t2].filter(Boolean).join(" + ") || p.dx || ""; window.pdxOpNote({ name: p.nm, proc, side: p.side || "", surg: p.opsurg || "", text: p.opnote || "", onSave: (r) => { p.opnote = r.text; p.opsurg = r.surg; dirty = true; autoSave(); render(); touch(); } }); return; }
         if (d.rm) { const old = p.room; p.room = d.rm; p.n = P.pts.filter((q) => q.room === d.rm && q !== p).length + 1; renum(old); }
         else if (d.sd !== undefined) p.side = d.sd;
         else if (d.sd2 !== undefined) p.side2 = d.sd2;
@@ -292,9 +300,9 @@
         else if (d.ca !== undefined) p.ca = p.ca ? "" : "ΝΑΙ";
         else if (d.sg) p.surg = d.sg;
         else if (d.t2x !== undefined) { p.t2 = ""; p.side2 = ""; }
-        else if (d.pk) { pkPick((x) => { if (d.pk === "2") { p.t2 = x.t; } else { p.t = x.t; if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; render(); }); return; }
+        else if (d.pk) { pkPick((x) => { if (d.pk === "2") { p.t2 = x.t; } else { p.t = x.t; if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; autoSave(); render(); }); return; }
         else return;
-        dirty = true; render();
+        dirty = true; autoSave(); render();
       });
     }
     // ---- διαλογή έτοιμου σετ: σετ κλινικής → «ΚΩΔΙΚΟΙ (ΝΕΟΙ)» → ΕΤΙΠ ----
