@@ -2268,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v260';
+const APP_VER = '2026-11-09x-v262';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13272,8 +13272,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(!(window.pdxIsBotUser && pdxIsBotUser()) || document.hidden) return;
     { const h = new Date().getHours(); if(h < 7 || h >= 22) return; }   // ⚡ 8/11: όχι μεσάνυχτα/νύχτα (στις 00:01 μπήκε μπροστά από παραγγελία: +15″)
     if(document.getElementById('obOv') || document.getElementById('pdxOrdOv')) return;   // ανοιχτή παραγγελία: όχι τώρα
-    // 7/11 (εντολή χρήστη): ΜΙΑ φορά την ημέρα η λίστα ΝΠΣ· μετά ΑΜ/ΑΜΚΑ (ΝΠΣ) + ΑΗΦΥ + εργαστηριακά Medilabi για όσους λείπουν
-    const d0 = new Date(); d0.setHours(0,0,0,0);
+    // 7/11 (εντολή χρήστη): ΜΙΑ φορά το πρωί (+ 17:00, 9/11) η λίστα ΝΠΣ· μετά ΑΜ/ΑΜΚΑ (ΝΠΣ) + ΑΗΦΥ + εργαστηριακά Medilabi για όσους λείπουν
+    // 9/11 (χρήστης): και ΔΕΥΤΕΡΗ φορά το απόγευμα — μετά τις 17:00 νέα λίστα (+ στοιχεία όσων λείπουν)
+    const d0 = new Date(); d0.setHours(d0.getHours() >= 17 ? 17 : 0, 0, 0, 0);
     const live = await sb6.from('oncall_jobs').select('id,kind,created_at,status').in('kind',['npslist','npsenrich']).gte('created_at', d0.toISOString()).not('status','in','(failed,cancelled)').limit(20);
     const L = live.data || [];
     if(!L.some(x=>x.kind==='npslist')){ await sb6.from('oncall_jobs').insert({name_key:'zzz_npslist', name:'Ασθενείς ΝΠΣ 3449', room:null, kind:'npslist', payload:{dpt:'3449', quiet:true, auto:true}, status:'new'}); return; }
@@ -16696,6 +16697,7 @@ Z99.2:C|αιμοκάθαρση
   st.textContent = `
   #labsFull{position:fixed;inset:0;z-index:9000;background:#fff;display:none;flex-direction:column;font-family:inherit;color:#1F2933}
   #labsFull.on{display:flex}
+  #labsFull .lf-note{cursor:pointer;font-size:15px;opacity:.75}
   #labsFull .lf-top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(env(safe-area-inset-top) + 10px);background:#1B4B66;color:#fff}
   #labsFull .lf-top b{font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #labsFull .lf-top.lf-wrap{flex-wrap:wrap;row-gap:4px}
@@ -17093,7 +17095,7 @@ Z99.2:C|αιμοκάθαρση
         LF_COLS.forEach(k=>{ const T = b.tests.find(t=>t.k===k); const p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
           const a = alarmOf(k, p0), old = dayOf(p0.d)!==b.days[0];
-          h += '<td class="v '+cls(a)+(old?' old':'')+'" title="'+E(p0.d||'')+'">'+E(p0.v)+arrow(a)+'</td>'; });
+          h += '<td class="v '+cls(a)+(old?' old':'')+'" title="'+E(p0.d||'')+'">'+valOrNote(p0.v, a)+'</td>'; });
         h += '<td class="cnt">'+(all?'<span class="'+(imp?'b':'g')+'">'+all+'</span>':'')+'</td></tr>';
       });
       return h + '</tbody></table>';
@@ -17103,7 +17105,7 @@ Z99.2:C|αιμοκάθαρση
     L.forEach(x=>{ const p = x.p, b = x.b, imp = x.imp, all = x.all;
       if(!b){ h += '<div class="lf-card none"><div class="r">'+E(p.label)+'</div><div class="n">'+E(p.d.name)+'</div><div class="s">Χωρίς αποτελέσματα από το Medilabi</div></div>'; return; }
       const chips = PIN.map(k=>b.tests.find(T=>T.k===k)).filter(T=>T && !hidden(T.k)).slice(0,6).map(T=>{ const p0 = T.pts[0], a = alarmOf(T.k, p0), old = dayOf(p0.d)!==b.days[0];
-        return '<span class="lf-chip '+cls(a)+(old?' old':'')+'"><i>'+E(shortLbl(T))+'</i> '+E(p0.v)+arrow(a)+'</span>'; }).join('');
+        return '<span class="lf-chip '+cls(a)+(old?' old':'')+'"><i>'+E(shortLbl(T))+'</i> '+valOrNote(p0.v, a)+'</span>'; }).join('');
       h += '<button class="lf-card'+(imp?' bad':'')+'" onclick="labsFullOpen(\''+E(p.k)+'\')"><div class="r">'+E(p.label)+(b.days[0]===today?' · <b class="nw">σήμερα</b>':'')+'</div><div class="n">'+E(p.d.name)+'</div>'
         + '<div class="lf-chips">'+chips+'</div>'
         + '<div class="s">Τελευταία: '+E(fmtD(b.last.d))+' '+E((b.last.d||'').slice(9))+(imp?' · <span class="b">'+imp+' σημαντικά εκτός ορίων</span>':'')+(all>imp?' · <span class="g">+'+(all-imp)+' άλλα</span>':'')+(!all?' · φυσιολογικά':'')+'</div></button>';
@@ -17155,7 +17157,7 @@ Z99.2:C|αιμοκάθαρση
         MCOLS.forEach(k=>{ const T = x.b.tests.find(t=>t.k===k), p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
           const a = alarmOf(k, p0), old = dayOf(p0.d)!==x.b.days[0];
-          h += '<td class="'+cls(a)+(old?' old':'')+'" data-lch="'+E(p.k)+'|'+E(k)+'">'+E(p0.v)+arrow(a)+'</td>'; });
+          h += isNote(p0.v) ? '<td class="na">'+valOrNote(p0.v)+'</td>' : '<td class="'+cls(a)+(old?' old':'')+'" data-lch="'+E(p.k)+'|'+E(k)+'">'+E(p0.v)+arrow(a)+'</td>'; });
         h += '</tr>'; });
       h += '</tbody></table></div>';
     } else h += '<div class="lf-empty">'+(q ? 'Κανένας από τους δικούς σας με «'+E(q)+'».' : mSort==='bad' ? 'Καμία τιμή εκτός ορίων στην τελευταία λήψη.' : 'Δεν υπάρχουν ασθενείς.')+'</div>';
@@ -17178,6 +17180,9 @@ Z99.2:C|αιμοκάθαρση
     }   // 8/11: η «Σύνθετη» αναζήτηση (όλο το Medilabi με φίλτρα) είναι κουμπί πάνω δεξιά, δίπλα στο «23/25 με αποτελέσματα»
     return h ? '<div class="lm-ext">'+h+'</div>' : '';
   }
+  // 💬 9/11 (χρήστης: «σχόλια όπως ΣΩΡΟΙ ΑΙΜΟΠΕΤΑΛΙΩΝ χαλάνε τις στήλες»): τιμή-κείμενο (όχι αριθμός) → μικρό 💬 που ανοίγει με πάτημα
+  const isNote = v=>{ const t = String(v==null?'':v).trim(); return t.length > 14 && !/^[<>≤≥]?\s*-?\d+([.,]\d+)?\s*\S{0,6}$/.test(t); };
+  const valOrNote = (v, a)=> isNote(v) ? '<span class="lf-note" data-lnote="'+E(String(v))+'" title="'+E(String(v))+'">💬</span>' : E(v)+arrow(a);
   function renderMob(P){
     const withLab = P.filter(p=>labOf(p)).length;
     box.classList.add('lm');
@@ -17360,6 +17365,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     const t = e.target;
     const so = t.closest('[data-lsort]'); if(so){ mSort = so.dataset.lsort; try{ localStorage.setItem('pdx_lf_sort', mSort); }catch(x){} box.querySelectorAll('[data-lsort]').forEach(b=>b.classList.toggle('on', b===so)); mobRedraw(); return; }
     const pt = t.closest('[data-lpt]'); if(pt){ labsFullOpen(pt.dataset.lpt); return; }
+    const ln = t.closest('[data-lnote]'); if(ln){ e && e.stopPropagation && e.stopPropagation(); try{ alert(ln.dataset.lnote); }catch(_){} return; }
     const lc = t.closest('[data-lch]'); if(lc){ const [k, tk] = lc.dataset.lch.split('|'); const p = pts().find(x=>x.k===k); if(p) chartOpen(ctxOf(p), tk); return; }
     const ch = t.closest('[data-ch]'); if(ch){ chartOpen(chCtx, ch.dataset.ch); return; }
     if(t.closest('[data-lext]')){ extSearch(); return; }
@@ -17976,6 +17982,9 @@ window.pdxNpsMedFind = function(q, L){ const N = x=>String(x||'').normalize('NFD
   const w0 = W[0]; return out.sort((x,y)=>(N(y).indexOf(w0)===0)-(N(x).indexOf(w0)===0) || x.length-y.length).slice(0,12); };
 // 🔥 9/11: προθέρμανση ΝΠΣ — μόλις ανοίγει η σελίδα, το bot ανοίγει ήδη τον ασθενή και τη φόρμα (τίποτα δεν γράφεται)
 window.pdxNpsWarm = function(rec, k, target){ try{
+  // 9/11 (χρήστης): προθέρμανση ΜΟΝΟ όταν ξεκινάς ενέργεια (παραγγελία φαρμάκου, εξιτήριο/εκτίμηση) — ΟΧΙ στο απλό άνοιγμα της πορείας νόσου.
+  // Χωρίς ειδοποίηση αν αποτύχει (bot). Κλείσιμο: localStorage pdx_nps_warm=0
+  if(target === 'prog' || localStorage.getItem('pdx_nps_warm') === '0') return;
   const amka = String(rec && rec.amka || '').replace(/\D/g,''); if(amka.length !== 11 || typeof sb6 === 'undefined') return;
   const W = window.__pdxWarmAt || (window.__pdxWarmAt = {}), key = amka+'|'+target; if(Date.now() - (W[key]||0) < 60000) return; W[key] = Date.now();
   const nrm4 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
