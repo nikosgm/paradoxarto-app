@@ -34,7 +34,7 @@ a.go2{color:#9fd4ff;font-size:14px}
 </head><body>
 <div id="app">
   <div class="cam"><video id="v" playsinline muted autoplay></video><div class="flash" id="fl"></div><div class="msg" id="msg"><div class="spin"></div></div></div>
-  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><span style="width:56px"></span></div>
+  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="rot" aria-label="Οριζόντιο" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">↻<br>Οριζόντιο</button></div>
 </div>
 <input id="gf" type="file" accept="image/*" multiple style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px">
 <input id="cf" type="file" accept="image/*" capture="environment" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px">
@@ -96,6 +96,11 @@ async function camera(){
   $('gal').onclick = ()=>{ if(busy) return; $('gf').value = ''; $('gf').click(); };
 }
 async function fromFiles(fs){ fs = [...(fs || [])].slice(0, 4); if(!fs.length) return; const bm = []; for(const f of fs){ try{ bm.push(await createImageBitmap(f)); }catch(e){} } if(bm.length) send(bm); }
+// ↻ 9/11 (χρήστης): «Οριζόντιο» — όταν είναι ενεργό (πράσινο), κάθε κάθετη λήψη γυρίζει 90° και η σελίδα βγαίνει ΟΡΙΖΟΝΤΙΑ
+// (= πρόγραμμα χειρουργείου). Το θυμάται.
+const ROT = 'pdx_scan_rot', rotOn = ()=>{ try{ return localStorage.getItem(ROT) === '1'; }catch(e){ return false; } };
+const rotPaint = ()=>{ const b = $('rot'); b.style.background = rotOn() ? '#34C759' : '#ffffff26'; b.innerHTML = rotOn() ? '↻ ✓<br>Οριζόντιο' : '↻<br>Οριζόντιο'; };
+$('rot').onclick = ()=>{ try{ localStorage.setItem(ROT, rotOn() ? '0' : '1'); }catch(e){} rotPaint(); }; rotPaint();
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
 
@@ -145,7 +150,7 @@ async function progFlow(pages, raw){
   }
 }
 async function send(srcs, w0, h0){
-  busy = true; const v = $('v'); const land = isLand(srcs, w0, h0);
+  busy = true; const v = $('v'); const turn = rotOn(), land = turn || isLand(srcs, w0, h0);
   // για «Δεν είναι πρόγραμμα → Claude»: κρατάμε τις πηγές (στιγμιότυπο του βίντεο σε καμβά)
   try{ window.__lastPages = { srcs: srcs.map(sr=>{ const w = w0 || sr.width, h = h0 || sr.height; const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(sr, 0, 0, w, h); return c; }), w:0, h:0 }; }catch(e){}
   msg('<div class="spin"></div><div>Ανέβασμα…</div>');
@@ -153,7 +158,9 @@ async function send(srcs, w0, h0){
     const raw = crypto.getRandomValues(new Uint8Array(16)), key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), pages = [];
     for(const src of srcs){
       const w = w0 || src.width, h = h0 || src.height, sc = Math.min(1, 1800 / Math.max(w, h));
-      const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      const cw = Math.round(w * sc), ch = Math.round(h * sc), tn = turn && h > w;
+      const c = document.createElement('canvas'); c.width = tn ? ch : cw; c.height = tn ? cw : ch; const x = c.getContext('2d');
+      if(tn){ x.translate(c.width/2, c.height/2); x.rotate(Math.PI/2); x.drawImage(src, -cw/2, -ch/2, cw, ch); } else x.drawImage(src, 0, 0, cw, ch);
       const jpg = new Uint8Array(await (await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.8))).arrayBuffer());
       const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, jpg)), o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12);
       let s = ''; for(let i = 0; i < o.length; i += 0x8000) s += String.fromCharCode.apply(null, o.subarray(i, i + 0x8000)); pages.push(btoa(s));
