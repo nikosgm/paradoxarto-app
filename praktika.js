@@ -38,14 +38,14 @@
       ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--t1,#1F2933);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));font:15px -apple-system,system-ui">'
         + '<div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:17px">📝 Πρακτικό · ' + E(o.name || "") + '</b><button data-x style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px">Κλείσιμο</button></div>'
         + '<div style="color:#6B7280;font-size:13px;margin:4px 0 8px">' + E(o.proc || "—") + (side ? " · " + side : "") + "</div>"
-        + (cur ? '<div style="font-weight:700;margin-top:6px">Χειρουργοί</div><input data-sg value="' + E(surg) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #C7CDD4;border-radius:10px">'
+        + (cur ? (o.noSurg ? "" : '<div style="font-weight:700;margin-top:6px">Χειρουργοί</div><input data-sg value="' + E(surg) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #C7CDD4;border-radius:10px">')
           + '<div style="display:flex;gap:6px;margin:10px 0 4px;align-items:center"><b style="flex:1">Κείμενο</b><button data-sd="ΑΡ" style="border:1px solid #C7CDD4;background:#fff;border-radius:16px;padding:6px 12px">→ ΑΡ</button><button data-sd="ΔΕ" style="border:1px solid #C7CDD4;background:#fff;border-radius:16px;padding:6px 12px">→ ΔΕ</button><button data-back style="border:0;background:#EEF2F6;border-radius:16px;padding:6px 12px">Άλλο πρότυπο</button></div>'
           + '<textarea data-t style="width:100%;box-sizing:border-box;min-height:300px;font-size:15.5px;line-height:1.45;padding:10px;border:1px solid #C7CDD4;border-radius:10px">' + E(text) + "</textarea>"
           + '<div style="display:flex;gap:8px;margin-top:10px"><button data-cp style="flex:1;min-height:46px;border:0;border-radius:12px;background:#EEF2F6;color:#0A84FF;font-weight:700">📋 Αντιγραφή</button>' + (o.onSave ? '<button data-sv style="flex:1;min-height:46px;border:0;border-radius:12px;background:#0A84FF;color:#fff;font-weight:700">💾 Αποθήκευση</button>' : "") + "</div>"
           + '<div style="font-size:12px;color:#8E8E93;margin-top:8px">Από τα πρακτικά της κλινικής (ψηφιοποίηση — έλεγξε πριν από τη χρήση· τα «[;]» είναι αβέβαιες λέξεις).</div>'
         : '<input data-q type="search" placeholder="🔎 Αναζήτηση σε όλα τα πρακτικά (π.χ. pigtail, νεφρεκτομή)" value="' + E(q) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #C7CDD4;border-radius:10px">'
           + '<div style="font-weight:700;margin:12px 0 6px">' + (q ? "Αποτελέσματα · " + all.length : all.length ? "Προτεινόμενα για αυτή την επέμβαση · " + all.length : "Δεν βρέθηκε ταιριαστό — ψάξε παραπάνω") + "</div>"
-          + all.slice(0, 25).map((x) => '<button data-pick="' + x.n + '" style="display:block;width:100%;text-align:left;border:1px solid #E5E7EB;background:#fff;border-radius:12px;padding:10px 12px;margin:0 0 8px"><b>' + E(x.op) + '</b><div style="font-size:12.5px;color:#6B7280;margin:2px 0 4px">' + E(x.surg) + '</div><div style="font-size:13.5px;color:#374151;max-height:3.9em;overflow:hidden">' + E(x.t) + "</div></button>").join(""))
+          + all.slice(0, 25).map((x) => '<button data-pick="' + x.n + '" style="display:block;width:100%;text-align:left;border:1px solid #E5E7EB;background:#fff;border-radius:12px;padding:10px 12px;margin:0 0 8px"><b>' + E(x.op) + '</b>' + (o.noSurg ? "" : '<div style="font-size:12.5px;color:#6B7280;margin:2px 0 4px">' + E(x.surg) + '</div>') + '<div style="font-size:13.5px;color:#374151;max-height:3.9em;overflow:hidden">' + E(x.t) + "</div></button>").join(""))
         + "</div>";
     };
     draw();
@@ -56,7 +56,7 @@
       const pk = t.closest("[data-pick]"); if (pk) { cur = (window.PRAKTIKA || []).find((x) => x.n === +pk.dataset.pick); text = side && sideOf(cur.op) && sideOf(cur.op) !== side && side !== "ΑΜΦΩ" ? swapSide(cur.t, side) : cur.t; if (!surg) surg = cur.surg; return draw(); }
       if (t.closest("[data-back]")) { cur = null; return draw(); }
       const sd = t.closest("[data-sd]"); if (sd) { text = swapSide(text, sd.dataset.sd); return draw(); }
-      if (t.closest("[data-cp]")) { const s = (surg ? surg + "\n\n" : "") + text; (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(() => { t.textContent = "✓ Αντιγράφηκε"; }, () => { const a = ov.querySelector("[data-t]"); a.select(); document.execCommand("copy"); t.textContent = "✓ Αντιγράφηκε"; }); return; }
+      if (t.closest("[data-cp]")) { const s = (surg && !o.noSurg ? surg + "\n\n" : "") + text; (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(() => { t.textContent = "✓ Αντιγράφηκε"; }, () => { const a = ov.querySelector("[data-t]"); a.select(); document.execCommand("copy"); t.textContent = "✓ Αντιγράφηκε"; }); return; }
       if (t.closest("[data-sv]") && o.onSave) { o.onSave({ text, surg }); ov.remove(); }
     });
     return ov;
