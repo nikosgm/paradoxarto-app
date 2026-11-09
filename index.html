@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09v-v254';
+const APP_VER = '2026-11-09w-v255';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17155,10 +17155,11 @@ Z99.2:C|αιμοκάθαρση
   function renderMob(P){
     const withLab = P.filter(p=>labOf(p)).length;
     box.classList.add('lm');
-    box.innerHTML = '<div class="lm-top"><button class="lm-x" onclick="labsFullClose()">Τέλος</button><span style="flex:1"></span><button class="lm-ic" onclick="labsFullReload()" aria-label="Ανανέωση">⟳</button><button class="lm-ic" onclick="labsFullSettings()" aria-label="Ρυθμίσεις">⚙︎</button></div>'
-      + '<div class="lm-hd"><h1>Εργαστηριακά</h1><div class="lm-sub" style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0">'+withLab+'/'+P.length+' με αποτελέσματα'+(loadedAt?' · '+hhmm(loadedAt):'')+'</span>'+(isBotU()?'<button type="button" class="lm-adv'+(extF.open?' on':'')+'" data-psf-tg>Σύνθετη</button>':'')+'</div>'
+    // 🧪 9/11 (χρήστης): χωρίς «Τέλος» (πλοήγηση από την κάτω μπάρα) και χωρίς γκρι λαβή· ⟳ πάνω δεξιά = «Φέρε τώρα» από το Medilabi
+    box.innerHTML = '<div class="lm-top"><span style="flex:1"></span><button class="lm-ic" data-medgo aria-label="Φέρε τώρα από το Medilabi" title="Φέρε τώρα από το Medilabi">⟳</button><button class="lm-ic" onclick="labsFullSettings()" aria-label="Ρυθμίσεις">⚙︎</button></div>'
+      + '<div class="lm-hd"><h1>Εργαστηριακά</h1><div class="lm-sub" style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+withLab+'/'+P.length+' με αποτελέσματα'+(loadedAt?' · '+hhmm(loadedAt):'')+'<span id="lmMedSt"></span></span><select class="lm-sort" data-lsortsel aria-label="Ταξινόμηση">'+[['room','Θάλαμος'],['new','Νεότερα'],['az','Α–Ω'],['bad','Εκτός ορίων']].map(s=>'<option value="'+s[0]+'"'+(mSort===s[0]?' selected':'')+'>'+s[1]+'</option>').join('')+'</select>'+(isBotU()?'<button type="button" class="lm-adv'+(extF.open?' on':'')+'" data-psf-tg>Σύνθετη</button>':'')+'</div>'
       + '<label class="lm-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B70" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" data-lmq autocomplete="off" placeholder="'+(isBotU()?'Δικοί μου ή Medilabi: όνομα, ΑΜ, ΑΜΚΑ':'Αναζήτηση ασθενή')+'" value="'+E(mQ)+'"></label>'
-      + '<div class="lm-seg">'+[['room','Θάλαμος'],['new','Νεότερα'],['az','Α–Ω'],['bad','Εκτός ορίων']].map(s=>'<button class="'+(mSort===s[0]?'on':'')+'" data-lsort="'+s[0]+'">'+s[1]+'</button>').join('')+'</div></div>'
+      + '</div>'
       + '<div class="lm-body" id="lmBody">'+mobBody(P)+'</div>';
   }
   function mobRedraw(){ EF.keep(()=>{ const b = box.querySelector('#lmBody'); if(b) b.innerHTML = MOB() ? mobBody(pts()) : deskBody(pts()); }); }
@@ -17206,7 +17207,12 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
       cl.addEventListener('click', e=>{ const kids = [...cl.children], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
       document.body.appendChild(cl); };
     new MutationObserver(()=>setTimeout(sync, 60)).observe(box, {attributes:true, attributeFilter:['class']});
-    const st = document.createElement('style'); st.textContent = '#labsFull.on{padding-bottom:calc(env(safe-area-inset-bottom) + 100px)}'; document.head.appendChild(st); })();
+    // 9/11 (χρήστης): η λίστα (κινητό) πιάνει ΟΛΗ την οθόνη και κυλάει ΠΙΣΩ από την κάτω μπάρα (όχι κόψιμο πάνω από αυτή)
+    const st = document.createElement('style'); st.textContent = '#labsFull.on:not(.lm){padding-bottom:calc(env(safe-area-inset-bottom) + 100px)}#labsFull.lm .lm-body{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 118px + var(--lmKb,0px))!important}'
+      + '#labsFull .lm-top:before{display:none!important}#labsFull .lm-top{padding-top:calc(env(safe-area-inset-top,0px) + 8px)!important;border-bottom:0!important;background:transparent!important}'
+      + '#labsFull .lm-sort{flex:none;border:0;border-radius:999px;padding:5px 26px 5px 12px;font-size:13px;font-weight:600;background:rgba(10,132,255,.12) url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27%3E%3Cpath d=%27M1 1l4 4 4-4%27 fill=%27none%27 stroke=%27%230A84FF%27 stroke-width=%271.6%27/%3E%3C/svg%3E") no-repeat right 10px center;color:#0A84FF;-webkit-appearance:none;appearance:none;font-family:inherit}'
+      + 'html.pdx-night #labsFull .lm-sort{background-color:rgba(10,132,255,.22)}';
+    document.head.appendChild(st); })();
   // σύρσιμο δεξιά (από την αριστερή άκρη) → πίσω (στην καρτέλα του ασθενή αν ήρθαμε από εκεί)
   (function(){ let x0 = 0, y0 = 0, ok = false;
     // από οπουδήποτε (όχι μόνο την άκρη), εκτός από πίνακες που κυλάνε οριζόντια
@@ -17547,25 +17553,34 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     if(!window.pdxBotAlive) return;
     pdxBotAlive().then(a=>{
       if(!box.classList.contains('on')) return;
+      if(box.classList.contains('lm')){   // 🧪 9/11: λίστα κινητού — χωρίς κίτρινη μπάρα (περισσότερος χώρος)· η κατάσταση στο ⟳ και, αν το bot είναι εκτός, στη γραμμή κάτω από τον τίτλο
+        const txt = a.ok===false ? pdxBotDownTxt(a) : (a.medilabi ? pdxMedTxt(a.medilabi) : '');
+        const g = box.querySelector('.lm-top [data-medgo]'); if(g && txt) g.title = txt;
+        const st = box.querySelector('#lmMedSt'); if(st && a.ok===false && !st.textContent) st.textContent = ' · ⚠ '+txt;
+        const old = box.querySelector('#lfMed'); if(old) old.remove(); return; }
       let el = box.querySelector('#lfMed');
       if(!el){ el = document.createElement('div'); el.id='lfMed'; el.style.cssText='padding:8px 12px;font-size:13.5px;line-height:1.45;background:#FFFBEB;border-bottom:1px solid #F3E3B5;color:#5B4300;display:flex;gap:8px;align-items:center;flex-wrap:wrap'; const t = box.querySelector('.lf-top,.lm-hd'); if(t) t.after(el); else box.prepend(el); }
       const txt = a.ok===false ? pdxBotDownTxt(a)+' — το Medilabi φτάνει μόνο από το νοσοκομείο.' : (a.medilabi ? pdxMedTxt(a.medilabi) : '🧪 Medilabi: χωρίς πληροφορία από τον υπολογιστή του νοσοκομείου.');
       el.innerHTML = '<span style="flex:1;min-width:200px">'+E(txt)+'</span><button data-medgo style="border:0;background:#1B4B66;color:#fff;border-radius:9px;padding:7px 11px;font-weight:700;cursor:pointer">🤖 Φέρε τώρα</button>';
     });
   }
+  box.addEventListener('change', e=>{ const sl = e.target.closest && e.target.closest('[data-lsortsel]'); if(!sl) return; mSort = sl.value; try{ localStorage.setItem('pdx_lf_sort', mSort); }catch(x){} mobRedraw(); });   // 🧪 9/11: ταξινόμηση = λίστα επιλογής
+  // κουμπί «Φέρε τώρα»: κείμενο (παλιά μπάρα) ή εικονίδιο ⟳ (λίστα κινητού)
+  const medLbl = (b, st)=>{ const ic = b.classList.contains('lm-ic'); b.textContent = st==='sent' ? (ic?'⏳':'⏳ Στάλθηκε…') : st==='run' ? (ic?'⏳':'⏳ Φέρνει…') : (ic?'⟳':'🤖 Φέρε τώρα'); };
+  const medSay = t=>{ const el = box.querySelector('#lfMed span') || box.querySelector('#lmMedSt'); if(el) el.textContent = (el.id==='lmMedSt' && t ? ' · ' : '')+t; };
   box.addEventListener('click', e=>{
     const b = e.target.closest('[data-medgo]'); if(!b || !window.pdxBotSend) return;
     const P = pts(), k = cur || (P[0] && P[0].k); if(!k){ alert('Χρειάζεται τουλάχιστον ένας ασθενής στη λίστα.'); return; }
-    b.disabled = true; b.textContent = '⏳ Στάλθηκε…';
+    b.disabled = true; medLbl(b, 'sent');
     const dC = cur ? ((String(cur).indexOf('extra-')===0 ? extraPatients : data)[cur]) : null;
-    if(dC && dC._npsTemp && window.pdxLabsFor){ b.disabled=false; b.textContent='🤖 Φέρε τώρα'; window.labsFullClose && labsFullClose(); pdxLabsFor({name:dC.name, amka:dC.amka, am:dC.am, k:cur}); return; }
-    pdxBotSend(k, 'medlabs', dC && dC.name ? {only:[dC.name]} : {}).then(ok=>{ if(!ok){ b.disabled=false; b.textContent='🤖 Φέρε τώρα'; return; }   // 7/11: μέσα σε ασθενή → ΜΟΝΟ αυτός (δευτερόλεπτα, όχι όλη η κλινική)
+    if(dC && dC._npsTemp && window.pdxLabsFor){ b.disabled=false; medLbl(b); window.labsFullClose && labsFullClose(); pdxLabsFor({name:dC.name, amka:dC.amka, am:dC.am, k:cur}); return; }
+    pdxBotSend(k, 'medlabs', dC && dC.name ? {only:[dC.name]} : {}).then(ok=>{ if(!ok){ b.disabled=false; medLbl(b); return; }   // 7/11: μέσα σε ασθενή → ΜΟΝΟ αυτός (δευτερόλεπτα, όχι όλη η κλινική)
       const t0 = Date.now(), tick = setInterval(()=>{
         if(!box.classList.contains('on') || Date.now()-t0 > 10*60000){ clearInterval(tick); return; }
         sb6.from('oncall_jobs').select('status,note').eq('kind','medlabs').order('created_at',{ascending:false}).limit(1).then(r=>{
           const j = r && r.data && r.data[0]; if(!j) return;
-          if(j.status==='done' || j.status==='failed'){ clearInterval(tick); const el = box.querySelector('#lfMed span'); if(el) el.textContent = (j.status==='done'?'✓ ':'⚠ ')+(j.note||''); b.disabled=false; b.textContent='🤖 Φέρε τώρα'; if(j.status==='done') load().then(()=>{ render(); medBar(); }); }
-          else if(j.status==='running') b.textContent = '⏳ Φέρνει…';
+          if(j.status==='done' || j.status==='failed'){ clearInterval(tick); medSay((j.status==='done'?'✓ ':'⚠ ')+String(j.note||'').slice(0, 80)); b.disabled=false; medLbl(b); if(j.status==='done') load().then(()=>{ render(); medBar(); }); }
+          else if(j.status==='running') medLbl(b, 'run');
         });
       }, 4000);
     });
