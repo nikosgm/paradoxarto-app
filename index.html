@@ -2268,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v262';
+const APP_VER = '2026-11-09x-v263';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16698,6 +16698,7 @@ Z99.2:C|αιμοκάθαρση
   #labsFull{position:fixed;inset:0;z-index:9000;background:#fff;display:none;flex-direction:column;font-family:inherit;color:#1F2933}
   #labsFull.on{display:flex}
   #labsFull .lf-note{cursor:pointer;font-size:15px;opacity:.75}
+  #labsFull .lf-more{color:#8E8E93;font-weight:700}
   #labsFull .lf-top{display:flex;align-items:center;gap:8px;padding:10px 12px;padding-top:calc(env(safe-area-inset-top) + 10px);background:#1B4B66;color:#fff}
   #labsFull .lf-top b{font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #labsFull .lf-top.lf-wrap{flex-wrap:wrap;row-gap:4px}
@@ -17091,7 +17092,7 @@ Z99.2:C|αιμοκάθαρση
       h += '<table class="lf-tb"><thead><tr><th class="c0">Κλίνη</th><th class="c1">Ασθενής</th><th>Τελευταία</th>'+LF_COLS.map(k=>'<th>'+E(shortLbl({k}))+'</th>').join('')+'<th>Εκτός</th></tr></thead><tbody>';
       L.forEach(x=>{ const p = x.p, b = x.b, imp = x.imp, all = x.all;
         if(!b){ h += '<tr class="none"><td class="c0">'+E(p.label)+'</td><td class="c1">'+E(p.d.name)+'</td><td colspan="'+(LF_COLS.length+2)+'" class="nr">χωρίς αποτελέσματα από το Medilabi</td></tr>'; return; }
-        h += '<tr onclick="labsFullOpen(\''+E(p.k)+'\')" class="'+(imp?'bad':'')+'"><td class="c0">'+E(p.label)+'</td><td class="c1"><b>'+E(p.d.name)+'</b></td><td class="dt">'+E(fmtD(b.last.d))+(b.days[0]===today?' <b class="nw">σήμερα</b>':'')+'</td>';
+        h += '<tr onclick="labsFullOpen(\''+E(p.k)+'\')" class="'+(imp?'bad':'')+'"><td class="c0">'+E(p.label)+'</td><td class="c1"><b>'+E(p.d.name)+'</b></td><td class="dt">'+(()=>{ const vl = visLast(b) || b.last, more = vl !== b.last && b.last.s > vl.s; return E(fmtD(vl.d))+(dayOf(vl.d)===today?' <b class="nw">σήμερα</b>':'')+(more?' <span class="lf-more" title="νεότερες εξετάσεις εκτός πίνακα">＋</span>':''); })()+'</td>';
         LF_COLS.forEach(k=>{ const T = b.tests.find(t=>t.k===k); const p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
           const a = alarmOf(k, p0), old = dayOf(p0.d)!==b.days[0];
@@ -17130,11 +17131,14 @@ Z99.2:C|αιμοκάθαρση
   const isBotU = ()=>!!(window.pdxIsBotUser && window.pdxIsBotUser());
   const fmtN = v=>{ const a = Math.abs(v); return String(+v.toFixed(a>=100?0:a>=10?1:2)).replace('.',','); };
   const ctxOf = p=>{ const lab = labOf(p); return lab ? {b:B(lab), name:p.d.name, label:p.label, adm:(p.d.stay && p.d.stay.adm) || p.d.admitDate || ''} : null; };
+  // 9/11 (χρήστης: «ήρθε βιοχημικός υγρών, δεν φαίνεται στην αρχική αλλά ο ασθενής εμφανίστηκε ως ανανεωμένος — μπερδεύει»):
+  // η ώρα/σειρά της αρχικής = η τελευταία λήψη ΜΟΝΟ των εξετάσεων που έχουν στήλη· νεότερες άλλες εξετάσεις → μικρό «+» δίπλα στην ώρα
+  const visLast = b=>{ let best = null; if(!b) return null; b.tests.forEach(T=>{ if(MCOLS.indexOf(T.k) < 0) return; const p0 = T.pts[0]; if(p0 && (!best || p0.s > best.s)) best = p0; }); return best; };
   function mobRows(P){
     const q = nrm(mQ);
     let L = P.map(p=>{ const lab = labOf(p), b = lab ? B(lab) : null, bl = lab ? badLast(lab) : [0,0]; return {p, b, imp:bl[0], all:bl[1]}; });
     if(q) L = L.filter(x=>nrm(x.p.d.name+' '+x.p.label).indexOf(q)>=0);
-    if(mSort==='new') L.sort((a,c)=>String(c.b ? c.b.last.s : '').localeCompare(String(a.b ? a.b.last.s : '')));
+    if(mSort==='new') L.sort((a,c)=>{ const va = visLast(a.b), vc = visLast(c.b); return String(vc ? vc.s : '').localeCompare(String(va ? va.s : '')); });
     else if(mSort==='az') L.sort((a,c)=>String(a.p.d.name).localeCompare(String(c.p.d.name),'el'));
     else if(mSort==='bad'){ L = L.filter(x=>x.all>0); L.sort((a,c)=>(c.imp-a.imp) || (c.all-a.all)); }
     return L;
@@ -17149,14 +17153,15 @@ Z99.2:C|αιμοκάθαρση
       h += '<div class="lm-tw"><table class="lm-t"><thead><tr><th class="c1"></th>'+MCOLS.map(k=>'<th>'+E(shortLbl({k}))+'</th>').join('')+'</tr></thead><tbody>';
       L.forEach(x=>{ const p = x.p;
         // 8/11: μόνο ΕΠΩΝΥΜΟ + ώρα λήψης (σήμερα) ή ημερομηνία (παλαιότερα) — χωρίς θάλαμο/όνομα
-        const tmL = x.b && x.b.last && (String(x.b.last.d||'').match(/(\d{1,2}:\d{2})/)||[])[1];
-        const when = x.b ? (x.b.days[0]===today ? (tmL || 'σήμερα') : fmtD(x.b.last.d)) : '';
+        const vl = visLast(x.b), vDay = vl ? dayOf(vl.d) : '', more = !!(vl && x.b.last && x.b.last.s > vl.s);
+        const tmL = vl && (String(vl.d||'').match(/(\d{1,2}:\d{2})/)||[])[1];
+        const when = vl ? (vDay===today ? (tmL || 'σήμερα') : fmtD(vl.d)) : (x.b ? fmtD(x.b.last.d) : '');
         const sn = String(p.d.name||'').trim().split(/\s+/)[0] || '—';
-        h += '<tr class="'+(x.imp?'bad':'')+'"><td class="c1" data-lpt="'+E(p.k)+'" title="'+E(p.d.name)+' · '+E(p.label)+'"><b style="display:block;overflow:hidden;text-overflow:ellipsis">'+E(sn)+'</b><small'+(x.b && x.b.days[0]===today?' class="nw"':'')+'>'+E(when)+'</small></td>';
+        h += '<tr class="'+(x.imp?'bad':'')+'"><td class="c1" data-lpt="'+E(p.k)+'" title="'+E(p.d.name)+' · '+E(p.label)+'"><b style="display:block;overflow:hidden;text-overflow:ellipsis">'+E(sn)+'</b><small'+(vl && vDay===today?' class="nw"':'')+'>'+E(when)+(more?' <span class="lf-more" title="νεότερες εξετάσεις εκτός πίνακα (π.χ. βιοχημικός υγρών) — πάτα τον ασθενή">＋</span>':'')+'</small></td>';
         if(!x.b){ h += '<td colspan="'+MCOLS.length+'" class="nr">χωρίς αποτελέσματα</td></tr>'; return; }
         MCOLS.forEach(k=>{ const T = x.b.tests.find(t=>t.k===k), p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
-          const a = alarmOf(k, p0), old = dayOf(p0.d)!==x.b.days[0];
+          const a = alarmOf(k, p0), old = dayOf(p0.d)!==(vDay || x.b.days[0]);
           h += isNote(p0.v) ? '<td class="na">'+valOrNote(p0.v)+'</td>' : '<td class="'+cls(a)+(old?' old':'')+'" data-lch="'+E(p.k)+'|'+E(k)+'">'+E(p0.v)+arrow(a)+'</td>'; });
         h += '</tr>'; });
       h += '</tbody></table></div>';
