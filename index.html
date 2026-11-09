@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09h-v222';
+const APP_VER = '2026-11-09j-v224';
 // Διακόπτες λειτουργιών: oncall_config key "features" = {quickEdit:false, ...}. Ό,τι λείπει θεωρείται ενεργό.
 const FEATURES = {};
 const FX = k => FEATURES[k] !== false;
@@ -17576,7 +17576,7 @@ window.__chClose = function(){ closeOv(); };
 window.pdxDictate = function(k){
   const isX = String(k).indexOf('extra')===0, rec = (isX ? extraPatients : data)[k]; if(!rec) return;
   const E4 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const st = {rec:null, chunks:[], t0:0, busy:'', err:'', text:'', tick:0, nps:null};
+  const st = {rec:null, chunks:[], t0:0, busy:'', err:'', text:'', tick:0, nps:null, sr:null, srHint:''};
   // 📤 9/11: «Πορεία νόσου» στο ΝΠΣ — φόρμα SOAP (υποχρεωτικά S/A/P όπως στο ΝΠΣ) ή ISBAR· ό,τι βλέπεις εδώ είναι ακριβώς ό,τι θα γραφτεί.
   // «Αποστολή» = έγκριση του γιατρού → το bot συμπληρώνει, διαβάζει πίσω και υποβάλλει (κείμενο κρυπτογραφημένο με το κλειδί κλινικής).
   const NPSF = {SOAP:[['S','Subjective *',1],['A','Assessment *',1],['P','Plan *',1],['rem','Σχόλια',0]], ISBAR:[['S','Situation *',1],['B','Background *',1],['A','Assessment *',1],['R','Recommendation *',1]]};
@@ -17608,11 +17608,14 @@ window.pdxDictate = function(k){
   const notes = ()=>Array.isArray(rec.courseNotes) ? rec.courseNotes : [];
   const pg = iosPage('Πορεία νόσου', '', ()=>{
     let h = '<div style="margin:6px 16px 0;font-size:14px;color:#6B7280">'+E4(rec.name||'')+'</div>';
-    const recOn = !!st.rec;
-    h += '<div style="display:flex;justify-content:center;margin:22px 0 8px"><button data-rec style="width:96px;height:96px;border-radius:48px;border:0;font-size:38px;color:#fff;background:'+(recOn?'#B42318':'#0A84FF')+';box-shadow:0 6px 20px rgba(0,0,0,.2)">'+(recOn?'■':'🎤')+'</button></div>';
-    h += '<div style="text-align:center;color:#6B7280;font-size:14px;min-height:20px">'+(recOn ? '● Ηχογράφηση · '+Math.round((Date.now()-st.t0)/1000)+'″ — πάτα ■ για τέλος' : st.busy ? '⏳ '+E4(st.busy) : 'Πάτα 🎤 και μίλα (π.χ. «Απύρετος, αιμοδυναμικά σταθερός, …»)')+'</div>';
+    const recOn = !!st.rec, srOn = !!st.sr;
+    // 🎙 9/11 (χρήστης: «το dictate αργεί»): ΚΥΡΙΟ = υπαγόρευση του ΚΙΝΗΤΟΥ (άμεση, ελληνικά)· Whisper στον υπολογιστή = εναλλακτικό
+    h += '<div style="display:flex;justify-content:center;margin:22px 0 8px"><button data-sr style="width:96px;height:96px;border-radius:48px;border:0;font-size:38px;color:#fff;background:'+(srOn?'#B42318':'#0A84FF')+';box-shadow:0 6px 20px rgba(0,0,0,.2)">'+(srOn?'■':'🎙')+'</button></div>';
+    h += '<div style="text-align:center;color:#6B7280;font-size:14px;min-height:20px;padding:0 16px">'+(srOn ? '● Ακούω — μίλα· πάτα ■ για τέλος' : recOn ? '● Ηχογράφηση για Whisper · '+Math.round((Date.now()-st.t0)/1000)+'″ — πάτα ■' : st.busy ? '⏳ '+E4(st.busy) : 'Πάτα 🎙 και μίλα — γράφει αμέσως (υπαγόρευση κινητού)')+'</div>';
+    if(st.srHint) h += '<div style="margin:10px 16px;padding:10px 12px;background:#FFF7E6;border-radius:10px;font-size:14px;color:#7A4B00">'+st.srHint+'</div>';
+    h += '<div style="text-align:center;margin:6px 0 0"><button data-rec style="border:0;background:none;color:'+(recOn?'#B42318':'#0A84FF')+';font-size:14px;font-weight:600;padding:6px 10px">'+(recOn?'■ Τέλος ηχογράφησης':'🎤 ή με Whisper (υπολογιστής νοσοκομείου, πιο αργό)')+'</button></div>';
     if(st.err) h += '<div style="margin:10px 16px;color:#B42318">⚠ '+E4(st.err)+'</div>';
-    if(st.text || !recOn) h += '<div style="margin:14px 16px 4px;font-weight:700">Κείμενο</div><textarea data-tx style="display:block;width:calc(100% - 32px);margin:0 16px;box-sizing:border-box;min-height:160px;font-size:16px;line-height:1.45;padding:10px;border:1px solid #C7CDD4;border-radius:12px" placeholder="Η μεταγραφή εμφανίζεται εδώ — μπορείς να τη διορθώσεις ή να γράψεις">'+E4(st.text)+'</textarea>'
+    h += '<div style="margin:14px 16px 4px;font-weight:700">Κείμενο</div><textarea data-tx style="display:block;width:calc(100% - 32px);margin:0 16px;box-sizing:border-box;min-height:160px;font-size:16px;line-height:1.45;padding:10px;border:1px solid #C7CDD4;border-radius:12px" placeholder="Η μεταγραφή εμφανίζεται εδώ — μπορείς να τη διορθώσεις ή να γράψεις">'+E4(st.text)+'</textarea>'
       + '<div style="display:flex;gap:8px;margin:10px 16px"><button data-cp style="flex:1;min-height:46px;border:0;border-radius:12px;background:#EEF2F6;color:#0A84FF;font-weight:700">📋 Αντιγραφή</button><button data-sv style="flex:1;min-height:46px;border:0;border-radius:12px;background:#0A84FF;color:#fff;font-weight:700">💾 Στην καρτέλα</button></div>'
       + npsBox();
     const N = notes(); if(N.length) h += iosGroup('Προηγούμενες · '+N.length, N.slice().reverse().slice(0,10).map(n=>({t:'<span style="font-size:14px">'+E4(n.text)+'</span>', sub:new Date(n.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})})));
@@ -17634,9 +17637,23 @@ window.pdxDictate = function(k){
         if(j.status==='done'){ const o = await pdxCK.decrypt(j.payload.result.enc); st.text = (st.text ? st.text.trim()+' ' : '') + String(o.text||'').trim(); st.busy = ''; pg.redraw(); return; }
         if(/^(failed|cancelled|dismissed)$/.test(j.status)){ throw new Error(j.note||'απέτυχε'); } }
     }catch(e){ st.busy = ''; st.err = e.message||String(e); pg.redraw(); } };
+  pdxNpsWarm(rec, k, 'prog');
   pg.el.addEventListener('input', e=>{ if(e.target.dataset.tx!=null) st.text = e.target.value; if(e.target.dataset.npsf && st.nps) st.nps.f[e.target.dataset.npsf] = e.target.value; });
   pg.el.addEventListener('click', async e=>{
     const t = e.target;
+    if(t.closest('[data-sr]')){
+      if(st.sr){ try{ st.sr.stop(); }catch(x){} return; }
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const kbHint = ()=>{ st.srHint = 'Η υπαγόρευση δεν ξεκίνησε εδώ. Πάτα μέσα στο «Κείμενο» και μετά το <b>🎤 του πληκτρολογίου</b> (κάτω δεξιά) — γράφει ελληνικά αμέσως.'; pg.redraw(); const ta = pg.el.querySelector('[data-tx]'); if(ta){ ta.focus(); try{ ta.setSelectionRange(ta.value.length, ta.value.length); }catch(x){} } };
+      if(!SR) return kbHint();
+      st.err = ''; st.srHint = ''; const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true;
+      const base = String(st.text||'').trim(); let fin = '';
+      r.onresult = ev=>{ let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'')+x[0].transcript.trim(); else inter += x[0].transcript; }
+        st.text = (base ? base+' ' : '') + fin + (inter ? (fin?' ':'')+inter : ''); const ta = pg.el.querySelector('[data-tx]'); if(ta) ta.value = st.text; };
+      r.onerror = ev=>{ const e2 = ev && ev.error; st.sr = null; if(e2 === 'not-allowed' || e2 === 'service-not-allowed' || e2 === 'audio-capture') kbHint(); else if(e2 && e2 !== 'no-speech' && e2 !== 'aborted'){ st.err = 'Υπαγόρευση: '+e2; pg.redraw(); } };
+      r.onend = ()=>{ st.sr = null; st.text = ((base ? base+' ' : '') + fin).trim() || st.text; pg.redraw(); };
+      try{ r.start(); st.sr = r; pg.redraw(); }catch(er){ st.sr = null; kbHint(); }
+      return; }
     if(t.closest('[data-rec]')){
       if(st.rec){ st.rec.stop(); return; }
       st.err = ''; try{ const ms = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:true, noiseSuppression:true}});
@@ -17665,6 +17682,13 @@ window.pdxNpsMedLoad = async function(){ const C = window.pdxNpsMedCat; if(C.ite
 window.pdxNpsMedFind = function(q, L){ const N = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase(); const W = N(q).split(/[\s,()/:]+/).filter(Boolean); if(!W.length) return [];
   const out = []; for(const it of (L||[])){ const T = N(it), toks = T.split(/[\s,()/:]+/); if(W.every(w=>toks.some(t=>t.indexOf(w)===0))){ out.push(it); if(out.length>=40) break; } }
   const w0 = W[0]; return out.sort((x,y)=>(N(y).indexOf(w0)===0)-(N(x).indexOf(w0)===0) || x.length-y.length).slice(0,12); };
+// 🔥 9/11: προθέρμανση ΝΠΣ — μόλις ανοίγει η σελίδα, το bot ανοίγει ήδη τον ασθενή και τη φόρμα (τίποτα δεν γράφεται)
+window.pdxNpsWarm = function(rec, k, target){ try{
+  const amka = String(rec && rec.amka || '').replace(/\D/g,''); if(amka.length !== 11 || typeof sb6 === 'undefined') return;
+  const W = window.__pdxWarmAt || (window.__pdxWarmAt = {}), key = amka+'|'+target; if(Date.now() - (W[key]||0) < 60000) return; W[key] = Date.now();
+  const nrm4 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  sb6.from('oncall_jobs').insert({name_key:nrm4(rec.name), name:rec.name||'', room:String(k).indexOf('extra')===0?null:k, kind:'npswarm', payload:{name:rec.name||'', amka, target, quiet:true}, status:'new'}).then(()=>{}, ()=>{});
+}catch(e){} };
 window.pdxMedOrder = function(k){
   const isX = String(k).indexOf('extra')===0, rec = (isX ? extraPatients : data)[k]; if(!rec) return;
   const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -17693,6 +17717,7 @@ window.pdxMedOrder = function(k){
     box.innerHTML = R.map(x=>'<div data-mpick="'+E5(x)+'" style="padding:9px 10px;border-bottom:1px solid #EEF0F3;font-size:14.5px;background:#fff;cursor:pointer">'+E5(x)+'</div>').join('');
     box.style.cssText = R.length ? 'margin-top:4px;border:1px solid #C7CDD4;border-radius:10px;overflow:hidden;max-height:300px;overflow-y:auto' : ''; };
   pdxNpsMedLoad().then(()=>sug());
+  pdxNpsWarm(rec, k, 'med');
   pg.el.addEventListener('input', e=>{ const t = e.target; if(!t.isConnected) return; if(t.dataset && t.dataset.mf){ st.f[t.dataset.mf] = t.value; if(t.dataset.mf==='drug') sug(); } });
   pg.el.addEventListener('change', e=>{ const t = e.target; if(t.dataset && t.dataset.mf && t.tagName==='SELECT') st.f[t.dataset.mf] = t.value; });
   pg.el.addEventListener('mousedown', e=>{ if(e.target.closest('[data-mpick]')) e.preventDefault(); });
@@ -17712,7 +17737,7 @@ window.pdxMedOrder = function(k){
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:nrm3(rec.name), name:rec.name||'', room:isX?null:k, kind:'npsmedorder', payload, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
       const id = ins.data.id;
       for(;;){ await new Promise(r=>setTimeout(r, 2000)); if(!pg.el.isConnected) return; const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = q.data; if(!j) continue;
-        if(j.status==='done'){ st.busy=''; st.ok = !/⚠/.test(j.note||''); st.msg = j.note||''; st.res = (j.payload||{}).result||null; if(appr && st.ok) st.saved = true; pg.redraw(); return; }
+        if(j.status==='done'){ st.busy=''; st.ok = !/⚠/.test(j.note||''); st.msg = j.note||''; st.res = (j.payload||{}).result||null; if(appr && st.ok) st.saved = true; pg.redraw(); if(!appr && st.ok){ (window.__pdxWarmAt||{})[String(rec.amka||'').replace(/\D/g,'')+'|med'] = 0; pdxNpsWarm(rec, k, 'med'); } return; }
         if(/^(failed|cancelled|dismissed|review)$/.test(j.status)){ st.busy=''; st.ok=false; st.msg = (/^⚠|^💊 ⚠/.test(j.note||'')?'':'⚠ ')+(j.note||'απέτυχε'); if(appr) st.last = null; pg.redraw(); return; }
         if(j.note){ st.busy = j.note.slice(0,80); pg.redraw(); } } }
     catch(er){ st.busy=''; st.ok=false; st.msg = '⚠ '+(er.message||er); pg.redraw(); } };
