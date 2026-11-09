@@ -18,10 +18,10 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:-apple-sys
 .cam{position:relative;flex:1;overflow:hidden}
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;font-size:16px;line-height:1.45}
-.bar{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 10px 22px;min-height:110px}
-.shot{width:80px;height:80px;border-radius:50%;border:5px solid #fff;background:#34C759}
+.bar{display:flex;align-items:center;justify-content:center;gap:9px;padding:14px 10px 22px;min-height:110px}
+.shot{flex:none;width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#34C759}
 .shot:active{transform:scale(.94)}
-.gal{width:56px;height:56px;border:0;border-radius:14px;background:#ffffff26;color:#fff;font-size:28px}
+.gal{flex:none;width:52px;height:56px;border:0;border-radius:14px;background:#ffffff26;color:#fff;font-size:28px}
 .btn{border:0;border-radius:14px;padding:14px 18px;font-size:17px;font-weight:800;background:#34C759;color:#fff;min-width:220px}
 .btn.sec{background:#ffffff26}
 input[type=text]{font-size:17px;padding:12px;border-radius:12px;border:0;width:260px;max-width:90vw;text-align:center}
@@ -41,7 +41,7 @@ a.go2{color:#9fd4ff;font-size:14px}
 </head><body>
 <div id="app">
   <div class="cam"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas><div class="hint" id="hint" style="display:none"></div><div class="flash" id="fl"></div><div class="msg" id="msg"><div class="spin"></div></div></div>
-  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="opn" aria-label="Πρακτικό" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">📝<br>Πρακτικό</button><button class="gal" id="scn" aria-label="Σκάνερ" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">📄<br>Σκάνερ</button><button class="gal" id="rot" aria-label="Οριζόντιο" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">↻<br>Οριζόντιο</button></div>
+  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="prg" aria-label="Πρόγραμμα" style="width:auto;min-width:52px;padding:0 7px;font-size:12px;font-weight:800;line-height:1.15">🗓<br>Πρόγραμμα</button><button class="gal" id="opn" aria-label="Πρακτικό" style="width:auto;min-width:52px;padding:0 7px;font-size:12px;font-weight:800;line-height:1.15">📝<br>Πρακτικό</button><button class="gal" id="scn" aria-label="Σκάνερ" style="width:auto;min-width:52px;padding:0 7px;font-size:12px;font-weight:800;line-height:1.15">📄<br>Σκάνερ</button></div>
 </div>
 <div id="ed"><div id="edw"><canvas id="edc"></canvas><canvas id="edo"></canvas><div class="hint">Σύρε τις μπλε γωνίες στις άκρες του χαρτιού</div></div>
   <div class="edb"><button class="btn sec" id="edx" style="min-width:0">↺ Ξανά</button><button class="btn sec" id="edf" style="min-width:0">Όλη η φωτό</button><button class="btn" id="edk" style="min-width:0;background:#0A84FF">✓ Σάρωση</button></div></div>
@@ -109,15 +109,18 @@ async function fromFiles(fs){ fs = [...(fs || [])].slice(0, 4); if(!fs.length) r
   if(scOn() && bm.length === 1){ const c = DS.grab(bm[0], bm[0].width, bm[0].height), q = DS.detectOn(c, c.width, c.height); if(q) return editor(c, q); }
   if(scOn()){ const out = bm.map(b=>{ const c = DS.grab(b, b.width, b.height), q = DS.detectOn(c, c.width, c.height); return q ? DS.warp(c, q) : b; }); return send(out); }
   send(bm); }
-// ↻ 9/11 (χρήστης): «Οριζόντιο» — όταν είναι ενεργό (πράσινο), κάθε κάθετη λήψη γυρίζει 90° και η σελίδα βγαίνει ΟΡΙΖΟΝΤΙΑ
-// (= πρόγραμμα χειρουργείου). Το θυμάται.
-const ROT = 'pdx_scan_rot', rotOn = ()=>{ try{ return localStorage.getItem(ROT) === '1'; }catch(e){ return false; } };
-const rotPaint = ()=>{ const b = $('rot'); b.style.background = rotOn() ? '#34C759' : '#ffffff26'; b.innerHTML = rotOn() ? '↻ ✓<br>Οριζόντιο' : '↻<br>Οριζόντιο'; };
-$('rot').onclick = ()=>{ try{ localStorage.setItem(ROT, rotOn() ? '0' : '1'); }catch(e){} rotPaint(); }; rotPaint();
-// 📝 9/11 (χρήστης): «Πρακτικό» — η λήψη πάει στο Claude ΩΣ ΠΡΑΚΤΙΚΟ ΧΕΙΡΟΥΡΓΕΙΟΥ (ψηφιοποίηση → φόρμα πρακτικού στο Παραδόχαρτο). Το θυμάται.
-const OPK = 'pdx_scan_op', opOn = ()=>{ try{ return localStorage.getItem(OPK) === '1'; }catch(e){ return false; } };
-const opPaint = ()=>{ const b = $('opn'); b.style.background = opOn() ? '#0A84FF' : '#ffffff26'; b.innerHTML = opOn() ? '📝 ✓<br>Πρακτικό' : '📝<br>Πρακτικό'; };
-$('opn').onclick = ()=>{ try{ localStorage.setItem(OPK, opOn() ? '0' : '1'); }catch(e){} opPaint(); }; opPaint();
+// 🗓/📝 9/11 (χρήστης: «σβήσε το οριζόντιο· κουμπιά για πρόγραμμα και πρακτικό, να μη μπορούν να πατηθούν ταυτόχρονα»):
+// ΕΝΑΣ τρόπος τη φορά (pdx_scan_mode): «prog» = πρόγραμμα χειρουργείου (email, σελίδα πάντα ΟΡΙΖΟΝΤΙΑ) · «op» = πρακτικό → Claude ·
+// κανένα = αυτόματα (οριζόντιο χαρτί → πρόγραμμα, όρθιο → ιστορικό/πόρισμα στο Claude). Το ένα σβήνει το άλλο· ξανά πάτημα = σβήνει.
+const MODE = 'pdx_scan_mode';
+const modeGet = ()=>{ try{ const m = localStorage.getItem(MODE); if(m != null) return m;
+  const old = localStorage.getItem('pdx_scan_op') === '1' ? 'op' : localStorage.getItem('pdx_scan_rot') === '1' ? 'prog' : ''; localStorage.setItem(MODE, old); return old; }catch(e){ return ''; } };
+const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog';
+const modePaint = ()=>{ const m = modeGet(), P = $('prg'), O = $('opn');
+  P.style.background = m === 'prog' ? '#34C759' : '#ffffff26'; P.innerHTML = m === 'prog' ? '🗓 ✓<br>Πρόγραμμα' : '🗓<br>Πρόγραμμα';
+  O.style.background = m === 'op' ? '#0A84FF' : '#ffffff26'; O.innerHTML = m === 'op' ? '📝 ✓<br>Πρακτικό' : '📝<br>Πρακτικό'; };
+const modeSet = (x)=>{ try{ localStorage.setItem(MODE, modeGet() === x ? '' : x); }catch(e){} modePaint(); };
+$('prg').onclick = ()=>modeSet('prog'); $('opn').onclick = ()=>modeSet('op'); modePaint();
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
 
