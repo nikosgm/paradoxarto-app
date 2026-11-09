@@ -18,7 +18,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:-apple-sys
 .cam{position:relative;flex:1;overflow:hidden}
 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:24px;font-size:16px;line-height:1.45}
-.bar{display:flex;align-items:center;justify-content:center;gap:28px;padding:14px 10px 22px;min-height:110px}
+.bar{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 10px 22px;min-height:110px}
 .shot{width:80px;height:80px;border-radius:50%;border:5px solid #fff;background:#34C759}
 .shot:active{transform:scale(.94)}
 .gal{width:56px;height:56px;border:0;border-radius:14px;background:#ffffff26;color:#fff;font-size:28px}
@@ -34,7 +34,7 @@ a.go2{color:#9fd4ff;font-size:14px}
 </head><body>
 <div id="app">
   <div class="cam"><video id="v" playsinline muted autoplay></video><div class="flash" id="fl"></div><div class="msg" id="msg"><div class="spin"></div></div></div>
-  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="rot" aria-label="Οριζόντιο" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">↻<br>Οριζόντιο</button></div>
+  <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="opn" aria-label="Πρακτικό" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">📝<br>Πρακτικό</button><button class="gal" id="rot" aria-label="Οριζόντιο" style="width:auto;min-width:56px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.15">↻<br>Οριζόντιο</button></div>
 </div>
 <input id="gf" type="file" accept="image/*" multiple style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px">
 <input id="cf" type="file" accept="image/*" capture="environment" style="position:fixed;left:-9999px;opacity:0;width:1px;height:1px">
@@ -101,6 +101,10 @@ async function fromFiles(fs){ fs = [...(fs || [])].slice(0, 4); if(!fs.length) r
 const ROT = 'pdx_scan_rot', rotOn = ()=>{ try{ return localStorage.getItem(ROT) === '1'; }catch(e){ return false; } };
 const rotPaint = ()=>{ const b = $('rot'); b.style.background = rotOn() ? '#34C759' : '#ffffff26'; b.innerHTML = rotOn() ? '↻ ✓<br>Οριζόντιο' : '↻<br>Οριζόντιο'; };
 $('rot').onclick = ()=>{ try{ localStorage.setItem(ROT, rotOn() ? '0' : '1'); }catch(e){} rotPaint(); }; rotPaint();
+// 📝 9/11 (χρήστης): «Πρακτικό» — η λήψη πάει στο Claude ΩΣ ΠΡΑΚΤΙΚΟ ΧΕΙΡΟΥΡΓΕΙΟΥ (ψηφιοποίηση → φόρμα πρακτικού στο Παραδόχαρτο). Το θυμάται.
+const OPK = 'pdx_scan_op', opOn = ()=>{ try{ return localStorage.getItem(OPK) === '1'; }catch(e){ return false; } };
+const opPaint = ()=>{ const b = $('opn'); b.style.background = opOn() ? '#0A84FF' : '#ffffff26'; b.innerHTML = opOn() ? '📝 ✓<br>Πρακτικό' : '📝<br>Πρακτικό'; };
+$('opn').onclick = ()=>{ try{ localStorage.setItem(OPK, opOn() ? '0' : '1'); }catch(e){} opPaint(); }; opPaint();
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
 
@@ -166,10 +170,11 @@ async function send(srcs, w0, h0){
       let s = ''; for(let i = 0; i < o.length; i += 0x8000) s += String.fromCharCode.apply(null, o.subarray(i, i + 0x8000)); pages.push(btoa(s));
       w0 = h0 = 0;
     }
-    if(land && !window.__scanForceClaude) return progFlow(pages, raw);
+    const op = opOn();
+    if(land && !op && !window.__scanForceClaude) return progFlow(pages, raw);
     window.__scanForceClaude = false;
     const id = await rpc('scan_put', { p_token: tok.get(), p_payload: { pages } });
-    const tag = '#s' + id + 'k' + [...raw].map(b=>b.toString(16).padStart(2, '0')).join('');
+    const tag = '#s' + id + 'k' + [...raw].map(b=>b.toString(16).padStart(2, '0')).join('') + (op ? 'o' : '');
     window.__scanNav = CLAUDE_APP + tag;
     msg('<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div><a class="go" href="' + CLAUDE_APP + tag + '">Άνοιγμα στην εφαρμογή Claude</a><a class="go2" href="' + CLAUDE + tag + '" target="_blank" rel="noopener">ή στον browser</a>');
     if(!window.__scanNoNav){ try{ location.href = CLAUDE_APP + tag; }catch(e){} }
