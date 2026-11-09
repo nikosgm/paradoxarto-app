@@ -18,7 +18,7 @@
   ];
   const keys = (s) => { const n = N(s); const out = new Set(n.split(/[^a-zα-ω0-9]+/).filter((w) => w.length >= 3)); for (const [re, k] of SYN) if (re.test(n)) N(k).split(" ").forEach((w) => out.add(w)); return out; };
   const sideOf = (s) => { const n = N(s); return /\bαμφω|αμφοτεροπλ/.test(n) ? "ΑΜΦΩ" : /\bαρ\b|αριστερ/.test(n) ? "ΑΡ" : /\bδε\b|δεξι/.test(n) ? "ΔΕ" : ""; };
-  const IDX = () => (window.PRAKTIKA || []).map((x) => ({ ...x, k: keys(x.op + " " + x.t.slice(0, 160)), side: sideOf(x.op) }));
+  const IDX = () => (window.PRAKTIKA || []).map((x) => ({ ...x, k: keys(x.op + " " + (x.aka || []).join(" ") + " " + x.t.slice(0, 160)), side: sideOf(x.op) }));
   function rank(proc, side) {
     const q = keys(proc); const L = IDX().map((x) => { let sc = 0; q.forEach((w) => { if (x.k.has(w)) sc += 3; else if ([...x.k].some((k) => k.startsWith(w.slice(0, 5)))) sc += 1; }); if (side && x.side === side) sc += 1; if (/\[;\]|δυσανάγνωστο/.test(x.op)) sc -= 2; return { x, sc }; });
     return L.filter((o) => o.sc > 0).sort((a, b) => b.sc - a.sc || a.x.t.length - b.x.t.length).map((o) => o.x);
@@ -53,7 +53,7 @@
     ov.addEventListener("click", (e) => {
       const t = e.target;
       if (t === ov || t.closest("[data-x]")) return ov.remove();
-      const pk = t.closest("[data-pick]"); if (pk) { cur = (window.PRAKTIKA || []).find((x) => x.n === +pk.dataset.pick); text = side && sideOf(cur.op) && sideOf(cur.op) !== side && side !== "ΑΜΦΩ" ? swapSide(cur.t, side) : cur.t; if (!surg) surg = cur.surg; return draw(); }
+      const pk = t.closest("[data-pick]"); if (pk) { cur = (window.PRAKTIKA || []).find((x) => x.n === +pk.dataset.pick); const cs = sideOf(cur.op) || sideOf(cur.t); text = side && cs && cs !== "ΑΜΦΩ" && cs !== side && side !== "ΑΜΦΩ" ? swapSide(cur.t, side) : cur.t; /* 9/11: συγχωνευμένα → πλευρά από το κείμενο */ if (!surg) surg = cur.surg; return draw(); }
       if (t.closest("[data-back]")) { cur = null; return draw(); }
       const sd = t.closest("[data-sd]"); if (sd) { text = swapSide(text, sd.dataset.sd); return draw(); }
       if (t.closest("[data-cp]")) { const s = (surg && !o.noSurg ? surg + "\n\n" : "") + text; (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject()).then(() => { t.textContent = "✓ Αντιγράφηκε"; }, () => { const a = ov.querySelector("[data-t]"); a.select(); document.execCommand("copy"); t.textContent = "✓ Αντιγράφηκε"; }); return; }
