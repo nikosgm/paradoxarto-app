@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09w-v255';
+const APP_VER = '2026-11-09x-v256';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7785,6 +7785,10 @@ document.head.appendChild(st);
   const iosShort = t=>{ t = String(t||'').trim(); return t.length > 16 ? t.slice(0,15)+'…' : t; };
   if(!window.__pdxTapHook){ window.__pdxTapHook = 1; const tr = e=>{ window.__pdxTapEl = e.target; window.__pdxTapPg = (e.target && e.target.closest) ? e.target.closest('#iosPg,.iosPgU') : null; }; document.addEventListener('pointerdown', tr, true); document.addEventListener('touchstart', tr, {capture:true, passive:true}); document.addEventListener('click', tr, true); }
   window.iosPage = function(title, back, draw){
+    // 9/11 (χρήστης: σύρσιμο «πίσω» έδειχνε από κάτω ξεχασμένα Εργαστηριακά/μισές οθόνες): σελίδα που ΔΕΝ ανοίγει μέσα από τα
+    // Εργαστηριακά τα κλείνει· τυχόν «φαντάσματα» συρσίματος (.pdxg/.pdxdim) φεύγουν πριν ανοίξει η νέα σελίδα
+    try{ const lf = document.getElementById('labsFull'), te = window.__pdxTapEl; if(lf && lf.classList.contains('on') && !(te && te.closest && te.closest('#labsFull,#lfTabs')) && window.labsFullClose) labsFullClose(); }catch(e){}
+    try{ document.querySelectorAll('.pdxg,.pdxdim').forEach(x=>x.remove()); }catch(e){}
     let top = document.getElementById('iosPg'); if(top && top.__closing) top = [...document.querySelectorAll('#iosPg')].find(x=>!x.__closing) || null;
     if(top && top.__ttl===title){ top.remove(); top = [...document.querySelectorAll('.iosPgU')].pop() || null; if(top){ top.classList.remove('iosPgU'); top.id = 'iosPg'; } }
     // 8/11: στοίβα ΜΟΝΟ όταν η νέα σελίδα ανοίγει από ΜΕΣΑ στην ανοιχτή (πάτημα μέσα της). Αν ανοίγει από αλλού
@@ -10593,7 +10597,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   })();
   // 📱 κινητό (νέα εμφάνιση): η κάτω μπάρα είναι Κλινική · Εργαστηριακά · Εργαλεία · Ρυθμίσεις — το παλιό «Σήμερα» δεν υπάρχει πια εκεί,
   // και το παλιό «🤖 Bot» ανοίγει ως σελίδα με «‹ πίσω» (όχι στην κύρια οθόνη χωρίς επιστροφή)
-  window.mobTab = t=>{ if(phoneNv()){ if(t==='today') t = 'pts'; if(t==='bot'){ closePops(); return window.pdxBotPage(); } }
+  window.mobTab = t=>{ try{ const lf = document.getElementById('labsFull'); if(lf && lf.classList.contains('on') && window.labsFullClose) labsFullClose(); }catch(e){}   // 9/11: αλλαγή καρτέλας → τα Εργαστηριακά δεν μένουν ανοιχτά από κάτω
+    if(phoneNv()){ if(t==='today') t = 'pts'; if(t==='bot'){ closePops(); return window.pdxBotPage(); } }
     if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; } closePops(); window.__dret=null; tab=t; openKey=null; render(); view.scrollTop=0; };
   window.mobFull = ()=>{ if(deskMode){ deskMode=false; window.__pdxDesk=false; try{ localStorage.setItem('pdx_desk','0'); }catch(e){} openKey=null; render(); try{ buildGrid(); }catch(e){} return; } forceFull=true; render(); };
   // 🖥⇄▦ 8/11 (εντολή χρήστη): εναλλαγή προβολής υπολογιστή με ΣΤΡΟΓΓΥΛΟ κουμπί κάτω δεξιά (όπως τα chat των ιστοσελίδων)
