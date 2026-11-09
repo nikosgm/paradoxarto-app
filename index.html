@@ -2268,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v265';
+const APP_VER = '2026-11-09x-v266';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13384,7 +13384,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const t = NB.listAt ? new Date(NB.listAt) : null, when = t ? (t.toDateString()===new Date().toDateString() ? 'σήμερα ' : t.getDate()+'/'+(t.getMonth()+1)+' ')+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0') : '';
     let h = '<div class="msec" style="display:flex;align-items:center;gap:8px"><span style="flex:1">'+L.length+' νοσηλευόμενοι στον ΝΠΣ'+(when?' · λίστα '+esc(when):'')+'</span><button data-npsfull style="border:0;background:none;color:#0A84FF;font-weight:700;font-size:14px">Λεπτομέρειες ›</button></div><div class="nv-npsl">';
     L.forEach((r, i)=>{ const k = nbKey(r), x = NB.enr[nbNz(r.name)] || {}, am = x.am || r.am || '';
-      h += '<div class="mcard mrow" data-npsv="'+i+'" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin:6px 12px;cursor:pointer"><span style="flex:1;min-width:0"><b>'+esc(r.name||'')+'</b>'+(am?'<br><span style="color:#8E8E93;font-size:13px">ΑΜ '+esc(am)+'</span>':'')+'</span>'
+      h += '<div class="mcard mrow" data-npsv="'+i+'" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin:6px 12px;cursor:pointer"><span style="flex:1;min-width:0"><b>'+esc(r.name||'')+'</b></span>'
         + (k ? '<span style="font-size:12.5px;font-weight:700;color:#34C759;white-space:nowrap">'+esc(/^extra/.test(k)?'εκτός θαλάμου':k.replace('-', '.'))+'</span>' : '<span style="font-size:12.5px;font-weight:700;color:#FF9500;white-space:nowrap">μόνο ΝΠΣ</span>')+'</div>'; });
     return h + (L.length ? '' : '<div class="msec">Η λίστα ΝΠΣ είναι άδεια.</div>') + '</div>';
   };
@@ -17192,8 +17192,9 @@ Z99.2:C|αιμοκάθαρση
     const withLab = P.filter(p=>labOf(p)).length;
     box.classList.add('lm');
     // 🧪 9/11 (χρήστης): χωρίς «Τέλος» (πλοήγηση από την κάτω μπάρα) και χωρίς γκρι λαβή· ⟳ πάνω δεξιά = «Φέρε τώρα» από το Medilabi
-    box.innerHTML = '<div class="lm-top"><span style="flex:1"></span><button class="lm-ic" data-medgo aria-label="Φέρε τώρα από το Medilabi" title="Φέρε τώρα από το Medilabi">⟳</button><button class="lm-ic" onclick="labsFullSettings()" aria-label="Ρυθμίσεις">⚙︎</button></div>'
-      + '<div class="lm-hd"><h1>Εργαστηριακά</h1><div class="lm-sub" style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+withLab+'/'+P.length+' με αποτελέσματα'+(loadedAt?' · '+hhmm(loadedAt):'')+'<span id="lmMedSt"></span></span><select class="lm-sort" data-lsortsel aria-label="Ταξινόμηση">'+[['room','Θάλαμος'],['new','Νεότερα'],['az','Α–Ω'],['bad','Εκτός ορίων']].map(s=>'<option value="'+s[0]+'"'+(mSort===s[0]?' selected':'')+'>'+s[1]+'</option>').join('')+'</select>'+(isBotU()?'<button type="button" class="lm-adv'+(extF.open?' on':'')+'" data-psf-tg>Σύνθετη</button>':'')+'</div>'
+    // 9/11 (χρήστης): ο τίτλος ανεβαίνει στη γραμμή των ⟳/⚙ (κερδίζεται χώρος)
+    box.innerHTML = '<div class="lm-top"><h1 class="lm-h1top" style="flex:1;min-width:0;margin:0;font-size:30px;font-weight:800;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Εργαστηριακά</h1><button class="lm-ic" data-medgo aria-label="Φέρε τώρα από το Medilabi" title="Φέρε τώρα από το Medilabi">⟳</button><button class="lm-ic" onclick="labsFullSettings()" aria-label="Ρυθμίσεις">⚙︎</button></div>'
+      + '<div class="lm-hd"><div class="lm-sub" style="display:flex;align-items:center;gap:8px"><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+withLab+'/'+P.length+' με αποτελέσματα'+(loadedAt?' · '+hhmm(loadedAt):'')+'<span id="lmMedSt"></span></span><select class="lm-sort" data-lsortsel aria-label="Ταξινόμηση">'+[['room','Θάλαμος'],['new','Νεότερα'],['az','Α–Ω'],['bad','Εκτός ορίων']].map(s=>'<option value="'+s[0]+'"'+(mSort===s[0]?' selected':'')+'>'+s[1]+'</option>').join('')+'</select>'+(isBotU()?'<button type="button" class="lm-adv'+(extF.open?' on':'')+'" data-psf-tg>Σύνθετη</button>':'')+'</div>'
       + '<label class="lm-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B6B70" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" data-lmq autocomplete="off" placeholder="'+(isBotU()?'Δικοί μου ή Medilabi: όνομα, ΑΜ, ΑΜΚΑ':'Αναζήτηση ασθενή')+'" value="'+E(mQ)+'"></label>'
       + '</div>'
       + '<div class="lm-body" id="lmBody">'+mobBody(P)+'</div>';
