@@ -1874,7 +1874,8 @@ const RC = (()=>{
   const sp = new URLSearchParams(location.search), sid = sp.get('pdxStudy'); if(!sid) return;
   const key = decodeURIComponent((location.hash.match(/k=([^&]+)/)||[])[1]||''); if(key){ try{ localStorage.setItem('pdx_key', JSON.stringify(key)); }catch(e){} history.replaceState(null,'',location.pathname+location.search); }
   let K = key; if(!K){ try{ K = JSON.parse(localStorage.getItem('pdx_key')||'""'); }catch(e){} }
-  const H = {'x-pdx-key':K, 'x-pdx-user':'viewer'};
+  // 🌐 9/11: «local=1» = CD αυτού του υπολογιστή (δορυφόρος) — αλλιώς ο τοπικός server το ζητά από τον κεντρικό (Παράθυρο)
+  const H = {'x-pdx-key':K, 'x-pdx-user':'viewer'}; if(sp.get('local')==='1') H['x-pdx-scope'] = 'local';
   let s; try{ const r = await fetch('/api/studies/'+encodeURIComponent(sid), {headers:H}); s = await r.json(); if(!r.ok) throw new Error(s.err||r.status); }
   catch(e){ status('Αρχείο Ασθενών: '+e.message, true); return; }
   const sops = []; s.series.slice().sort((a,b)=>b.sops.length-a.sops.length).forEach(se=>se.sops.forEach(x=>sops.push(x)));
