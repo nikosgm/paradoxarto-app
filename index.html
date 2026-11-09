@@ -2268,7 +2268,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09x-v263';
+const APP_VER = '2026-11-09x-v264';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19283,7 +19283,15 @@ function smartFix(d){
     ['attending','therapist'].forEach(function(f){ var v = String(d[f]||'').trim(); if(!v) return;
       var w = v.replace(/^(κ\.?|κος|θεράπων)\s*/i,''); var best = null, bd = 9, tie = false;
       names.forEach(function(n){ var dd = levD(nz(w), nz(n)); if(dd < bd){ bd = dd; best = n; tie = false; } else if(dd===bd) tie = true; });
-      if(best && !tie && w !== best && bd <= Math.max(1, Math.floor(nz(best).length/3))){ d[f] = best; done.push(v+' → '+best); } }); }catch(e){}
+      if(best && !tie && w !== best && bd <= Math.max(1, Math.floor(nz(best).length/3))){ d[f] = best; done.push(v+' → '+best); } });
+    // 9/11 (χρήστης: «7 θεράποντες με ονόματα που δεν μοιάζουν — ο θεράπων ΔΕΝ πάει στα “για έλεγχο”»): ό,τι μοιάζει με έναν από αυτούς ΕΙΝΑΙ αυτός
+    var near = function(x){ var w = nz(String(x||'').replace(/^(κ\.?|κος|θεράπων)\s*/i,'').trim()); if(!w) return null; var b = null, bd = 9, tie = false;
+      names.forEach(function(n){ var dd = Math.min(levD(w, nz(n)), nz(n).indexOf(w)===0 && w.length>=3 ? 0 : 9); if(dd < bd){ bd = dd; b = n; tie = false; } else if(dd===bd && n!==b) tie = true; });
+      return b && !tie && bd <= Math.max(2, Math.floor(nz(b).length/2)) ? b : null; };
+    if(Array.isArray(d.suggestions)) d.suggestions = d.suggestions.filter(function(sg){ if(!sg || !/^(attending|therapist)$/.test(String(sg.target||''))) return true;
+      var b = near(sg.text) || near(d[sg.target]); if(!b) return true; if(d[sg.target] !== b){ done.push(String(sg.text||d[sg.target]||'')+' → '+b); d[sg.target] = b; } return false; });
+    ['attending','therapist'].forEach(function(f){ if(d[f] && names.indexOf(d[f]) < 0){ var b = near(d[f]); if(b){ done.push(d[f]+' → '+b); d[f] = b; } } });
+    if(Array.isArray(d.uncertain)) d.uncertain = d.uncertain.filter(function(u){ var t = String(u||''); return !(/θεράπ/i.test(t) || (names.indexOf(d.attending)>=0 && near(t) === d.attending)); }); }catch(e){}
   // φάρμακα (λατινικές λέξεις ≥5 γραμμάτων)
   try{ var L = {}; DRUG_BASE.forEach(function(n){ L[n.toLowerCase()] = n; });
     (window.pdxEpMedNames ? pdxEpMedNames() : []).forEach(function(n){ var b = String(n).split(/[^A-Za-z\-]+/)[0]; if(b && b.length>=4) L[b.toLowerCase()] = b.charAt(0)+b.slice(1).toLowerCase(); });
