@@ -2259,7 +2259,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09r-v239';
+const APP_VER = '2026-11-09r-v240';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10589,7 +10589,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // και το παλιό «🤖 Bot» ανοίγει ως σελίδα με «‹ πίσω» (όχι στην κύρια οθόνη χωρίς επιστροφή)
   window.mobTab = t=>{ if(phoneNv()){ if(t==='today') t = 'pts'; if(t==='bot'){ closePops(); return window.pdxBotPage(); } }
     if(document.documentElement.classList.contains('nv3')){ window.nvClearRight && nvClearRight(); window.__nvAct = null; } closePops(); window.__dret=null; tab=t; openKey=null; render(); view.scrollTop=0; };
-  window.mobFull = ()=>{ if(deskMode){ deskMode=false; window.__pdxDesk=false; openKey=null; render(); try{ buildGrid(); }catch(e){} return; } forceFull=true; render(); };
+  window.mobFull = ()=>{ if(deskMode){ deskMode=false; window.__pdxDesk=false; try{ localStorage.setItem('pdx_desk','0'); }catch(e){} openKey=null; render(); try{ buildGrid(); }catch(e){} return; } forceFull=true; render(); };
   // 🖥⇄▦ 8/11 (εντολή χρήστη): εναλλαγή προβολής υπολογιστή με ΣΤΡΟΓΓΥΛΟ κουμπί κάτω δεξιά (όπως τα chat των ιστοσελίδων)
   (function(){ if(document.getElementById('pdxViewFab')) return;
     const st = document.createElement('style'); st.textContent = '#pdxViewFab{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border-radius:28px;border:0;background:var(--primary,#1B4B66);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:9300;display:none;align-items:center;justify-content:center;cursor:pointer}#pdxViewFab:hover{transform:scale(1.06)}#pdxViewFab svg{width:26px;height:26px}';
@@ -10602,7 +10602,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       b.style.display = show ? 'flex' : 'none'; const k = on ? 'tb' : 'pc'; if(b.__k !== k){ b.__k = k; b.innerHTML = on ? TB : PC; b.title = on ? 'Κλασικός πίνακας' : 'Νέα προβολή (λίστα αριστερά, ασθενής δεξιά)'; b.setAttribute('aria-label', b.title); } };
     b.onclick = ()=>{ const on = view.classList.contains('on') && view.classList.contains('desk'); window.pdxDeskView(!on); setTimeout(upd, 50); };
     new MutationObserver(upd).observe(view, {attributes:true, attributeFilter:['class']}); window.addEventListener('resize', upd); setInterval(upd, 1500); setTimeout(upd, 300); })();
-  window.pdxDeskView = function(v){ deskMode = (v===undefined) ? !deskMode : !!v; window.__pdxDesk = deskMode; openKey = null; tab = 'pts'; render(); if(!deskMode){ try{ buildGrid(); }catch(e){} } };
+  // 💾 9/11 (χρήστης: «η εφαρμογή υπολογιστή κολλάει και πάει πίσω στην κλασική»): η επιλογή «νέα προβολή» ΜΕΝΕΙ (localStorage pdx_desk)·
+  // πριν ζούσε μόνο στη μνήμη → κάθε ξαναφόρτωμα (ανανέωση, αυτόματη ενημέρωση έκδοσης) γύριζε στον κλασικό πίνακα.
+  window.pdxDeskView = function(v){ deskMode = (v===undefined) ? !deskMode : !!v; window.__pdxDesk = deskMode; try{ localStorage.setItem('pdx_desk', deskMode ? '1' : '0'); }catch(e){} openKey = null; tab = 'pts'; render(); if(!deskMode){ try{ buildGrid(); }catch(e){} } };
+  // στον υπολογιστή η νέα προβολή είναι η προεπιλογή (7/11)· κλασικός ΜΟΝΟ αν τον διάλεξες ρητά (pdx_desk = '0')
+  try{ if(!isPhone() && localStorage.getItem('pdx_desk') !== '0'){ deskMode = true; window.__pdxDesk = true; } }catch(e){}
   btn.onclick = ()=>{ forceFull=false; render(); };
   window.buildMobileView = render;
   window.addEventListener('resize', render);
