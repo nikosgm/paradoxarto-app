@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10u-v288';
+const APP_VER = '2026-11-10v-v289';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12997,8 +12997,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + (dg?'<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Διαγνώσεις</div><div style="font-size:14.5px;white-space:pre-wrap">'+E(String(dg).replace(/\s*ui-button\b/g,''))+'</div></div>':'')
         // 🩺 10/11 (χρήστης: «Δε βλέπω ιατρική πράξη»): η πράξη Ημέρας που πρόσθεσε το bot (από τη σημείωση «🩺 πράξη: …»)
         + ((()=>{ const m = String(j.note||'').match(/🩺 πράξη:\s*([^·]+?)(?:\s*☑)?\s*(?:·\s*(.*))?$/); if(!m) return '';
-            const ex = String(m[2]||'').trim();
-            return '<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Ιατρική πράξη</div><div style="font-size:14.5px;white-space:pre-wrap">🩺 '+E(m[1].trim())+(ex?'<div style="font-size:13px;color:#1E7B45;margin-top:2px">'+E(ex)+'</div>':'')+'</div></div>'; })())
+            const ex = String(m[2]||'').trim(), du = (j.payload||{}).dayunit||{};
+            const sd = du.side ? '<div style="font-size:14px;font-weight:700;color:#1D4E80;margin-top:3px">Πλευρά: '+E(du.side)+(du.actAt?' · ώρα πράξης '+E(String(du.actAt).split(' ')[1]||du.actAt):'')+'</div>' : '';
+            return '<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Ιατρική πράξη</div><div style="font-size:14.5px;white-space:pre-wrap">🩺 '+E(m[1].trim())+sd+(ex?'<div style="font-size:13px;color:#1E7B45;margin-top:2px">'+E(ex)+'</div>':'')+'</div></div>'; })())
         + '<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Ιατρική γνωμάτευση</div><div style="font-size:14.5px;white-space:pre-wrap;background:#F7F9FB;border-radius:10px;padding:8px;max-height:38vh;overflow:auto">'+E(f.opinion||'')+'</div></div>'
         + '<button data-cancel style="margin-top:10px;width:100%;border:1.5px solid #B23A3A;background:#fff;color:#B23A3A;border-radius:14px;padding:11px;font-size:15px;font-weight:700">✕ Ακύρωση (δεν αποθηκεύεται)</button>';
       const vrdStage = j.kind==='order' && f.stage==='vrd' && !!f.vrd;
@@ -13141,10 +13142,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
             + (cur.status==='approve' ? '<div style="margin-top:14px;font-size:14px;color:#6D6D72">καταχωρίζεται — δεν διακόπτεται</div>' : '<button data-jx="'+cur.id+'" style="margin-top:14px;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:999px;padding:10px 22px;min-height:44px;font-size:16px;font-weight:600">Διακοπή</button>') + '</div>'; }
         const row = j=>{ const p = pctOf(j.note), st = {new:'περιμένει τον υπολογιστή', seen:'παραλήφθηκε', running:'σε εξέλιξη', approve:'καταχωρίζεται', review:'👀 για έγκριση — πάτα', done:'✓ έγινε', approved:'✓ καταχωρίστηκε', failed:'⚠︎ απέτυχε', cancelled:'ακυρώθηκε', dismissed:'✓'}[j.status]||j.status;
           return {ic:{order:'🧾',rx:'💊',ref:'📋',consult:'📞',discharge:'📄',imgget:'🩻',imgdir:'🩻',medbx:'🔬',bxscan:'🔬'}[j.kind]||'🤖', t:esc(label(j)), sub:esc(st)+(ACT.includes(j.status) ? ' · '+secs(j)+'″' : (j.updated_at ? ' · διήρκεσε '+Math.max(1, Math.round((Date.parse(j.updated_at)-Date.parse(j.created_at))/1000))+'″ · '+new Date(j.updated_at).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''))+(j.note?'<br>'+esc(clean(j.note)).slice(0,160):'')+(ACT.includes(j.status)?'<div class="pdx-jp"><i style="width:'+(p==null?Math.min(90, secs(j)*4):p)+'%"></i></div>':''), on: j.status==='review' ? "pdxBotReview("+j.id+")" : j.kind==='bxscan' ? "pdxBiopsies()" : '',
-            raw: ((ACT.includes(j.status) && j.status!=='approve') || j.status==='review') ? '<button data-jx="'+j.id+'" style="border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:600;flex:none">Διακοπή</button>' : ''}; };
+            raw: (j.status==='review' && window.pdxBotReview ? '<button data-jrv="'+j.id+'" style="border:0;background:#1D4E80;color:#fff;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:700;flex:none;margin-right:6px">Έγκριση ›</button>' : '') + (((ACT.includes(j.status) && j.status!=='approve') || j.status==='review') ? '<button data-jx="'+j.id+'" style="border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:600;flex:none">Διακοπή</button>' : '')}; };
         return hero + (A.length ? iosGroup('Τώρα', A.map(row)) : iosGroup('', [{t:'Καμία εργασία σε εξέλιξη'}])) + (D.length ? iosGroup('Πρόσφατες', D.map(row)) : '') + '<div style="height:40px"></div>';
       });
       // ✕ διακοπή εργασίας που τρέχει/περιμένει: το bot τη σταματά στο επόμενο βήμα (ποτέ δεν καταχωρίζει μισή)
+      // 👀 10/11 (χρήστης): «Έγκριση ›» κατευθείαν από τις Εργασίες bot
+      page.el.addEventListener('click', ev=>{ const b = ev.target.closest('[data-jrv]'); if(!b) return; ev.stopPropagation(); window.pdxBotReview && window.pdxBotReview(+b.getAttribute('data-jrv')); }, true);
       page.el.addEventListener('click', async ev=>{ const b = ev.target.closest('[data-jx]'); if(!b) return; ev.stopPropagation(); b.disabled = true; b.textContent = '…';
         const id = +b.getAttribute('data-jx');
         if(!confirm('Διακοπή αυτής της εργασίας;')){ b.disabled = false; b.textContent = 'Διακοπή'; return; }
