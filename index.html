@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v294';
+const APP_VER = '2026-11-10z-v295';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -11493,7 +11493,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
 
   // ===== 📋 Παραπεμπτικό e-prescription (εντολή «ref»): κατηγορία → αιτιολογία → ICD → εξετάσεις. Το bot ΣΤΑΜΑΤΑ πριν την «Καταχώριση»·
   // καταχωρίζεται ΜΟΝΟ από το «👀 Έλεγχος» (pdxRxReview). Κρυφό ώσπου window.PDX_REF_ON = true.
-  const REF_CATS = ['Βιολογικών Υλικών 1','Βιολογικών Υλικών 2','Ουρολογία','Αξονική Τομογραφία','Μαγνητικές Τομογραφίες','Ακτινογραφίες','Κυτταρολογικές','Παθολογοανατομικές'];
+  // 10/11: ΑΚΡΙΒΗ ονόματα κατηγοριών του e-prescription (examinationGroup/list) — το bot διαλέγει ακριβές ταίριασμα
+  const REF_CATS = ['Εξετάσεις Βιολογικών Υλικών 1 (Βιοπαθολογίας) (Αιματολογικές, Βιοχημικές, Μικροβιολογικές)','Εξετάσεις Βιολογικών Υλικών 2 (Βιοπαθολογίας & Πυρηνικής Ιατρικής) (Ανοσολογικές, Ορμονολογικές)','Ουρολογία','Υπέρηχοι','Αξονική Τομογραφία','Μαγνητικές Τομογραφίες','Ακτινογραφίες','Σπινθηρογραφήματα','Κυτταρολογικές','Παθολογοανατομικές - Ιστολογικές']
+  window.PDX_REF_ON = true;   // 📋 10/11: κατάλογος 1.883 εξετάσεων/62 κατηγορίες + δοκιμή ΜΑΥΡΟΥΔΗΣ (job 2342: έτοιμο για έλεγχο σε 20″, ΟΧΙ καταχώριση) → ενεργό;
   window.pdxRefSheet = function(k){
     if(!window.PDX_REF_ON) return toast('📋 Τα παραπεμπτικά μέσω bot δεν είναι ακόμα ενεργά');
     const d = recOf(k); if(!d) return;
@@ -14230,6 +14232,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     out.sort((a,b)=>(EXC.idx[b].indexOf(W[0])===0)-(EXC.idx[a].indexOf(W[0])===0) || EXC.idx[a].length-EXC.idx[b].length);
     return out.slice(0, n||15).map(i=>({name:EXC.items[i][0], id:EXC.items[i][1], group:EXC.items[i][2]||''})); };
   setTimeout(()=>{ try{ window.pdxEpExamLoad(); }catch(e){} }, 9500);
+  // 🗂 10/11: κατηγορία e-prescription μιας εξέτασης (ακριβές όνομα στον κατάλογο) — για «ένα παραπεμπτικό ανά κατηγορία»
+  window.pdxEpExamGroup = function(name){ if(!EXC.items) return ''; const k = rfN(name); if(!EXC.idx) EXC.idx = EXC.items.map(x=>rfN(x[0]));
+    const G = new Set(); for(let i=0;i<EXC.items.length;i++) if(EXC.idx[i]===k && EXC.items[i][2]) G.add(EXC.items[i][2]);
+    return G.size===1 ? [...G][0] : ''; };
   window.pdxExamLive = function(inp, box, onPick, opt){
     opt = opt || {}; box.classList.add('exl');
     let tm = 0, seq = 0, last = null;
@@ -14622,9 +14628,20 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       S.sending = true; refresh();
       const epU = window.pdxEpAccGet ? pdxEpAccGet(root) : '', d = S.k ? recOf(S.k) : null;
       const nm = d ? d.name : (S.who && S.who.name ? S.who.name : ('Α.Μ.Κ.Α. ··'+S.amka.slice(-2)));
-      const pl = Object.assign({exams:S.ex.map(x=>({name:x.n, kind:x.k||'', ep:!!x.ep})), icd:S.icd, urgent:S.urg, withRx:S.withRx, mode:'review', quiet:true}, d ? {} : {amka:S.amka, general:true}, epU ? {epUser:epU} : {});
-      try{ const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:d?S.k:null, kind:'ref', payload:pl, status:'new'}).select('id').single(); if(r.error) throw r.error; S.sending = false; watchJob(r.data.id, nm+' · παραπεμπτικό'); S.ex = []; drawEx(); }
-      catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)); }
+      // 🗂 10/11 (χρήστης: «κάθε εξέταση στην κατηγορία της»): ΕΝΑ παραπεμπτικό ΑΝΑ ΚΑΤΗΓΟΡΙΑ e-prescription (από τον κατάλογο epcat|exam)
+      try{ await window.pdxEpExamLoad(); }catch(e){}
+      const byCat = {}, unk = [];
+      S.ex.forEach(x=>{ const g = window.pdxEpExamGroup(x.n) || (x.ep && x.k && x.k.length > 3 ? x.k : ''); if(!g) unk.push(x.n); else (byCat[g] = byCat[g] || []).push(x); });
+      if(unk.length){ S.sending = false; refresh(); return toast('⚠ Δεν βρέθηκε στον κατάλογο e-prescription: «'+unk.slice(0,2).join('», «')+'» — διάλεξέ τη από τη λίστα αναζήτησης'); }
+      const big = Object.entries(byCat).find(([g,L])=>L.length>12); if(big){ S.sending = false; refresh(); return toast('⚠ Έως 12 εξετάσεις ανά παραπεμπτικό («'+big[0].slice(0,40)+'»: '+big[1].length+')'); }
+      const just = (d ? [d.dx, d.surgery].map(x=>String(x||'').trim()).filter(Boolean).join(' · ') : '') || 'Ουρολογικός έλεγχος';
+      const cats = Object.keys(byCat); let nOk = 0;
+      try{ for(const g of cats){
+          const pl = Object.assign({cat:g, just:just.slice(0,2000), exams:byCat[g].map(x=>({name:x.n, kind:x.k||'', ep:!!x.ep})), icd:S.icd, urgent:S.urg, withRx:S.withRx, mode:'review', quiet:true}, d ? {} : {amka:S.amka, general:true}, epU ? {epUser:epU} : {});
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:d?S.k:null, kind:'ref', payload:pl, status:'new'}).select('id').single(); if(r.error) throw r.error;
+          nOk++; watchJob(r.data.id, nm+' · παραπεμπτικό'+(cats.length>1?' '+nOk+'/'+cats.length:'')); }
+        S.sending = false; if(cats.length>1) toast('📋 '+cats.length+' παραπεμπτικά (ένα ανά κατηγορία)'); S.ex = []; drawEx(); }
+      catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)+(nOk?' (στάλθηκαν '+nOk+'/'+cats.length+')':'')); }
     }
     root.addEventListener('click', e=>{
       const t = e.target;
