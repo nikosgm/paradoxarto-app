@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10s-v286';
+const APP_VER = '2026-11-10t-v287';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12990,7 +12990,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         ? '<div style="font-size:15px;white-space:pre-wrap;line-height:1.45">'+E(j.note||'')+'</div><button data-cancel style="margin-top:12px;width:100%;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:14px;height:50px;font-size:17px;font-weight:600">Ακύρωση</button>'
         : '<div style="font-size:13px;color:#B26A00;background:#FFF7E6;border-radius:10px;padding:8px 10px;margin-bottom:6px">Αυτά γράφει τώρα ο φάκελος (διαβάστηκαν από τη φόρμα). Με την έγκριση ο υπολογιστής ελέγχει ξανά ότι δεν άλλαξε τίποτα.</div>'
         + row('Ασθενής (φάκελος)', f.patient) + row('Θεράπων', f.doctor) + row('Τύπος · Έκβαση', [f.type,f.outcome].filter(Boolean).join(' · ')) + row('Ημ/νία - ώρα εξόδου', typeof f.time==='object'&&f.time ? [f.time.date,f.time.time].filter(Boolean).join(' ')||'' : f.time)
-        + (dg?'<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Διαγνώσεις</div><div style="font-size:14.5px;white-space:pre-wrap">'+E(dg)+'</div></div>':'')
+        + (dg?'<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Διαγνώσεις</div><div style="font-size:14.5px;white-space:pre-wrap">'+E(String(dg).replace(/\s*ui-button\b/g,''))+'</div></div>':'')
+        // 🩺 10/11 (χρήστης: «Δε βλέπω ιατρική πράξη»): η πράξη Ημέρας που πρόσθεσε το bot (από τη σημείωση «🩺 πράξη: …»)
+        + ((()=>{ const m = String(j.note||'').match(/🩺 πράξη:\s*([^·]+?)(?:\s*☑)?\s*(?:·\s*(.*))?$/); if(!m) return '';
+            const ex = String(m[2]||'').trim();
+            return '<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Ιατρική πράξη</div><div style="font-size:14.5px;white-space:pre-wrap">🩺 '+E(m[1].trim())+(ex?'<div style="font-size:13px;color:#1E7B45;margin-top:2px">'+E(ex)+'</div>':'')+'</div></div>'; })())
         + '<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Ιατρική γνωμάτευση</div><div style="font-size:14.5px;white-space:pre-wrap;background:#F7F9FB;border-radius:10px;padding:8px;max-height:38vh;overflow:auto">'+E(f.opinion||'')+'</div></div>'
         + '<button data-cancel style="margin-top:10px;width:100%;border:1.5px solid #B23A3A;background:#fff;color:#B23A3A;border-radius:14px;padding:11px;font-size:15px;font-weight:700">✕ Ακύρωση (δεν αποθηκεύεται)</button>';
       const vrdStage = j.kind==='order' && f.stage==='vrd' && !!f.vrd;
