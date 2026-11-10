@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10b-v269';
+const APP_VER = '2026-11-10c-v270';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14010,6 +14010,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs .dw .ds b.on{color:#1D4E80;font-size:18px;font-weight:700}
   .rxs .dw:after{content:'';position:absolute;left:calc(50% - 21px);top:3px;width:42px;height:32px;border-radius:7px;background:rgba(255,255,255,.75);box-shadow:0 1px 3px rgba(0,0,0,.14);pointer-events:none;z-index:0}
   .rxs .dw .ds{position:relative;z-index:1}
+  .rxs .dwa{display:none;width:30px;height:38px;flex:none;border:0;border-radius:9px;background:#E9E9EE;color:#1D4E80;font-size:20px;font-weight:700;cursor:pointer;padding:0}
+  @media (hover:hover) and (pointer:fine){.rxs .dwa{display:block}.rxs .dwa:hover{background:#DDE5EF}}
+  html.pdx-night .rxs .dwa{background:#2C2C2E;color:#fff}
   .rxs .bxc{display:flex;align-items:center;background:#E9E9EE;border-radius:9px;height:38px;flex:none}
   .rxs .bxc button{width:36px;height:38px;border:0;background:none;font-size:18px;color:#1D4E80;padding:0;cursor:pointer}
   .rxs .bxc i{font-style:normal;font-size:13.5px;font-weight:700;min-width:58px;text-align:center;white-space:nowrap}
@@ -14300,7 +14303,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       return '<div class="ed" data-edk="'+k+'">'
         + '<div class="er"><span class="el">Δόση</span>'+sg('dose', [['0.5','½'],['1','1'],['1.5','1½'],['2','2'],['3','3']])+'</div>'
         + '<div class="er"><span class="el">Φορές</span>'+sg('freq', [['1','1'],['2','2'],['3','3'],['4','4']])+'</div>'
-        + '<div class="er"><span class="el">Ημέρες</span><div class="dw"><div class="ds" data-dw="'+k+'">'+days+'</div></div></div>'
+        + '<div class="er"><span class="el">Ημέρες</span><button type="button" class="dwa" data-ed="'+k+'|dd|-1" aria-label="μία ημέρα λιγότερη">‹</button><div class="dw"><div class="ds" data-dw="'+k+'">'+days+'</div></div><button type="button" class="dwa" data-ed="'+k+'|dd|1" aria-label="μία ημέρα περισσότερη">›</button></div>'
         + '<div class="er"><span class="el">Κουτιά</span><div class="bxc"><button type="button" data-ed="'+k+'|bx|-1" aria-label="λιγότερα κουτιά">−</button><i>'+bxLbl(o)+'</i><button type="button" data-ed="'+k+'|bx|1" aria-label="περισσότερα κουτιά">+</button></div>'
         + '<div class="sgc" style="max-width:120px;margin-left:auto">'+[['25%','25%'],['0%','0%']].map(x=>'<button type="button" data-ed="'+k+'|part|'+x[0]+'" class="'+((o.part||'25%')===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div>'
         + '</div>';
@@ -14310,6 +14313,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       scope.querySelectorAll('[data-dw]').forEach(ds=>{ const k = ds.dataset.dw, o = edObj(k); if(!o) return;
         const W = 40, setPos = ()=>{ ds.scrollLeft = Math.max(0, ((+o.days||1)-1)*W); };
         requestAnimationFrame(setPos);
+        ds.addEventListener('wheel', e=>{ if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){ e.preventDefault(); ds.scrollLeft += e.deltaY > 0 ? W : -W; } }, {passive:false});   // ποντίκι: ροδέλα πάνω/κάτω → ημέρα ±1
         let tm = 0; ds.addEventListener('scroll', ()=>{ clearTimeout(tm); tm = setTimeout(()=>{ if(!ds.isConnected || Date.now()-(ds._lock||0)<700) return; const v = Math.max(1, Math.min(DMAX, Math.round(ds.scrollLeft/W)+1)); if(v!==+o.days){ edSet(k, 'days', v, true); } ds.querySelectorAll('b').forEach(b=>b.classList.toggle('on', +b.dataset.dv===v)); }, 110); }, {passive:true});
         ds.addEventListener('click', e=>{ const b = e.target.closest('[data-dv]'); if(!b) return; e.stopPropagation(); const v = +b.dataset.dv; if(v!==+o.days) edSet(k, 'days', v, true); ds.querySelectorAll('b').forEach(x=>x.classList.toggle('on', x===b)); ds._lock = Date.now(); ds.scrollTo({left:(v-1)*W, behavior:'smooth'}); });
       });
@@ -14319,6 +14323,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // αυτόματα → +: από το αυτόματο +1 (ή 1) · −: αυτόματο −1 · χειροκίνητο στο 0 → ξανά αυτόματα
         const n = cur ? cur + (+v) : (+v>0 ? (auto ? auto+1 : 1) : (auto>1 ? auto-1 : 0));
         if(n<=0){ o.bxMan = false; o.boxes = 0; } else { o.bxMan = true; o.boxes = Math.min(20, n); } }
+      else if(f==='dd'){ o.days = Math.max(1, Math.min(DMAX, (+o.days||0) + (+v))); const ds = root.querySelector('[data-dw="'+k+'"]'); if(ds){ ds._lock = Date.now(); ds.scrollTo({left:(o.days-1)*40, behavior:'smooth'}); ds.querySelectorAll('b').forEach(b=>b.classList.toggle('on', +b.dataset.dv===o.days)); } soft = true; }
       else if(f==='dose') o.dose = String(v); else if(f==='part') o.part = v; else o[f] = +v;
       if(soft){ const bi = root.querySelector('[data-edk="'+k+'"] .bxc i'); if(bi) bi.innerHTML = bxLbl(o); }
       if(k==='n'){ if(soft) formPv(); else syncForm(); }
