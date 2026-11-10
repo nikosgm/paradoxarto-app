@@ -25,11 +25,16 @@
       const rowT = []; for (let c = R.s.c; c <= R.e.c; c++) rowT.push(txt(ws[XLSX.utils.encode_cell({ r, c })]));
       const all = rowT.join(" ");
       const cls = /ΟΝΟΜΑΤΕΠΩΝΥΜΟ|ΕΠΕΜΒΑΣΗ/.test(all) ? "hd" : /^\s*ΑΙΘΟΥΣΑ/i.test(rowT[0]) ? "rm" : "";
-      h += "<tr" + (cls ? ' class="' + cls + '"' : "") + ">";
+      const rh = (ws["!rows"] || [])[r], hp = rh && (rh.hpx || (rh.hpt ? rh.hpt * 96 / 72 : 0));   // 10/11 βράδυ: ύψος γραμμής όπως στο Excel (προεπισκόπηση)
+      h += "<tr" + (cls ? ' class="' + cls + '"' : "") + (hp ? ' style="height:' + Math.round(hp) + 'px"' : "") + ">";
       for (let c = R.s.c; c <= R.e.c; c++) {
         const k = r + ":" + c; if (cover.has(k)) continue;
         const sp = span[k], t = rowT[c - R.s.c];
-        h += "<td" + (sp ? (sp[0] > 1 ? ' rowspan="' + sp[0] + '"' : "") + (sp[1] > 1 ? ' colspan="' + sp[1] + '"' : "") : "") + ">" + E(t).replace(/\n/g, "<br>") + "</td>";
+        const cs = (ws[XLSX.utils.encode_cell({ r, c })] || {}).s || {}, st = [];
+        if (cs.font && cs.font.bold) st.push("font-weight:700"); if (cs.font && cs.font.italic) st.push("font-style:italic"); if (cs.font && cs.font.sz) st.push("font-size:" + Math.round(cs.font.sz * 96 / 72) + "px");
+        if (cs.fgColor && cs.fgColor.rgb && cs.patternType === "solid" && !/^(FFFFFF|000000)$/i.test(String(cs.fgColor.rgb).slice(-6))) st.push("background:#" + String(cs.fgColor.rgb).slice(-6));
+        const al = cs.alignment || {}; if (al.horizontal) st.push("text-align:" + (al.horizontal === "centerContinuous" ? "center" : al.horizontal)); if (al.vertical) st.push("vertical-align:" + (al.vertical === "center" ? "middle" : al.vertical));
+        h += "<td" + (sp ? (sp[0] > 1 ? ' rowspan="' + sp[0] + '"' : "") + (sp[1] > 1 ? ' colspan="' + sp[1] + '"' : "") : "") + (st.length ? ' style="' + st.join(";") + '"' : "") + ">" + E(t).replace(/\n/g, "<br>") + "</td>";
       }
       h += "</tr>";
     }
