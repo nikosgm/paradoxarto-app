@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v295';
+const APP_VER = '2026-11-10z-v296';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7151,8 +7151,8 @@ document.head.appendChild(st);
   setTimeout(()=>{ try{ const _jm = ()=>{ setTimeout(()=>botRefresh(true), 400); try{ if(window.__ahfyKick) window.__ahfyKick(); }catch(e){} };
     sb6.channel('pdx-jobs-mob').on('postgres_changes',{event:'INSERT',schema:'public',table:'oncall_jobs'},_jm)
       .on('postgres_changes',{event:'UPDATE',schema:'public',table:'oncall_jobs',filter:'status=in.(new,seen,review,approve,done,failed,cancelled,dismissed)'},_jm).subscribe(); }catch(e){} }, 3000);
-  const JOB_IC = {evoradimg:'🫁', evoradfind:'🩻', botcfg:'⚙️', emrmedmap:'💊', evoradprobe:'🩻', findpacs:'🔎', rxname:'🔎', cred:'🔐', order:'🧾', rx:'💊', consult:'📞', discharge:'📄', comorb:'🩺', ehrdx:'🩺', ehrlabs:'📈', labs:'🧪', medlabs:'🧪'};
-  const JOB_T = {evoradimg:'Ακτινογραφία θώρακος (κρυπτογραφημένη)', evoradfind:'Evorad: εξετάσεις ασθενή', botcfg:'Ρυθμίσεις bot', emrmedmap:'ΝΠΣ φάρμακα: χαρτογράφηση (μόνο ανάγνωση)', evoradprobe:'Evorad: χαρτογράφηση (μόνο ανάγνωση)', findpacs:'Αναζήτηση Evorad / PACS', rxname:'ΑΜΚΑ → όνομα (e-prescription)', cred:'Κωδικός για το bot (κρυπτογραφημένος)', order:'Παραγγελία εξετάσεων', rx:'Συνταγογράφηση', consult:'Κλήση για εκτίμηση', discharge:'Εξιτήριο στον φάκελο', comorb:'Συννοσηρότητες → ιστορικό', ehrdx:'Διαγνώσεις από ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά Medilabi (νοσοκομείο)'};
+  const JOB_IC = {epsine:'📑', evoradimg:'🫁', evoradfind:'🩻', botcfg:'⚙️', emrmedmap:'💊', evoradprobe:'🩻', findpacs:'🔎', rxname:'🔎', cred:'🔐', order:'🧾', rx:'💊', consult:'📞', discharge:'📄', comorb:'🩺', ehrdx:'🩺', ehrlabs:'📈', labs:'🧪', medlabs:'🧪'};
+  const JOB_T = {epsine:'ΕΨΙΝΕ: οριστικοποίηση ιστορικού νοσηλείας', evoradimg:'Ακτινογραφία θώρακος (κρυπτογραφημένη)', evoradfind:'Evorad: εξετάσεις ασθενή', botcfg:'Ρυθμίσεις bot', emrmedmap:'ΝΠΣ φάρμακα: χαρτογράφηση (μόνο ανάγνωση)', evoradprobe:'Evorad: χαρτογράφηση (μόνο ανάγνωση)', findpacs:'Αναζήτηση Evorad / PACS', rxname:'ΑΜΚΑ → όνομα (e-prescription)', cred:'Κωδικός για το bot (κρυπτογραφημένος)', order:'Παραγγελία εξετάσεων', rx:'Συνταγογράφηση', consult:'Κλήση για εκτίμηση', discharge:'Εξιτήριο στον φάκελο', comorb:'Συννοσηρότητες → ιστορικό', ehrdx:'Διαγνώσεις από ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά Medilabi (νοσοκομείο)'};
   const JOB_S = {new:['περιμένει','w'], seen:['παραλήφθηκε','w'], running:['τρέχει','run'], done:['✓ έγινε','ok'], review:['για έγκριση','w'], approve:['έγκριση στάλθηκε','w'], approved:['✓ εγκρίθηκε','ok'], failed:['✗ απέτυχε','bad'], cancelled:['ακυρώθηκε','mu']};
   const JOB_LIVE = ['new','seen','running','review','approve'];
   const hm = t=>{ const d=new Date(t); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
@@ -7943,7 +7943,7 @@ document.head.appendChild(st);
     return pg;
   };
   window.pdxBotLog = function(cat0){
-    const KN = {order:'🧾 Παραγγελία εξετάσεων', rx:'💊 Συνταγή', rxname:'💊 Συνταγή', consult:'📞 Κλήση για εκτίμηση', discharge:'📄 Εξιτήριο', comorb:'🩺 Συννοσηρότητες', ehrdx:'🩺 Διαγνώσεις ΑΗΦΥ', ehrlabs:'🧪 Εργαστηριακά ΑΗΦΥ', medlabs:'🧪 Εργαστηριακά Medilabi', evoradimg:'🩻 Απεικονιστικά', imgget:'🩻 Απεικονιστικά', bxscan:'🔬 Βιοψίες', clinicview:'🏥 Λίστα κλινικής', ehrdocs:'📁 Έγγραφα ΑΗΦΥ'};
+    const KN = {epsine:'📑 ΕΨΙΝΕ', order:'🧾 Παραγγελία εξετάσεων', rx:'💊 Συνταγή', rxname:'💊 Συνταγή', consult:'📞 Κλήση για εκτίμηση', discharge:'📄 Εξιτήριο', comorb:'🩺 Συννοσηρότητες', ehrdx:'🩺 Διαγνώσεις ΑΗΦΥ', ehrlabs:'🧪 Εργαστηριακά ΑΗΦΥ', medlabs:'🧪 Εργαστηριακά Medilabi', evoradimg:'🩻 Απεικονιστικά', imgget:'🩻 Απεικονιστικά', bxscan:'🔬 Βιοψίες', clinicview:'🏥 Λίστα κλινικής', ehrdocs:'📁 Έγγραφα ΑΗΦΥ'};
     const SK = /^(orderprep|botwho|bxfind|bxget|srcprobe|imgmap|fsls|fsfind|botcfg|emrmap|medbxprobe|evoradprobe|evoradsrc|evoradfind|findpacs|emrmedmap|medqprobe|medcat|medcat2|emrlistprobe|emrnetprobe|selftest|logins|imgdir|ptprep)$/;
     const SN = {done:['✅','#15803D'], approved:['✅','#15803D'], failed:['⚠️','#B91C1C'], cancelled:['✕','#64748B'], dismissed:['✕','#64748B'], running:['⚙️','#1D4E80'], new:['⏳','#92400E'], seen:['⏳','#92400E'], review:['👀','#92400E'], approve:['⏳','#92400E']};
     let rows = null, err = '', mineOnly = false, cat = cat0 || 'all', openId = 0;
@@ -8336,6 +8336,7 @@ document.head.appendChild(st);
       ['📁','Αρχεία κλινικής','αρχεια φακελος ουρολογικης pronas αξονικη μαγνητικη απεικονιση dicom pdf', k=>pdxFiles(), false],
       ['💻','Αξονικές: εφαρμογή υπολογιστή (3D)','αξονικες viewer ct dicom 3d radiant εγκατασταση εφαρμογη υπολογιστη cd', k=>{ location.href='ct?install=1'; }, false],
       ['🔬','Βιοψίες','βιοψιες βιοψια παθολογοανατομικο ιστολογικη αποτελεσμα gleason', bot?(k=>pdxBiopsies()):null, false],
+      ['📑','ΕΨΙΝΕ (Ενιαίο Ψηφιακό Ιστορικό)','εψινε ενιαιο ψηφιακο ιστορικο νοσηλειας οριστικοποιηση', bot?(k=>pdxEpsineOpen()):null, false],
       ['📂','Αρχείο ασθενών (βάση)','αρχειο ασθενων βαση φακελος νοσηλειες εξιτηριο πρακτικο ιστορικο', k=>pdxArchOpen(''), false],
       ['☑','Εκκρεμότητα σε πολλούς','εκκρεμοτητα πολλους μαζικα bulk', k=>pdxDo('bulk'), false],
       ['📅','Εισαγωγές & ΑΜ','εισαγωγες αμ μητρωο νπσ', adm?(k=>pdxDo('admits')):null, false],
@@ -11069,7 +11070,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   ];
   const TESTS_DEF = ['Γενική αίματος','Ουρία','Κρεατινίνη','K','Na','CRP','PT - INR','APTT','Γενική ούρων','Καλλιέργεια ούρων','Καλλιέργεια αίματος','Ομάδα - Διασταύρωση'];
   const SPECS_DEF = ['Καρδιολογική','Παθολογική','Αναισθησιολογική','Νεφρολογική','Χειρουργική','Πνευμονολογική','Αιματολογική','Ενδοκρινολογική','Λοιμωξιολογική'];
-  const KIND = {order:'Παραγγελία εξετάσεων', rx:'Συνταγογράφηση', ref:'Παραπεμπτικό', consult:'Κλήση για εκτίμηση', discharge:'Εξιτήριο στον φάκελο', comorb:'Συννοσηρότητες → ιστορικό', ehrdx:'Διαγνώσεις από ΑΗΦΥ', ehrlabs:'Εργαστηριακά από ΑΗΦΥ'};
+  const KIND = {epsine:'ΕΨΙΝΕ', order:'Παραγγελία εξετάσεων', rx:'Συνταγογράφηση', ref:'Παραπεμπτικό', consult:'Κλήση για εκτίμηση', discharge:'Εξιτήριο στον φάκελο', comorb:'Συννοσηρότητες → ιστορικό', ehrdx:'Διαγνώσεις από ΑΗΦΥ', ehrlabs:'Εργαστηριακά από ΑΗΦΥ'};
   const ST = {new:'⏳ στάλθηκε', seen:'🖥 παραλήφθηκε', running:'⚙️ σε εξέλιξη', done:'✅ έγινε', review:'👀 για έγκριση', approve:'⏳ έγκριση στάλθηκε', approved:'✅ εγκρίθηκε', failed:'⚠️ απέτυχε', cancelled:'✕ ακυρώθηκε'};
   window.pdxBotActions = ()=>{
     const l = (Array.isArray(cfg().botActions) && cfg().botActions.length) ? cfg().botActions.slice() : ACTS_DEF.slice();
@@ -13044,7 +13045,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // Κάθε εργασία που έστειλε αυτός ο χρήστης (τελευταία 30′): κάψουλα με κυκλάκι προόδου + τι κάνει τώρα. Πάτημα → οθόνη
   // προόδου με όλες τις εργασίες. Τέλος → ✓/⚠ για λίγα δευτερόλεπτα· «για έγκριση» → πορτοκαλί, πάτημα = έγκριση.
   (function(){
-    const LBL = {bxscan:'Βιοψίες', order:'Παραγγελία', rx:'Συνταγή', rxname:'ΑΜΚΑ → όνομα', consult:'Εκτίμηση', discharge:'Εξιτήριο', comorb:'Συννοσηρότητες', ehrdx:'Διαγνώσεις ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά', medbx:'Βιοψίες', imgdir:'Φάκελος ασθενή', imgget:'Εικόνες', evoradimg:'Ακτινογραφία', clinicview:'Εισαγωγές', logins:'Έλεγχος συνδέσεων', cred:'Κωδικοί'};
+    const LBL = {epsine:'ΕΨΙΝΕ', bxscan:'Βιοψίες', order:'Παραγγελία', rx:'Συνταγή', rxname:'ΑΜΚΑ → όνομα', consult:'Εκτίμηση', discharge:'Εξιτήριο', comorb:'Συννοσηρότητες', ehrdx:'Διαγνώσεις ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά', medbx:'Βιοψίες', imgdir:'Φάκελος ασθενή', imgget:'Εικόνες', evoradimg:'Ακτινογραφία', clinicview:'Εισαγωγές', logins:'Έλεγχος συνδέσεων', cred:'Κωδικοί'};
     const SKIP = /^(orderprep|imgmap|fsls|fsfind|botcfg|emrmap|medbxprobe|evoradprobe|evoradsrc|evoradfind|findpacs|emrmedmap)$/;
     const ACT = ['new','seen','running','approve'];
     const css = document.createElement('style'); css.textContent =
@@ -18475,7 +18476,10 @@ window.pdxOpNoteFromScan = function(p){
     if(e.kind==='opnote'){ [['Χειρουργοί',b.surg],['Αναισθησία',b.anesth],['Καθετήρες',b.tubes],['Παροχετεύσεις',b.drains]].forEach(([l,v])=>{ if(v) h += kv(l,v); }); }
     if(e.kind==='biopsy'){ if(b.what) h += kv('Παρασκεύασμα', b.what); if(b.result) h += kv('Αποτέλεσμα', b.result); (b.parts||[]).forEach((p,i)=>{ const t = typeof p==='string' ? p : [p.what,p.text||p.res].filter(Boolean).join(' — '); if(t) h += kv('Τμήμα '+(i+1), t); }); }
     if(e.kind==='admission'){ h += kv('Κλινική', String(b.clinic||'').replace(/^★\s*/,'')) + kv('Διάστημα', (String(b.from||'').replace('T',' ').slice(0,16))+' → '+(String(b.to||'').replace('T',' ').slice(0,16)||'—')) + (b.depts ? kv('Πέρασε από', b.depts) : ''); }
-    if(Array.isArray(b.fields) && b.fields.length) h += b.fields.filter(f=>f && String(f.v||'').trim()).map(f=>kv(f.l||'—', f.v)).join('');
+    // 🧾 10/11 (χρήστης): στο εξιτήριο ΠΡΩΤΑ το κείμενο που γράφουμε (γνωμάτευση/διάγνωση), μετά τα υπόλοιπα
+    const KEYF = /γνωμάτευ|διάγνωσ|ιατρική γνώμη|πορεία|θεραπεία|οδηγίες|συστάσ/i;
+    if(Array.isArray(b.fields) && b.fields.length){ const F = b.fields.filter(f=>f && String(f.v||'').trim()); const top = /discharge|dc/.test(e.kind) ? F.filter(f=>KEYF.test(f.l||'')) : [];
+      h += top.map(f=>kv(f.l||'—', f.v)).join('') + F.filter(f=>top.indexOf(f)<0).map(f=>kv(f.l||'—', f.v)).join(''); }
     else if(b.text) h += kv('Κείμενο', b.text);
     else if(Array.isArray(b.row) && b.row.filter(Boolean).length) h += kv('Γραμμή ΝΠΣ', b.row.filter(Boolean).join(' · '));
     if(!h) h = '<div style="color:#8E8E93;font-size:13.5px;margin:6px 0">Δεν έχει αποθηκευτεί ακόμα το κείμενο — πάτα «↻ Φέρε φάκελο από το ΝΠΣ».</div>';
@@ -18604,6 +18608,30 @@ window.pdxOpNoteFromScan = function(p){
     for(let i=1;i<=Math.min(pdf.numPages,40);i++){ const pp = await pdf.getPage(i), v0 = pp.getViewport({scale:1}), v = pp.getViewport({scale:W/v0.width}); const c=document.createElement('canvas'); c.width=Math.round(v.width); c.height=Math.round(v.height); await pp.render({canvasContext:c.getContext('2d'), viewport:v}).promise; out.push('<img src="'+c.toDataURL('image/jpeg',0.85)+'" alt="" style="width:100%;display:block;margin-bottom:6px;border-radius:6px">'); }
     return out.join(''); };
 })();
+// 📑 10/11 ΕΨΙΝΕ: ασθενείς που βγήκαν (αρχείο Παραδόχαρτου, με ΑΜΚΑ) → «Ετοίμασε» → το bot ανοίγει το ΕΨΙΝΕ (μόνο ανάγνωση) → 👀 έγκριση στις Εργασίες bot
+// → «Καταχώρηση» + «Οριστικοποίηση». ⛔ ΟΧΙ Ουρολογικό Ημέρας (δεν είναι στο Παραδόχαρτο).
+window.pdxEpsineOpen = function(){
+  const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const st = {rows:null, sent:{}, msg:'', amka:''};
+  const pg = iosPage('ΕΨΙΝΕ', 'Εργαλεία', ()=>{
+    let h = '<div style="margin:4px 16px 10px;font-size:14px;color:#6B7280;line-height:1.4">Το bot ανοίγει το Ενιαίο Ψηφιακό Ιστορικό του ασθενή και σου δείχνει τι γράφει. <b>Υποβάλλεται μόνο όταν πατήσεις έγκριση</b> στις Εργασίες bot.</div>';
+    h += '<form data-ea style="display:flex;gap:8px;margin:0 16px 10px"><input name="a" inputmode="numeric" maxlength="11" placeholder="ΑΜΚΑ" value="'+E5(st.amka)+'" style="flex:1;font-size:17px;padding:10px;border:0;border-radius:10px;background:rgba(118,118,128,.12)"><button style="border:0;border-radius:10px;padding:0 14px;background:var(--acc,#0A84FF);color:#fff;font-weight:600">Ετοίμασε</button></form>';
+    if(st.msg) h += '<div style="margin:0 16px 8px;font-size:14px;color:'+(/^⚠/.test(st.msg)?'#FF3B30':'#34C759')+'">'+E5(st.msg)+'</div>';
+    if(!st.rows) h += '<div style="margin:16px;color:#8E8E93">⏳ …</div>';
+    else h += iosGroup('Εξιτήρια κλινικής · 30 ημέρες', st.rows.map(r=>({t:'<b>'+E5(r.name)+'</b>', sub:E5((r.at||'').split('-').reverse().join('/'))+(r.amka?' · ΑΜΚΑ '+E5(r.amka):' · <span style="color:#FF3B30">χωρίς ΑΜΚΑ</span>'),
+      raw: r.amka ? '<button data-eg="'+E5(r.amka)+'" data-en="'+E5(r.name)+'" style="border:0;border-radius:8px;padding:7px 10px;font-weight:600;background:'+(st.sent[r.amka]?'rgba(118,118,128,.14);color:#6B7280':'var(--acc,#0A84FF);color:#fff')+'">'+(st.sent[r.amka]?'✓ στάλθηκε':'Ετοίμασε')+'</button>' : ''})));
+    return h + '<div style="height:50px"></div>'; });
+  const go = async (amka, name)=>{ if(!/^\d{11}$/.test(amka)){ st.msg='⚠ ΑΜΚΑ 11 ψηφία'; return pg.redraw(); }
+    try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_eps', name:name||('ΑΜΚΑ ··'+amka.slice(-3)), room:null, kind:'epsine', payload:{amka, quiet:true}, status:'new'}).select('id').single(); if(r.error) throw r.error;
+      st.sent[amka] = 1; st.msg = '✓ Στάλθηκε — θα εμφανιστεί για έγκριση στις Εργασίες bot'; try{ if(window.watchJob) watchJob(r.data.id, '📑 ΕΨΙΝΕ · '+(name||amka)); }catch(e){} }
+    catch(e){ st.msg = '⚠ '+(e.message||e); } pg.redraw(); };
+  pg.el.addEventListener('submit', e=>{ const f = e.target.closest('[data-ea]'); if(!f) return; e.preventDefault(); st.amka = f.a.value.replace(/\D/g,''); go(st.amka, ''); });
+  pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-eg]'); if(b && !st.sent[b.dataset.eg]) go(b.dataset.eg, b.dataset.en); });
+  (async ()=>{ try{ const a = await sb6.from('oncall_archive').select('name,data,archived_at').gte('archived_at', new Date(Date.now()-30*864e5).toISOString()).order('archived_at',{ascending:false}).limit(120);
+      const seen = new Set(); st.rows = (a.data||[]).map(x=>({name:String(x.name||(x.data&&x.data.name)||'').trim(), amka:String((x.data&&x.data.amka)||'').replace(/\D/g,''), at:String(x.archived_at||'').slice(0,10)})).filter(r=>r.name && !seen.has(r.name+r.amka) && seen.add(r.name+r.amka)); }
+    catch(e){ st.rows = []; st.msg = '⚠ '+(e.message||e); } pg.redraw(); })();
+  return pg;
+};
 window.pdxDossierOpen = async function(name, amka){
   if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
   const E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
