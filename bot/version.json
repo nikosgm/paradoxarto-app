@@ -1,1 +1,1 @@
-{"version": "0.21.242", "zip": "ef-bot-0.21.242.zip", "sha256": "c63c1f4b7f909fefbb5167cdbefd2d5bd64e1d5438cd3b40affd8942de463e23", "notes": "ΕΨΙΝΕ: Αναζήτηση μέσω PrimeFaces.ab με τα πεδία ημερομηνιών στο process"}
+{"version": "0.21.243", "zip": "ef-bot-0.21.243.zip", "sha256": "4b5b53cd246fd4f3c4163887e95a7cd1f3a4eb7e40d5b082cd3ed8efeb27102a", "notes": "ΕΨΙΝΕ: δοκιμή πολλών ζευγών ημερομηνιών (tries)"}
