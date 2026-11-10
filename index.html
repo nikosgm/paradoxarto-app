@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v299';
+const APP_VER = '2026-11-10z-v300';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21998,9 +21998,114 @@ window.CLS_MODE='A';
   window.pdxScanDevCount = async function(){ try{ const r = await sb6.from('oncall_scan_devices').select('id').eq('approved', false); return (r.data||[]).length; }catch(e){ return 0; } };
   // 🗓 8/11: Πρόγραμμα χειρουργείου — φορτώνεται μόνο όταν ανοίξει (orprog-data.js + orprog.js)
   // 9/11: τα αρχεία του προγράμματος ανά έκδοση (πριν σταθερό ?v=213 → έμενε παλιό orprog.js στην cache)
+  // ===== 📋 10/11 βράδυ (χρήστης): «στο πρόγραμμα χειρουργείου, πέρα από την επεξεργασία, να έχεις και το πρόγραμμα που έχουμε ανεβάσει —
+  // κάθε μέρα από τον φάκελο ΠΡΟΓΡΑΜΜΑ ΧΕΙΡΟΥΡΓΕΙΟΥ / <μήνας>· Τρίτη → Τετάρτης, Πέμπτη → Παρασκευής, Παρασκευή από το μεσημέρι → Δευτέρας» =====
+  // Εύρεση: ρίζα κλινικής → «ΠΡΟΓΡΑΜΜΑ ΧΕΙΡΟΥΡΓΕΙΟΥ» → φάκελος μήνα → Excel της ημέρας (όνομα ή ημερομηνία μέσα στο αρχείο) → μόνο η περιοχή εκτύπωσης (orsched.js).
+  // Κοινή μνήμη: oncall_labs «orsched|YYYY-MM-DD» ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΗ (κλειδί κλινικής) → όλες οι συσκευές το βλέπουν αμέσως· ανανέωση αν > 2 ώρες.
+  const OR_MONTHS = ['ΙΑΝΟΥΑΡ','ΦΕΒΡΟΥΑΡ','ΜΑΡΤ','ΑΠΡΙΛ','ΜΑΙ','ΙΟΥΝ','ΙΟΥΛ','ΑΥΓΟΥΣΤ','ΣΕΠΤΕΜΒΡ','ΟΚΤΩΒΡ','ΝΟΕΜΒΡ','ΔΕΚΕΜΒΡ'];
+  const OR_DAYS = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
+  const orNz = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+  const orIso = d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  // ποιο πρόγραμμα: Δευ/Τετ → της ημέρας · Τρ → Τετάρτης · Πε → Παρασκευής · Παρ πριν τις 12 → της ημέρας, μετά → Δευτέρας · Σαβ/Κυρ → Δευτέρας
+  window.pdxOrTarget = function(now){ const d = new Date(now || Date.now()); d.setHours(12,0,0,0); const wd = new Date(now || Date.now()).getDay(), hr = new Date(now || Date.now()).getHours();
+    const add = n=>{ const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+    return wd===1 || wd===3 ? d : wd===5 ? (hr < 12 ? d : add(3)) : wd===2 || wd===4 ? add(1) : wd===6 ? add(2) : add(1); };
+  // επιλογή φακέλων/αρχείου (καθαρές συναρτήσεις — tests/orsched-pick.js)
+  window.pdxOrPick = {
+    prog: dirs=>(dirs||[]).find(x=>/ΠΡΟΓΡΑΜΜΑ\s*ΧΕΙΡΟΥΡΓ/.test(orNz(x.name))) || null,
+    month: (dirs, d)=>{ const st = OR_MONTHS[d.getMonth()], y = String(d.getFullYear()); const L = (dirs||[]).filter(x=>orNz(x.name).indexOf(st)>=0);
+      return L.find(x=>orNz(x.name).indexOf(y)>=0) || L.filter(x=>!/20\d\d/.test(x.name)).sort((a,b)=>(b.t||0)-(a.t||0))[0] || L.sort((a,b)=>(b.t||0)-(a.t||0))[0] || null; },
+    // ημερομηνία από όνομα αρχείου: 11.11.2026 · 11-11-26 · 11_11 · «ΠΡΟΓΡΑΜΜΑ 11.11»
+    fileDate: (name, y)=>{ const m = String(name||'').match(/(\d{1,2})[.\-_ ](\d{1,2})(?:[.\-_ ](\d{2,4}))?/); if(!m || +m[2] > 12 || +m[1] > 31) return '';
+      const yy = m[3] ? (m[3].length===2 ? '20'+m[3] : m[3]) : String(y); return yy+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'); },
+    files: (files, iso)=>{ const y = iso.slice(0,4); const X = (files||[]).filter(f=>/\.xlsx?$/i.test(f.name) && !/^~\$/.test(f.name));
+      const exact = X.filter(f=>window.pdxOrPick.fileDate(f.name, y)===iso).sort((a,b)=>(b.t||0)-(a.t||0));
+      const undated = X.filter(f=>!window.pdxOrPick.fileDate(f.name, y)).sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,3);
+      return {exact, undated, all: X.sort((a,b)=>(b.t||0)-(a.t||0))}; }
+  };
+  async function orJob(kind, payload, ms){
+    const ins = await sb6.from('oncall_jobs').insert({kind, name:'📋 Πρόγραμμα χειρουργείου', name_key:'αρχεια', payload, status:'new'}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
+    const id = ins.data.id, t0 = Date.now();
+    while(Date.now() - t0 < (ms||60000)){ await new Promise(r=>setTimeout(r, 1500)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = q.data; if(!j) continue;
+      if(j.status==='done'){ const res = (j.payload && j.payload.result) || {}; if(kind!=='imgget') sb6.from('oncall_jobs').update({status:'dismissed'}).eq('id', id).then(()=>{},()=>{}); return kind==='imgget' ? Object.assign({id}, res) : await pdxCK.decrypt(res.enc); }
+      if(/^(failed|dismissed|cancelled)$/.test(j.status)) throw new Error(j.note || 'απέτυχε'); }
+    sb6.from('oncall_jobs').update({status:'dismissed'}).eq('id', id).then(()=>{},()=>{}); throw new Error('Ο υπολογιστής του νοσοκομείου δεν απάντησε'); }
+  async function orGetFile(ri, rel){
+    const res = await orJob('imgget', {ri, rel, file:true}, 180000); const ix = await pdxCK.decrypt(res.idx), parts = [];
+    for(let c = 0; c < res.chunks; c++){ const dl = await sb6.storage.from('img-enc').download(res.id+'/'+c+'.bin'); if(dl.error) throw new Error(dl.error.message); parts[c] = await pdxCK.openBytes(new Uint8Array(await dl.data.arrayBuffer())); }
+    sb6.storage.from('img-enc').remove(Array.from({length:res.chunks},(_,c)=>res.id+'/'+c+'.bin')).then(()=>{},()=>{}); sb6.from('oncall_jobs').update({status:'dismissed'}).eq('id', res.id).then(()=>{},()=>{});
+    const f = (ix.files||[])[0]; if(!f) throw new Error('κενό αρχείο'); return parts[f.c].subarray(f.o, f.o+f.l); }
+  const orLd = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src.split('/').pop().split('?')[0])); document.head.appendChild(s); });
+  async function orLibs(){ if(!window.XLSX) await orLd('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); if(!window.pdxOrSched) await orLd('orsched.js?v='+encodeURIComponent(typeof APP_VER!=='undefined'?APP_VER:'')); }
+  // → {iso, name, html, pts, at} ή {iso, none:true, list:[ονόματα]}
+  window.pdxOrSchedFetch = async function(iso, onStep){
+    const step = t=>{ try{ onStep && onStep(t); }catch(e){} };
+    if(!window.pdxCK || !(await pdxCK.ready())) throw new Error('Αυτή η συσκευή δεν έχει το κλειδί της κλινικής');
+    const d = new Date(iso+'T12:00:00');
+    step('Φάκελος κλινικής…'); const R = await orJob('fsls', {}); const roots = (R.dirs||[]);
+    let base = null, prog = null; for(const r0 of roots){ const L = await orJob('fsls', {ri:r0.ri, rel:r0.rel||''}); prog = window.pdxOrPick.prog(L.dirs); if(prog){ base = r0; break; } }
+    if(!prog) throw new Error('Δεν βρέθηκε φάκελος «ΠΡΟΓΡΑΜΜΑ ΧΕΙΡΟΥΡΓΕΙΟΥ»');
+    step('Φάκελος μήνα…'); const L2 = await orJob('fsls', {ri:prog.ri, rel:prog.rel}); const mo = window.pdxOrPick.month(L2.dirs, d);
+    const Lm = mo ? await orJob('fsls', {ri:mo.ri, rel:mo.rel}) : L2;   // αν δεν υπάρχει φάκελος μήνα, τα αρχεία μπορεί να είναι απευθείας μέσα
+    const F = window.pdxOrPick.files(Lm.files, iso);
+    await orLibs();
+    const tryF = async f=>{ step('Λήψη «'+f.name+'»…'); const b = await orGetFile(f.ri, f.rel); const wb = XLSX.read(b, {type:'array', cellStyles:true});
+      return {f, wb, date: pdxOrSched.dateOf(XLSX, wb, f.name)}; };
+    let hit = null;
+    for(const f of F.exact.slice(0,2)){ hit = await tryF(f); if(hit) break; }
+    if(!hit) for(const f of F.undated){ const x = await tryF(f); if(x.date===iso){ hit = x; break; } }
+    if(!hit) return {iso, none:true, list:F.all.slice(0,8).map(f=>f.name), month: mo ? mo.name : ''};
+    return {iso, name:hit.f.name, mt:hit.f.t||0, html:pdxOrSched.render(XLSX, hit.wb).html, pts:pdxOrSched.patients(XLSX, hit.wb).map(p=>({room:p.room, name:p.name, op:p.op||p.dx, surgeon:p.surgeon})), at:Date.now()};
+  };
+  // κοινή κρυπτογραφημένη μνήμη
+  window.pdxOrSchedGet = async function(iso){ try{ const r = await sb6.from('oncall_labs').select('data,updated_at').eq('name_key','orsched|'+iso).maybeSingle(); if(!r.data || !r.data.data || !r.data.data.enc) return null; return await pdxCK.decrypt(r.data.data.enc); }catch(e){ return null; } };
+  window.pdxOrSchedPut = async function(o){ try{ const enc = await pdxCK.encrypt(o); await sb6.from('oncall_labs').upsert({name_key:'orsched|'+o.iso, name:'πρόγραμμα χειρουργείου (ανεβασμένο)', pid:null, data:{enc, at:o.at||Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){} };
+  window.pdxOrSchedOpen = function(iso0){
+    const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
+    const st = {o:null, busy:'', err:'', iso};
+    if(!document.getElementById('orsCss')){ const c = document.createElement('style'); c.id = 'orsCss'; c.textContent = '.ors-wrap{margin:12px;background:#fff;border-radius:12px;overflow:auto;-webkit-overflow-scrolling:touch;padding:8px}html.pdx-night .ors-wrap{background:#fff}.ors-nav{display:flex;gap:8px;margin:8px 16px 0}.ors-nav button{flex:1;border:0;border-radius:10px;height:40px;background:rgba(120,120,128,.12);color:var(--acc,#007AFF);font-size:15px;font-weight:600}'; document.head.appendChild(c); }
+    const lbl = x=>{ const dd = new Date(x+'T12:00:00'); return OR_DAYS[dd.getDay()]+' '+dd.getDate()+'/'+(dd.getMonth()+1); };
+    const pg = iosPage('Ανεβασμένο πρόγραμμα', 'Πρόγραμμα χειρουργείου', ()=>{
+      let h = '<div class="ios-h" style="margin-top:6px">'+esc(lbl(st.iso))+(st.o && st.o.name ? ' · '+esc(st.o.name) : '')+'</div>';
+      h += '<div class="ors-nav"><button data-od="-1">‹ Προηγούμενο</button><button data-od="0">Σήμερα/επόμενο</button><button data-od="1">Επόμενο ›</button></div>';
+      if(st.err) h += iosGroup('', [{t:'<span style="color:#FF3B30">⚠ '+esc(st.err)+'</span>'}]);
+      if(st.busy) h += '<div class="ios-g" style="margin-top:12px"><div class="pdx-load"><span class="pdx-spin"></span><b>'+esc(st.busy)+'</b></div></div>';
+      if(st.o && st.o.none) h += iosGroup('', [{t:'Δεν έχει ανέβει ακόμα πρόγραμμα για '+esc(lbl(st.iso)), sub: st.o.list && st.o.list.length ? 'Στον φάκελο '+esc(st.o.month||'')+': '+esc(st.o.list.join(' · ')) : 'Ο φάκελος του μήνα δεν έχει Excel'}]);
+      if(st.o && st.o.html) h += '<style>'+pdxOrSchedCss()+'</style><div class="ors-wrap">'+st.o.html+'</div>'
+        + '<div class="ios-f">'+(st.o.pts ? st.o.pts.length+' ασθενείς · ' : '')+'ενημέρωση '+new Date(st.o.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>';
+      h += '<div class="pf-act"><button class="s" data-or="fresh"'+(st.busy?' disabled style="opacity:.5"':'')+'>↻ Ξανά από τον φάκελο</button></div><div style="height:30px"></div>';
+      return h; });
+    const load = async (fresh)=>{ st.err = ''; st.o = null;
+      if(!fresh){ const c = await pdxOrSchedGet(st.iso); if(c){ st.o = c; pg.redraw(); if(Date.now() - (c.at||0) < 2*3600e3) return; } }
+      st.busy = 'Πρόγραμμα από τον φάκελο…'; pg.redraw();
+      try{ const o = await pdxOrSchedFetch(st.iso, t=>{ st.busy = t; pg.redraw(); }); st.o = o; if(o.html || o.none) pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }
+      catch(e){ st.err = e.message || String(e); }
+      st.busy = ''; pg.redraw(); };
+    pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
+      if(b.dataset.or==='fresh') return load(true);
+      const k = +b.dataset.od; if(k===0) st.iso = orIso(pdxOrTarget()); else { const x = new Date(st.iso+'T12:00:00'); do{ x.setDate(x.getDate()+k); }while([1,3,5].indexOf(x.getDay())<0); st.iso = orIso(x); }
+      load(false); });
+    load(false);
+    return pg;
+  };
+  window.pdxOrSchedCss = ()=>(window.pdxOrSched && pdxOrSched.CSS) || '';
+  // 🔄 «κάθε μέρα»: ήσυχη ανανέωση στο παρασκήνιο (κλινικοί, ≥ 20″ μετά την είσοδο) αν η κοινή μνήμη λείπει ή είναι > 6 ωρών — μία συσκευή αρκεί για όλους
+  setTimeout(async function orBg(){ try{ if(!window.authRole){ return setTimeout(orBg, 30000); } if(['resident','attending','admin'].indexOf(window.authRole)<0) return;
+      const iso = orIso(pdxOrTarget()), K = 'pdx_orsched_bg'; let last = 0; try{ last = +localStorage.getItem(K) || 0; }catch(e){} if(Date.now() - last < 6*3600e3) return;
+      try{ localStorage.setItem(K, String(Date.now())); }catch(e){}
+      if(!window.pdxCK || !(await pdxCK.ready())) return; const c = await pdxOrSchedGet(iso); if(c && Date.now() - (c.at||0) < 6*3600e3 && !c.none) return;
+      const o = await pdxOrSchedFetch(iso); if(o.html || o.none) pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }catch(e){} }, 20000);
   window.pdxOrProgOpen = async function(date){
     const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v='+encodeURIComponent(typeof APP_VER !== 'undefined' ? APP_VER : '213'); s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
-    try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{}); return window.pdxOrProg(date); }catch(e){ alert('⚠ '+(e.message||e)); }
+    try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{});
+      const r = await window.pdxOrProg(date);
+      // 📋 10/11 βράδυ: πάνω-πάνω «Ανεβασμένο πρόγραμμα» (από τον φάκελο) — έξω από το .ios-in ώστε να μη σβήνεται στα redraw
+      try{ const pg = [...document.querySelectorAll('#iosPg')].find(x=>x.__ttl==='Πρόγραμμα χειρουργείου'), body = pg && pg.querySelector('.ios-body');
+        if(body && !body.querySelector('[data-orsched]')){ const iso = orIso(pdxOrTarget()), dd = new Date(iso+'T12:00:00'); const b = document.createElement('button'); b.setAttribute('data-orsched', '1');
+          b.style.cssText = 'display:flex;align-items:center;gap:10px;width:calc(100% - 32px);margin:8px 16px 4px;padding:12px 14px;border:0;border-radius:14px;background:#0E2A47;color:#fff;text-align:left;font-size:15.5px;cursor:pointer';
+          b.innerHTML = '<span style="font-size:24px">📋</span><span style="flex:1"><b>Ανεβασμένο πρόγραμμα</b><br><small style="opacity:.8">'+esc(OR_DAYS[dd.getDay()]+' '+dd.getDate()+'/'+(dd.getMonth()+1))+' · από τον φάκελο του μήνα</small></span><span style="font-size:22px;opacity:.7">›</span>';
+          b.onclick = ()=>{ window.__pdxTapPg = pg; pdxOrSchedOpen(); }; const big = body.querySelector('.ios-big'); (big ? big.nextSibling ? body.insertBefore(b, big.nextSibling) : body.appendChild(b) : body.insertBefore(b, body.firstChild)); } }catch(e){}
+      return r; }catch(e){ alert('⚠ '+(e.message||e)); }
   };
   window.pdxScanDevices = function(){
     let rows = null, err = '', note = ''; const can = ['attending','admin'].indexOf(window.authRole)>=0;
