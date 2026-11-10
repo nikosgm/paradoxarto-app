@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v301';
+const APP_VER = '2026-11-10z-v302';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22179,7 +22179,7 @@ window.CLS_MODE='A';
       h += '<div class="pf-act"><button class="s" data-or="fresh"'+(st.busy?' disabled style="opacity:.5"':'')+'>↻ Ξανά από τον φάκελο</button></div><div style="height:30px"></div>';
       return h; });
     const load = async (fresh)=>{ st.err = ''; st.o = null;
-      if(!fresh){ const c = await pdxOrSchedGet(st.iso); if(c){ st.o = c; pg.redraw(); if(Date.now() - (c.at||0) < 2*3600e3) return; } }
+      if(!fresh){ const c = await pdxOrSchedGet(st.iso); if(c){ st.o = c; pg.redraw(); if(c.html || Date.now() - (c.at||0) < 30*60000) return; } }   // βρέθηκε → μένει· «δεν βρέθηκε» > 30′ → ξανά
       st.busy = 'Πρόγραμμα από τον φάκελο…'; pg.redraw();
       try{ const o = await pdxOrSchedFetch(st.iso, t=>{ st.busy = t; pg.redraw(); }); st.o = o; if(o.html || o.none) pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }
       catch(e){ st.err = e.message || String(e); }
@@ -22192,12 +22192,20 @@ window.CLS_MODE='A';
     return pg;
   };
   window.pdxOrSchedCss = ()=>(window.pdxOrSched && pdxOrSched.CSS) || '';
-  // 🔄 «κάθε μέρα»: ήσυχη ανανέωση στο παρασκήνιο (κλινικοί, ≥ 20″ μετά την είσοδο) αν η κοινή μνήμη λείπει ή είναι > 6 ωρών — μία συσκευή αρκεί για όλους
-  setTimeout(async function orBg(){ try{ if(!window.authRole){ return setTimeout(orBg, 30000); } if(['resident','attending','admin'].indexOf(window.authRole)<0) return;
-      const iso = orIso(pdxOrTarget()), K = 'pdx_orsched_bg'; let last = 0; try{ last = +localStorage.getItem(K) || 0; }catch(e){} if(Date.now() - last < 6*3600e3) return;
-      try{ localStorage.setItem(K, String(Date.now())); }catch(e){}
-      if(!window.pdxCK || !(await pdxCK.ready())) return; const c = await pdxOrSchedGet(iso); if(c && Date.now() - (c.at||0) < 6*3600e3 && !c.none) return;
-      const o = await pdxOrSchedFetch(iso); if(o.html || o.none) pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }catch(e){} }, 20000);
+  // 🔄 10/11 21:23 (χρήστης: «δεν χρειάζεται κάθε 6 ώρες — κάθε Τρίτη, Πέμπτη, Παρασκευή μετά τις 2 μία φορά, κι αν δεν το βρει ξαναψάχνει σε μισή ώρα»):
+  // έλεγχος ανά 5′ · μόνο Τρ/Πε/Παρ ≥ 14:00 · το πρόγραμμα της επόμενης ημέρας χειρουργείου (pdxOrTarget) · βρέθηκε (κοινή μνήμη) → τέλος για εκείνη την ημέρα ·
+  // «δεν βρέθηκε» → νέα αναζήτηση 30′ μετά την τελευταία (ο χρόνος είναι στην κοινή μνήμη, άρα ΜΙΑ συσκευή ψάχνει για όλους)
+  window.pdxOrSchedDue = function(now, cached){ const d = new Date(now); if([2,4,5].indexOf(d.getDay())<0 || d.getHours() < 14) return false;
+    if(cached && cached.html) return false; if(cached && cached.none && now - (cached.at||0) < 30*60000) return false; return true; };
+  let orBgBusy = false;
+  setInterval(async ()=>{ if(orBgBusy || document.hidden) return; try{ if(['resident','attending','admin'].indexOf(window.authRole)<0) return;
+      const now = Date.now(); if(!pdxOrSchedDue(now, null)) return;
+      const iso = orIso(pdxOrTarget(now)), K = 'pdx_orsched_try'; let mine = 0; try{ mine = +localStorage.getItem(K) || 0; }catch(e){} if(now - mine < 30*60000) return;
+      if(!window.pdxCK || !(await pdxCK.ready())) return; orBgBusy = true;
+      const c = await pdxOrSchedGet(iso); if(!pdxOrSchedDue(now, c)) return;
+      try{ localStorage.setItem(K, String(now)); }catch(e){}
+      await pdxOrSchedPut({iso, none:true, list:[], at:now});   // «ψάχνει τώρα» → οι άλλες συσκευές περιμένουν 30′
+      const o = await pdxOrSchedFetch(iso); await pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }catch(e){} finally{ orBgBusy = false; } }, 5*60000);
   window.pdxOrProgOpen = async function(date){
     const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v='+encodeURIComponent(typeof APP_VER !== 'undefined' ? APP_VER : '213'); s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
     try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{});
