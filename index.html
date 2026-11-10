@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10w-v290';
+const APP_VER = '2026-11-10x-v291';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8117,6 +8117,12 @@ document.head.appendChild(st);
         return {t:'<b>'+nm+'</b>', sub: x.err ? (/PdxArchive|config\.json|Cannot find path/i.test(x.err) ? '<span style="color:#8E8E93">— η βάση δεν είναι εγκατεστημένη σε αυτόν τον υπολογιστή (δεν αγγίζει τα CD)</span>' : '<span style="color:#FF3B30">⚠ '+esc(x.err)+'</span>') : !S2 ? '⏳ φόρτωση…' : (S2.cdOn!==false ? '💿 αποθηκεύει αξονικές' : '— δεν αγγίζει τα CD (ελεύθερο για άλλους)')+(S2.cdOn!==false ? ' · '+(S2.eject!==false ? '⏏ βγάζει το CD' : 'κρατά το CD') : ''),
           raw: S2 ? '<span style="display:flex;gap:6px"><button data-db="pcon" data-id="'+bot+'" '+(att?'':'disabled')+' style="border:0;border-radius:8px;padding:6px 9px;font-size:13px;font-weight:700;background:'+(S2.cdOn!==false?'#34C759':'rgba(118,118,128,.16)')+';color:'+(S2.cdOn!==false?'#fff':'inherit')+'">💿</button><button data-db="pcej" data-id="'+bot+'" '+(att && S2.cdOn!==false?'':'disabled')+' style="border:0;border-radius:8px;padding:6px 9px;font-size:13px;font-weight:700;background:'+(S2.cdOn!==false && S2.eject!==false?'#34C759':'rgba(118,118,128,.16)')+';color:'+(S2.cdOn!==false && S2.eject!==false?'#fff':'inherit')+'">⏏</button></span>' : '' }; }),
         lock || '💿 = αυτόματη αποθήκευση αξονικών από CD · ⏏ = βγάζει το CD όταν τελειώσει. Κλειστό 💿 → ο υπολογιστής δεν αγγίζει τα CD (π.χ. για αξονική άλλου).');
+      // 🔒 10/11 (χρήστης): κωδικός εισόδου της εφαρμογής «Αρχείο Ασθενών» — ίδιος σε ΟΛΟΥΣ τους υπολογιστές· στέλνεται μόνο PBKDF2 (ποτέ ο κωδικός)
+      { const inst = PCS.filter(([b])=>PCST[b] && PCST[b].s), on = inst.filter(([b])=>PCST[b].s.uiLock);
+        h += iosGroup('🔒 Κωδικός εισόδου «Αρχείου Ασθενών»', [
+          {t: on.length ? 'Ενεργός' : 'Χωρίς κωδικό', sub: inst.length ? (on.length===inst.length ? '✓ σε όλους ('+on.map(x=>x[1]).join(', ')+')' : on.length ? '⚠ μόνο σε: '+on.map(x=>x[1]).join(', ')+' — πάτα «Αλλαγή» για όλους' : 'η εφαρμογή ανοίγει χωρίς κωδικό') : '⏳ φόρτωση…',
+           raw: att ? '<span style="display:flex;gap:6px"><button data-db="uipw" style="border:0;border-radius:8px;padding:7px 10px;font-size:14px;font-weight:700;background:var(--acc,#0A84FF);color:#fff">'+(on.length?'Αλλαγή':'Ορισμός')+'</button>'+(on.length?'<button data-db="uipw0" style="border:0;border-radius:8px;padding:7px 10px;font-size:14px;font-weight:600;background:rgba(118,118,128,.16)">Κατάργηση</button>':'')+'</span>' : ''}
+        ], lock || 'Ζητείται κάθε φορά που ανοίγει η εφαρμογή «Αρχείο Ασθενών» στους υπολογιστές. Τα bots και το κινητό δεν επηρεάζονται.'); }
       h += iosGroup('Ογκολογικοί', [{t:'Αυτόματος χαρακτηρισμός', sub:'από διαγνώσεις C / D0x / D37–D44, κακοήθη βιοψία ή συμβούλιο', sw:S.oncAuto!==false, data:att?'data-db="onc"':''}], lock || 'Κλειστό: ογκολογικός μόνο όταν τον ορίσει γιατρός.');
       h += iosGroup('Συγχρονισμός', [{ic:'🔄', t:'Τωρινοί ασθενείς → βάση', sub: syncNote ? esc(syncNote) : 'Παραδόχαρτο + λίστα ΝΠΣ (όνομα, ΑΜΚΑ, ΑΜ, πατρώνυμο, διαγνώσεις)', data:'data-db="sync"', on:'void 0'}], 'Μπαίνουν όσοι έχουν ΑΜΚΑ ή ΑΜ· ξανά = ενημέρωση, όχι διπλοί.');
       // 🌙 νυχτερινή αντιγραφή στον φάκελο δικτύου (ανοίγουν γρήγορα από τον Μεσαίο)
@@ -8152,6 +8158,27 @@ document.head.appendChild(st);
     pg.el.addEventListener('click', async e=>{
       const b = e.target.closest('[data-db]'); if(!b || b.disabled) return; const a = b.dataset.db, id = b.dataset.id;
       if(a==='reload'){ err = ''; pg.redraw(); return load(); }
+      if(a==='uipw' || a==='uipw0'){ if(!att) return;
+        let val = '';
+        if(a==='uipw'){ val = await new Promise(res=>{ const ov2 = document.createElement('div'); ov2.style.cssText='position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center';
+            ov2.innerHTML='<form style="background:var(--card,#fff);border-radius:16px;padding:18px;width:min(340px,90vw);display:flex;flex-direction:column;gap:10px"><b style="font-size:17px">🔒 Νέος κωδικός εισόδου</b>'
+              +'<input type="password" autocomplete="new-password" placeholder="Νέος κωδικός (τουλάχιστον 4)" style="font-size:17px;padding:10px;border:1px solid #CBD5E1;border-radius:10px">'
+              +'<input type="password" autocomplete="new-password" placeholder="Ξανά" style="font-size:17px;padding:10px;border:1px solid #CBD5E1;border-radius:10px"><div data-m style="color:#FF3B30;font-size:14px;min-height:16px"></div>'
+              +'<div style="display:flex;gap:8px"><button type="button" data-c style="flex:1;border:0;border-radius:10px;padding:11px;background:rgba(118,118,128,.16);font-size:16px">Άκυρο</button><button style="flex:1;border:0;border-radius:10px;padding:11px;background:var(--acc,#0A84FF);color:#fff;font-size:16px;font-weight:700">Αποθήκευση</button></div></form>';
+            document.body.appendChild(ov2); const [i1,i2] = ov2.querySelectorAll('input'); setTimeout(()=>i1.focus(), 50);
+            ov2.querySelector('[data-c]').onclick = ()=>{ ov2.remove(); res(''); };
+            ov2.querySelector('form').onsubmit = ev=>{ ev.preventDefault(); const m = ov2.querySelector('[data-m]');
+              if(i1.value.length<4) return m.textContent='Τουλάχιστον 4 χαρακτήρες'; if(i1.value!==i2.value) return m.textContent='Οι δύο κωδικοί διαφέρουν'; const v = i1.value; ov2.remove(); res(v); }; });
+          if(!val) return; }
+        else if(!confirm('Κατάργηση του κωδικού; Η εφαρμογή θα ανοίγει χωρίς κωδικό σε όλους τους υπολογιστές.')) return;
+        let body = '';
+        if(val){ const salt = crypto.getRandomValues(new Uint8Array(16)), iter = 150000;
+          const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(val), 'PBKDF2', false, ['deriveBits']);
+          const bits = new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2', salt, iterations:iter, hash:'SHA-256'}, k, 256));
+          const hx = u=>[...u].map(x=>x.toString(16).padStart(2,'0')).join(''); body = {salt:hx(salt), iter, hash:hx(bits)}; val = ''; }
+        const tgt = PCS.filter(([bt])=>PCST[bt] && PCST[bt].s); msg = '⏳ κωδικός σε '+tgt.length+' υπολογιστές…'; pg.redraw();
+        const rs = await Promise.all(tgt.map(([bt,nm])=>pdxDbCallOn(bt, 'POST', '/api/settings', {uiPass: body}).then(r=>{ PCST[bt].s = r; return ''; }, er=>nm+': '+er.message)));
+        const bad = rs.filter(Boolean); msg = bad.length ? '⚠ '+bad.join(' · ') : '✓ '+(body ? 'Ο κωδικός άλλαξε' : 'Ο κωδικός καταργήθηκε')+' σε '+tgt.length+' υπολογιστές'; pg.redraw(); return; }
       if(a==='pcon'){ const x = PCST[id]; if(!x || !x.s) return; const nm = (PCS.find(p2=>p2[0]===id)||[])[1]; return setPc(id, {cdOn: x.s.cdOn===false}, nm+': '+(x.s.cdOn===false?'αποθηκεύει αξονικές από CD':'δεν αγγίζει τα CD')); }
       if(a==='pcej'){ const x = PCST[id]; if(!x || !x.s) return; const nm = (PCS.find(p2=>p2[0]===id)||[])[1]; return setPc(id, {eject: x.s.eject===false}, nm+': '+(x.s.eject===false?'βγάζει το CD':'κρατά το CD')); }
       if(a==='cd') return set({cdMode:b.dataset.v}, b.dataset.v==='auto' ? 'Εισαγωγή CD: αυτόματα' : 'Εισαγωγή CD: με έγκριση');
