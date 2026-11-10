@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10r-v285';
+const APP_VER = '2026-11-10s-v286';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13732,6 +13732,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && Array.isArray(j.payload.result.rows)){ rows = j.payload.result.rows; loadedAt = Date.parse(j.updated_at)||0; } }catch(e){}
     try{ const o = JSON.parse(localStorage.getItem(SK)||'null'); if(o && typeof o==='object') sel = o; }catch(e){}
     try{ Object.keys(localStorage).filter(k=>k.indexOf('pdx_du_sel_')===0 && k!==SK).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+    // 10/11 (χρήστης: «ούτε ο θεράπων μπαίνει»): ο σημερινός ειδικός γίνεται θεράπων σε όσους δεν άλλαξες με το χέρι (και στα ✗ που ξαναστέλνονται)
+    { const td0 = C.today && C.today.d===(()=>{ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })() ? C.today.doc : ''; if(td0) Object.keys(sel).forEach(k=>{ const s1 = sel[k]; if(s1 && !s1.docManual && !(s1.job && /^✅/.test(s1.st||''))) s1.doc = td0; }); }
     const selSave = ()=>{ try{ localStorage.setItem(SK, JSON.stringify(sel)); }catch(e){} };
     // ↔ 9/11 (χρήστης): στις στομίες το ΝΠΣ ρωτά πλευρά στην προσθήκη πράξης → Δεξιά / Αριστερά / Άμφω
     const SIDES = ['Δεξιά','Αριστερά','Άμφω'];
@@ -13814,13 +13816,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       q('[data-pn]').forEach(e=>{ C.procs[+e.dataset.pn].name = e.value.trim(); }); q('[data-psd]').forEach(e=>{ C.procs[+e.dataset.psd].side = !!e.checked; }); q('[data-pc]').forEach(e=>{ C.procs[+e.dataset.pc].code = e.value.trim(); });
       const d = pg.el.querySelector('[data-docs]'); if(d) C.docs = d.value.split('\n').map(x=>x.trim()).filter(Boolean);
       const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
-      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ sel[e.dataset.dc].doc = e.value; }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = e.value; }); selSave(); };
+      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ const s1 = sel[e.dataset.dc]; if(s1.doc !== e.value){ s1.doc = e.value; s1.docManual = true; } }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = e.value; }); selSave(); };
     pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-tx]'); if(t){ sel[t.dataset.tx].txt = t.value; selSave(); } });
     pg.el.addEventListener('change', e=>{ const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))){ sel[k].proc = +bp.value; if(!needSide(prOf(sel[k]))) delete sel[k].side; } }); selSave(); } pg.redraw(); return; }
       rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); }
       const pr = e.target.closest('[data-pr]'); if(pr){ const s1 = sel[pr.dataset.pr]; if(s1){ if(!needSide(prOf(s1))) delete s1.side; } selSave(); pg.redraw(); } });   // 10/11: αλλαγή πράξης → εμφανίζεται αμέσως η πλευρά (στομίες) και ενημερώνεται το κείμενο
     pg.el.addEventListener('click', async e=>{ const rv = e.target.closest('[data-rev]'); if(rv){ if(window.pdxBotReview) pdxBotReview(+rv.dataset.rev); return; }
-      const tdb = e.target.closest('[data-td]'); if(tdb){ rd(); const v = tdb.dataset.td; C.today = {d:todayK(), doc:v}; Object.keys(sel).forEach(k=>{ if(!sel[k].job) sel[k].doc = v; }); selSave(); await save(); msg = '✓ Σήμερα: '+v; pg.redraw(); return; }
+      const tdb = e.target.closest('[data-td]'); if(tdb){ rd(); const v = tdb.dataset.td; C.today = {d:todayK(), doc:v}; Object.keys(sel).forEach(k=>{ if(!isDone(sel[k]) && !sel[k].docManual) sel[k].doc = v; }); selSave(); await save(); msg = '✓ Σήμερα: '+v; pg.redraw(); return; }
       const sb = e.target.closest('[data-sd]'); if(sb){ rd(); const s1 = sel[sb.dataset.sd]; if(s1){ s1.side = s1.side===sb.dataset.v ? '' : sb.dataset.v; selSave(); pg.redraw(); } return; }
       const b = e.target.closest('[data-a],[data-pdel]'); if(!b) return; rd();
       if(b.dataset.pdel!=null){ C.procs.splice(+b.dataset.pdel,1); if(!C.procs.length) C.procs.push({name:'',code:''}); return pg.redraw(); }
