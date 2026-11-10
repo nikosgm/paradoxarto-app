@@ -74,7 +74,10 @@ self.addEventListener('push', (e) => {
     tag: d.tag || undefined,
     data: { url: d.url || './', title, kind: /για (έλεγχο|έγκριση)/.test(title + ' ' + (d.body || '')) ? 'review'
       // αποτυχίες/κολλήματα εργασιών bot → σελίδα «Εργασίες bot»
-      : /⚠|δεν ξεκίνησε|απέτυχε|υπολογιστ|φύλακας/.test(title + ' ' + (d.body || '')) && !/εκτός ορίων|κωδικ/i.test(title + ' ' + (d.body || '')) ? 'jobs'
+      // 10/11 βράδυ (χρήστης: «πατάω ειδοποίηση του bot → με πετάει στην αρχή»): ΟΛΕΣ οι ειδοποιήσεις ενεργειών bot (❌ 🚑 ΔΕΝ καταχωρ… κόλλησε 🤖 ✅) → «Εργασίες bot»
+      : /⚠|❌|🚑|🤖|✅|💾|δεν ξεκίνησε|απέτυχε|κόλλησε|ΔΕΝ (καταχωρ|ολοκληρ|μπήκαν)|καταχωρ|οριστικοπ|εξιτήρι|συνταγ|παραπεμπ|ΕΨΙΝΕ|bot|υπολογιστ|φύλακας/i.test(title + ' ' + (d.body || '')) && !/εκτός ορίων|κωδικ|βιοψ/i.test(title + ' ' + (d.body || '')) ? 'jobs'
+      // 🔬 βιοψίες → σελίδα βιοψιών
+      : /βιοψ/i.test(title + ' ' + (d.body || '')) ? 'bx'
       // 9/11: εργαστηριακά / καλλιέργειες / κρίσιμες τιμές → σελίδα 🔔 Ειδοποιήσεις (πριν: απλώς άνοιγε η εφαρμογή)
       : /εκτός ορίων|καλλιέργ|κρίσιμ|🚨|εργαστηρ/i.test(title + ' ' + (d.body || '')) ? 'notif' : '' },
   }));
@@ -84,11 +87,13 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const nd = e.notification.data || {}, rev = nd.kind === 'review';
   // «για έλεγχο/έγκριση» → η εφαρμογή ανοίγει κατευθείαν το φύλλο ελέγχου
-  const jobs = nd.kind === 'jobs', nt = nd.kind === 'notif';
-  const tu = new URL(nd.url || './', self.location.href); if (rev) tu.hash = 'pdxrev'; else if (jobs) tu.hash = 'pdxjobs'; else if (nt) tu.hash = 'pdxnotif'; const target = tu.href;
+  const jobs = nd.kind === 'jobs', nt = nd.kind === 'notif', bx = nd.kind === 'bx';
+  const tu = new URL(nd.url || './', self.location.href); if (rev) tu.hash = 'pdxrev'; else if (jobs) tu.hash = 'pdxjobs'; else if (nt) tu.hash = 'pdxnotif'; else if (bx) tu.hash = 'pdxbx'; const target = tu.href;
   e.waitUntil((async () => {
+    // 10/11 βράδυ: το iPhone συχνά ΧΑΝΕΙ το #hash/το μήνυμα όταν ξυπνά η εφαρμογή → «σημείωμα» στην κρυφή μνήμη· η εφαρμογή το διαβάζει μόλις ανοίξει/φανεί
+    if (nd.kind) { try { const ch = await caches.open('pdx-nav'); await ch.put('/__pdxnav', new Response(JSON.stringify({ kind: nd.kind, t: Date.now(), title: nd.title || '' }), { headers: { 'content-type': 'application/json' } })); } catch (err) {} }
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of all) { if (c.url.startsWith(self.location.origin)) { await c.focus(); if (rev) c.postMessage({ type: 'pdx-open-review' }); else if (jobs) c.postMessage({ type: 'pdx-open-jobs' }); else if (nt) c.postMessage({ type: 'pdx-open-notif' }); return; } }
+    for (const c of all) { if (c.url.startsWith(self.location.origin)) { await c.focus(); if (nd.kind) c.postMessage({ type: 'pdx-nav', kind: nd.kind }); if (rev) c.postMessage({ type: 'pdx-open-review' }); else if (jobs) c.postMessage({ type: 'pdx-open-jobs' }); else if (nt) c.postMessage({ type: 'pdx-open-notif' }); return; } }
     await self.clients.openWindow(target);
   })());
 });
