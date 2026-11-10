@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10e-v272';
+const APP_VER = '2026-11-10f-v273';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8532,6 +8532,12 @@ document.head.appendChild(st);
     return {t:'', c:'', att:false};
   }
   function nvLine(d){ return [surg(d), d.dx].filter(Boolean).join(' · '); }
+  // 🩺 10/11 (χρήστης): στην κάρτα της αρχικής το χειρουργείο· αν δεν έχει χειρουργείο, η αιτία σύντομα (π.χ. «Εμπύρ. αποφρ.»)
+  function nvDxShort(t){ t = String(t||'').trim(); if(t.length <= 16) return t; const w = t.split(/\s+/).filter(Boolean).slice(0, 2);
+    return w.map(x=>x.length > 6 ? x.slice(0, 5)+'.' : x).join(' '); }
+  function nvOp(d){ const s = surg(d) || String(d.surgeryCustom||'').trim(); return s ? {t:s, op:true} : (d.dx ? {t:nvDxShort(d.dx), full:d.dx, op:false} : null); }
+  window.pdxOpLine = d=>{ const o = nvOp(d); return o ? o.t : ''; };
+  function nvOpH(d, big){ const o = nvOp(d); if(!o) return ''; return '<span class="nv-op" title="'+esc(o.full||o.t)+'" style="display:block;font-size:'+(big?'13px':'11.5px')+';line-height:1.25;font-weight:'+(o.op?'700':'500')+';color:'+(o.op?'var(--mp,#1D4E80)':'#6B7280')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">'+(o.op?'':'🩺 ')+esc(o.t)+'</span>'; }
   // «ΕΠΩΝΥΜΟ Ο.» όταν το πλήρες όνομα δεν χωράει στην κάρτα
   // 8/11 (χρήστης): στην κάρτα ΜΟΝΟ το επώνυμο
   function nvName2(n){ const w = String(n||'—').trim().split(/\s+/); return '<span class="nl">'+esc(w[0])+'</span>'; }
@@ -8581,7 +8587,7 @@ document.head.appendChild(st);
       if(v==='grid'){
         // όλες οι κάρτες ίδιο πλάτος, στη θέση του κρεβατιού: κρεβάτια 1 και 3 → κάρτα, κενό, κάρτα (αριθμός κρεβατιών από ROOMS)
         const card = e=>{ const d = e.d, s = nvStat(e);
-          return '<div class="mcard mrow nvt'+(s.att?' att':'')+'" onclick="mobOpen(\''+esc(e.k)+'\')"><div class="nvt-h"><span class="nv-bed mroom">'+nvBedLbl(e)+'</span><span class="mnm nm2" title="'+esc(d.name||'')+'">'+nvName2(d.name)+'</span></div>'
+          return '<div class="mcard mrow nvt'+(s.att?' att':'')+'" onclick="mobOpen(\''+esc(e.k)+'\')"><div class="nvt-h"><span class="nv-bed mroom">'+nvBedLbl(e)+'</span><span class="mnm nm2" title="'+esc(d.name||'')+'">'+nvName2(d.name)+'</span></div>'+nvOpH(d)
             + '<div class="nv-ft">'+nvPills(d)+(d.therapist?'<span class="nv-th" title="'+esc(((window.THERAPIST_FULL||{})[d.therapist])||d.therapist)+'">'+esc(nvTher(d.therapist))+'</span>':'')+'</div></div>'; };
         const rm = (typeof ROOMS!=='undefined'?ROOMS:[]).find(r=>String(r.num)===String(g.r)), nb = rm ? (rm.beds||0) : 0;
         let cells = '', rest = g.es.slice();
@@ -8591,7 +8597,7 @@ document.head.appendChild(st);
         h += '<div class="nv-grid">' + cells + rest.map(card).join('') + '</div>';
       } else {
         h += '<div class="nv-grp">' + g.es.map(e=>{ const d = e.d, s = nvStat(e), pl = nvPills(d);
-          return '<div class="mcard mrow nvr" onclick="mobOpen(\''+esc(e.k)+'\')"><span class="nv-bn mroom">'+nvBedLbl(e)+'</span><div class="nv-mid"><span class="mnm">'+esc(d.name||'—')+(s.att?'<span class="nv-dot" title="'+esc(s.t)+'"></span>':'')+'</span>'+(pl?'<span class="nv-sub nv-ft" style="margin-top:2px">'+pl+'</span>':'')+'</div>'+(d.therapist?'<span class="nv-th" style="margin-left:0">'+esc(d.therapist)+'</span>':'')+'</div>'; }).join('') + '</div>';
+          return '<div class="mcard mrow nvr" onclick="mobOpen(\''+esc(e.k)+'\')"><span class="nv-bn mroom">'+nvBedLbl(e)+'</span><div class="nv-mid"><span class="mnm">'+esc(d.name||'—')+(s.att?'<span class="nv-dot" title="'+esc(s.t)+'"></span>':'')+'</span>'+nvOpH(d, true)+(pl?'<span class="nv-sub nv-ft" style="margin-top:2px">'+pl+'</span>':'')+'</div>'+(d.therapist?'<span class="nv-th" style="margin-left:0">'+esc(d.therapist)+'</span>':'')+'</div>'; }).join('') + '</div>';
       }
     });
     setTimeout(()=>{ try{ window.nvFitNames(); }catch(x){} }, 0);
@@ -9348,7 +9354,7 @@ document.head.appendChild(st);
     const bk = String(L().back||'‹ Πίσω'), bkT = bk.replace(/^\s*‹\s*/,'').trim()==='Πίσω' ? '‹ '+(VM()!=='classic' ? 'Κλινική' : (L().patients||'Ασθενείς')) : bk;   // «‹ <προηγούμενος τίτλος>»: η αρχική οθόνη λέγεται «Κλινική»
     let h = '<div class="mtop"><div></div><span style="display:flex;gap:8px;flex:none"><button onclick="mobActions(\''+esc(k)+'\')" style="font-weight:700">⚡ Ενέργειες</button><button onclick="mobBack()">'+esc(bkT)+'</button></span></div>';
     { const s0 = surg(d), dev = devPills(d).split('</span>').map(t=>t.replace(/<[^>]*>/g,'').trim()).filter(Boolean).join(' + ');
-      const age = String(d.age||'').trim(), sub = [age ? esc(/^\d+$/.test(age) ? age+' ετών' : age) : ''].filter(Boolean).join(' · ');   // 8/11: χειρουργείο/καθετήρες ΜΟΝΟ στο πλαίσιο «Χειρουργείο · Καθετήρες» (όχι και κάτω από το όνομα)
+      const age = String(d.age||'').trim(), opT = s0 || String(d.surgeryCustom||'').trim(), sub = [opT ? '<b style="color:var(--mp,#1D4E80)">'+esc(opT)+'</b>' : (d.dx ? '🩺 '+esc(d.dx) : ''), age ? esc(/^\d+$/.test(age) ? age+' ετών' : age) : ''].filter(Boolean).join(' · ');   // 10/11 (χρήστης): ξανά το χειρουργείο κάτω από το όνομα (ή η αιτία νοσηλείας)   // 8/11: χειρουργείο/καθετήρες ΜΟΝΟ στο πλαίσιο «Χειρουργείο · Καθετήρες» (όχι και κάτω από το όνομα)
       // 🪪 8/11 (εντολή χρήστη): στην καρτέλα επώνυμο + όνομα (από ΝΠΣ), πατρώνυμο με μικρά, ΑΜ/ΑΜΚΑ (πάτημα = αντιγραφή) και «Αντιγραφή»
       const P = window.pdxPtId ? pdxPtId(k, d) : {name:d.name||''};
       h += '<div class="pth"><h1 onclick="mobEditName()">'+esc(k.indexOf('extra')===0?e.room:e.room+'-'+e.bed)+' · '+esc(P.name||d.name||'—')+(P.fatherGen?' <span style="font-size:.62em;font-weight:500;opacity:.75">ΤΟΥ '+esc(P.fatherGen)+'</span>':'')+'</h1>'+(sub?'<div class="pts">'+sub+'</div>':'')
