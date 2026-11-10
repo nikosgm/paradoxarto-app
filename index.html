@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10t-v287';
+const APP_VER = '2026-11-10u-v288';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8138,7 +8138,11 @@ document.head.appendChild(st);
       h += iosGroup('Σύντομα', [{t:'<span style="color:#8E8E93">Αυτόματη ενημέρωση από τα bots</span>', sub:'νοσηλείες, εργαστηριακά, βιοψίες, χειρουργεία'}, {t:'<span style="color:#8E8E93">Νυχτερινό αντίγραφο ασφαλείας της βάσης</span>'}]);
       return h + '<div style="height:60px"></div>';
     });
-    const loadPcs = ()=>PCS.forEach(([bot])=>{ pdxDbCallOn(bot, 'GET', '/api/settings').then(r=>{ PCST[bot] = {s:r}; pg.redraw(); }, e=>{ PCST[bot] = {err:e.message}; pg.redraw(); }); });
+    // 💿 10/11 (χρήστης: «Πόρτα δε φαίνεται στη βάση»): η λίστα ήταν σταθερή (3 υπολογιστές) → τώρα ΟΛΟΙ από τα ονόματα υπολογιστών (Πόρτα, Εξωτερικά…)
+    const PC_ORD = ['Παράθυρο','Μεσαίος','Γωνιακός','Πόρτα','Εξωτερικά'];
+    const loadPcs = async ()=>{ try{ const BN = await pdxBotNames(true); Object.entries(BN||{}).forEach(([id,nm])=>{ if(id && nm && !PCS.some(p2=>p2[0]===id)) PCS.push([id, String(nm)]); });
+        PCS.sort((a,b)=>{ const i=PC_ORD.indexOf(a[1]), k=PC_ORD.indexOf(b[1]); return (i<0?99:i)-(k<0?99:k); }); pg.redraw(); }catch(e){} loadPcs0(); };
+    const loadPcs0 = ()=>PCS.forEach(([bot])=>{ pdxDbCallOn(bot, 'GET', '/api/settings').then(r=>{ PCST[bot] = {s:r}; pg.redraw(); }, e=>{ PCST[bot] = {err:e.message}; pg.redraw(); }); });
     const setPc = async (bot, o, label)=>{ if(!att) return; const x = PCST[bot] || (PCST[bot] = {}); if(x.busy) return; x.busy = 1; x.s = Object.assign({}, x.s, o); msg = '⏳ '+label+'…'; pg.redraw();
       try{ x.s = await pdxDbCallOn(bot, 'POST', '/api/settings', o); msg = '✓ '+label; }catch(e){ msg = '⚠ '+e.message; } x.busy = 0; pg.redraw(); };
     const load = async ()=>{ try{ ov = await pdxDbCall('GET', '/api/overview'); err = ''; }catch(e){ err = e.message; } busy = ''; pg.redraw(); };
