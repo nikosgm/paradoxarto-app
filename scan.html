@@ -123,7 +123,10 @@ async function fromFiles(fs){ fs = [...(fs || [])].slice(0, 4); if(!fs.length) r
 // Ο ανιχνευτής φύλλου (σκάνερ) μόνο στο «🗓 Πρόγραμμα».
 const MODE = 'pdx_scan_mode';
 const MODES = { '': ['🔄', 'Αυτόματα', 'οριζόντιο χαρτί → πρόγραμμα · όρθιο → ιστορικό/πόρισμα'], prog: ['🗓', 'Πρόγραμμα', 'πρόγραμμα χειρουργείου → email'], hist: ['📄', 'Ιστορικό', 'ιστορικό ή πόρισμα (π.χ. αξονικής) → Claude'], op: ['📝', 'Πρακτικό', 'πρακτικό χειρουργείου από το βιβλίο → Claude'] };
-const modeGet = ()=>{ try{ const m = localStorage.getItem(MODE); if(m != null) return MODES[m] ? m : '';
+// 🔄 10/11 βράδυ (χρήστης: «αφού το οριζόντιο καταλαβαίνει το πρόγραμμα και το Claude ξεχωρίζει ιστορικό/πόρισμα/πρακτικό — μία σάρωση, χωρίς επιλογή»):
+// ΠΑΝΤΑ «Αυτόματα»· το κουμπί «τι σαρώνω» κρύβεται (η σελίδα σάρωσης/connector ρυθμίζονται μία φορά στην αρχή)
+const ONE_MODE = true;
+const modeGet = ()=>{ if(ONE_MODE) return ''; try{ const m = localStorage.getItem(MODE); if(m != null) return MODES[m] ? m : '';
   const old = localStorage.getItem('pdx_scan_op') === '1' ? 'op' : localStorage.getItem('pdx_scan_rot') === '1' ? 'prog' : ''; localStorage.setItem(MODE, old); return old; }catch(e){ return ''; } };
 const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog', histOn = ()=>modeGet() === 'hist';
 const modePaint = ()=>{ const m = modeGet(), M = MODES[m], b = $('mod'); b.innerHTML = M[0] + ' ' + M[1] + ' ▾'; b.style.background = m ? (m === 'prog' ? '#34C759' : m === 'op' ? '#AF52DE' : '#0A84FF') : '#ffffff26'; };
@@ -151,7 +154,7 @@ $('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
   const back = ()=>{ $('msg').classList.remove('menu'); if(stream) $('msg').style.display = 'none'; else camera(); };
   $('mclose').onclick = back;
   $('msg').querySelectorAll('[data-m]').forEach(x=>x.onclick = ()=>{ modeSet(x.dataset.m); back(); }); };
-modePaint();
+modePaint(); if(ONE_MODE){ try{ $('mod').style.display = 'none'; }catch(e){} }
 try{ if(!localStorage.getItem('pdx_scan_via2')){ localStorage.setItem('pdx_scan_via', 'page'); localStorage.setItem('pdx_scan_via2', '1'); } }catch(e){}   // 10/11: μία φορά → όλες οι συσκευές στη Σελίδα Σάρωσης
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
