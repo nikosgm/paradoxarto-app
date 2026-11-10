@@ -88,15 +88,22 @@ async function waitApproval(){
 
 // ---------- κάμερα ----------
 let stream = null, busy = false;
+// 📷 10/11 (χρήστης: «γράφει εγγραφή κάμερας/βίντεο»): το iPhone δείχνει την κόκκινη κάμερα όσο η κάμερα είναι ανοιχτή (δεν γράφεται βίντεο).
+// Η κάμερα κλείνει: στο μενού «Τι σαρώνω», όταν φεύγεις από την εφαρμογή, και μετά από 90″ χωρίς λήψη · ξανανοίγει με ένα πάτημα.
+let camIdle = 0;
+function camStop(){ clearTimeout(camIdle); if(stream){ try{ stream.getTracks().forEach(t=>t.stop()); }catch(e){} stream = null; } try{ $('v').srcObject = null; }catch(e){} }
+function camKick(){ clearTimeout(camIdle); camIdle = setTimeout(()=>{ if(busy || !stream || document.hidden) return; camStop();
+  msg('<div style="font-size:48px">📷</div><div>Η κάμερα έκλεισε (δεν χρησιμοποιήθηκε)</div><button class="btn" id="camon">Άνοιγμα κάμερας</button>'); $('camon').onclick = ()=>camera(); }, 90000); }
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); return; } setTimeout(()=>{ if(!document.hidden && !stream && !busy && $('msg').style.display === 'none') camera(); }, 300); });
 async function camera(){
   $('bar').style.visibility = 'visible';
   msg('<div class="spin"></div>');
   try{
     stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:3840 }, height:{ ideal:2160 } } });
     const v = $('v'); v.srcObject = stream; await v.play().catch(()=>{});
-    $('msg').style.display = 'none';
+    $('msg').style.display = 'none'; camKick();
     try{ const tr = stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if(cap.focusMode && cap.focusMode.includes('continuous')) await tr.applyConstraints({ advanced:[{ focusMode:'continuous' }] }); }catch(e){}
-    $('shot').onclick = ()=>{ if(busy || !v.videoWidth) return; $('fl').style.opacity = '.8'; setTimeout(()=>{ $('fl').style.opacity = '0'; }, 120); shoot(); };
+    $('shot').onclick = ()=>{ if(busy || !v.videoWidth) return; camKick(); $('fl').style.opacity = '.8'; setTimeout(()=>{ $('fl').style.opacity = '0'; }, 120); shoot(); };
     live();
   }catch(e){
     // δεν επιτράπηκε η ζωντανή κάμερα → η κάμερα του κινητού
@@ -120,7 +127,7 @@ const modeGet = ()=>{ try{ const m = localStorage.getItem(MODE); if(m != null) r
 const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog', histOn = ()=>modeGet() === 'hist';
 const modePaint = ()=>{ const m = modeGet(), M = MODES[m], b = $('mod'); b.innerHTML = M[0] + ' ' + M[1] + ' ▾'; b.style.background = m ? (m === 'prog' ? '#34C759' : m === 'op' ? '#AF52DE' : '#0A84FF') : '#ffffff26'; };
 const modeSet = (x)=>{ try{ localStorage.setItem(MODE, x); }catch(e){} modePaint(); };
-$('mod').onclick = ()=>{ if(busy) return; const cur = modeGet();
+$('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
   msg('<b style="font-size:19px">Τι σαρώνω;</b>' + Object.keys(MODES).map(k=>'<button class="btn" data-m="' + k + '" style="width:100%;max-width:340px;text-align:left;background:' + (k === cur ? '#0A84FF' : '#ffffff1f') + '"><b>' + MODES[k][0] + ' ' + MODES[k][1] + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + MODES[k][2] + '</span></button>').join(''));
   // 💬 ίδια συζήτηση Claude για όλες τις σαρώσεις: επικόλληση του συνδέσμου της (Claude → ⋯ → Κοινοποίηση/Αντιγραφή συνδέσμου ή από τη γραμμή διεύθυνσης)
   let cur0 = ''; try{ cur0 = localStorage.getItem('pdx_scan_chat') || ''; }catch(e){}
@@ -314,6 +321,11 @@ async function progFlow(pages, raw){
   }
 }
 async function send(srcs, w0, h0){
+  // 📋 10/11 (χρήστης: «μας πέταξε στη συζήτηση Claude χωρίς να γράψει κάτι»): η εφαρμογή Claude στο iPhone ΔΕΝ γεμίζει πάντα το μήνυμα από τον σύνδεσμο.
+  // Το Safari επιτρέπει αντιγραφή μόνο ΤΗ ΣΤΙΓΜΗ του πατήματος → «κλείνουμε θέση» στο πρόχειρο τώρα και τη γεμίζουμε όταν ανέβει η σάρωση.
+  try{ if(!window.__clipRes && navigator.clipboard && window.ClipboardItem){ let ok, no; const pr = new Promise((a, b)=>{ ok = a; no = b; }); pr.catch(()=>{});
+    window.__clipRes = { ok:(t)=>{ ok(new Blob([t], { type:'text/plain' })); window.__clipRes = null; }, no:()=>{ no(new Error('x')); window.__clipRes = null; } };
+    navigator.clipboard.write([new ClipboardItem({ 'text/plain': pr })]).catch(()=>{}); setTimeout(()=>{ if(window.__clipRes) window.__clipRes.no(); }, 60000); } }catch(e){}
   busy = true; const v = $('v'); const turn = rotOn(), land = turn || (!histOn() && isLand(srcs, w0, h0));
   // για «Δεν είναι πρόγραμμα → Claude»: κρατάμε τις πηγές (στιγμιότυπο του βίντεο σε καμβά)
   try{ window.__lastPages = { srcs: srcs.map(sr=>{ const w = w0 || sr.width, h = h0 || sr.height; const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(sr, 0, 0, w, h); return c; }), w:0, h:0 }; }catch(e){}
@@ -331,7 +343,7 @@ async function send(srcs, w0, h0){
       w0 = h0 = 0;
     }
     const op = opOn();
-    if(land && !op && !window.__scanForceClaude) return progFlow(pages, raw);
+    if(land && !op && !window.__scanForceClaude){ if(window.__clipRes) window.__clipRes.no(); return progFlow(pages, raw); }
     window.__scanForceClaude = false;
     const id = await rpc('scan_put', { p_token: tok.get(), p_payload: { pages } });
     const tag = '#s' + id + 'k' + [...raw].map(b=>b.toString(16).padStart(2, '0')).join('') + (op ? 'o' : '');
@@ -347,14 +359,14 @@ async function send(srcs, w0, h0){
     let via = 'chat'; try{ via = localStorage.getItem('pdx_scan_via') || 'chat'; }catch(e){}
     if(op) via = 'page';
     window.__scanNav = via === 'page' ? CLAUDE_APP + tag : via === 'chat' ? chatU : '';
-    window.__scanAsk = ask;
+    window.__scanAsk = ask; if(window.__clipRes) window.__clipRes.ok(ask);
     msg('<div style="font-size:54px">🤖</div><div>' + (via ? 'Ανοίγει το Claude…' : 'Πού να διαβαστεί;') + '</div>'
       + (op ? '' : '<a class="go" id="vchat" href="' + chatU + '">💬 Συζήτηση Claude</a><a class="go2" href="' + chatW + '" target="_blank" rel="noopener">ή στον browser</a><div style="font-size:13px;opacity:.75;max-width:320px;text-align:center">με τη σύνδεση «Παραδόχαρτο» στον λογαριασμό σου (συνάδελφοι)· αν δεν γραφτεί μόνο του το μήνυμα: Επικόλληση</div>')
       + '<a class="go2" id="vpage" href="' + CLAUDE_APP + tag + '">📄 Σελίδα Σάρωσης (διαχειριστής)</a>');
     const remember = (v)=>{ try{ localStorage.setItem('pdx_scan_via', v); }catch(e){} };
     if($('vchat')) $('vchat').onclick = ()=>{ remember('chat'); try{ navigator.clipboard && navigator.clipboard.writeText(ask); }catch(e){} };
     $('vpage').onclick = ()=>{ if(!op) remember('page'); };
-    if(via === 'chat'){ try{ navigator.clipboard && navigator.clipboard.writeText(ask).catch(()=>{}); }catch(e){} }
+    if(via === 'chat' && !window.__clipRes){ try{ navigator.clipboard && navigator.clipboard.writeText(ask).catch(()=>{}); }catch(e){} }
     if(via && !window.__scanNoNav){ try{ location.href = window.__scanNav; }catch(e){} }
     setTimeout(()=>{ busy = false; }, 1500);
     // όταν ξαναγυρίσεις στην εφαρμογή: πάλι κάμερα
