@@ -1987,7 +1987,7 @@ document.getElementById('dateLabel').textContent = fmtDate();
   st.textContent += '@media (hover:none),(pointer:coarse){.hsa{display:none!important}}';   // 9/11 (χρήστης): στο κινητό χωρίς βελάκια — σύρσιμο
   document.head.appendChild(st);
   const TOUCH = (()=>{ try{ return matchMedia('(hover:none),(pointer:coarse)').matches; }catch(e){ return false; } })();
-  const isStrip = el=>{ if(!el || el.nodeType!==1) return false; if(!(el.scrollWidth > el.clientWidth + 4) || el.clientHeight <= 0 || el.clientHeight > 110) return false;   // φτηνός έλεγχος πρώτα
+  const isStrip = el=>{ if(!el || el.nodeType!==1 || el.hasAttribute('data-dw')) return false;   // 10/11: όχι στη λωρίδα ημερών της συνταγής if(!(el.scrollWidth > el.clientWidth + 4) || el.clientHeight <= 0 || el.clientHeight > 110) return false;   // φτηνός έλεγχος πρώτα
     if(el.tagName==='TABLE' || el.closest('table') || el.querySelector('table')) return false; const cs = getComputedStyle(el);
     return (cs.overflowX==='auto' || cs.overflowX==='scroll') && (cs.display.indexOf('flex')>=0 || cs.whiteSpace==='nowrap'); };
   const paint = el=>{ const L = el.__hsa; if(!L) return; const max = el.scrollWidth - el.clientWidth; L[0].classList.toggle('on', el.scrollLeft > 4); L[1].classList.toggle('on', el.scrollLeft < max - 4); };
@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10a-v268';
+const APP_VER = '2026-11-10b-v269';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13997,6 +13997,25 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs .mctl{flex-basis:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.rxs .mctl .stp{justify-content:space-between}.rxs .mctl .stp button{width:44px;height:44px}.rxs .mctl .stp i{min-width:0;flex:1;white-space:nowrap}
   .rxs .pt{border:0;background:#E6EEF7;color:#1D4E80;border-radius:9px;height:44px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}.rxs .pt.on{background:#1F6F43;color:#fff}
   .rxs .mbx{flex-basis:100%;font-size:12.5px;color:#6B6B70;margin-top:4px}
+  /* 10/11: συμπαγής επεξεργασία φαρμάκου (τύπου iPhone) — όλα σε μία οθόνη */
+  .rxs .ed{flex-basis:100%;min-width:0;width:100%;margin-top:6px;display:flex;flex-direction:column;gap:6px}
+  .rxs .ed .er{display:flex;align-items:center;gap:8px;min-width:0}.rxs .ed .el{width:54px;flex:none;font-size:12.5px;color:#6D6D72}
+  .rxs .sgc{display:flex;flex:1;min-width:0;background:#E9E9EE;border-radius:9px;padding:2px;gap:2px}
+  .rxs .sgc button{flex:1;height:34px;border:0;border-radius:7px;background:none;font-size:15px;font-weight:600;color:#1C1C1E;font-family:inherit;cursor:pointer;padding:0}
+  .rxs .sgc button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.14);color:#1D4E80}
+  .rxs .dw{flex:1;min-width:0;position:relative;height:38px;background:#E9E9EE;border-radius:9px;overflow:hidden}
+  .rxs .dw .ds{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:38px;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:0 calc(50% - 20px)}
+  .rxs .dw .ds::-webkit-scrollbar{display:none}
+  .rxs .dw .ds b{flex:0 0 40px;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:#8E8E93;font-variant-numeric:tabular-nums}
+  .rxs .dw .ds b.on{color:#1D4E80;font-size:18px;font-weight:700}
+  .rxs .dw:after{content:'';position:absolute;left:calc(50% - 21px);top:3px;width:42px;height:32px;border-radius:7px;background:rgba(255,255,255,.75);box-shadow:0 1px 3px rgba(0,0,0,.14);pointer-events:none;z-index:0}
+  .rxs .dw .ds{position:relative;z-index:1}
+  .rxs .bxc{display:flex;align-items:center;background:#E9E9EE;border-radius:9px;height:38px;flex:none}
+  .rxs .bxc button{width:36px;height:38px;border:0;background:none;font-size:18px;color:#1D4E80;padding:0;cursor:pointer}
+  .rxs .bxc i{font-style:normal;font-size:13.5px;font-weight:700;min-width:58px;text-align:center;white-space:nowrap}
+  .rxs .bxc i small{font-weight:500;color:#6D6D72;font-size:11.5px}
+  .rxs .med.op{background:#F7F9FC}.rxs .med .chev{color:#C7C7CC;font-size:15px;flex:none}
+  html.pdx-night .rxs .sgc,html.pdx-night .rxs .dw,html.pdx-night .rxs .bxc{background:#2C2C2E}html.pdx-night .rxs .sgc button{color:#fff}html.pdx-night .rxs .sgc button.on{background:#636366;color:#fff}html.pdx-night .rxs .dw:after{background:rgba(99,99,102,.7)}html.pdx-night .rxs .med.op{background:#232325}
   .rxs .tg{width:51px;height:31px;border-radius:16px;background:#E9E9EA;position:relative;flex:none;border:0;cursor:pointer;transition:background .15s}
   .rxs .tg:after{content:'';position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .15s}
   .rxs .tg.on{background:#34C759}.rxs .tg.on:after{left:22px}
@@ -14233,11 +14252,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const opt = (L, v)=>L.map(x=>'<option value="'+E(x[0])+'"'+(String(x[0])===String(v)?' selected':'')+'>'+E(x[1])+'</option>').join('');
       h += '<div class="h" style="margin-top:14px">Νέο φάρμακο</div><div class="g mf"><div class="r"><input class="t" data-medq type="search" autocomplete="off" placeholder="🔎 Φάρμακο (π.χ. Ciproxin)" enterkeyhint="done"></div><div data-mres class="exl"></div>'
         + '<div class="r"><span class="l">Περιεκτικότητα</span><input data-mf="strength" class="t v" placeholder="π.χ. 500mg" autocomplete="off"></div>'
+        + '<div style="display:none">'
         + '<div class="r cs"><span class="l">Δόση</span><div class="chs2" data-cs="dose"></div><select data-mf="dose" style="display:none">'+opt([['0.5','½ δισκίο'],['1','1 δισκίο'],['1.5','1½ δισκίο'],['2','2 δισκία'],['3','3 δισκία']])+'</select></div>'
         + '<div class="r cs"><span class="l">Φορές / ημέρα</span><div class="chs2" data-cs="freq"></div><select data-mf="freq" style="display:none">'+opt([['0','— επίλεξε —'],['1','1 φορά'],['2','2 φορές'],['3','3 φορές'],['4','4 φορές']])+'</select></div>'
         + '<div class="r cs"><span class="l">Ημέρες</span><div class="chs2" data-cs="days"></div><select data-mf="days" style="display:none">'+opt([['0','— επίλεξε —']].concat([1,2,3,4,5,6,7,8,10,14,15,20,21,28,30].map(n=>[String(n), n+(n===1?' ημέρα':' ημέρες')])))+'</select></div>'
         + '<div class="r cs"><span class="l">Κουτιά</span><div class="chs2" data-cs="boxes"></div><select data-mf="boxes" style="display:none"></select></div>'
         + '<div class="r cs"><span class="l">Συμμετοχή<small data-ptxt style="display:none">τώρα 25%</small></span><div class="chs2"><button type="button" data-cspart="25%">25%</button><button type="button" data-cspart="0%">0%</button></div><button class="tg" data-tg0 aria-label="Συμμετοχή 0%" style="display:none"></button></div>'
+        + '</div><div class="r" style="flex-wrap:wrap" data-edn></div>'
         + '<div class="r"><div class="pv" data-medpv style="flex:1;padding:0"></div><button class="addb" data-a="add" style="height:44px">Προσθήκη</button></div></div>';
       h += '<div class="h">Επανάληψη συνταγής</div><div class="g"><div class="r"><span class="l">Επαναλαμβανόμενη</span><select data-rep>'+opt([['0','Όχι'],['2','Δίμηνη'],['3','Τρίμηνη'],['6','Εξάμηνη']], S.rep)+'</select></div>'
         + (S.rep ? '<div class="r"><span class="l">Κάθε</span><select data-every>'+opt([['28','28 ημέρες'],['30','30 ημέρες']], S.every)+'</select></div>' : '')+'</div>'
@@ -14267,18 +14288,51 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       refresh();
     }
     function exAdd(v){ v = String(v||'').trim(); if(!v) return; if(!S.ex.some(x=>x.n.toLowerCase()===v.toLowerCase())) S.ex.push({n:v, k:exKind(v)}); const q = root.querySelector('[data-exq]'); if(q) q.value=''; drawEx(); }
+    // 10/11: συμπαγής επεξεργασία (δόση · φορές · ημέρες με κύλιση · κουτιά αυτόματα/χειροκίνητα · συμμετοχή) — key: 'n' (νέο) ή δείκτης
+    const DMAX = 30;
+    const edObj = k=>k==='n' ? S.f : S.meds[+k];
+    const edBox = o=>o.bxMan && o.boxes ? o.boxes : (o.perBox && needOf(o) ? Math.max(1, Math.ceil(needOf(o)/o.perBox)) : 0);
+    const bxLbl = o=>'📦 '+(o.bxMan && o.boxes ? o.boxes : '<small>αυτ.</small> '+(edBox(o)||'–'));
+    function edH(o, k){
+      const sg = (f, L)=>'<div class="sgc">'+L.map(x=>'<button type="button" data-ed="'+k+'|'+f+'|'+x[0]+'" class="'+(String(o[f])===String(x[0])?'on':'')+'">'+x[1]+'</button>').join('')+'</div>';
+      const d = +o.days||0, bx = edBox(o);
+      let days = ''; for(let n=1;n<=DMAX;n++) days += '<b data-dv="'+n+'"'+(n===d?' class="on"':'')+'>'+n+'</b>';
+      return '<div class="ed" data-edk="'+k+'">'
+        + '<div class="er"><span class="el">Δόση</span>'+sg('dose', [['0.5','½'],['1','1'],['1.5','1½'],['2','2'],['3','3']])+'</div>'
+        + '<div class="er"><span class="el">Φορές</span>'+sg('freq', [['1','1'],['2','2'],['3','3'],['4','4']])+'</div>'
+        + '<div class="er"><span class="el">Ημέρες</span><div class="dw"><div class="ds" data-dw="'+k+'">'+days+'</div></div></div>'
+        + '<div class="er"><span class="el">Κουτιά</span><div class="bxc"><button type="button" data-ed="'+k+'|bx|-1" aria-label="λιγότερα κουτιά">−</button><i>'+bxLbl(o)+'</i><button type="button" data-ed="'+k+'|bx|1" aria-label="περισσότερα κουτιά">+</button></div>'
+        + '<div class="sgc" style="max-width:120px;margin-left:auto">'+[['25%','25%'],['0%','0%']].map(x=>'<button type="button" data-ed="'+k+'|part|'+x[0]+'" class="'+((o.part||'25%')===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div></div>'
+        + '</div>';
+    }
+    // κύλιση ημερών: θέση στην τρέχουσα τιμή + επιλογή όταν σταματήσει (ή με πάτημα)
+    function edWire(scope){
+      scope.querySelectorAll('[data-dw]').forEach(ds=>{ const k = ds.dataset.dw, o = edObj(k); if(!o) return;
+        const W = 40, setPos = ()=>{ ds.scrollLeft = Math.max(0, ((+o.days||1)-1)*W); };
+        requestAnimationFrame(setPos);
+        let tm = 0; ds.addEventListener('scroll', ()=>{ clearTimeout(tm); tm = setTimeout(()=>{ if(!ds.isConnected || Date.now()-(ds._lock||0)<700) return; const v = Math.max(1, Math.min(DMAX, Math.round(ds.scrollLeft/W)+1)); if(v!==+o.days){ edSet(k, 'days', v, true); } ds.querySelectorAll('b').forEach(b=>b.classList.toggle('on', +b.dataset.dv===v)); }, 110); }, {passive:true});
+        ds.addEventListener('click', e=>{ const b = e.target.closest('[data-dv]'); if(!b) return; e.stopPropagation(); const v = +b.dataset.dv; if(v!==+o.days) edSet(k, 'days', v, true); ds.querySelectorAll('b').forEach(x=>x.classList.toggle('on', x===b)); ds._lock = Date.now(); ds.scrollTo({left:(v-1)*W, behavior:'smooth'}); });
+      });
+    }
+    function edSet(k, f, v, soft){ const o = edObj(k); if(!o) return;
+      if(f==='bx'){ const cur = o.bxMan && o.boxes ? o.boxes : 0, auto = edBox(Object.assign({}, o, {bxMan:false}));
+        // αυτόματα → +: από το αυτόματο +1 (ή 1) · −: αυτόματο −1 · χειροκίνητο στο 0 → ξανά αυτόματα
+        const n = cur ? cur + (+v) : (+v>0 ? (auto ? auto+1 : 1) : (auto>1 ? auto-1 : 0));
+        if(n<=0){ o.bxMan = false; o.boxes = 0; } else { o.bxMan = true; o.boxes = Math.min(20, n); } }
+      else if(f==='dose') o.dose = String(v); else if(f==='part') o.part = v; else o[f] = +v;
+      if(soft){ const bi = root.querySelector('[data-edk="'+k+'"] .bxc i'); if(bi) bi.innerHTML = bxLbl(o); }
+      if(k==='n'){ if(soft) formPv(); else syncForm(); }
+      else { o.boxes = edBox(o) || o.boxes; if(soft){ const row = root.querySelector('[data-mi="'+k+'"] .m span'); if(row) row.textContent = medSum(o); } else drawMeds(); }
+    }
+    const medSum = m=>{ const bx = edBox(m); return (m.dose==='1'?'1':fmtD(m.dose))+'×'+m.freq+' · '+m.days+' ημ. · '+(bx ? bx+(bx===1?' κουτί':' κουτιά') : 'κουτιά αυτ.')+(m.part==='0%'?' · 0%':''); };
     function drawMeds(){
       const box = root.querySelector('[data-meds]'); if(!box) return;
       box.style.display = S.meds.length ? '' : 'none';
-      box.innerHTML = S.meds.map((m,i)=>{ const bx = boxesOf(m);
-        return '<div class="med" style="flex-wrap:wrap"><div class="m"><b>'+E(m.name)+' '+E(m.strength)+'</b><span>'+E(medTxt(m))+'</span></div>'
-        +'<button class="del" data-del="'+i+'" aria-label="Αφαίρεση" style="width:44px;height:44px;border-radius:22px">✕</button>'
-        +'<div class="mctl"><div class="stp" title="Φορές/ημέρα"><button data-st="f-'+i+'" aria-label="λιγότερες φορές">−</button><i>×'+m.freq+'</i><button data-st="f+'+i+'" aria-label="περισσότερες φορές">+</button></div>'
-        +'<div class="stp" title="Ημέρες"><button data-st="d-'+i+'" aria-label="λιγότερες ημέρες">−</button><i>'+m.days+' ημ.</i><button data-st="d+'+i+'" aria-label="περισσότερες ημέρες">+</button></div>'
-        +'<div class="stp" title="Κουτιά"><button data-st="b-'+i+'" aria-label="λιγότερα κουτιά">−</button><i>'+(bx?bx+' κουτ.':'αυτ.')+'</i><button data-st="b+'+i+'" aria-label="περισσότερα κουτιά">+</button></div>'
-        +'<button class="pt'+(m.part==='0%'?' on':'')+'" data-pt="'+i+'" aria-label="Συμμετοχή">Συμμετοχή '+(m.part==='0%'?'0%':'25%')+'</button></div>'
-        +'<div class="mbx">'+(m.perBox ? needOf(m)+' τεμ. · συσκευασία '+m.perBox+'/κουτί → '+(bx||'—')+' '+(bx===1?'κουτί':'κουτιά')+(m.bxMan?' (δική σου επιλογή)':'') : 'κουτιά: '+(m.bxMan&&m.boxes ? m.boxes+' (δική σου επιλογή)' : 'αυτόματα από τη συσκευασία στο e-prescription ('+needOf(m)+' τεμ.)'))+'</div></div>'; }).join('');
-      refresh();
+      box.innerHTML = S.meds.map((m,i)=>{ const op = S.open===i;
+        return '<div class="med'+(op?' op':'')+'" style="flex-wrap:wrap" data-mi="'+i+'"><div class="m" data-mopen="'+i+'" style="cursor:pointer"><b>'+E(m.name)+' '+E(m.strength)+'</b><span>'+E(medSum(m))+'</span></div>'
+        +'<span class="chev" data-mopen="'+i+'">'+(op?'▲':'▼')+'</span><button class="del" data-del="'+i+'" aria-label="Αφαίρεση" style="width:36px;height:36px;border-radius:18px">✕</button>'
+        +(op ? edH(m, i) : '')+'</div>'; }).join('');
+      edWire(box); refresh();
     }
     function drawFavs(){
       const box = root.querySelector('[data-favs]'); if(!box) return;
@@ -14328,6 +14382,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       Object.keys(SH).forEach(k=>{ const box = root.querySelector('[data-cs="'+k+'"]'), sl = mf(k); if(!box||!sl) return;
         box.innerHTML = [...sl.options].filter(o=>!KEEP[k] || KEEP[k](o.value)).map(o=>'<button type="button" data-csk="'+k+'" data-csv="'+E(o.value)+'"'+(o.value===sl.value?' class="on"':'')+'>'+E(SH[k](o))+'</button>').join(''); });
       root.querySelectorAll('[data-cspart]').forEach(b=>b.classList.toggle('on', b.dataset.cspart===(f.part||'25%')));
+      const en = root.querySelector('[data-edn]'); if(en){ en.style.display = f.name ? '' : 'none'; en.innerHTML = f.name ? edH(f, 'n') : ''; edWire(en); }
       formPv();
     }
     function formPv(){
@@ -14466,6 +14521,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const rdl = t.closest('[data-rdel]'); if(rdl){ rHide([rdl.dataset.rdel]); drawRecent(); return; }
       if(t.closest('[data-rclr]')){ if(!confirm('Καθαρισμός της λίστας «Πρόσφατοι»; (μόνο για εσένα — οι συνταγές δεν σβήνονται)')) return; rHide(recentAmka().map(x=>x.amka)); drawRecent(); return; }
       if(t.closest('[data-tg0]')){ S.f.part = S.f.part==='0%' ? '25%' : '0%'; syncForm(); return; }
+      const edb = t.closest('[data-ed]'); if(edb){ const [k,f,v] = edb.dataset.ed.split('|'); edSet(k, f, v); return; }
+      const mop = t.closest('[data-mopen]'); if(mop){ const i = +mop.dataset.mopen; S.open = S.open===i ? -1 : i; drawMeds(); return; }
       const csb = t.closest('[data-csk]'); if(csb){ const sl = root.querySelector('[data-mf="'+csb.dataset.csk+'"]'); if(sl){ sl.value = csb.dataset.csv; sl.dispatchEvent(new Event('change', {bubbles:true})); } return; }
       const csp = t.closest('[data-cspart]'); if(csp){ S.f.part = csp.dataset.cspart; syncForm(); return; }
       const ptb = t.closest('[data-pt]'); if(ptb){ const m = S.meds[+ptb.dataset.pt]; if(m){ m.part = m.part==='0%' ? '25%' : '0%'; drawMeds(); } return; }
