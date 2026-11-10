@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10k-v278';
+const APP_VER = '2026-11-10l-v279';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17017,7 +17017,8 @@ Z99.2:C|αιμοκάθαρση
   #labsFull .lm-ic{border:0;background:#E9E9EE;border-radius:17px;width:34px;height:34px;font-size:16px;color:#1D4E80;font-family:inherit}
   #labsFull .lm-hd{padding:2px 16px 8px;display:flex;flex-direction:column;gap:9px}
   #labsFull .lm-hd h1{margin:0;font-size:32px;font-weight:800;letter-spacing:-.5px;color:#1C1C1E}
-  #labsFull .lm-sub{font-size:13px;color:#8E8E93;margin-top:-7px}
+  #labsFull .lm-sub{font-size:13px;color:#8E8E93;margin-top:0}
+  #labsFull .lm-top{padding-bottom:6px!important}#labsFull .lm-top .lm-ic{flex:none;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;padding:0!important}   /* 10/11: τα ⟳/⚙ έπεφταν πάνω στα «Νεότερα/Σύνθετη» */
   #labsFull .lm-q{display:flex;align-items:center;gap:8px;height:38px;border-radius:11px;background:#E3E3E8;padding:0 12px}
   #labsFull .lm-q input{border:0;background:transparent;font-size:16px;flex:1;outline:none;min-width:0;color:#1C1C1E;font-family:inherit;-webkit-appearance:none}
   .lm-seg{display:flex;gap:2px;background:#E3E3E8;border-radius:9px;padding:2px}
