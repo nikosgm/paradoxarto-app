@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v308';
+const APP_VER = '2026-11-10z-v309';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7481,11 +7481,8 @@ document.head.appendChild(st);
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"]
     ]);
     h += grp('Για έναν ασθενή', [
-      ['🔎','Ασθενείς','αναζήτηση & ιστορικό', "pdxPatients()"],
       bot && ['💊','Συνταγή e-prescription','με ΑΜΚΑ', "pdxDo('rxout')"],
-      bot && ['📞','Κλήση για εκτίμηση','', "pdxPickPatient('📞 Κλήση για εκτίμηση: ποιος;', k=>pdxConsultSheet(k))"],
-      bot && ['🧾','Παραγγελία εξετάσεων','', "pdxPickPatient('🧾 Παραγγελία: ποιος;', k=>pdxBot(k,'order'))"],
-      ['🩻','Απεικονίσεις','', "pdxPickPatient('🩻 Απεικονίσεις: ποιος;', k=>pdxCtOpen(k))"],
+      // 10/11 22:15 (χρήστης): Κλήση για εκτίμηση, Παραγγελία & Απεικονίσεις = πλεονασμός (γίνονται μέσα από τον ασθενή) → αφαιρέθηκαν
       bot && ['🏥','Ασθενείς ΝΠΣ','λίστα κλινικής & σύγκριση', "pdxNpsPatients()"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],
       bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"]
@@ -7494,9 +7491,12 @@ document.head.appendChild(st);
       ['☑','Εκκρεμότητα σε πολλούς','', "pdxDo('bulk')"],
       bot && ['🧾','Παραγγελία σε πολλούς','ίδιες εξετάσεις σε όλους', "pdxOrderBulk()"],
       adm && ['📅','Εισαγωγές & ΑΜ από ΝΠΣ','', "pdxDo('admits')"],
-      (bot || att) && ['🌤','Ουρολογικό Ημέρας','ασθενείς & μαζικά εξιτήρια', "pdxDayUnit()"]
+      (bot || att) && ['🌤','Ουρολογικό Ημέρας','ασθενείς & μαζικά εξιτήρια', "pdxDayUnit()"],
+      // 📑 10/11 22:15 (χρήστης: «τα ΕΨΙΝΕ πού τα έβαλες;») — υπήρχε ΜΟΝΟ στην αναζήτηση «Τι θέλεις να κάνεις;»
+      bot && ['📑','ΕΨΙΝΕ','Ενιαίο Ψηφιακό Ιστορικό · οριστικοποίηση', "pdxEpsineOpen()"]
     ]);
     h += grp('Αρχεία', [
+      ['📂','Αρχείο ασθενών','κλινικής · όλου του νοσοκομείου', "pdxPtArch()"],
       ['🗄','Αρχείο εξιτηρίων','', "pdxDo('archive')"],
       ['📤','Ανέβασμα ιστορικού','', "pdxDo('up')"],
       ['🛟','Επαναφορά λίστας','', "pdxDo('snap')"]
@@ -8346,7 +8346,7 @@ document.head.appendChild(st);
   }
   // 🏥 επιλογή ασθενή από τη λίστα ΝΠΣ της κλινικής (τελευταία ανάγνωση 3449) — πάτημα, χωρίς πληκτρολόγηση· αναζήτηση προαιρετική
   window.pdxNpsPick = function(title, hint){ return new Promise(async res=>{
-    let rows = [], at = 0; try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npslist').eq('status','done').order('id',{ascending:false}).limit(6);
+    let rows = [], at = 0; try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(6);
       const j = (r.data||[]).find(x=>x.payload && x.payload.result && Array.isArray(x.payload.result.rows) && String(x.payload.result.dpt||'3449')==='3449'); if(j){ rows = j.payload.result.rows.slice(); at = Date.parse(j.updated_at); } }catch(e){}
     const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
     // πρώτα όσοι μοιάζουν με το όνομα του CD (λατινικά → ελληνικά δεν συγκρίνονται· απλώς ταξινόμηση αλφαβητικά)
@@ -8794,8 +8794,8 @@ document.head.appendChild(st);
     let h = '<div style="display:flex;align-items:center;gap:10px;padding:0 4px 0 8px"><span style="width:30px;height:30px;border-radius:8px;background:#1D4E80;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">Π</span><b style="font-size:15px;flex:1;white-space:nowrap">Παραδόχαρτο</b><button class="nv-sidebtn" style="display:flex" aria-label="Απόκρυψη πλαϊνής μπάρας" title="Απόκρυψη" onclick="pdxSideToggle()">'+NVI.side+'</button></div>';
     const nN = window.pdxNpsCount ? pdxNpsCount() : null;   // 🏥 9/11 (χρήστης): «Ασθενείς ΝΠΣ» κάτω από τους «Ασθενείς»
     h += '<div><div class="dks-h">ΚΛΙΝΙΚΗ</div>' + a('Ασθενείς', tab==='pts' && !window.__npsView, "window.__npsView=false;mobTab('pts')", mine!==all ? mine+'/'+all : all) + (bot ? '<button class="dks-a'+(tab==='pts' && window.__npsView && !A?' on':'')+'" onclick="pdxNpsFilter(true)">Ασθενείς ΝΠΣ'+(nN==null?'':'<small>'+nN+'</small>')+'</button>' : '') + a('Εκκρεμότητες', tab==='todo', "mobTab('todo')", nT) + '</div>';
-    h += '<div><div class="dks-h">ΕΡΓΑΛΕΙΑ</div>' + a('Αναζήτηση ασθενών', false, "pdxPatients()", '', 'ptx') + a('Εργαστηριακά', false, "window.labsFullOpen ? labsFullOpen('') : pdxCmd()", '', 'labs')
-      + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
+    h += '<div><div class="dks-h">ΕΡΓΑΛΕΙΑ</div>' + a('Αρχείο ασθενών', false, "pdxPtArch()", '', 'ptx') + a('Εργαστηριακά', false, "window.labsFullOpen ? labsFullOpen('') : pdxCmd()", '', 'labs')
+      + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('ΕΨΙΝΕ', false, "pdxEpsineOpen()", '', 'epsine') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
       + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
     h += '<div style="margin-top:auto">' + a('Πλήρης πίνακας', false, "mobFull()") + a('Ρυθμίσεις', tab==='me', "mobTab('me')") + '</div>';
     return h;
@@ -11318,9 +11318,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const M0 = await pdxConsultMap();
     const st = {map: Object.assign({}, M0.map), fav: M0.fav.slice(), q:'', msg:'', cat:null, job:null};
     const loadCat = async ()=>{
-      const r = await sb6.from('oncall_jobs').select('id,status,note,payload,updated_at').eq('kind','consultcat').order('id',{ascending:false}).limit(1);
-      const j = r.data && r.data[0]; st.job = j || null;
-      st.cat = (j && j.status==='done' && j.payload && j.payload.result && j.payload.result.specs) || null;
+      // 10/11 22:15 (χρήστης: «Δεν έχει διαβαστεί ακόμα η λίστα» — ενώ υπήρχε από 1/11): ο κατάλογος = το τελευταίο ΕΠΙΤΥΧΗΜΕΝΟ αποτέλεσμα
+      // (και «καθαρισμένο» = dismissed· όχι «⚠ άκυρο»)· η τελευταία εντολή (αποτυχία/σε εξέλιξη) φαίνεται μόνο ως κατάσταση αν είναι νεότερη
+      const r = await sb6.from('oncall_jobs').select('id,status,note,updated_at').eq('kind','consultcat').order('id',{ascending:false}).limit(1);
+      const c = await sb6.from('oncall_jobs').select('id,status,note,payload,updated_at').eq('kind','consultcat').in('status',['done','dismissed']).not('payload->result->specs','is',null).order('id',{ascending:false}).limit(3);
+      const good = (c.data||[]).find(x=>!/άκυρο/.test(x.note||'') && Array.isArray(x.payload && x.payload.result && x.payload.result.specs));
+      const last = r.data && r.data[0];
+      st.job = good && (!last || last.id===good.id || !/new|running|seen/.test(last.status)) ? Object.assign({}, good, {status:'done'}) : (last || null);
+      st.cat = good ? good.payload.result.specs : null;
     };
     await loadCat();
     let ov = document.getElementById('csOv'); if(ov) ov.remove();
@@ -13624,7 +13629,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxMedCats = async function(force){
     if(!force && medCats) return medCats;
     try{ const c = JSON.parse(localStorage.getItem('pdx_medcat2')||'null'); if(c && c.cats && c.cats.length){ medCats = medCatsBuild(c.cats); if(!force && Date.now()-(c.at||0) < 6*3600e3) return medCats; } }catch(e){}
-    try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','medcat2').eq('status','done').order('id',{ascending:false}).limit(1);
+    try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','medcat2').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
       const cs = r.data && r.data[0] && r.data[0].payload && r.data[0].payload.result && r.data[0].payload.result.cats;
       if(Array.isArray(cs) && cs.length){ medCats = medCatsBuild(cs); try{ localStorage.setItem('pdx_medcat2', JSON.stringify({at:Date.now(), cats:cs.map(c=>({lab:c.lab, dep:c.dep, path:c.path, tests:c.tests}))})); }catch(e){} } }catch(e){}
     return medCats || [];
@@ -13633,7 +13638,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const C2 = await pdxMedCats(force); if(C2.length){ const a = [].concat(...C2.map(c=>c.keys)); medCat = a.filter((t,i)=>a.indexOf(t)===i); return medCat; }
     if(!force && medCat) return medCat;
     try{ const c = JSON.parse(localStorage.getItem('pdx_medcat')||'null'); if(c && c.tests && c.tests.length){ medCat = c.tests; if(!force && Date.now()-(c.at||0) < 6*3600e3) return medCat; } }catch(e){}
-    try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','medcat').eq('status','done').order('id',{ascending:false}).limit(1);
+    try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','medcat').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
       const t = r.data && r.data[0] && r.data[0].payload && r.data[0].payload.result && r.data[0].payload.result.tests;
       if(Array.isArray(t) && t.length){ medCat = t; try{ localStorage.setItem('pdx_medcat', JSON.stringify({at:Date.now(), tests:t})); }catch(e){} } }catch(e){}
     return medCat || [];
@@ -13679,10 +13684,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   async function nbLoad(force){
     if(NB.busy || (!force && Date.now()-NB.at < 120000)) return; NB.busy = true; NB.at = Date.now();
     // 8/11: η τελευταία λίστα ΤΗΣ ΚΛΙΝΙΚΗΣ (3449) — όχι απλώς η τελευταία npslist (μια λίστα άλλου τμήματος, π.χ. 3434, έκρυβε όλους τους ασθενείς ΝΠΣ)
-    try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at,created_at').eq('kind','npslist').eq('status','done').order('id',{ascending:false}).limit(15);
+    try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at,created_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(15);
       const j = (r.data||[]).find(x=>{ const rs = x.payload && x.payload.result; return rs && Array.isArray(rs.rows) && (rs.dpt||'3449')==='3449'; }); const res = j && j.payload && j.payload.result;
       if(res && Array.isArray(res.rows) && (res.dpt||'3449')==='3449'){ NB.rows = res.rows; NB.listAt = Date.parse(j.updated_at)||0; }
-      const e = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npsenrich').eq('status','done').gte('created_at', new Date(Date.now()-3*864e5).toISOString()).order('id',{ascending:true}).limit(20);
+      const e = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npsenrich').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-3*864e5).toISOString()).order('id',{ascending:true}).limit(20);
       (e.data||[]).forEach(x=>{ const P = x.payload && x.payload.result && x.payload.result.pts || {}; Object.keys(P).forEach(n=>{ NB.enr[nbNz(n)] = P[n]; }); });
       await nbAuto(); }catch(e){}
     NB.busy = false; try{ nbPaint(); }catch(e){} try{ const sg = (NB.rows ? NB.rows.length : -1)+'|'+NB.listAt; if(sg !== NB.vsig){ NB.vsig = sg; if(window.__npsView && window.mobRefresh) mobRefresh(); } }catch(e){}   // φίλτρο ΝΠΣ: μόνο όταν άλλαξε η λίστα (όχι άλμα στο scroll κάθε λεπτό)
@@ -13834,7 +13839,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const MY = d=>{ const m = /^(\d{4})-(\d{2})/.exec(String(d||'')); if(m) return (+m[2])+'/'+m[1].slice(2); const g = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(String(d||'')); return g ? (+g[2])+'/'+g[3].slice(-2) : ''; };
     function histoShort(t0){ const t1 = String(t0||'').replace(/\s+/g,' '), t = t1.normalize('NFD').replace(/[\u0300-\u036f]/g,'').normalize('NFC'); const out = [];   // χωρίς τόνους («υψηλού» = «υψηλου»)
       const pt = /\bp?T\s?(is|a|[0-4][a-c]?|x)\b/i.exec(t); if(pt) out.push('pT'+pt[1]);
-      if(/high[ -]?grade|υψηλ(ής|ου) (βαθμ|κακοηθ)|\bHG\b/i.test(t)) out.push('HG'); else if(/low[ -]?grade|χαμηλ(ής|ου) (βαθμ|κακοηθ)|\bLG\b/i.test(t)) out.push('LG');
+      if(/high[ -]?grade|υψηλ(ης|ου) (βαθμ|κακοηθ)|\bHG\b/i.test(t)) out.push('HG'); else if(/low[ -]?grade|χαμηλ(ης|ου) (βαθμ|κακοηθ)|\bLG\b/i.test(t)) out.push('LG');   // 10/11 22:15: χωρίς τόνους (ήταν «ής» → έχανε το «υψηλής βαθμίδας»)
       if(/\bCIS\b|in situ/i.test(t) && !/^pTis/.test(out[0]||'')) out.push('+CIS');
       const gl = /gleason\D{0,12}(\d)\s*\+\s*(\d)/i.exec(t); if(gl) out.push('Gleason '+gl[1]+'+'+gl[2]);
       const isup = /ISUP\D{0,10}(\d)/i.exec(t); if(isup) out.push('ISUP '+isup[1]);
@@ -13898,7 +13903,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   };
   window.pdxNpsGoneCheck = async function(force){
     try{ if(typeof sb6==='undefined' || ['resident','attending','admin'].indexOf(window.authRole)<0) return [];
-      const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','npslist').eq('status','done').order('id',{ascending:false}).limit(8);
+      const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(8);
       const L = (r.data||[]).filter(x=>x.payload && x.payload.result && Array.isArray(x.payload.result.rows) && String(x.payload.result.dpt||'3449')==='3449' && x.payload.result.rows.length >= 3);
       if(L.length < 2) return []; const last = L[0], prev = L[1];
       if(!force && Date.now() - Date.parse(last.updated_at) > 18*3600e3) return [];
@@ -13934,7 +13939,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const E3 = x=>esc(String(x==null?'':x));
     const nz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
     let dpt = '3449', res = null, busy = '', msg = '', flt = 'all';
-    const loadLast = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npslist').eq('status','done').order('id',{ascending:false}).limit(6);
+    const loadLast = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(6);
       const j = (r.data||[]).find(x=>x.payload && x.payload.result && String(x.payload.result.dpt||'3449')===dpt); res = j ? Object.assign({}, j.payload.result, {at: Date.parse(j.updated_at)}) : null; }catch(e){} };
     const mine = ()=>{ const out = []; [data, extraPatients].forEach(st=>Object.keys(st||{}).forEach(k=>{ const d = st[k]; if(d && String(d.name||'').trim()) out.push({k, d, n: nz(d.name)}); })); return out; };
     const match = (row, P)=>{ const n = nz(row.name), t = n.split(' ').filter(w=>w.length>=3); if(!t.length) return null;
@@ -14124,7 +14129,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // μένουν σε αυτή τη συσκευή μέχρι το τέλος της ημέρας.
     const day0 = new Date(); day0.setHours(0,0,0,0); const SK = 'pdx_du_sel_'+day0.toISOString().slice(0,10);
     let loadedAt = 0;
-    try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','dayunit').eq('status','done').gte('created_at', day0.toISOString()).order('id',{ascending:false}).limit(1);
+    try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','dayunit').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', day0.toISOString()).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && Array.isArray(j.payload.result.rows)){ rows = j.payload.result.rows; loadedAt = Date.parse(j.updated_at)||0; } }catch(e){}
     try{ const o = JSON.parse(localStorage.getItem(SK)||'null'); if(o && typeof o==='object') sel = o; }catch(e){}
     try{ Object.keys(localStorage).filter(k=>k.indexOf('pdx_du_sel_')===0 && k!==SK).forEach(k=>localStorage.removeItem(k)); }catch(e){}
@@ -18855,11 +18860,21 @@ window.pdxOpNoteFromScan = function(p){
   const oncTag = p=>p.onc ? tag('🎗 '+(p.onc_status==='αναμονή βιοψίας'?'αναμονή βιοψίας':'Ογκολογικός')+(p.onc_site?' · '+E4(p.onc_site):''), p.onc_status==='αναμονή βιοψίας'?'#FFF4E5':'#FDECEC', p.onc_status==='αναμονή βιοψίας'?'#B26A00':'#B42318') : '';
 
   // ---------- λίστα / αναζήτηση ----------
-  window.pdxArchOpen = function(f0){
-    const st = {q:'', f:f0||'', rows:null, busy:'', err:'', seq:0};
+  // 📂 10/11 22:15 (χρήστης): «η αναζήτηση ασθενών να είναι στο Αρχείο ασθενών, σε ξεχωριστή καρτέλα ασθενείς κλινικής και ασθενείς όλου του νοσοκομείου»
+  window.pdxPtArchSeg = function(cur){
+    const b = (k,t)=>'<button type="button" onclick="pdxPtArch(\''+k+'\')" style="flex:1;border:0;border-radius:8px;padding:8px 6px;font-size:15px;font-weight:600;font-family:inherit;'+(cur===k?'background:#fff;color:#000;box-shadow:0 1px 3px rgba(0,0,0,.12)':'background:transparent;color:#3C3C43')+'">'+t+'</button>';
+    return '<div data-ptarch style="display:flex;gap:2px;margin:0 16px 10px;padding:2px;border-radius:10px;background:rgba(118,118,128,.14)">'+b('clin','🏥 Κλινικής')+b('hosp','🌐 Όλο το νοσοκομείο')+'</div>';
+  };
+  window.pdxPtArch = function(t){
+    try{ if(!t) t = localStorage.getItem('pdx_ptarch') || 'clin'; localStorage.setItem('pdx_ptarch', t); }catch(e){ t = t || 'clin'; }
+    if(t==='hosp') return window.pdxPatients && pdxPatients({arch:true, q:''});
+    return window.pdxArchOpen('', {arch:true});
+  };
+  window.pdxArchOpen = function(f0, o){
+    const st = {q:'', f:f0||'', rows:null, busy:'', err:'', seq:0}, arch = !!(o && o.arch);
     const F = [['','Πρόσφατοι'],['onc','🎗 Ογκολογικοί'],['bx','⏳ Αναμονή βιοψίας']];
-    const pg = iosPage('Ασθενείς βάσης', 'Βάση δεδομένων', ()=>{
-      let h = '<form data-aq style="margin:4px 16px 10px"><input name="q" value="'+E4(st.q)+'" placeholder="Επώνυμο, ΑΜΚΑ ή ΑΜ" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:17px;padding:10px 12px;border:0;border-radius:10px;background:rgba(118,118,128,.12)"></form>'
+    const pg = iosPage(arch ? 'Αρχείο ασθενών' : 'Ασθενείς βάσης', arch ? 'Εργαλεία' : 'Βάση δεδομένων', ()=>{
+      let h = (arch ? pdxPtArchSeg('clin') : '') + '<form data-aq style="margin:4px 16px 10px"><input name="q" value="'+E4(st.q)+'" placeholder="Επώνυμο, ΑΜΚΑ ή ΑΜ" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:17px;padding:10px 12px;border:0;border-radius:10px;background:rgba(118,118,128,.12)"></form>'
         + '<div style="display:flex;gap:6px;margin:0 16px 6px;flex-wrap:wrap">'+F.map(([v,l])=>'<button data-af="'+v+'" style="border:0;border-radius:16px;padding:6px 12px;font-size:14px;font-weight:600;background:'+(st.f===v?'var(--acc,#0A84FF);color:#fff':'rgba(118,118,128,.14);color:inherit')+'">'+l+'</button>').join('')+'</div>';
       if(st.busy) h += '<div style="margin:16px;color:#8E8E93">⏳ '+E4(st.busy)+'</div>';
       if(st.err) h += '<div style="margin:16px;color:#FF3B30">⚠ '+E4(st.err)+'</div>';
@@ -19007,7 +19022,7 @@ window.pdxEpsineOpen = function(){
       h += P.length ? iosGroup('Εκκρεμούν · '+P.length, P.map(r=>({t:'<b>'+E5(r.name)+'</b>', sub:E5(r.adm)+' → '+E5(r.dc)+' · '+E5(r.st), on:'void 0', data:'data-ept="'+E5(r.amka)+'"'}))) : '<div style="margin:16px;color:#8E8E93">Καμία εκκρεμότητα 🎉</div>';
       if(D.length) h += iosGroup('Ολοκληρωμένα · '+D.length, D.slice(0,30).map(r=>({t:E5(r.name), sub:E5(r.dc)+' · '+E5(r.sub)}))); }
     return h + '<div style="height:50px"></div>'; });
-  const loadList = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','epsinelist').eq('status','done').order('id',{ascending:false}).limit(1);
+  const loadList = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','epsinelist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && j.payload.result.enc){ await pdxCK.ready(); const d = await pdxCK.decrypt(j.payload.result.enc); st.rows = d.rows||[]; st.at = d.at; } }catch(e){ st.msg = '⚠ '+(e.message||e); } pg.redraw(); };
   const fetchList = async ()=>{ if(st.busy) return; st.busy = 'Το bot διαβάζει τη λίστα ΕΨΙΝΕ από το ΝΠΣ…'; st.msg=''; pg.redraw();
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_eps', name:'📑 ΕΨΙΝΕ', room:null, kind:'epsinelist', payload:{quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
@@ -19053,7 +19068,7 @@ window.pdxDossierOpen = async function(name, amka){
     h += iosGroup('', [{t:'<b style="color:#0A84FF">↻ Φέρε τώρα από το ΝΠΣ</b>', on:'window.__dosNow && __dosNow()'}]);
     return h + '<div style="height:40px"></div>'; };
   const pg = iosPage('Φάκελος νοσηλείας', '', draw);
-  const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','npsdossier').eq('status','done').eq('name', name).order('id',{ascending:false}).limit(1);
+  const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','npsdossier').in('status',['done','dismissed']).not('payload->result','is',null).eq('name', name).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && j.payload.result.enc){ st.d = await pdxCK.decrypt(j.payload.result.enc); } }catch(e){ st.err = 'Αποκρυπτογράφηση: '+(e.message||e); } pg.redraw(); };
   window.__dosNow = async ()=>{ if(st.busy) return; st.busy = 'Στάλθηκε στον υπολογιστή του νοσοκομείου…'; st.err=''; pg.redraw();
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_dos', name, room:null, kind:'npsdossier', payload:{name, amka:amka||'', quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
@@ -20794,7 +20809,8 @@ window.pdxPatients = function(opt){
   css(); opt = opt || {};
   if(opt.q != null){ M.q = String(opt.q); M.lvl = 'search'; M.res = null; }
   if(opt.pt && opt.pt.name){ M.tab = opt.tab || 'hist'; M.bx = null; M.lvl = 'pt'; M.pt = Object.assign({src:'local', amka:'', am:'', father:'', birth:'', pid:'', row:'', nowK:''}, opt.pt); M.H = null; M.dc = null; }
-  pg = iosPage('Ασθενείς', 'Πίσω', ()=>{ head(); return M.lvl==='pt' && M.pt ? ptHtml() : M.lvl==='dc' && M.dc ? dcHtml() : searchHtml(); });
+  M.arch = !!opt.arch;   // 📂 10/11 22:15: καρτέλα «Όλο το νοσοκομείο» του Αρχείου ασθενών
+  pg = iosPage(M.arch ? 'Αρχείο ασθενών' : 'Ασθενείς', M.arch ? 'Εργαλεία' : 'Πίσω', ()=>{ head(); return M.lvl==='pt' && M.pt ? ptHtml() : M.lvl==='dc' && M.dc ? dcHtml() : ((M.arch && window.pdxPtArchSeg ? pdxPtArchSeg('hosp') : '') + searchHtml()); });
   if(window.pdxSearchFilters){ FL = window.pdxSearchFilters(document.createElement('div'), M.flt, ()=>{}); }
   pg.el.querySelector('.ios-back').onclick = back;
   { const cl = pg.close; pg.close = function(){ npsCancel(); return cl.apply(this, arguments); }; }   // κλείσιμο σελίδας → η εντολή ΝΠΣ ακυρώνεται
