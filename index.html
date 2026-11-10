@@ -1436,7 +1436,9 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
       const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ep)))].slice(0,8).map(b=>b.toString(16).padStart(2,'0')).join('');
       const r = await sb6.from('oncall_labs').select('data').eq('name_key','pushpref|'+h).maybeSingle();
       const d = Object.assign({}, (r && r.data && r.data.data) || {}), want = M.rooms.map(String);
-      if(JSON.stringify(d.rooms||[]) === JSON.stringify(want)) return;
+      const bx0 = !d.cats || d.cats.bx===undefined;   // 🔬 10/11: βιοψίες = ρητά κλειστές μέχρι να τις ανοίξει ο χρήστης
+      if(JSON.stringify(d.rooms||[]) === JSON.stringify(want) && !bx0) return;
+      if(bx0) d.cats = Object.assign({}, d.cats||{}, {bx:false});
       d.rooms = want; d.at = Date.now();
       await sb6.from('oncall_labs').upsert({name_key:'pushpref|'+h, name:'ειδοποιήσεις', pid:null, data:d, updated_at:new Date().toISOString()}, {onConflict:'name_key'});
     }catch(e){}
@@ -2271,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v298';
+const APP_VER = '2026-11-10z-v299';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8014,22 +8016,33 @@ document.head.appendChild(st);
   // 🔔 Ειδοποιήσεις: σελίδα με διακόπτη ενεργοποίησης και από κάτω τι ειδοποιήσεις δέχομαι (αποθηκεύονται αμέσως)
   window.pdxNotifPage = function(){
     const L = [['labsBad','🧪','Εργαστηριακά εκτός ορίων','Νέες τιμές εκτός ορίων από το Medilabi'],['review','👀','Για έλεγχο / έγκριση','Συνταγή, παραπεμπτικό, παραγγελία που περιμένει εσάς — το πάτημα ανοίγει τον έλεγχο'],['botDone','🤖','Εργασίες bot που ολοκληρώθηκαν','Κλήση, παραγγελία, συνταγή, εξιτήριο'],['botFail','⚠','Εργασίες bot που απέτυχαν',''],['system','🔑','Κωδικοί / σύνδεση του bot','Π.χ. κωδικός που δεν δουλεύει']];
-    let h = '', cats = {review:true, labsBad:true, botDone:true, botFail:true, system:true}, quiet = [23,7], qOn = false, allow = ['labsBad','review'], busy = false, msg = '', saveT = 0;
+    let h = '', cats = {review:true, labsBad:true, botDone:true, botFail:true, system:true, bx:false}, quiet = [23,7], qOn = false, allow = ['labsBad','review'], busy = false, msg = '', saveT = 0;
+    // 🔬 10/11 βράδυ (χρήστης): βιοψίες = ρύθμιση που ΕΝΕΡΓΟΠΟΙΕΙ όποιος θέλει · (α) κάθε νέα βιοψία (β) εβδομαδιαία σύνοψη σε μέρα/ώρα επιλογής
+    let bxW = {on:false, d:1, h:9}, cur0 = {};
+    const DAYS = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
     const hrs = v=>Array.from({length:24},(_,i)=>'<option'+(i===v?' selected':'')+' value="'+i+'">'+String(i).padStart(2,'0')+':00</option>').join('');
     const hashOf = async ep=>[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ep)))].slice(0,8).map(b=>b.toString(16).padStart(2,'0')).join('');
     const load = async ()=>{ const ep = pdxPushOn(); if(!ep) return; h = await hashOf(ep);
       try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','pushpref|'+h).maybeSingle(); const c = (r.data && r.data.data) || {};
-        cats = Object.assign(cats, c.cats||{}); if(Array.isArray(c.quiet)){ quiet = c.quiet[0]!==c.quiet[1] ? c.quiet.slice() : [23,7]; qOn = c.quiet[0]!==c.quiet[1]; } if(Array.isArray(c.quietAllow)) allow = c.quietAllow; }catch(e){}
+        cur0 = c; cats = Object.assign(cats, c.cats||{}); if(c.bxWeek && typeof c.bxWeek==='object') bxW = Object.assign(bxW, c.bxWeek);
+        if(!c.cats || c.cats.bx===undefined) save();   // πρώτη φορά: «βιοψίες» ρητά ΚΛΕΙΣΤΕΣ (ο server στέλνει όσα δεν είναι κλειστά)
+        if(Array.isArray(c.quiet)){ quiet = c.quiet[0]!==c.quiet[1] ? c.quiet.slice() : [23,7]; qOn = c.quiet[0]!==c.quiet[1]; } if(Array.isArray(c.quietAllow)) allow = c.quietAllow; }catch(e){}
       pg.redraw(); };
     const save = ()=>{ clearTimeout(saveT); saveT = setTimeout(async ()=>{ if(!h) return;
-      const data = {cats, quiet: qOn ? quiet : [0,0], quietAllow: allow, rooms: ((window.pdxMine&&pdxMine.rooms)||[]).map(String), at: Date.now()};
+      const data = Object.assign({}, cur0, {cats, bxWeek: bxW, quiet: qOn ? quiet : [0,0], quietAllow: allow, rooms: ((window.pdxMine&&pdxMine.rooms)||[]).map(String), at: Date.now()});
       const r = await sb6.from('oncall_labs').upsert({name_key:'pushpref|'+h, name:'ειδοποιήσεις', pid:null, data, updated_at:new Date().toISOString()}, {onConflict:'name_key'});
-      if(r.error){ msg = 'Δεν αποθηκεύτηκε: '+r.error.message; pg.redraw(); } }, 400); };
+      if(r.error){ msg = 'Δεν αποθηκεύτηκε: '+r.error.message; pg.redraw(); } else cur0 = data; }, 400); };
     const pg = iosPage('Ειδοποιήσεις', 'Ρυθμίσεις', ()=>{
       const on = !!pdxPushOn();
       let x = iosGroup('', [{t:'Ειδοποιήσεις', sw:on, data:'data-act="push"'}], busy ? 'Περίμενε…' : msg ? '<span style="color:#FF3B30">'+esc(msg)+'</span>' : 'Για αυτό το κινητό. Οι υπενθυμίσεις εκκρεμοτήτων που βάζεις εσύ έρχονται πάντα.');
       if(on){
         x += iosGroup('Τι ειδοποιήσεις δέχομαι', L.map(([k,ic,t,sub])=>({ic, t, sub, sw: cats[k]!==false, data:'data-cat="'+k+'"'})));
+        x += iosGroup('🔬 Βιοψίες', [
+          {ic:'🔬', t:'Κάθε νέα βιοψία', sub:'Μόλις βγει αποτέλεσμα (PDF) στο Medilabi', sw: cats.bx===true, data:'data-cat="bx"'},
+          {ic:'🗓', t:'Εβδομαδιαία σύνοψη', sub:'Όσες βγήκαν τις τελευταίες 7 ημέρες', sw: !!bxW.on, data:'data-act="bxw"'},
+          bxW.on && {t:'Ημέρα', raw:'<select data-bxw="d">'+DAYS.map((n,i)=>'<option value="'+i+'"'+(i===+bxW.d?' selected':'')+'>'+n+'</option>').join('')+'</select><span class="ios-c">›</span>'},
+          bxW.on && {t:'Ώρα', raw:'<select data-bxw="h">'+hrs(+bxW.h)+'</select><span class="ios-c">›</span>'}
+        ], 'Μόνο για όποιον τις ενεργοποιεί, σε αυτό το κινητό. Μετράει η αναφορά (PDF), όχι το σήμα «εκκρεμεί» του Medilabi.');
         x += iosGroup('Ώρες ησυχίας', [
           {t:'Ώρες ησυχίας', sw:qOn, data:'data-act="quiet"'},
           qOn && {t:'Από', raw:'<select data-q="0">'+hrs(quiet[0])+'</select><span class="ios-c">›</span>'},
@@ -8039,12 +8052,15 @@ document.head.appendChild(st);
       }
       return x;
     });
-    pg.el.addEventListener('change', e=>{ const q = e.target.closest('[data-q]'); if(q){ quiet[+q.dataset.q] = +q.value; save(); } });
+    pg.el.addEventListener('change', e=>{ const q = e.target.closest('[data-q]'); if(q){ quiet[+q.dataset.q] = +q.value; save(); }
+      const bw = e.target.closest('[data-bxw]'); if(bw){ bxW[bw.dataset.bxw] = +bw.value; save(); } });
     pg.el.addEventListener('click', async e=>{
       if(e.target.closest('select')) return;
       const r = e.target.closest('.ios-r'); if(!r || busy) return;
       const a = r.getAttribute('data-act'), c = r.getAttribute('data-cat');
+      if(c==='bx'){ cats.bx = cats.bx!==true; pg.redraw(); save(); return; }
       if(c){ cats[c] = cats[c]===false; pg.redraw(); save(); return; }
+      if(a==='bxw'){ bxW.on = !bxW.on; pg.redraw(); save(); return; }
       if(a==='quiet'){ qOn = !qOn; pg.redraw(); save(); return; }
       if(a==='allow'){ const i = allow.indexOf('labsBad'); if(i>=0) allow.splice(i,1); else allow.push('labsBad'); pg.redraw(); save(); return; }
       if(a==='push'){ busy = true; msg = ''; pg.redraw();
@@ -9808,7 +9824,7 @@ document.head.appendChild(st);
         const c = e.target.closest('[data-c]'); if(c){ cats[c.dataset.c] = cats[c.dataset.c]===false; return draw(); }
         if(e.target.closest('[data-q]') && !e.target.closest('select')){ qOn2 = !qOn2; return draw(); }
         if(e.target.closest('[data-save]')){
-          const data = {cats, quiet: qOn2 ? quiet : [0,0], quietAllow: allow, rooms: ((window.pdxMine&&pdxMine.rooms)||[]).map(String), at: Date.now()};
+          const data = Object.assign({}, cur, {cats, quiet: qOn2 ? quiet : [0,0], quietAllow: allow, rooms: ((window.pdxMine&&pdxMine.rooms)||[]).map(String), at: Date.now()});   // 10/11: κρατά bxWeek κ.λπ.
           const r = await sb6.from('oncall_labs').upsert({name_key:'pushpref|'+h, name:'ειδοποιήσεις', pid:null, data, updated_at:new Date().toISOString()}, {onConflict:'name_key'});
           if(r.error){ ov.querySelector('[data-m]').textContent = 'Σφάλμα: '+r.error.message; return; }
           ov.remove(); try{ showToast('✓ Αποθηκεύτηκαν οι επιλογές ειδοποιήσεων'); }catch(_){}
@@ -12396,6 +12412,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       purge: async ()=>{ try{ const v = await tx('readonly', st=>st.getAll()); for(const x of (v||[])) if(Date.now()-x.at >= TTL) await tx('readwrite', st=>st.delete(x.k)); }catch(e){} }
     };
   })();
+  // 🔬 10/11 βράδυ (χρήστης: «βγαίνει στο Medilabi, ανεβαίνει το PDF, αλλά δίπλα γράφει ακόμα εκκρεμεί → μπερδεύεσαι»): ΜΕΤΡΑΕΙ ΤΟ PDF, όχι το σήμα «εκκρεμεί».
+  // Εκκρεμής γραμμή για δείγμα (ίδιο σημείο) που έχει ήδη αναφορά/PDF → δεν είναι εκκρεμής (φεύγει ως διπλή). Γραμμή με link/docId → πάντα «βγήκε».
+  window.pdxBxDone = function(items){
+    const nzp = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9]+/g,' ').trim();
+    const L = (items||[]).map(b=>(b && (b.link || b.docId) && b.pending) ? Object.assign({}, b, {pending:false}) : b).filter(Boolean);
+    const partsOf = b=>(Array.isArray(b.parts) && b.parts.length ? b.parts : String(b.what||'').split(/\s*·\s*/)).map(nzp).filter(Boolean);
+    // ημερομηνία: εκκρεμής με ΑΝΑΦΟΡΑ ίδιου σημείου ίδιας ή μεταγενέστερης ημερομηνίας (−1 ημέρα) = έχει βγει· νεότερη εκκρεμής (νέα βιοψία) μένει
+    const dOf = d=>{ const m = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(String(d||'')); return m ? new Date(+(m[3].length===2?'20'+m[3]:m[3]), +m[2]-1, +m[1]).getTime() : 0; };
+    const done = {}; L.forEach(b=>{ if(!b.pending && (b.link || b.docId)) partsOf(b).forEach(x=>{ done[x] = Math.max(done[x]||0, dOf(b.date)||1); }); });
+    return L.filter(b=>!(b.pending && partsOf(b).length && partsOf(b).every(x=>done[x] && done[x] >= dOf(b.date) - 864e5)));
+  };
   window.pdxBiopsies = async function(focusName){
     if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
     // 🔎 «Ασθενείς»: {pid, name, onBack} → ανοίγει κατευθείαν τις βιοψίες αυτού του ασθενή· «‹» γυρίζει στην καρτέλα
@@ -12424,7 +12451,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       (ARCH||[]).forEach(x=>{ if(nz(x.name)===n) take(x.ad); });
       return best;
     }
-    const byNew = it=>it.slice().sort((a,b)=>dt(b.date)-dt(a.date));
+    const byNew = it=>window.pdxBxDone(it).sort((a,b)=>dt(b.date)-dt(a.date));
     // βιοψίες της νοσηλείας: από 7 ημέρες πριν την εισαγωγή· χωρίς ημ. εισαγωγής → οι πιο πρόσφατες, αν είναι των τελευταίων 60 ημερών
     function curItems(name, it){
       const s0 = byNew(it); if(!s0.length) return [];
@@ -12483,7 +12510,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       catch(e){ st.err = e.message||String(e); }
       st.busy=''; pg.redraw();
     }
-    const openFrom = (d, c)=>{ const p = (d.res||[])[0] || {items:[]}, it = p.items||[], done = it.filter(b=>!b.pending);
+    const openFrom = (d, c)=>{ const p = (d.res||[])[0] || {items:[]}, it = window.pdxBxDone(p.items||[]), done = it.filter(b=>!b.pending);
       st.open = {name:p.name || (c.row||'').slice(0,50), pid:c.pid, all:it, what:it.map(b=>b.what).join(' · '), pending:!done.length, link:(done.find(b=>b.link)||{}).link||'', cachedAt:d.__at||0};
       if(!it.length) st.open.none = true; };
     async function mget(c, fresh){
@@ -12638,7 +12665,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // 🕘 «Πρόσφατα»: ΜΟΝΟ ασθενείς στους οποίους ΑΝΟΙΧΤΗΚΕ βιοψία (PDF) — όχι κάθε αναζήτηση/προβολή λίστας (εντολή χρήστη 5/11)
     async function recentLoad(){ try{ await pdxBxCache.purge(); const L = await pdxBxCache.all('pt|'); const out = [];
       const opened = new Set(((await pdxBxCache.all('pdf|')) || []).map(x=>String(x.pid||'')).filter(Boolean));
-      for(const x of L){ if(!opened.has(String(x.k.slice(3)))) continue; try{ const d = await pdxCK.decrypt(x.enc); const p = (d.res||[])[0] || {}; const it = p.items||[]; out.push({pid:x.k.slice(3), name:p.name||'', n:it.length, nP:it.filter(b=>b.pending).length, at:x.at}); }catch(e){} }
+      for(const x of L){ if(!opened.has(String(x.k.slice(3)))) continue; try{ const d = await pdxCK.decrypt(x.enc); const p = (d.res||[])[0] || {}; const it = window.pdxBxDone(p.items||[]); out.push({pid:x.k.slice(3), name:p.name||'', n:it.length, nP:it.filter(b=>b.pending).length, at:x.at}); }catch(e){} }
       st.recent = out.sort((a,b)=>b.at-a.at); pg.redraw(); }catch(e){} }
     // σύρσιμο αριστερά → «Διαγραφή»
     (function(){ let sx=0, sy=0, el=null, dx=0, lock=null;
@@ -20483,7 +20510,7 @@ function ptHtml(){
   return h + '<div style="height:40px"></div>';
 }
 async function bxCached(pt){ if(!pt.pid || !window.pdxBxCache || !window.pdxCK) return;
-  try{ const ch = await pdxBxCache.get('pt|'+pt.pid); if(!ch) return; const d = await pdxCK.decrypt(ch.enc); const p = (d.res||[])[0] || {}; if(M.pt===pt){ M.bx = {pid:pt.pid, items:p.items||[], at:ch.at}; redraw(); } }catch(e){} }
+  try{ const ch = await pdxBxCache.get('pt|'+pt.pid); if(!ch) return; const d = await pdxCK.decrypt(ch.enc); const p = (d.res||[])[0] || {}; if(M.pt===pt){ M.bx = {pid:pt.pid, items:window.pdxBxDone(p.items||[]), at:ch.at}; redraw(); } }catch(e){} }
 
 // ===== εξιτήριο (μόνο ανάγνωση) =====
 async function openDc(i, src){
