@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10n-v281';
+const APP_VER = '2026-11-10o-v282';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12389,7 +12389,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       }
       if(FL){
         if(String(st.q||'').trim().length < 3 && FL.botF()) h += '<div class="pf-act" style="margin-top:4px"><button class="s" data-msearch'+(st.busy?' disabled style="opacity:.5"':'')+'>🔎 Medilabi με φίλτρα: '+E2(FL.label())+'</button></div>'; }
-      if(st.cands){ const CI = st.cands.map((c,i)=>[c,i]), CF = FL ? FL.filter(CI, x=>x[0].row) : CI;
+      if(st.cands){ const CI = st.cands.map((c,i)=>[c,i]), CF0 = FL ? FL.filter(CI, x=>x[0].row) : CI;
+        // ↕ 10/11 (χρήστης): ταξινόμηση αλφαβητικά ή χρονολογικά — προεπιλογή: χρονολογικά, τα νεότερα πρώτα (η πιο πρόσφατη ημερομηνία της γραμμής)
+        let bxS = 'new'; try{ bxS = localStorage.getItem('pdx_bx_sort') || 'new'; }catch(e){}
+        const dOf = r=>{ let mx = 0; String(r||'').replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g, (m, d, mo, y)=>{ const t = new Date(+y, +mo-1, +d).getTime(); if(t > mx) mx = t; return m; }); return mx; };
+        const CF = CF0.slice().sort(bxS==='az' ? (a,b)=>String(a[0].row||'').localeCompare(String(b[0].row||''), 'el', {sensitivity:'base'}) : (a,b)=>dOf(b[0].row)-dOf(a[0].row));
+        h += '<div style="display:flex;gap:2px;background:#E3E3E8;border-radius:9px;padding:2px;margin:10px 16px 0">'+[['new','🕘 Νεότερα πρώτα'],['az','Α–Ω']].map(([v,l])=>'<button type="button" data-bxs="'+v+'" style="flex:1;border:0;border-radius:7px;height:32px;font-size:14px;font-weight:600;background:'+(bxS===v?'#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)':'transparent')+';color:#1C1C1E">'+l+'</button>').join('')+'</div>';
         h += iosGroup('Medilabi · «'+E2(st.slbl||st.sq||'')+'» · '+(CF.length!==CI.length ? CF.length+'/' : '')+st.cands.length+(st.spg && +st.spg.page > 1 ? ' · σελ. '+(+st.spg.page) : '')+(st.ms?' · '+(st.ms/1000).toFixed(1)+'″':''), CF.length ? CF.map(([c,i])=>({ic:c.uro?'🏥':'👤', t:'<b>'+E2(String(c.row||'').slice(0,70))+'</b>', sub:c.uro?'<span style="color:#15803D">✓ νοσηλεία ουρολογικής</span>':'<span style="color:#8E8E93">χωρίς ουρολογική νοσηλεία στο Medilabi</span>', data:'data-cand="'+i+'"'})) : [{t: CI.length ? 'Καμία γραμμή δεν ταιριάζει με τα φίλτρα κλινικής/ημερομηνίας' : 'Κανένας ασθενής με αυτό το όνομα στο Medilabi'}]);
         if(FL){ h += FL.note(CF.length, CI.length) + FL.pager(st.spg, !!st.busy); } }
       // 🕘 Πρόσφατα (10 ημέρες στη συσκευή) — σύρε αριστερά για διαγραφή
@@ -12433,6 +12438,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       { const dl = e.target.closest('[data-rdel]'); if(dl){ const pid = dl.dataset.rdel; pdxBxCache.del('pt|'+pid); pdxBxCache.all('pdf|').then(L=>L.forEach(x=>{ if(String(x.pid)===String(pid)) pdxBxCache.del(x.k); })); st.recent = (st.recent||[]).filter(r=>r.pid!==pid); pg.redraw(); return; } }
       { const ro = e.target.closest('[data-ropen]'); if(ro){ if(ro.classList.contains('open')){ ro.classList.remove('open'); ro.style.transform=''; return; } if(Date.now()-(ro.__sw||0) < 350) return; const r = (st.recent||[]).find(x=>x.pid===ro.dataset.ropen); if(r) mget({pid:r.pid, label:r.name, row:r.name}); return; } }
       { const sg = e.target.closest('[data-sug]'); if(sg){ const x = (st.sugg||[])[+sg.getAttribute('data-sug')]; if(x) msearch(/^\d{11}$/.test(String(x.amka||'')) ? String(x.amka) : x.name); return; } }
+      { const bs = e.target.closest('[data-bxs]'); if(bs){ try{ localStorage.setItem('pdx_bx_sort', bs.dataset.bxs); }catch(x){} pg.redraw(); return; } }
       { const cd = e.target.closest('[data-cand]'); if(cd){ const c = (st.cands||[])[+cd.getAttribute('data-cand')]; if(c && c.pid) mget(c); else if(c) { st.err = 'Ο ασθενής δεν έχει αναγνωριστικό στο Medilabi — δοκιμάστε με ΑΜΚΑ'; pg.redraw(); } return; } }
       if(e.target.closest('[data-pdf]') && st.open){ const d0 = (st.open.all||[st.open]).find(b=>!b.pending && b.link); if(d0) pdfGet(st.open, d0); }
       { const bi = e.target.closest('[data-bxi]'); if(bi && st.open){ const b = (st.open.all||[])[+bi.getAttribute('data-bxi')]; if(b) pdfGet(st.open, b); } }
