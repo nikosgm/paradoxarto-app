@@ -1,1 +1,1 @@
-{"version": "0.21.241", "zip": "ef-bot-0.21.241.zip", "sha256": "027f5e46d8e3fdfda0179afb8697d4e8187c8d503b06fd7f9c0d73e042e26144", "notes": "ΕΨΙΝΕ: κουμπί Αναζήτηση μέσα στο πάνελ κριτηρίων + διάγνωση"}
+{"version": "0.21.242", "zip": "ef-bot-0.21.242.zip", "sha256": "c63c1f4b7f909fefbb5167cdbefd2d5bd64e1d5438cd3b40affd8942de463e23", "notes": "ΕΨΙΝΕ: Αναζήτηση μέσω PrimeFaces.ab με τα πεδία ημερομηνιών στο process"}
