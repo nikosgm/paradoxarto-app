@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v307';
+const APP_VER = '2026-11-10z-v308';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8366,6 +8366,18 @@ document.head.appendChild(st);
     ov.addEventListener('click', e=>{ if(e.target===ov || e.target.closest('[data-x]')){ ov.remove(); return res(null); }
       const b = e.target.closest('[data-i]'); if(b){ const r = rows[+b.dataset.i]; ov.remove(); res(r ? {name:r.name, am:r.am||'', amka:r.amka||''} : null); } });
   }); };
+  // 🩺 διαγνώσεις → ομάδες ICD-10 (καθαρή συνάρτηση): τίτλοι ΝΠΣ «ΕΙΣΟΔΟΥ · (N39.9) ΠΕΡΙΓΡΑΦΗ» + γυμνοί κωδικοί
+  window.pdxDxGroups = function(titles, codes){
+    const CH = [[/^[AB]/,'Λοιμώδη'],[/^C|^D[0-4]/,'Νεοπλάσματα'],[/^D[5-8]/,'Αίμα'],[/^E/,'Ενδοκρινικά · μεταβολικά'],[/^F/,'Ψυχικά'],[/^G/,'Νευρικό σύστημα'],[/^H/,'Οφθαλμός · ους'],[/^I/,'Κυκλοφορικό'],[/^J/,'Αναπνευστικό'],[/^K/,'Πεπτικό'],[/^L/,'Δέρμα'],[/^M/,'Μυοσκελετικό'],[/^N/,'Ουροποιογεννητικό'],[/^[OP]/,'Κύηση · περιγεννητικά'],[/^Q/,'Συγγενείς ανωμαλίες'],[/^R/,'Συμπτώματα · ευρήματα'],[/^[ST]/,'Κακώσεις · δηλητηριάσεις'],[/^[VWXY]/,'Εξωτερικά αίτια'],[/^Z/,'Παράγοντες υγείας · ιστορικό']];
+    const by = new Map(), seen = new Set();
+    const add = (code, desc, tag)=>{ code = String(code||'').toUpperCase().trim(); const k = code || ('?'+desc); if(seen.has(k)) return; seen.add(k);
+      const cat = code ? ((CH.find(([re])=>re.test(code))||[])[1] || 'Άλλα') : 'Χωρίς κωδικό'; if(!by.has(cat)) by.set(cat, []); by.get(cat).push({code, desc:String(desc||'').trim(), tag:tag||''}); };
+    (titles||[]).forEach(t=>{ t = String(t||''); const m = /\(([A-Z]\d{2}(?:\.\d{1,2})?)\)\s*(.*)$/i.exec(t) || /\b([A-Z]\d{2}(?:\.\d{1,2})?)\b\s*[-·:]?\s*(.*)$/.exec(t); const tg0 = (/^\s*[—–-]?\s*(ΕΙΣΟΔΟΥ|ΕΞΟΔΟΥ|ΚΥΡΙΑ|ΔΕΥΤΕΡΕΥΟΥΣΑ)/i.exec(t)||[])[1] || '', tag = {ΕΙΣΟΔΟΥ:'εισόδου', ΕΞΟΔΟΥ:'εξόδου', ΚΥΡΙΑ:'κύρια', ΔΕΥΤΕΡΕΥΟΥΣΑ:'δευτερεύουσα'}[tg0.toUpperCase()] || '';
+      if(m) add(m[1], m[2].replace(/\s*[▸·]\s*$/,''), tag); else add('', t.replace(/^\s*[—–-]\s*/,''), ''); });
+    (codes||[]).forEach(c=>add(c, '', ''));
+    const order = CH.map(x=>x[1]).concat(['Άλλα','Χωρίς κωδικό']);
+    return [...by.entries()].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).map(([cat, items])=>({cat, items:items.sort((x,y)=>x.code.localeCompare(y.code))}));
+  };
   window.pdxScanHub = function(){
     const adm = window.authRole==='admin';
     const pg = iosPage('Σάρωση', 'Ρυθμίσεις', ()=>{
@@ -18908,12 +18920,17 @@ window.pdxOpNoteFromScan = function(p){
       // 🎗 συμβούλια
       if((p.mdt||[]).length) h += iosGroup('🎗 Ογκολογικό συμβούλιο · '+p.mdt.length, p.mdt.map(m=>({t:'<span style="color:#8E8E93;font-size:13px">'+dmy(m.meeting)+'</span> <b>'+E4(m.decision||'—')+'</b>', sub:m.text?E4(m.text):''})));
       // λοιπά ανά είδος
-      ORDER.forEach(kd=>{ const L = ev.filter(e=>e.kind===kd || (kd==='discharge' && e.kind==='dc')); if(!L.length) return; if(kd==='dx' && L.length > 12) L.length = 12;
+      ORDER.forEach(kd=>{ if(kd==='dx') return; const L = ev.filter(e=>e.kind===kd || (kd==='discharge' && e.kind==='dc')); if(!L.length) return;
         h += iosGroup((KIND[kd]||['📝',kd])[0]+' '+(KIND[kd]||['',kd])[1]+' · '+L.length, L.map(row)); });
       const oth = ev.filter(e=>!KIND[e.kind] && e.kind!=='dc'); if(oth.length) h += iosGroup('📝 Άλλα · '+oth.length, oth.map(row));
-      if(p.dx) h += iosGroup('🩺 Διαγνώσεις (ICD-10)', String(p.dx).split(',').filter(Boolean).map(c=>({t:E4(c)})));
+      // 🩺 10/11 βράδυ (χρήστης): διαγνώσεις ΟΜΑΔΟΠΟΙΗΜΕΝΕΣ ανά κατηγορία ICD-10 (ΝΠΣ + κωδικοί του ασθενή, χωρίς διπλά)
+      { const G = window.pdxDxGroups(ev.filter(e=>e.kind==='dx').map(e=>e.title), String(p.dx||'').split(',').filter(Boolean));
+        if(G.length) h += '<div class="ios-h">🩺 Διαγνώσεις · '+G.reduce((a,g)=>a+g.items.length,0)+'</div>' + G.map(g=>'<div class="ios-g" style="margin-bottom:10px"><div style="padding:9px 16px 3px;font-size:13px;font-weight:700;color:#6D6D72">'+E4(g.cat)+' · '+g.items.length+'</div>'
+          + g.items.map(x=>'<div style="padding:7px 16px;border-top:.5px solid rgba(60,60,67,.12);font-size:15px"><b style="font-variant-numeric:tabular-nums">'+E4(x.code||'—')+'</b> '+E4(x.desc)+(x.tag?' <span style="color:#8E8E93;font-size:12.5px">'+E4(x.tag)+'</span>':'')+'</div>').join('')+'</div>').join(''); }
       if(!ev.length && !(p.studies||[]).length) h += '<div style="margin:16px;color:#8E8E93">Ο φάκελος είναι άδειος — πάτα «↻ Φέρε φάκελο από το ΝΠΣ».</div>';
-      h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">↻ Φέρε φάκελο από το ΝΠΣ</b>', sub:'νοσηλείες, εξιτήρια, πρακτικά, εκτιμήσεις, πορεία — μόνο ανάγνωση (1–3′)', on:'void 0', data:'data-adoss'},
+      // 10/11 βράδυ (χρήστης: «πάτησα φέρε φάκελο αλλά δεν βλέπω το loading»): πρόοδος/αποτέλεσμα ΚΑΙ εδώ, στο κουμπί
+      h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">'+(st.busy && /Φάκελος/.test(st.busy) ? '<span class="pdx-spin" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:6px"></span>' : '↻ ')+'Φέρε φάκελο από το ΝΠΣ</b>',
+        sub: st.busy && /Φάκελος/.test(st.busy) ? '⏳ '+E4(st.busy) : st.msg ? '<span style="color:'+(/^⚠/.test(st.msg)?'#B42318':'#15803D')+'">'+E4(st.msg)+'</span>' : 'νοσηλείες, εξιτήρια, πρακτικά, εκτιμήσεις, πορεία — μόνο ανάγνωση (1–3′) · αν δεν είναι στην κλινική, ψάχνει εκτός κλινικής (1 έτος)', on:'void 0', data:'data-adoss'},
         p.amka ? {t:'<b style="color:var(--acc,#0A84FF)">🔬 Έλεγχος βιοψιών στο Medilabi</b>', sub:'νέες βιοψίες → φάκελος', on:'void 0', data:'data-abxs'} : null]);
       return h + '<div style="height:60px"></div>'; });
     const load = async (quiet)=>{ if(!quiet){ st.busy = st.p ? 'Ανανέωση…' : 'Φόρτωση φακέλου…'; pg.redraw(); }
