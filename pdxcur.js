@@ -72,7 +72,9 @@
       // 🔪 8/11: επέμβαση(εις) + ημερομηνία (podDate) → «αναμονή βιοψίας» στη βάση μέχρι να βγει ιστολογική
       { const d = /^\d{4}-\d{2}-\d{2}/.test(String(rec.podDate || "")) ? String(rec.podDate).slice(0, 10) : "";
         const nm = [rec.surgeryCustom || rec.surgery, rec.surgery2Custom || rec.surgery2].map((x) => String(x || "").trim()).filter((x) => x && !/^άλλ[οη]$/i.test(x));
-        p.surg = d ? [...new Set(nm)].map((name) => ({ name, date: d })) : []; }
+        // 10/11 βράδυ (χρήστης): «το πρόγραμμα χειρουργείου που κάνουμε εμείς μην το λαμβάνεις υπόψη — η επέμβαση ΜΟΝΟ από την πράξη (ΝΠΣ)» →
+        // η «Προς …» επέμβαση/ημερομηνία του Παραδόχαρτου ΔΕΝ στέλνεται πια ως γεγονός «surgery» στη βάση
+        void d; void nm; p.surg = []; }
       p.dx.push(...codesOf(rec.dx));
       if (rec.comorb && rec.comorb.dcx !== false && Array.isArray(rec.comorb.codes)) p.dx.push(...codesOf(rec.comorb.codes));
       // ταίριασμα με τη λίστα ΝΠΣ
