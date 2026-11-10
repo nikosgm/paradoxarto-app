@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v310';
+const APP_VER = '2026-11-10z-v311';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22317,7 +22317,9 @@ window.CLS_MODE='A';
     load(false);
     return pg;
   };
-  window.pdxOrSchedCss = ()=>(window.pdxOrSched && pdxOrSched.CSS) || '';
+  // 10/11 22:44 (χρήστης: «δεν φαίνεται με τα κελιά όπως η εκτύπωση»): από την κοινή μνήμη το orsched.js ΔΕΝ είχε φορτωθεί → κενό CSS → χωρίς περιγράμματα· σταθερό αντίγραφο
+  const ORS_CSS0 = '.ors{border-collapse:collapse;table-layout:fixed;font:12px/1.25 Calibri,Arial,sans-serif;color:#000;background:#fff}.ors td{border:1px solid #444;padding:2px 4px;vertical-align:middle;overflow:hidden;word-wrap:break-word}.ors tr.hd td{font-weight:700;background:#E8EEF5;text-align:center}.ors tr.rm td{font-weight:700;background:#F3F3F3}';
+  window.pdxOrSchedCss = ()=>(window.pdxOrSched && pdxOrSched.CSS) || ORS_CSS0;
   // 🔄 10/11 21:23 (χρήστης: «δεν χρειάζεται κάθε 6 ώρες — κάθε Τρίτη, Πέμπτη, Παρασκευή μετά τις 2 μία φορά, κι αν δεν το βρει ξαναψάχνει σε μισή ώρα»):
   // έλεγχος ανά 5′ · μόνο Τρ/Πε/Παρ ≥ 14:00 · το πρόγραμμα της επόμενης ημέρας χειρουργείου (pdxOrTarget) · βρέθηκε (κοινή μνήμη) → τέλος για εκείνη την ημέρα ·
   // «δεν βρέθηκε» → νέα αναζήτηση 30′ μετά την τελευταία (ο χρόνος είναι στην κοινή μνήμη, άρα ΜΙΑ συσκευή ψάχνει για όλους)
