@@ -1518,6 +1518,7 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
   // και η σελίδα πρέπει να είναι κοινοποιημένη στο email του (Κοινοποίηση → προσθήκη email· γίνεται μόνο από τον ιδιοκτήτη).
   const lc = x=>String(x||'').trim().toLowerCase();
   function histBox(act){
+    return '';   // 10/11 23:16 (χρήστης): με τον connector «Παραδόχαρτο» στο Claude του καθενός δεν χρειάζεται κοινοποίηση σελίδας → το πλαίσιο δεν εμφανίζεται
     const withE = act.filter(p=>lc(p.claude_email)), noE = act.filter(p=>!lc(p.claude_email));
     const isOk = p=>hs.emails.indexOf(lc(p.claude_email))>=0, todo = withE.filter(p=>!isOk(p));
     const chip = (t,c,bg)=>'<span style="font-size:12px;font-weight:700;color:'+c+';background:'+bg+';border-radius:999px;padding:3px 9px">'+t+'</span>';
@@ -2273,7 +2274,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v316';
+const APP_VER = '2026-11-10z-v317';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21607,7 +21608,10 @@ window.histUploadOpen = function(){
   async function uid(){ try{ return (await sb6.auth.getUser()).data.user.id; }catch(e){ return null; } }
   function devLabel(){ const u = navigator.userAgent||''; const t = /iPad/.test(u)?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android':/Windows/.test(u)?'Windows':/Mac/.test(u)?'Mac':'Συσκευή'; const b = /CriOS|Chrome/.test(u)&&!/Edg/.test(u)?'Chrome':/Edg/.test(u)?'Edge':/Firefox|FxiOS/.test(u)?'Firefox':/Safari/.test(u)?'Safari':''; return t+(b?' · '+b:'')+((navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) ? ' · εφαρμογή' : ''); }
   async function loadCfg(){ const r = await sb6.from('oncall_config').select('value').eq('key','crypto').maybeSingle(); S.cfg = (r && r.data && r.data.value && r.data.value.kid) ? r.data.value : null; return S.cfg; }
-  async function loadRows(){ const r = await sb6.from('oncall_keys').select('id,kind,user_id,label,pub,fp,kid,wrapped,approved_by,approved_at,created_at,last_seen').order('created_at'); S.rows = (r && r.data) || []; return S.rows; }
+  async function loadRows(){ const r = await sb6.from('oncall_keys').select('id,kind,user_id,label,pub,fp,kid,wrapped,approved_by,approved_at,created_at,last_seen').order('created_at'); S.rows = (r && r.data) || [];
+    // 👤 10/11 23:15 (χρήστης: «μπερδευόμαστε με τα ονόματα των συσκευών — ποια συσκευή από ποιον λογαριασμό»): ο λογαριασμός κάθε συσκευής
+    try{ const ids = [...new Set(S.rows.map(x=>x.user_id).filter(Boolean))]; if(ids.length){ const q = await sb6.from('oncall_profiles').select('user_id,full_name,email').in('user_id', ids); S.who = {}; ((q && q.data)||[]).forEach(u=>{ S.who[u.user_id] = String(u.full_name || u.email || '').replace(/@paradoxarto\.app$/,''); }); } }catch(e){}
+    return S.rows; }
   async function findMe(){
     const id = await iget('devid'), me = id ? S.rows.find(r=>r.id===id) : null;
     S.me = me || null; if(!S.fp){ try{ S.fp = await fpOf(await pubJwk()); }catch(e){} }
@@ -21739,8 +21743,10 @@ window.histUploadOpen = function(){
     const pend = devs.filter(r=>!r.wrapped), appr = devs.filter(r=>r.wrapped);
     if(pend.length) h += iosGroup('Περιμένουν έγκριση', pend.map(r=>({ic:'⏳', t:E(r.label||'Συσκευή')+(S.me&&r.id===S.me.id?' (αυτή)':''), sub:'αποτύπωμα '+E(r.fp||'—')+' · '+dt(r.created_at),
       raw: '<span style="display:flex;gap:6px">'+(has?'<button onclick="event.stopPropagation();pdxCKdo(\'approve\',\''+r.id+'\')" style="border:0;background:#34C759;color:#fff;border-radius:9px;padding:7px 11px;font-weight:700;font-size:14px">Έγκριση</button>':'')+'<button onclick="event.stopPropagation();pdxCKdo(\'remove\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#B42318;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px">✕</button></span>'})), has ? 'Εγκρίνεις μόνο αν το αποτύπωμα ταιριάζει με αυτό που δείχνει η άλλη συσκευή.' : '');
-    h += iosGroup('Έμπιστες συσκευές · '+appr.length, appr.map(r=>({ic:'📱', t:E(r.label||'Συσκευή')+(S.me&&r.id===S.me.id?' (αυτή)':''), sub:'τελευταία χρήση '+dt(r.last_seen||r.approved_at),
-      raw: (adm || (S.me&&r.id===S.me.id)) ? '<button onclick="event.stopPropagation();pdxCKdo(\'remove\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#B42318;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px">Αφαίρεση</button>' : ''})),
+    const who = r=>(S.who && S.who[r.user_id]) ? '👤 '+E(S.who[r.user_id])+' · ' : '';
+    const ren = r=>(adm || (S.me&&r.id===S.me.id)) ? '<button onclick="event.stopPropagation();pdxCKdo(\'rename\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#007AFF;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px;margin-right:6px">✎</button>' : '';
+    h += iosGroup('Έμπιστες συσκευές · '+appr.length, appr.slice().sort((a,b)=>String((S.who||{})[a.user_id]||'').localeCompare(String((S.who||{})[b.user_id]||''))).map(r=>({ic:'📱', t:E(r.label||'Συσκευή')+(S.me&&r.id===S.me.id?' (αυτή)':''), sub:who(r)+'τελευταία χρήση '+dt(r.last_seen||r.approved_at)+' · '+E(String(r.fp||'').slice(0,9)),
+      raw: ren(r) + ((adm || (S.me&&r.id===S.me.id)) ? '<button onclick="event.stopPropagation();pdxCKdo(\'remove\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#B42318;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px">Αφαίρεση</button>' : '')})),
       'Η αφαίρεση σταματά τη συσκευή από τα νέα κλειδιά. Αν χαθεί ή κλαπεί συσκευή, πες το, για να αλλάξει το κλειδί κλινικής (αλλαγή κλειδιού: επόμενη φάση).');
     const rec = S.rows.find(r=>r.kind==='recovery'), bot = S.rows.find(r=>r.kind==='bot');
     const bots = S.rows.filter(r=>r.kind==='bot');
@@ -21777,6 +21783,10 @@ window.histUploadOpen = function(){
   window.pdxCKdo = async function(what, id){
     if(S.busy) return; S.busy = true;
     try{
+      if(what==='rename'){ const r = S.rows.find(x=>x.id===id); if(!r) return;
+        const nm = prompt('Όνομα συσκευής (π.χ. «Γραφείο ιατρών PC2», «iPhone Νίκου»):', r.label||''); if(nm==null || !nm.trim()) return;
+        const x = await sb6.from('oncall_keys').update({label: nm.trim().slice(0,60)}).eq('id', id); if(x.error) throw new Error(x.error.message);
+        r.label = nm.trim().slice(0,60); toast('✓ Όνομα: '+r.label); return; }
       if(what==='create'){
         if(!confirm('Δημιουργία κλειδιού κλινικής; Θα εμφανιστεί κωδικός ανάκτησης που πρέπει να φυλάξεις. Κανένα δεδομένο δεν αλλάζει ακόμα.')) return;
         const r = await createClinicKey(); recoveryScreen(r.code);
