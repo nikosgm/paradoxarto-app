@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10q-v284';
+const APP_VER = '2026-11-10r-v285';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13816,7 +13816,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
       q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ sel[e.dataset.dc].doc = e.value; }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = e.value; }); selSave(); };
     pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-tx]'); if(t){ sel[t.dataset.tx].txt = t.value; selSave(); } });
-    pg.el.addEventListener('change', e=>{ const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && !sel[k].job){ sel[k].proc = +bp.value; if(!needSide(prOf(sel[k]))) delete sel[k].side; } }); selSave(); } pg.redraw(); return; }
+    pg.el.addEventListener('change', e=>{ const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))){ sel[k].proc = +bp.value; if(!needSide(prOf(sel[k]))) delete sel[k].side; } }); selSave(); } pg.redraw(); return; }
       rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); }
       const pr = e.target.closest('[data-pr]'); if(pr){ const s1 = sel[pr.dataset.pr]; if(s1){ if(!needSide(prOf(s1))) delete s1.side; } selSave(); pg.redraw(); } });   // 10/11: αλλαγή πράξης → εμφανίζεται αμέσως η πλευρά (στομίες) και ενημερώνεται το κείμενο
     pg.el.addEventListener('click', async e=>{ const rv = e.target.closest('[data-rev]'); if(rv){ if(window.pdxBotReview) pdxBotReview(+rv.dataset.rev); return; }
