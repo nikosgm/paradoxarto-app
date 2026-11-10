@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10d-v271';
+const APP_VER = '2026-11-10e-v272';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13451,6 +13451,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const C = NB.rows.filter(r=>{ if(d.am && r.am && String(d.am)===String(r.am)) return true; const u = nbNz(r.name).split(' '); return t.every((w,i)=>u[i] && (u[i]===w || (w.length>=4 && u[i].startsWith(w)))); });
       const r = C.length===1 ? C[0] : C.find(x=>d.am && String(x.am)===String(d.am)); if(!r) return null;
       const x = NB.enr[nbNz(r.name)] || {}; return {full:(x.full && x.full.split(/\s+/).length > String(r.name).split(/\s+/).length ? x.full : r.name), am:x.am||r.am||'', amka:x.amka||r.amka||'', father:x.father||r.father||''}; }catch(e){ return null; } };
+  // 📄 10/11 (χρήστης: «ιστορικό για ασθενή που είναι στον ΝΠΣ αλλά όχι στο Παραδόχαρτο → όχι νέος ασθενής· ταυτοποίηση με τον ασθενή του ΝΠΣ»)
+  // όνομα ιστορικού → ΜΟΝΑΔΙΚΟΣ ασθενής της λίστας ΝΠΣ που ΔΕΝ είναι στο Παραδόχαρτο (επώνυμο + όνομα, με ή χωρίς τόνους/σειρά· ή ΑΜΚΑ)
+  window.pdxNpsFindMissing = function(label, amka){ try{ if(!NB.rows){ if(!NB.busy) Promise.resolve(nbLoad(false)).then(()=>{ if(NB.rows && window.histPendRefresh) setTimeout(histPendRefresh, 500); }); return null; }
+      const M = nbMiss(); if(/^\d{11}$/.test(String(amka||''))){ const a = M.filter(r=>{ const x = NB.enr[nbNz(r.name)] || {}; return String(x.amka||r.amka||'')===String(amka); }); if(a.length===1) return a[0].name; }
+      const t = nbNz(label).split(' ').filter(w=>w.length>=2); if(t.length<2) return null;
+      const C = M.filter(r=>{ const u = nbNz(r.name).split(' '); return t.slice(0,2).every(w=>u.some(x=>x===w || (w.length>=4 && x.startsWith(w)) || (x.length>=4 && w.startsWith(x)))); });
+      return C.length===1 ? C[0].name : null; }catch(e){ return null; } };
   // 🏥 8/11 (εντολή χρήστη): στα «σε πολλούς» (παραγγελία, εκκρεμότητα) και στην επιλογή ασθενή μπαίνουν ΚΑΙ οι ασθενείς του ΝΠΣ που δεν είναι στο Παραδόχαρτο
   // 🏥 9/11 (χρήστης): «ΝΠΣ» = ΦΙΛΤΡΟ της αρχικής (ίδια σελίδα· island + μπάρα μένουν) → όλοι οι νοσηλευόμενοι του ΝΠΣ ΑΛΦΑΒΗΤΙΚΑ
   const nbKey = r=>{ const t = nbNz(r.name).split(' '); let hit = '';
@@ -18564,6 +18571,12 @@ function histPendRefresh(){
         if(dd._key && store(String(dd._key).indexOf('extra')===0)[dd._key]) x = {key:dd._key, level:'ok', extra:String(dd._key).indexOf('extra')===0};   // η σελίδα ιστορικών το αντιστοίχισε
         else if(dd._cands) return;   // πολλοί πιθανοί (π.χ. ίδιο επίθετο): διαλέγει ο γιατρός από «Νέα ιστορικά»
         else x = window.__oncallMatch(String(r.label||'').replace(/\(;\)/g,''));
+        // 🏥 10/11: δεν είναι στο Παραδόχαρτο αλλά είναι στη λίστα ΝΠΣ → ο ασθενής του ΝΠΣ μπαίνει στο Παραδόχαρτο («Εκτός θαλάμου», με ΑΜ/ΑΜΚΑ) και το ιστορικό σε αυτόν
+        if((!x || x.level!=='ok') && window.pdxNpsFindMissing && window.pdxNpsKey){ try{
+          var nm = pdxNpsFindMissing(String(r.label||dd.name||'').replace(/\(;\)/g,''), dd.amka || dd.AMKA);
+          window.__histNps = window.__histNps || {};
+          if(nm && !window.__histNps[r.id]){ window.__histNps[r.id] = 1; var nk = pdxNpsKey('nps:'+nm, true); if(nk){ x = {key:nk, level:'ok', extra:true}; try{ toast('🏥 '+nm+': από τη λίστα ΝΠΣ στο Παραδόχαρτο (εκτός θαλάμου) με το ιστορικό του', 3500); }catch(e){} } }
+        }catch(e){} }
         if(!x || x.level!=='ok') return;
         if(!m[x.key] || r.id > m[x.key].row.id) m[x.key] = {row:r, level:x.level, extra:!!x.extra};
       });
