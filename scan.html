@@ -132,6 +132,13 @@ $('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
   // 💬 ίδια συζήτηση Claude για όλες τις σαρώσεις: επικόλληση του συνδέσμου της (Claude → ⋯ → Κοινοποίηση/Αντιγραφή συνδέσμου ή από τη γραμμή διεύθυνσης)
   let cur0 = ''; try{ cur0 = localStorage.getItem('pdx_scan_chat') || ''; }catch(e){}
   if(false) $('msg').insertAdjacentHTML('beforeend', '<button class="btn" id="chatpin" style="width:100%;max-width:340px;text-align:left;background:#ffffff1f"><b>💬 ' + (cur0 ? 'Ίδια συζήτηση Claude ✓' : 'Νέα συζήτηση Claude σε κάθε σάρωση') + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + (cur0 ? 'πάτα για αλλαγή ή για νέα κάθε φορά' : 'πάτα για να ορίσεις μία συζήτηση για όλες') + '</span></button>');
+  // 📄 10/11 (χρήστης: «σε υπάρχουσα συζήτηση αλλά να μην επικολλώ»): η εφαρμογή Claude ΔΕΝ δέχεται έτοιμο μήνυμα σε υπάρχουσα συζήτηση → εναλλακτικά
+  // η «Σελίδα Σάρωσης» (artifact): ΠΑΝΤΑ η ίδια σελίδα, διαβάζει ΜΟΝΗ της τη σάρωση (χωρίς νέα συζήτηση, χωρίς επικόλληση). Επιλογή ανά συσκευή (pdx_scan_via).
+  { let v0 = 'chat'; try{ v0 = localStorage.getItem('pdx_scan_via') || 'chat'; }catch(e){}
+    $('msg').insertAdjacentHTML('beforeend', '<div style="width:100%;max-width:340px;margin-top:10px;font-size:13px;opacity:.8">Πού διαβάζεται:</div>'
+      + '<button class="btn" data-via="page" style="width:100%;max-width:340px;text-align:left;background:' + (v0 === 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>📄 Σελίδα Σάρωσης</b><br><small style="opacity:.8">πάντα η ίδια · διαβάζεται μόνη της · χωρίς επικόλληση</small></button>'
+      + '<button class="btn" data-via="chat" style="width:100%;max-width:340px;text-align:left;background:' + (v0 !== 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>💬 Νέα συζήτηση Claude</b><br><small style="opacity:.8">για συναδέλφους με άλλον λογαριασμό</small></button>');
+    $('msg').querySelectorAll('[data-via]').forEach((x)=>x.onclick = ()=>{ try{ localStorage.setItem('pdx_scan_via', x.dataset.via); }catch(e){} $('mod').onclick(); }); }
   if($('chatpin')) $('chatpin').onclick = ()=>{ const v = prompt('Σύνδεσμος της συζήτησης Claude (https://claude.ai/chat/…). Κενό = νέα συζήτηση κάθε φορά.', cur0); if(v == null) return;
     const t = v.trim();
     // 10/11: σύνδεσμος «Κοινοποίησης» (claude.ai/share/…) = αντίγραφο μόνο για ανάγνωση· δεν συνεχίζει τη συζήτηση
