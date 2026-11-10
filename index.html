@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v311';
+const APP_VER = '2026-11-10z-v312';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7479,12 +7479,12 @@ document.head.appendChild(st);
     if(clin) h += grp('Κλινική', [
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
-      ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"]   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
+      ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
+      bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"]   // 10/11 22:46 (χρήστης): στην «Κλινική»
     ]);
     h += grp('Για έναν ασθενή', [
       bot && ['💊','Συνταγή e-prescription','με ΑΜΚΑ', "pdxDo('rxout')"],
       // 10/11 22:15/22:38 (χρήστης): Κλήση για εκτίμηση, Παραγγελία, Απεικονίσεις (γίνονται μέσα από τον ασθενή) & Ασθενείς ΝΠΣ (είναι στην αρχική) = πλεονασμός → αφαιρέθηκαν
-      bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"]
     ]);
     h += grp('Για πολλούς', [
       ['☑','Εκκρεμότητα σε πολλούς','', "pdxDo('bulk')"],
@@ -8477,10 +8477,14 @@ document.head.appendChild(st);
       if(pts.length && acts.some(a=>a[4])) pts.slice(0,2).forEach(e=>acts.filter(a=>a[4]).slice(0,3).forEach(a=>{ sel.push(()=>a[3](e.k)); h += '<div data-i="'+(sel.length-1)+'" style="background:#fff;border-radius:14px;padding:12px;margin-bottom:7px;font-size:15px;cursor:pointer">'+a[0]+' <b>'+esc(a[1])+'</b> για '+esc(lbl(e))+'</div>'; }));
       pts.forEach(e=>{ sel.push(()=>mobOpen(e.k)); h += '<div data-i="'+(sel.length-1)+'" style="background:#fff;border-radius:14px;padding:12px;margin-bottom:7px;font-size:15px;cursor:pointer">👤 Άνοιγμα <b>'+esc(lbl(e))+'</b>'+why(e,w)+'</div>'; });
       acts.filter(a=>!a[4] || !pts.length).forEach(a=>{ sel.push(()=>a[4] ? pdxPickPatient(a[0]+' '+a[1]+': ποιος;', k=>a[3](k)) : a[3]()); h += '<div data-i="'+(sel.length-1)+'" style="background:#fff;border-radius:14px;padding:12px;margin-bottom:7px;font-size:15px;cursor:pointer">'+a[0]+' '+esc(a[1])+'</div>'; });
+      // 🔎 10/11 22:49 (χρήστης: «ο φακός να είναι και αναζήτηση ασθενή σε ΟΛΟ το νοσοκομείο, όχι μόνο στους θαλάμους»): επώνυμο (≥3 γράμματα), ΑΜΚΑ (11) ή ΑΜ (8)
+      const qq = String(q||'').trim();
+      if(/^\d{11}$|^\d{8}$/.test(qq) || (/^[A-Za-zΑ-ΩΆ-Ώα-ωά-ώϊϋΐΰ\s]{3,}$/.test(qq) && !acts.length)){ sel.push(()=>{ window.pdxPatients && pdxPatients({arch:true, q:qq.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()}); setTimeout(()=>{ const f = document.querySelector('#iosPg [data-ptq]'); if(f){ try{ f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true})); }catch(e){} } }, 120); });
+        h += '<div data-i="'+(sel.length-1)+'" style="background:#fff;border-radius:14px;padding:12px;margin-bottom:7px;font-size:15px;cursor:pointer">🌐 Αναζήτηση <b>«'+esc(qq)+'»</b> σε όλο το νοσοκομείο<small style="display:block;color:#64748B;margin-top:2px">όχι μόνο στους θαλάμους · Αρχείο ασθενών</small></div>'; }
       if(!h) h = '<div style="color:#64748B;padding:10px">Τίποτα — δοκίμασε όνομα ασθενή, κρεβάτι ή «συνταγή», «εκτίμηση», «warnings»…</div>';
       ov.querySelector('[data-r]').innerHTML = (w.length?'':'<div class="mtp-h" style="margin:6px 4px">Συχνά</div>') + h;
     };
-    ov.innerHTML = '<div style="display:flex;gap:8px;padding:12px"><input data-q placeholder="🔎 Τι θέλεις να κάνεις;" style="flex:1;font-size:17px;padding:12px 14px;border:2px solid var(--mp,#1D4E80);border-radius:16px;background:#fff;color:#1F2933"><button data-x style="border:0;background:#E2E8F0;border-radius:14px;padding:0 14px;font-size:15px">Άκυρο</button></div><div data-r style="flex:1;overflow:auto;padding:0 12px 30px"></div>';
+    ov.innerHTML = '<div style="display:flex;gap:8px;padding:12px"><input data-q placeholder="🔎 Ασθενής ή τι θέλεις να κάνεις;" style="flex:1;font-size:17px;padding:12px 14px;border:2px solid var(--mp,#1D4E80);border-radius:16px;background:#fff;color:#1F2933"><button data-x style="border:0;background:#E2E8F0;border-radius:14px;padding:0 14px;font-size:15px">Άκυρο</button></div><div data-r style="flex:1;overflow:auto;padding:0 12px 30px"></div>';
     document.body.appendChild(ov); draw('');
     const inp = ov.querySelector('[data-q]'); setTimeout(()=>inp.focus(), 50);
     inp.addEventListener('input', ()=>draw(inp.value));
@@ -17888,13 +17892,17 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
   // 7/11: η κάτω μπάρα (κάψουλα) μένει και στα εργαστηριακά: αντίγραφο της μπάρας του #mobView πάνω από το παράθυρο
   (function(){ let cl = null;
     const copyStyle = (from, to)=>{ const cs = getComputedStyle(from); for(let i = 0; i < cs.length; i++){ const n = cs[i]; to.style.setProperty(n, cs.getPropertyValue(n)); } [...from.children].forEach((c, j)=>{ if(to.children[j]) copyStyle(c, to.children[j]); }); };
-    const sync = ()=>{ const mv = document.getElementById('mobView'); const src = mv && (mv.querySelector('.nv-tb') || mv.querySelector('.mtabs'));   // 7/11: η κάψουλα είναι η .nv-tb
-      const show = box.classList.contains('on') && src && getComputedStyle(mv).display!=='none' && !mv.classList.contains('desk') && src.getBoundingClientRect().height > 0;
+    // 10/11 22:48 (χρήστης: «από το Island στα εργαστηριακά, για μισό δευτερόλεπτο χάνεται το Island»): το αντίγραφο φτιαχνόταν 60ms ΜΕΤΑ το άνοιγμα και
+    // ξαναστηνόταν σε κάθε αλλαγή κλάσης → τώρα φτιάχνεται ΠΡΙΝ ανοίξει η σελίδα (labsFullOpen → __lfIslSync(true)) και ΜΕΝΕΙ όσο είναι ανοιχτή
+    const sync = (force)=>{ const mv = document.getElementById('mobView'); const src = mv && (mv.querySelector('.nv-tb') || mv.querySelector('.mtabs'));   // 7/11: η κάψουλα είναι η .nv-tb
+      const show = (force || box.classList.contains('on')) && src && getComputedStyle(mv).display!=='none' && !mv.classList.contains('desk') && src.getBoundingClientRect().height > 0;
+      if(show && cl && cl.isConnected) return;
       if(cl){ cl.remove(); cl = null; } if(!show) return;
       cl = src.cloneNode(true); copyStyle(src, cl); cl.removeAttribute('id'); cl.style.setProperty('z-index', '9100'); cl.style.setProperty('position', 'fixed'); cl.id = 'lfTabs';
       cl.addEventListener('click', e=>{ const kids = [...cl.children], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
       document.body.appendChild(cl); };
-    new MutationObserver(()=>setTimeout(sync, 60)).observe(box, {attributes:true, attributeFilter:['class']});
+    window.__lfIslSync = sync;
+    new MutationObserver(()=>sync()).observe(box, {attributes:true, attributeFilter:['class']});
     // 9/11 (χρήστης): η λίστα (κινητό) πιάνει ΟΛΗ την οθόνη και κυλάει ΠΙΣΩ από την κάτω μπάρα (όχι κόψιμο πάνω από αυτή)
     const st = document.createElement('style'); st.textContent = '#labsFull.on:not(.lm){padding-bottom:calc(env(safe-area-inset-bottom) + 100px)}#labsFull.lm .lm-body{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 118px + var(--lmKb,0px))!important}'
       + '#labsFull .lm-top:before{display:none!important}#labsFull .lm-top{padding-top:calc(env(safe-area-inset-top,0px) + 8px)!important;border-bottom:0!important;background:transparent!important}'
@@ -18301,6 +18309,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     const first = !box.classList.contains('on');
     if(first) viaList = !k; else if(!cur && k) viaList = true;
     cur = k || '';
+    if(first && window.__lfIslSync) try{ __lfIslSync(true); }catch(e){}   // 10/11 22:48: το Island ΠΡΙΝ ανοίξει η σελίδα (όχι κενό)
     box.classList.add('on');
     // ό,τι υπάρχει ήδη εμφανίζεται ΑΜΕΣΩΣ· η ανανέωση γίνεται στο παρασκήνιο
     if(rows.length){ render(); medBar(); if(Date.now()-loadedAt > 20000) load().then(()=>{ if(box.classList.contains('on')){ const st=box.scrollTop; render(); medBar(); box.scrollTop=st; } }); }
