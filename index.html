@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10x-v291';
+const APP_VER = '2026-11-10y-v292';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17429,7 +17429,11 @@ Z99.2:C|αιμοκάθαρση
       h += '<div class="lm-gh" style="padding-top:6px">Σε όλο το νοσοκομείο · Medilabi</div>' + EF.html();
       if(ext.busy) h += '<div class="lm-msg">⏳ '+E(ext.msg || 'Ψάχνει στο Medilabi…')+'</div>';
       else if(ext.q===q && ext.pts){
-        const XI = ext.pts.map((x,i)=>[x,i]), XF = EF.filter(XI, y=>y[0].row);
+        // 🕘 10/11 (χρήστης): ταξινόμηση όπως στις βιοψίες — προεπιλογή νεότερα πρώτα (ημερομηνία μέσα στη γραμμή) · Α–Ω
+        let xS = 'new'; try{ xS = localStorage.getItem('pdx_lx_sort') || 'new'; }catch(e){}
+        const dOf = r=>{ let mx = 0; String(r||'').replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g, (m, d, mo, y)=>{ const t = new Date(+y, +mo-1, +d).getTime(); if(t > mx) mx = t; return m; }); return mx; };
+        const XI = ext.pts.map((x,i)=>[x,i]), XF = EF.filter(XI, y=>y[0].row).slice().sort(xS==='az' ? (a,b)=>String(a[0].row||'').localeCompare(String(b[0].row||''), 'el', {sensitivity:'base'}) : (a,b)=>(dOf(b[0].row)-dOf(a[0].row)) || (a[1]-b[1]));
+        if(XF.length > 1) h += '<div style="display:flex;gap:2px;background:#E3E3E8;border-radius:9px;padding:2px;margin:6px 0">'+[['new','🕘 Νεότερα πρώτα'],['az','Α–Ω']].map(([v,l])=>'<button type="button" data-lxs="'+v+'" style="flex:1;border:0;border-radius:7px;height:32px;font-size:14px;font-weight:600;background:'+(xS===v?'#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)':'transparent')+';color:#1F2933">'+l+'</button>').join('')+'</div>';
         h += XF.length ? '<div class="lm-xl">'+XF.map(([x,i])=>'<button class="lm-xr" data-lxp="'+i+'">'+E(x.row)+'</button>').join('')+'</div>' : '<div class="lm-msg">'+(XI.length ? 'Καμία γραμμή δεν ταιριάζει με τα φίλτρα κλινικής/ημερομηνίας.' : 'Κανένας ασθενής στο Medilabi.')+'</div>';
         h += EF.note(XF.length, XI.length) + EF.pager(ext.pg, ext.busy);
         if(ext.msg) h += '<div class="lm-msg">'+E(ext.msg)+'</div>';
@@ -17627,6 +17631,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     const ln = t.closest('[data-lnote]'); if(ln){ e && e.stopPropagation && e.stopPropagation(); try{ alert(ln.dataset.lnote); }catch(_){} return; }
     const lc = t.closest('[data-lch]'); if(lc){ const [k, tk] = lc.dataset.lch.split('|'); const p = pts().find(x=>x.k===k); if(p) chartOpen(ctxOf(p), tk); return; }
     const ch = t.closest('[data-ch]'); if(ch){ chartOpen(chCtx, ch.dataset.ch); return; }
+    { const xs = t.closest('[data-lxs]'); if(xs){ try{ localStorage.setItem('pdx_lx_sort', xs.dataset.lxs); }catch(x){} mobRedraw(); return; } }
     if(t.closest('[data-lext]')){ extSearch(); return; }
     const xp = t.closest('[data-lxp]'); if(xp){ extOpen(+xp.dataset.lxp); return; }
   });
