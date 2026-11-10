@@ -2274,7 +2274,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v320';
+const APP_VER = '2026-11-10z-v321';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17566,7 +17566,7 @@ Z99.2:C|αιμοκάθαρση
   @keyframes lmU{from{transform:translateY(100%)}to{transform:none}}
   @keyframes lmF{from{opacity:0}to{opacity:1}}
   @media print{ #lmCh{display:none!important} }
-  #labsFull .lf-mchip{display:inline-block;font-size:11px;font-weight:600;line-height:1.4;color:#1D4E80;background:#E6F1FB;border-radius:99px;padding:1px 7px;margin-left:3px;white-space:nowrap}html.pdx-night #labsFull .lf-mchip{color:#B5D4F4;background:#0C447C}
+  #labsFull .lf-mchip{display:inline-block;font-size:10.5px;font-weight:600;line-height:1.35;color:#1D4E80;background:#E6F1FB;border-radius:99px;padding:0 5px;margin-left:2px;white-space:nowrap;vertical-align:1px}html.pdx-night #labsFull .lf-mchip{color:#B5D4F4;background:#0C447C}
   @media print{ #labsFull{display:none!important} }`;
   document.head.appendChild(st);
   const box = document.createElement('div'); box.id = 'labsFull';
@@ -17831,7 +17831,7 @@ Z99.2:C|αιμοκάθαρση
         const when = vl ? (vDay===today ? (tmL || 'σήμερα') : fmtD(vl.d)) : (x.b ? fmtD(x.b.last.d) : '');
         const sn = String(p.d.name||'').trim().split(/\s+/)[0] || '—';
         h += '<tr class="'+(x.imp?'bad':'')+'"><td class="c1" data-lpt="'+E(p.k)+'" title="'+E(p.d.name)+' · '+E(p.label)+'"><b style="display:block;overflow:hidden;text-overflow:ellipsis">'+E(sn)+'</b><small'+(vl && vDay===today?' class="nw"':'')+'>'+E(when)+(more ? (()=>{ const nM = x.b.tests.filter(T=>MCOLS.indexOf(T.k)<0 && T.pts[0] && T.pts[0].s > vl.s).length || 1;   // 10/11 23:18 (χρήστης: ιδέα Α — «+3 εξετάσεις» αντί για σκέτο «+»)
-            return ' <span class="lf-more lf-mchip" title="νεότερες εξετάσεις εκτός πίνακα (π.χ. βιοχημικός υγρών) — πάτα τον ασθενή">+'+nM+' '+(nM===1?'εξέταση':'εξετάσεις')+'</span>'; })() : '')+'</small></td>';
+            return ' <span class="lf-more lf-mchip" title="νεότερες εξετάσεις εκτός πίνακα (π.χ. βιοχημικός υγρών) — πάτα τον ασθενή">+'+nM+' εξετ.</span>'; })() : '')+'</small></td>';
         if(!x.b){ h += '<td colspan="'+MCOLS.length+'" class="nr">χωρίς αποτελέσματα</td></tr>'; return; }
         MCOLS.forEach(k=>{ const T = x.b.tests.find(t=>t.k===k), p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
