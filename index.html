@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v305';
+const APP_VER = '2026-11-10z-v306';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8320,11 +8320,34 @@ document.head.appendChild(st);
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"}
     ]);
     if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Αρχείο Ασθενών', [{ic:'🗂', t:'Βάση δεδομένων', sub:'κατάσταση · εγκρίσεις CD · ρυθμίσεις', on:"pdxDbPage()"}]);   // 8/11: Ογκολογικό & Πρόγραμμα χειρουργείου → Εργαλεία
-    if(['resident','attending','admin'].indexOf(window.authRole)>=0) h += iosGroup('Σάρωση', [{ic:'📷', t:'Σάρωση', sub:'ιστορικό · πόρισμα · πρόγραμμα (→ Claude ή → email)', on:"pdxScanOpen()"}, {ic:'📱', t:'Συσκευές σάρωσης', sub:'έγκριση της εφαρμογής «Σάρωση» στα κινητά', v:(window.__pdxScanDevN?'<b style="color:#FF3B30">'+window.__pdxScanDevN+' νέα</b>':''), on:"pdxScanDevices()"}, {ic:'📋', t:'Πορίσματα για έλεγχο', sub:'από τη σελίδα του Claude → ασθενής → βάση', v:(window.__pdxRepN?String(window.__pdxRepN):''), on:"pdxRepQueue()"}, adm && {ic:'🔐', t:'Κωδικός Kerio', sub:'κρυπτογραφημένα από το κινητό → μόνο στον υπολογιστή του bot', on:"pdxCredOpen('kerio')"}, adm && {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}]);
+    // 10/11 βράδυ (χρήστης: «πιο ομαδοποιημένες ρυθμίσεις — σάρωση + συσκευές σάρωσης μαζί, Kerio κωδικός + έλεγχος μαζί, το ίδιο τα πορίσματα»): ΜΙΑ γραμμή «📷 Σάρωση» → σελίδα
+    if(['resident','attending','admin'].indexOf(window.authRole)>=0){ const nb = (window.__pdxScanDevN||0) + (window.__pdxRepN||0);
+      h += iosGroup('', [{ic:'📷', t:'Σάρωση', sub:'σάρωση · συσκευές · πορίσματα για έλεγχο'+(adm?' · Kerio':''), v:(nb?'<b style="color:#FF3B30">'+nb+'</b>':''), on:"pdxScanHub()"}]); }
     h += adm ? iosGroup('', [{ic:'🛠', t:'Διαχείριση', sub:'Χρήστες · Bot · Υπολογιστές · Ασφάλεια · JSON', v:'admin', on:"pdxSetMore()"}])
              : iosGroup('', [{ic:'⚙️', t:'Περισσότερα', sub:'Εκκρεμότητες · Ενέργειες bot · Κρυπτογράφηση', on:"pdxSetMore()"}]);
     return h + '<div style="height:120px"></div></div>' + tabs();
   }
+  window.pdxScanHub = function(){
+    const adm = window.authRole==='admin';
+    const pg = iosPage('Σάρωση', 'Ρυθμίσεις', ()=>{
+      let h = iosGroup('', [{ic:'📷', t:'<b>Άνοιγμα σάρωσης</b>', sub:'ιστορικό · πόρισμα · πρακτικό · πρόγραμμα', on:"pdxScanOpen()"}]);
+      h += iosGroup('Έλεγχος & έγκριση', [
+        {ic:'📋', t:'Πορίσματα για έλεγχο', sub:'από τη σελίδα του Claude → ασθενής → βάση', v:(window.__pdxRepN?'<b style="color:#FF3B30">'+window.__pdxRepN+'</b>':''), on:"pdxRepQueue()"},
+        {ic:'📱', t:'Συσκευές σάρωσης', sub:'έγκριση της εφαρμογής «Σάρωση» στα κινητά', v:(window.__pdxScanDevN?'<b style="color:#FF3B30">'+window.__pdxScanDevN+' νέα</b>':''), on:"pdxScanDevices()"}]);
+      if(adm) h += iosGroup('Email προγράμματος (Kerio)', [{ic:'📧', t:'Kerio', sub:'κωδικός (κρυπτογραφημένα → μόνο στον υπολογιστή του bot) · έλεγχος σύνδεσης', on:"pdxKerioHub()"}]);
+      return h + '<div style="height:40px"></div>'; });
+    return pg;
+  };
+  window.pdxCredHub = function(){
+    iosPage('Κωδικοί του bot', 'Διαχείριση', ()=>iosGroup('', [
+      {ic:'🔐', t:'Νέος κωδικός', sub:'ΝΠΣ · e-prescription · Medilabi · ΑΗΦΥ…', on:"pdxDo('cred')"},
+      {ic:'🔑', t:'Έλεγχος κωδικών', sub:'δοκιμή σύνδεσης σε κάθε σύστημα', on:"pdxCredCheck()"}], 'Οι κωδικοί κρυπτογραφούνται στη συσκευή σου και ανοίγουν μόνο στον υπολογιστή του νοσοκομείου.'));
+  };
+  window.pdxKerioHub = function(){
+    iosPage('Kerio', 'Σάρωση', ()=>iosGroup('', [
+      {ic:'🔐', t:'Κωδικός Kerio', sub:'νέος κωδικός από το κινητό', on:"pdxCredOpen('kerio')"},
+      {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}], 'Ο κωδικός κρυπτογραφείται στη συσκευή σου και ανοίγει μόνο στον υπολογιστή του νοσοκομείου.'));
+  };
   // 🛠 «Διαχείριση» (admin) / «Περισσότερα»: ό,τι ΔΕΝ είναι καθημερινό — τίποτα δεν αφαιρέθηκε, απλώς μετακινήθηκε εδώ
   window.pdxSetMore = function(){
     const adm = window.authRole==='admin';
@@ -8343,8 +8366,8 @@ document.head.appendChild(st);
         bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:go("pdxDo('bot')")} : {ic:'🤖', t:'Ενέργειες bot', on:go("pdxDo('botlog')")},
         {ic:'🩺', t:'Κατάσταση συστημάτων', on:go("pdxHealth()")},
         adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:go("pdxAutoApprove()")},
-        adm && {ic:'🔐', t:'Κωδικοί του bot', on:go("pdxDo('cred')")},
-        bot && {ic:'🔑', t:'Έλεγχος κωδικών', on:go("pdxCredCheck()")},
+        // 10/11 βράδυ (χρήστης: ομαδοποίηση): κωδικοί + έλεγχος σε ΜΙΑ γραμμή
+        (adm || bot) && {ic:'🔐', t:'Κωδικοί του bot', sub: adm ? 'νέος κωδικός · έλεγχος' : 'έλεγχος', on: adm ? go("pdxCredHub()") : go("pdxCredCheck()")},
         adm && {ic:'🎛', t:'Κέντρο ελέγχου bot', on:go("pdxBotsPage()")},
         adm && {ic:'⬇️', t:'Κατέβασμα / ενημέρωση bot', on:go("pdxBotDownload()")}
       ]);
