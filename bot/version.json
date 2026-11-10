@@ -1,1 +1,1 @@
-{"version": "0.21.243", "zip": "ef-bot-0.21.243.zip", "sha256": "4b5b53cd246fd4f3c4163887e95a7cd1f3a4eb7e40d5b082cd3ed8efeb27102a", "notes": "ΕΨΙΝΕ: δοκιμή πολλών ζευγών ημερομηνιών (tries)"}
+{"version": "0.21.244", "zip": "ef-bot-0.21.244.zip", "sha256": "bd6bb793adc81ff33d8cf78f5e8f5c5ead7d70cc4fba1421e93231f224797b8f", "notes": "ΕΨΙΝΕ: διόρθωση ψεύτικου «σελίδα ανοιχτή» (pfExec {err} = αληθές)"}
