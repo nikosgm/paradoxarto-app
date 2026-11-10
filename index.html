@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10h-v275';
+const APP_VER = '2026-11-10i-v276';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7317,9 +7317,9 @@ document.head.appendChild(st);
   #mobView .js.w{background:#FEF3C7;color:#92400E} #mobView .js.ok{background:#E7F6EC;color:#166534} #mobView .js.bad{background:#FDECEA;color:#B42318} #mobView .js.run{background:#E8EEFC;color:#1D4ED8} #mobView .js.mu{background:#F1F5F9;color:#64748B}
   #mobView .mhdr{display:flex;gap:6px;flex-wrap:wrap;margin:10px 12px 0}
   #mobView .mhdr .hx{background:#EEF2F7!important;color:#24364A!important}#mobView .mhdr .ct{background:#EAF5EE!important;color:#1F5130!important}
-  #mobView .mdev{margin:8px 12px 0;background:#fff;border-radius:12px;overflow:hidden}#mobView .mdev .dvr{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;font-size:15px;font-weight:600;color:#1F5130;cursor:pointer}#mobView .mdev .dvr+.dvr{border-top:.5px solid #E5E7EB}#mobView .mdev .dvr span{flex:1;min-width:0}#mobView .mdev .dvr small{font-weight:500;color:#6B7280}
-  #mobView .mdev .dvml{border:0;border-radius:9px;background:#EAF5EE;color:#1F5130;font-weight:800;font-size:15px;min-width:76px;height:36px;padding:0 10px;cursor:pointer;font-variant-numeric:tabular-nums}#mobView .mdev .dvml.e{background:#F2F2F7;color:#1D4E80;font-weight:700}
-  html.pdx-night #mobView .mdev{background:#1C1C1E}html.pdx-night #mobView .mdev .dvr{color:#BFE6CB}html.pdx-night #mobView .mdev .dvr+.dvr{border-top-color:#38383A}html.pdx-night #mobView .mdev .dvml{background:#1E3326;color:#BFE6CB}html.pdx-night #mobView .mdev .dvml.e{background:#2C2C2E;color:#64A8FF}
+  #mobView .mdvl{margin:6px 12px 0;display:flex;flex-direction:column;align-items:flex-start;gap:5px}#mobView .mdvl .dvr{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 10px;border-radius:999px;background:#EAF5EE;font-size:13.5px;font-weight:600;color:#1F5130;cursor:pointer;max-width:100%}#mobView .mdvl .dvr span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mobView .mdvl .dvr small{font-weight:500;color:#6B7280}
+  #mobView .mdvl .dvml{border:0;border-radius:999px;background:#fff;color:#1F5130;font-weight:800;font-size:12.5px;height:24px;padding:0 9px;cursor:pointer;font-variant-numeric:tabular-nums;flex:none}#mobView .mdvl .dvml.e{color:#1D4E80;font-weight:700}
+  html.pdx-night #mobView .mdvl .dvr{background:#1E3326;color:#BFE6CB}html.pdx-night #mobView .mdvl .dvml{background:#2C2C2E;color:#BFE6CB}html.pdx-night #mobView .mdvl .dvml.e{color:#64A8FF}
   #mobView .chv{padding:4px 14px}#mobView .chv .chk{padding:8px 0;border-bottom:.5px solid #E5E7EB;font-size:14.5px;line-height:1.4}#mobView .chv .chk:last-child{border-bottom:0}#mobView .chv .chk span{display:block;font-size:11.5px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.2px;margin-bottom:2px}
   html.pdx-night #mobView .mhdr .hx{background:#2C2C2E!important;color:#E5E5EA!important}html.pdx-night #mobView .mhdr .ct{background:#1E3326!important;color:#BFE6CB!important}html.pdx-night #mobView .chv .chk{border-bottom-color:#38383A}
   #mobView .mhdr span{font-size:13px;font-weight:800;border-radius:999px;padding:5px 10px;background:#E8EEF5;color:var(--mp,#1D4E80)}
@@ -9253,14 +9253,14 @@ document.head.appendChild(st);
   // 🩹 10/11 (χρήστης): κάθε καθετήρας/παροχέτευση σε δική του γραμμή, δίπλα πόσο έβγαλε· πάτημα στο ποσό = συμπλήρωση
   function hdrDev(k, d){
     const x = esc(k), rows = [], T = todayISO(), pod = parseInt(d.pod,10), h = new Date().getHours();
-    const pill = (v, act)=>'<button class="dvml'+(v!==undefined && v!=='' ? '' : ' e')+'" onclick="event.stopPropagation();'+act+'">'+(v!==undefined && v!=='' ? esc(v)+' ml' : '＋ ml')+'</button>';
+    const pill = (v, act)=>'<button class="dvml'+(v!==undefined && v!=='' ? '' : ' e')+'" onclick="event.stopPropagation();'+act+'">'+(v!==undefined && v!=='' ? esc(v)+' ml' : '＋ml')+'</button>';
     (d.foleyTypes||[]).forEach(t=>{ const nm = (['Open end','3way'].includes(t) ? 'Foley '+t : t)+(d.foleySize ? ' '+d.foleySize : ''); const v = (d.typeDiuresis||{})[t] || '';
       rows.push('<div class="dvr" onclick="qeOpenSheet(\''+x+'\',\'cath\',true)"><span>'+esc(nm)+(d.irrigation ? ' <small>· πλύσεις'+(d.irrigRate ? ' '+esc(d.irrigRate) : '')+'</small>' : '')+'</span>'+pill(v, "mobNum('td:"+esc(t).replace(/'/g,'')+"')")+'</div>'); });
     [['drain', d.drainType, d.drainMl], ['drain2', d.drain2Type, d.drain2Ml], ['drain3', d.drain3Type, d.drain3Ml]].forEach(([key, type, ml])=>{
       if(!type && !(key==='drain' && d.drain)) return; const red = /redon/i.test(type||'');
       const f = red ? 'cum' : pod===0 ? 'pm' : (h < 12 ? 'am' : 'noon'); const v = red ? dlGet(d, key, T, 'cum') : (dlGet(d, key, T, f) || dlGet(d, key, T, 'am') || '');
       rows.push('<div class="dvr" onclick="qeOpenSheet(\''+x+'\',\'cath\',true)"><span>'+esc(type ? 'Drain '+type : 'Παροχέτευση')+(red ? ' <small>· σύνολο</small>' : '')+'</span>'+pill(v!==undefined ? v : (ml||''), "mobNum('dl:"+key+":"+f+"')")+'</div>'); });
-    return rows.length ? '<div class="mdev">'+rows.join('')+'</div>' : '';
+    return rows.length ? '<div class="mdvl">'+rows.join('')+'</div>' : '';
   }
   // 👆 7/11: παρατεταμένο πάτημα (κινητό) / δεξί κλικ (υπολογιστής) σε κάρτα ασθενή → γρήγορο μενού
   (function(){
