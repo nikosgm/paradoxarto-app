@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v312';
+const APP_VER = '2026-11-10z-v313';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16403,19 +16403,20 @@ Z99.2:C|αιμοκάθαρση
     const ov = document.createElement('div'); ov.id='comorbOverlay';
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;';
     const box = document.createElement('div');
-    box.style.cssText='background:#fff;color:#1A222B;border-radius:14px;padding:14px 16px;width:min(680px,96vw);max-height:92vh;display:flex;flex-direction:column;gap:10px;overflow:auto;font-size:15px;';
+    box.style.cssText='background:#fff;color:#1A222B;border-radius:20px;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));width:min(680px,96vw);max-height:92vh;display:flex;flex-direction:column;gap:12px;overflow:auto;font-size:15px;box-shadow:0 12px 40px rgba(0,0,0,.25);';
     box.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:18px">🩺 Συννοσηρότητες · '+E(d.name)+'</b>'
       +'<button data-x class="btn btn-secondary" style="flex:0 0 auto">Κλείσιμο</button></div>'
+      // 🩺 10/11 22:46 (χρήστης): πιο όμορφο · κατηγορίες που ανοίγουν (όπως ο ιατρικός φάκελος) · κύριο = Τράβηγμα από ΑΗΦΥ · χωρίς ΑΜΚΑ (είναι στην καρτέλα)
+      +'<button data-pull class="btn btn-primary" style="width:100%;font-size:16px;font-weight:700;padding:13px;border-radius:14px">🤖 Τράβηγμα από ΑΗΦΥ</button>'
+      +'<div data-note style="display:none;background:#EEF6FF;color:#1D4E80;border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;line-height:1.4"></div>'
+      +'<div data-list></div>'
+      +'<details data-man style="border:1px solid #E5E9EE;border-radius:12px;padding:8px 12px"><summary style="cursor:pointer;font-size:14px;font-weight:700;color:#1D4E80;padding:4px 0">✍️ Χειροκίνητα (επικόλληση κωδικών · από το ιστορικό) <span data-cnt style="color:#6B7686;font-weight:500"></span></summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'
       +'<textarea data-in rows="4" placeholder="Επικόλλησε κωδικούς ICD-10 (π.χ. I10 E11.9 J44) ή όλο το κείμενο από το ιστορικό συνταγών της ΗΔΙΚΑ…" style="width:100%;box-sizing:border-box;font-size:15px;line-height:1.4;padding:10px;border:1.5px solid #DCE2E8;border-radius:10px;font-family:inherit;resize:vertical"></textarea>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button data-hist class="btn btn-secondary" style="font-size:13.5px">+ από το ιστορικό του Παραδόχαρτου</button>'
-      +'<button data-pull class="btn btn-primary" style="font-size:13.5px;font-weight:700">🤖 Τράβηγμα από ΑΗΦΥ</button>'
       +'<button data-paste class="btn btn-secondary" style="font-size:13.5px">📋 Επικόλληση</button>'
-      +'<button data-clr class="btn btn-secondary" style="font-size:13.5px">Καθάρισμα</button><span data-cnt style="color:#6B7686;font-size:13.5px"></span></div>'
-      +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13.5px;color:#334155"><span>ΑΜΚΑ ασθενή <span style="color:#6B7686">(μόνο αν δεν υπάρχει στον φάκελο του νοσοκομείου)</span></span>'
-      +'<input data-amka inputmode="numeric" maxlength="11" placeholder="11 ψηφία" style="width:130px;font-size:15px;padding:6px 8px;border:1.5px solid #DCE2E8;border-radius:8px;letter-spacing:.5px"><span data-amkast style="font-size:13px"></span></div>'
-      +'<div data-note style="display:none;background:#FFF3DF;color:#7A4A00;border-radius:10px;padding:8px 11px;font-size:13.5px;font-weight:600;line-height:1.4"></div>'
-      +'<div data-list></div>'
+      +'<button data-clr class="btn btn-secondary" style="font-size:13.5px">Καθάρισμα</button></div></div></details>'
+      +'<div style="display:none"><input data-amka><span data-amkast></span></div>'
       +'<div style="border-top:1px solid #DCE2E8;padding-top:10px;display:flex;flex-direction:column;gap:6px">'
       +'<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-d="dcx" style="width:20px;height:20px;margin-top:1px"><span><b>Εξιτήριο</b> · επιπλέον διαγνώσεις<br><span style="color:#6B7686;font-size:13px">Κρατιούνται στον ασθενή και μπαίνουν μόνες τους όταν βγει το εξιτήριο από το Παραδόχαρτο</span></span></label>'
       +'<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-d="hist" style="width:20px;height:20px;margin-top:1px"><span><b>Ατομικό ιστορικό</b> στον φάκελο<br><span style="color:#6B7686;font-size:13px">Αποστολή τώρα στο bot του υπολογιστή· την Αποθήκευση την πατάτε εσείς</span></span></label>'
@@ -16472,14 +16473,25 @@ Z99.2:C|αιμοκάθαρση
         +'<button data-to="'+E(it.code)+'" data-v="0" style="border:1.5px solid #1D4E80;border-radius:99px;padding:4px 10px;font-size:13px;font-weight:700;background:'+(!p.useTo?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">ως '+E(it.code)+'</button></span>';
       return h+'</span></label>';
     }
+    const chOf = code=>{ try{ return (window.pdxDxGroups(null, [code])[0]||{}).cat || 'Άλλα'; }catch(e){ return 'Άλλα'; } };
+    const chOpen = new Set(), chShut = new Set();
     function draw(){
       const g = c=>items.filter(it=>it.cls===c);
       const C=g('C'), U=g('U'), A=g('A');
       let h = '';
-      if(!items.length) h = '<div style="color:#6B7686;font-size:14px;padding:6px 0">'+(ta.value.trim()?'Δεν βρέθηκαν κωδικοί ICD-10 στο κείμενο.':'Επικόλλησε κωδικούς για να ξεκινήσει η ταξινόμηση.')+'</div>';
-      const head = (t,col)=>'<div style="font-size:13px;font-weight:800;color:'+col+';margin:10px 0 2px;text-transform:none">'+t+'</div>';
-      if(C.length) h += head('✓ Χρόνια — μπαίνουν ('+C.length+')','#0F7B4A') + C.map(row).join('');
-      if(U.length) h += head('? Να αποφασίσεις ('+U.length+')','#B26A00') + U.map(row).join('');
+      if(!items.length) h = '<div style="color:#6B7686;font-size:14px;padding:6px 2px">'+(ta.value.trim()?'Δεν βρέθηκαν κωδικοί ICD-10.':'Πάτα «🤖 Τράβηγμα από ΑΗΦΥ» — ή «✍️ Χειροκίνητα» για επικόλληση.')+'</div>';
+      // κατηγορίες ICD-10 (όπως ο ιατρικός φάκελος): χρόνια + «να αποφασίσεις» μαζί, ανά κεφάλαιο· ανοιχτές όσες έχουν «?» ή είναι λίγες
+      const CU = C.concat(U), by = new Map(); CU.forEach(it=>{ const c = chOf(it.code); if(!by.has(c)) by.set(c, []); by.get(c).push(it); });
+      const ORD = ['Κυκλοφορικό','Ενδοκρινικά · μεταβολικά','Αναπνευστικό','Νεοπλάσματα','Ουροποιογεννητικό','Πεπτικό','Νευρικό σύστημα','Ψυχικά','Αίμα'];
+      [...by.entries()].sort((a,b)=>{ const i=ORD.indexOf(a[0]), j=ORD.indexOf(b[0]); return (i<0?99:i)-(j<0?99:j); }).forEach(([cat, L])=>{
+        const on = L.filter(it=>(pick.get(it.code)||{}).on).length, q = L.filter(it=>it.cls==='U').length;
+        const open = chOpen.has(cat) || (!chShut.has(cat) && (q>0 || by.size<=3));
+        h += '<details data-ch="'+E(cat)+'"'+(open?' open':'')+' style="border:1px solid #E5E9EE;border-radius:14px;margin:8px 0;overflow:hidden;background:#FBFCFD">'
+          + '<summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:700;font-size:15px"><span style="flex:1">'+E(cat)+'</span>'
+          + (q?'<span style="background:#FFF3DF;color:#B26A00;border-radius:99px;padding:2px 8px;font-size:12px">'+q+' ?</span>':'')
+          + '<span style="background:#E8F5EE;color:#0F7B4A;border-radius:99px;padding:2px 9px;font-size:12.5px">'+on+'/'+L.length+'</span><span style="color:#8A94A3">'+(open?'▾':'▸')+'</span></summary>'
+          + '<div style="padding:0 12px 4px;background:#fff">'+L.map(row).join('')+'</div></details>';
+      });
       if(A.length) h += '<button data-ac style="margin-top:10px;border:0;background:none;padding:4px 0;font-size:13px;font-weight:800;color:#8A94A3;cursor:pointer">'+(showAcute?'▾':'▸')+' ✕ Οξέα / συμπτώματα / έλεγχοι — δεν μπαίνουν ('+A.length+')</button>'
         + (showAcute ? A.map(row).join('') : '');
       list.innerHTML = h;
@@ -16513,6 +16525,7 @@ Z99.2:C|αιμοκάθαρση
     };
     window.pdxComorbAppend = (text, src)=> document.body.contains(ov) ? append(text, src) : null;
     const close = ()=>{ ov.remove(); };
+    list.addEventListener('toggle', e=>{ const d = e.target; if(!d || !d.dataset || !d.dataset.ch) return; const c = d.dataset.ch; if(d.open){ chOpen.add(c); chShut.delete(c); } else { chShut.add(c); chOpen.delete(c); } const a = d.querySelector('summary span:last-child'); if(a) a.textContent = d.open ? '▾' : '▸'; }, true);
     ov.addEventListener('click', e=>{
       if(e.target===ov || e.target.closest('[data-x]')) return close();
       if(e.target.closest('[data-pull]')) return pull();
