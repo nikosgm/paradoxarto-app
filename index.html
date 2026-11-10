@@ -2274,7 +2274,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v321';
+const APP_VER = '2026-11-10z-v322';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21627,6 +21627,8 @@ window.histUploadOpen = function(){
   async function loadCfg(){ const r = await sb6.from('oncall_config').select('value').eq('key','crypto').maybeSingle(); S.cfg = (r && r.data && r.data.value && r.data.value.kid) ? r.data.value : null; return S.cfg; }
   async function loadRows(){ const r = await sb6.from('oncall_keys').select('id,kind,user_id,label,pub,fp,kid,wrapped,approved_by,approved_at,created_at,last_seen').order('created_at'); S.rows = (r && r.data) || [];
     // 👤 10/11 23:15 (χρήστης: «μπερδευόμαστε με τα ονόματα των συσκευών — ποια συσκευή από ποιον λογαριασμό»): ο λογαριασμός κάθε συσκευής
+    // 🖥 10/11 23:25 (χρήστης: «γράφε ποιος είναι — Γωνία, Παράθυρο, Πόρτα — όχι κωδικό»): ονόματα υπολογιστών από bot_names
+    try{ if(window.pdxBotNames) S.bn = await pdxBotNames(); }catch(e){}
     try{ const ids = [...new Set(S.rows.map(x=>x.user_id).filter(Boolean))]; if(ids.length){ const q = await sb6.from('oncall_profiles').select('user_id,full_name,email').in('user_id', ids); S.who = {}; ((q && q.data)||[]).forEach(u=>{ S.who[u.user_id] = String(u.full_name || u.email || '').replace(/@paradoxarto\.app$/,''); }); } }catch(e){}
     return S.rows; }
   async function findMe(){
@@ -21767,12 +21769,12 @@ window.histUploadOpen = function(){
       'Η αφαίρεση σταματά τη συσκευή από τα νέα κλειδιά. Αν χαθεί ή κλαπεί συσκευή, πες το, για να αλλάξει το κλειδί κλινικής (αλλαγή κλειδιού: επόμενη φάση).');
     const rec = S.rows.find(r=>r.kind==='recovery'), bot = S.rows.find(r=>r.kind==='bot');
     const bots = S.rows.filter(r=>r.kind==='bot');
-    if(bots.length) h += iosGroup('Υπολογιστές του bot · '+bots.length, bots.map(r=>({ic:'🖥', t:E(r.label||'Υπολογιστής'), sub:'αποτύπωμα '+E(r.fp||'—')+' · '+(r.wrapped?'✓ έχει κλειδί & κωδικούς':'⏳ περιμένει'),
+    if(bots.length) h += iosGroup('Υπολογιστές του bot · '+bots.length, bots.map(r=>({ic:'🖥', t:(()=>{ const id = (String(r.label||'').match(/\b(b[a-z0-9]{10,16})\b/)||[])[1], nm = id && S.bn && S.bn[id]; return nm ? '<b>'+E(nm)+'</b>' : E(r.label||'Υπολογιστής'); })(), sub:'υπολογιστής κλινικής · '+(r.wrapped?'✓ έχει κλειδί & κωδικούς':'⏳ περιμένει'),
       raw: adm ? (!r.wrapped && has && r.pub ? '<button onclick="event.stopPropagation();pdxCKdo(\'botok\',\''+r.id+'\')" style="border:0;background:#34C759;color:#fff;border-radius:9px;padding:7px 11px;font-weight:700;font-size:14px;margin-right:6px">Έγκριση</button>' : '')+'<button onclick="event.stopPropagation();pdxCKdo(\'remove\',\''+r.id+'\')" style="border:0;background:#F2F2F7;color:#B42318;border-radius:9px;padding:7px 10px;font-weight:700;font-size:14px">Αφαίρεση</button>' : ''})),
       'Νέος υπολογιστής με το bot (συνδεδεμένος ως διαχειριστής) παίρνει αυτόματα, κρυπτογραφημένα, τους κωδικούς και το κλειδί από τον κεντρικό. Αφαίρεση = δεν παίρνει τίποτα πια.');
     h += iosGroup('Ανάκτηση & bot', [
       {ic:'🧾', t:'Κωδικός ανάκτησης', sub: rec ? 'δημιουργήθηκε '+dt(rec.approved_at||rec.created_at) : 'δεν υπάρχει', on: has&&adm ? "pdxCKdo('newrec')" : '', v: has&&adm ? 'Νέος' : ''},
-      {ic:'🤖', t:'Κλειδί του bot', sub: bot ? 'δόθηκε '+dt(bot.approved_at||bot.created_at)+' · '+E(bot.fp||'') : 'δεν έχει δοθεί', on: has&&adm ? "pdxCKdo('bot')" : '', v: has&&adm ? (bot?'Ανανέωση':'Δώσε') : ''}
+      {ic:'🤖', t:'Κλειδί του bot', sub: bot ? 'δόθηκε '+dt(bot.approved_at||bot.created_at)+(()=>{ const id = (String(bot.label||'').match(/\b(b[a-z0-9]{10,16})\b/)||[])[1], nm = id && S.bn && S.bn[id]; return nm ? ' · '+E(nm) : ''; })() : 'δεν έχει δοθεί', on: has&&adm ? "pdxCKdo('bot')" : '', v: has&&adm ? (bot?'Ανανέωση':'Δώσε') : ''}
     ], 'Νέος κωδικός ανάκτησης ακυρώνει τον παλιό. Το bot θα χρησιμοποιήσει το κλειδί όταν ενημερωθεί για κρυπτογραφημένα δεδομένα.');
     h += box('<b>Κατάσταση:</b> φάση 1 — κλειδιά και συσκευές έτοιμα. Τα δεδομένα ασθενών <b>δεν</b> έχουν κρυπτογραφηθεί ακόμα· αυτό γίνεται στο επόμενο βήμα, με αντίγραφο ασφαλείας πρώτα.<br><small style="color:#64748B">Ταυτότητα κλειδιού: '+E(S.cfg.kid)+'</small>');
     return h;
