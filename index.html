@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10c-v270';
+const APP_VER = '2026-11-10d-v271';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14265,7 +14265,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div class="r"><div class="pv" data-medpv style="flex:1;padding:0"></div><button class="addb" data-a="add" style="height:44px">Προσθήκη</button></div></div>';
       h += '<div class="h">Επανάληψη συνταγής</div><div class="g"><div class="r"><span class="l">Επαναλαμβανόμενη</span><select data-rep>'+opt([['0','Όχι'],['2','Δίμηνη'],['3','Τρίμηνη'],['6','Εξάμηνη']], S.rep)+'</select></div>'
         + (S.rep ? '<div class="r"><span class="l">Κάθε</span><select data-every>'+opt([['28','28 ημέρες'],['30','30 ημέρες']], S.every)+'</select></div>' : '')+'</div>'
-        + (S.rep ? '<div class="f" style="color:#8A4B00">⚠ Η επανάληψη θα συμπληρωθεί από εσάς στον έλεγχο (στον υπολογιστή, πριν την «Καταχώριση») — το bot δεν τη γράφει ακόμα.</div>' : '');
+        + (S.rep ? '<div class="f" style="color:#1D4E80">🔁 Το bot πατά «Μήνες» και «Επανάληψη» ανά '+(S.every||30)+' ημέρες στον οδηγό (νέο — ελέγξτε τη στη σύνοψη πριν την «Καταχώριση»· αν δεν τα βρει, σας το λέει).</div>' : '');
       h += '<div class="chs" data-favs style="margin-top:8px"></div>';
       // 4) Διάγνωση
       const icdDefs = ['N39','N40','N20','R31','N30'].concat(S.icdSurg && S.icdSurg!=='N39' ? [S.icdSurg] : []);
