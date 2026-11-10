@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10p-v283';
+const APP_VER = '2026-11-10q-v284';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13599,7 +13599,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     let OFF = {}; try{ const o = await sb6.from('oncall_config').select('value').eq('key','bot_off').maybeSingle(); OFF = Object.assign({}, (o.data && o.data.value) || {}); }catch(e){}
     let NRB = {}; try{ const o = await sb6.from('oncall_config').select('value').eq('key','bot_nightreboot').maybeSingle(); NRB = Object.assign({}, (o.data && o.data.value) || {}); }catch(e){}
     let PREF = []; try{ const o = await sb6.from('oncall_config').select('value').eq('key','emr_pref').maybeSingle(); PREF = Array.isArray(o.data && o.data.value) ? o.data.value : []; }catch(e){}
-    const NAMES = ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'];
+    const NAMES = ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο','Εξωτερικά'];
     const ago = t=>{ if(!t) return '—'; const s = Math.round((Date.now()-t)/1000); return s<60 ? s+'″' : s<3600 ? Math.round(s/60)+'′' : Math.round(s/3600)+' ώρ.'; };
     const ok = (b,t,bad)=>'<div style="display:flex;gap:8px;font-size:13.5px;padding:2px 0"><span style="flex:none">'+(b===true?'✅':b===false?'⚠️':'•')+'</span><span'+(b===false?' style="color:#B45309"':'')+'>'+t+(b===false&&bad?' — <b>'+bad+'</b>':'')+'</span></div>';
     const btn = (a,id,t)=>'<button data-act="'+a+'" data-id="'+E2(id)+'" style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 10px;font-size:13.5px;font-weight:600;min-height:38px">'+t+'</button>';
