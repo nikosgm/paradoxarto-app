@@ -2274,7 +2274,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v319';
+const APP_VER = '2026-11-10z-v320';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17908,7 +17908,7 @@ Z99.2:C|αιμοκάθαρση
 let viaList = false;   // ο ασθενής ανοίχτηκε από τη λίστα των εργαστηριακών (σύρσιμο → πίσω στη λίστα)
   let extBack = null;   // 🔎 «Ασθενείς»: «‹» γυρίζει στην καρτέλα ασθενή
   let extTempK = '';   // 7/11: ασθενής ΝΠΣ (προσωρινός): τα αποτελέσματα μένουν και στην καρτέλα του («Τελευταία εργαστηριακά»)
-  window.labsFullOpenPid = function(pid, name, onBack, tempK){ if(!pid) return; extBack = onBack || null; extTempK = tempK || ''; box.classList.add('on');
+  window.labsFullOpenPid = function(pid, name, onBack, tempK){ extHist = false; if(!pid) return; extBack = onBack || null; extTempK = tempK || ''; box.classList.add('on');
     const rec = extTempK && (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[extTempK];
     if(rec && rec._medLab && rec._medPid===String(pid)){ extName = String(name||'').slice(0,40) || 'Ασθενής'; extLab = rec._medLab; cur = '@ext'; render(); if(Date.now()-(rec._medAt||0) < 3*60000) return; }
     extLoad({pid:String(pid)}, String(name||'').slice(0,40) || 'Ασθενής'); };
@@ -17951,8 +17951,21 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     const x = ext.pts && ext.pts[i]; if(!x || !x.pid) return;
     extBack = null; extLoad(x, String(x.row||'').split(/\s{2,}|\s\d/)[0].slice(0,40) || 'Ασθενής');
   }
+  // 📚 10/11 23:22 (χρήστης: «στο Medilabi υπάρχει επιλογή για όλο το ιστορικό αντί ανά νοσηλεία — να το πατάμε»): ασθενής κλινικής → medpt {q, all}
+  let extHist = false;
+  window.labsFullHist = async function(k){
+    const P = pts(), p = P.find(x=>x.k===k); if(!p) return; const d = p.d || {};
+    extBack = ()=>labsFullOpen(k); extTempK = ''; extHist = true; extName = String(d.name||'').slice(0,40) || 'Ασθενής'; extLab = null; ext.msg = 'Φέρνει ΟΛΟ το ιστορικό από το Medilabi…';
+    cur = '@ext'; render();
+    try{ const am = String(d.amka||'').replace(/\D/g,''), q = /^\d{11}$/.test(am) ? am : String(d.name||'');
+      const j = await botJob('medpt', {q, name:d.name||'', am:String(d.am||''), all:true}, '📚 Medilabi ιστορικό: '+extName.slice(0,20));
+      const all = j.status==='done' && ((j.payload||{}).result||{}).all;
+      if(all && (all.dates||[]).length) extLab = {name_key:'hist|'+k, updated_at:String(Date.now()), data:all}; else ext.msg = String(j.note || 'απέτυχε').slice(0,160);
+    }catch(e){ ext.msg = '⚠ '+String(e && e.message || e).slice(0,140); }
+    if(cur==='@ext') render();
+  };
   async function extLoad(x, nm){
-    extName = nm; extLab = null; ext.msg = 'Φέρνει από το Medilabi…';
+    extHist = false; extName = nm; extLab = null; ext.msg = 'Φέρνει από το Medilabi…';
     cur = '@ext'; render();
     try{ const j = await botJob('medpt', {pid:x.pid}, '🧪 Medilabi: '+extName.slice(0,20));
       const all = j.status==='done' && ((j.payload||{}).result||{}).all;
@@ -17963,7 +17976,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     if(cur==='@ext') render();
   }
   function renderExt(){
-    let h = top(E(extName), 'Medilabi · εκτός κλινικής', '<button onclick="'+(extBack ? 'labsFullExtBack()' : 'labsFullOpen(\'\')')+'" aria-label="Πίσω">‹</button>') + '<div class="lf-body">';
+    let h = top(E(extName), extHist ? 'Medilabi · 📚 όλο το ιστορικό' : 'Medilabi · εκτός κλινικής', '<button onclick="'+(extBack ? 'labsFullExtBack()' : 'labsFullOpen(\'\')')+'" aria-label="Πίσω">‹</button>') + '<div class="lf-body">';
     if(!extLab) h += '<div class="lf-empty">'+(/^⚠|απέτυχ|failed/i.test(ext.msg)?'':'⏳ ')+E(ext.msg)+'</div>';
     else { const b = B(extLab); chCtx = {b, name:extName, label:'', adm:''}; h += b.tests.length ? cardView(b, b.tests.filter(T=>!hidden(T.k))) : '<div class="lf-empty">Χωρίς αποτελέσματα.</div>'; }
     box.innerHTML = h + '</div>';
@@ -18100,6 +18113,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     h += '<div class="lf-bar lf-one">' + srcBtns
       + '<span class="lf-seg">'+[['card','Κάρτα'],['day','Ανά ημέρα'],['raw','Medilabi']].map(m=>'<button class="'+(mode===m[0]?'on':'')+'" onclick="labsFullOpt(\'m:'+m[0]+'\')">'+m[1]+'</button>').join('')+'</span>'
       + (nHid ? '<button class="'+(showAll?'on':'')+'" onclick="labsFullOpt(\'all\')" title="Εμφάνιση και όσων έχετε κρύψει">+'+nHid+' κρυφά</button>' : '')
+      + '<button onclick="labsFullHist(\''+E(p.k)+'\')" title="Όλες οι νοσηλείες από το Medilabi">📚 Όλο το ιστορικό</button>'   // 10/11 23:22 (χρήστης)
       + '</div><div class="lf-body">';
     if(!lab || !b.tests.length){ box.innerHTML = h + '<div class="lf-empty">Χωρίς αποτελέσματα από το Medilabi.</div></div>'; return; }
     if(mode==='raw') return (box.innerHTML = h + rawTable(lab) + '</div>');
