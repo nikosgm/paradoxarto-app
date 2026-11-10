@@ -134,10 +134,10 @@ $('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
   if(false) $('msg').insertAdjacentHTML('beforeend', '<button class="btn" id="chatpin" style="width:100%;max-width:340px;text-align:left;background:#ffffff1f"><b>💬 ' + (cur0 ? 'Ίδια συζήτηση Claude ✓' : 'Νέα συζήτηση Claude σε κάθε σάρωση') + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + (cur0 ? 'πάτα για αλλαγή ή για νέα κάθε φορά' : 'πάτα για να ορίσεις μία συζήτηση για όλες') + '</span></button>');
   // 📄 10/11 (χρήστης: «σε υπάρχουσα συζήτηση αλλά να μην επικολλώ»): η εφαρμογή Claude ΔΕΝ δέχεται έτοιμο μήνυμα σε υπάρχουσα συζήτηση → εναλλακτικά
   // η «Σελίδα Σάρωσης» (artifact): ΠΑΝΤΑ η ίδια σελίδα, διαβάζει ΜΟΝΗ της τη σάρωση (χωρίς νέα συζήτηση, χωρίς επικόλληση). Επιλογή ανά συσκευή (pdx_scan_via).
-  { let v0 = 'chat'; try{ v0 = localStorage.getItem('pdx_scan_via') || 'chat'; }catch(e){}
+  { let v0 = 'page'; try{ v0 = localStorage.getItem('pdx_scan_via') || 'page'; }catch(e){}
     $('msg').insertAdjacentHTML('beforeend', '<div style="width:100%;max-width:340px;margin-top:10px;font-size:13px;opacity:.8">Πού διαβάζεται:</div>'
       + '<button class="btn" data-via="page" style="width:100%;max-width:340px;text-align:left;background:' + (v0 === 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>📄 Σελίδα Σάρωσης</b><br><small style="opacity:.8">πάντα η ίδια · διαβάζεται μόνη της · χωρίς επικόλληση</small></button>'
-      + '<button class="btn" data-via="chat" style="width:100%;max-width:340px;text-align:left;background:' + (v0 !== 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>💬 Νέα συζήτηση Claude</b><br><small style="opacity:.8">για συναδέλφους με άλλον λογαριασμό</small></button>');
+      + '<button class="btn" data-via="chat" style="width:100%;max-width:340px;text-align:left;background:' + (v0 !== 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>💬 Νέα συζήτηση Claude</b><br><small style="opacity:.8">εφεδρικά (κάθε σάρωση νέα συζήτηση)</small></button>');
     $('msg').querySelectorAll('[data-via]').forEach((x)=>x.onclick = ()=>{ try{ localStorage.setItem('pdx_scan_via', x.dataset.via); }catch(e){} $('mod').onclick(); }); }
   if($('chatpin')) $('chatpin').onclick = ()=>{ const v = prompt('Σύνδεσμος της συζήτησης Claude (https://claude.ai/chat/…). Κενό = νέα συζήτηση κάθε φορά.', cur0); if(v == null) return;
     const t = v.trim();
@@ -147,6 +147,7 @@ $('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
     try{ if(t) localStorage.setItem('pdx_scan_chat', t); else localStorage.removeItem('pdx_scan_chat'); }catch(e){} $('mod').onclick(); };
   $('msg').querySelectorAll('[data-m]').forEach(x=>x.onclick = ()=>{ modeSet(x.dataset.m); $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); }); };
 modePaint();
+try{ if(!localStorage.getItem('pdx_scan_via2')){ localStorage.setItem('pdx_scan_via', 'page'); localStorage.setItem('pdx_scan_via2', '1'); } }catch(e){}   // 10/11: μία φορά → όλες οι συσκευές στη Σελίδα Σάρωσης
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
 
@@ -364,7 +365,7 @@ async function send(srcs, w0, h0){
     const chatPath = '/new';
     const chatW = 'https://claude.ai' + chatPath + '?q=' + encodeURIComponent(ask), chatU = chatW.replace(/^https:\/\//, 'claude://');
     // 9/11 (χρήστης: «το πάτημα της λήψης να είναι και εντολή αποστολής στο Claude, χωρίς κουμπί»): προεπιλογή = συζήτηση Claude ΑΜΕΣΑ
-    let via = 'chat'; try{ via = localStorage.getItem('pdx_scan_via') || 'chat'; }catch(e){}
+    let via = 'page'; try{ via = localStorage.getItem('pdx_scan_via') || 'page'; }catch(e){}   // 10/11 (χρήστης): προεπιλογή η ΙΔΙΑ Σελίδα Σάρωσης για όλους — όχι νέες συζητήσεις
     if(op) via = 'page';
     window.__scanNav = via === 'page' ? CLAUDE_APP + tag : via === 'chat' ? chatU : '';
     window.__scanAsk = ask; if(window.__clipRes) window.__clipRes.ok(ask);
