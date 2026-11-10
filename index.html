@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10j-v277';
+const APP_VER = '2026-11-10k-v278';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -9378,8 +9378,11 @@ document.head.appendChild(st);
       const age = String(d.age||'').trim(), opT = s0 || String(d.surgeryCustom||'').trim(), sub = [opT ? '<b style="color:var(--mp,#1D4E80)">'+esc(opT)+'</b>' : (d.dx ? '🩺 '+esc(d.dx) : ''), age ? esc(/^\d+$/.test(age) ? age+' ετών' : age) : ''].filter(Boolean).join(' · ');   // 10/11 (χρήστης): ξανά το χειρουργείο κάτω από το όνομα (ή η αιτία νοσηλείας)   // 8/11: χειρουργείο/καθετήρες ΜΟΝΟ στο πλαίσιο «Χειρουργείο · Καθετήρες» (όχι και κάτω από το όνομα)
       // 🪪 8/11 (εντολή χρήστη): στην καρτέλα επώνυμο + όνομα (από ΝΠΣ), πατρώνυμο με μικρά, ΑΜ/ΑΜΚΑ (πάτημα = αντιγραφή) και «Αντιγραφή»
       const P = window.pdxPtId ? pdxPtId(k, d) : {name:d.name||''};
-      h += '<div class="pth"><h1 onclick="mobEditName()">'+esc(k.indexOf('extra')===0?e.room:e.room+'-'+e.bed)+' · '+esc(P.name||d.name||'—')+(P.fatherGen?' <span style="font-size:.62em;font-weight:500;opacity:.75">ΤΟΥ '+esc(P.fatherGen)+'</span>':'')+'</h1>'+(sub?'<div class="pts">'+sub+'</div>':'')
-        + ((P.am||P.amka) ? '<div class="ptid" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+(P.am?'<button onclick="pdxCopy(\''+esc(P.am)+'\',\'ΑΜ\')" style="border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font-size:13.5px;color:#1F2933">ΑΜ <b>'+esc(P.am)+'</b> ⧉</button>':'')+(P.amka?'<button onclick="pdxCopy(\''+esc(P.amka)+'\',\'ΑΜΚΑ\')" style="border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font-size:13.5px;color:#1F2933">ΑΜΚΑ <b>'+esc(P.amka)+'</b> ⧉</button>':'')+'<button onclick="pdxCopyPt(\''+esc(k)+'\')" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:700">📋 Αντιγραφή</button></div>' : '')
+      // 10/11 (χρήστης): πάτημα στο όνομα = αντιγραφή (χωρίς κουμπί «Αντιγραφή»)· πατρώνυμο + ΑΜ + ΑΜΚΑ στην ίδια γραμμή· ✎ = διόρθωση ονόματος
+      const idB = (lbl, v)=>'<button onclick="pdxCopy(\''+esc(v)+'\',\''+lbl+'\')" style="border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:3px 9px;font-size:12.5px;color:#1F2933">'+lbl+' <b>'+esc(v)+'</b></button>';
+      h += '<div class="pth"><h1 onclick="pdxCopyPt(\''+esc(k)+'\')" title="Πάτα για αντιγραφή" style="cursor:copy">'+esc(k.indexOf('extra')===0?e.room:e.room+'-'+e.bed)+' · '+esc(P.name||d.name||'—')+'<button onclick="event.stopPropagation();mobEditName()" aria-label="Διόρθωση ονόματος" style="border:0;background:none;color:#B4BFCC;font-size:.5em;padding:0 0 0 8px;vertical-align:middle">✎</button></h1>'
+        + '<div class="ptid" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px">'+(P.fatherGen?'<span style="font-size:13.5px;font-weight:600;color:#6B7280">ΤΟΥ '+esc(P.fatherGen)+'</span>':'')+(P.am?idB('ΑΜ', P.am):'')+(P.amka?idB('ΑΜΚΑ', P.amka):'')+'</div>'
+        + (sub?'<div class="pts">'+sub+'</div>':'')
         + '</div>'; }
     h += hdrChips(k, d);
     const TL={hct:()=>tile('Ht','hct',d.hct,d.hctPrev,LTM(d,'hct')),wbc:()=>tile('WBC','wbc',d.wbc,d.wbcPrev,LTM(d,'wbc')),crp:()=>tile('CRP','crp',d.crp,d.crpPrev,LTM(d,'crp')),cr:()=>tile('Cr','cr',d.cr,d.crPrev,LTM(d,'cr')),temp:()=>tile('Θερμ.','temp',d.temp,''),
