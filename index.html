@@ -1310,7 +1310,7 @@ window.pdxAccountOpen = async function(){
     + L('ΟΝΟΜΑ ΧΡΗΣΤΗ (για τη σύνδεση)') + '<input id="acU" autocomplete="username" autocapitalize="none" spellcheck="false" style="'+F+'" value="'+E(uname)+'"'+(isApp?'':' disabled')+'>'
     + (isApp?'':'<div style="font-size:12.5px;color:#64748B">Ο λογαριασμός συνδέεται με email· το όνομα χρήστη δεν αλλάζει εδώ.</div>')
     + L('EMAIL ΕΠΙΚΟΙΝΩΝΙΑΣ') + '<input id="acM" type="email" autocomplete="email" autocapitalize="none" style="'+F+'" placeholder="π.χ. όνομα@hotmail.com" value="'+E(md.contact_email||'')+'">'
-    + L('EMAIL ΣΤΟ CLAUDE (για τη σελίδα ανεβάσματος ιστορικού)') + '<input id="acC" type="email" autocapitalize="none" style="'+F+'" placeholder="το email με το οποίο μπαίνετε στο Claude" value="'+E(md.claude_email||'')+'">'
+    + '<input id="acC" type="hidden" value="'+E(md.claude_email||'')+'">'   // 10/11 βράδυ (χρήστης): το «Email στο Claude» δεν χρειάζεται πια — κρυφό (κρατά την τιμή)
     + L('ΝΕΟΣ ΚΩΔΙΚΟΣ (αφήστε κενό αν δεν αλλάζει)') + '<input id="acP1" type="password" autocomplete="new-password" style="'+F+'" placeholder="τουλάχιστον 8 χαρακτήρες">'
     + '<input id="acP2" type="password" autocomplete="new-password" style="'+F+'" placeholder="ξανά ο νέος κωδικός">'
     + '<label style="display:flex;gap:8px;align-items:center;font-size:14.5px;margin-top:8px"><input id="acOut" type="checkbox" style="width:20px;height:20px"> Με την αλλαγή κωδικού, αποσύνδεση από όλες τις άλλες συσκευές</label>'
@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v303';
+const APP_VER = '2026-11-10z-v304';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7206,7 +7206,8 @@ document.head.appendChild(st);
     }
     if(S.vault) h += '<div class="mbst" style="font-size:14px;line-height:1.45">'+esc(S.vault==='dpapi' ? '🔒 Κωδικοί: κρυπτογραφημένοι με τα Windows' : S.vault==='locked' ? '⚠️ Κωδικοί: κλειδωμένοι — δεν ανοίγουν (να τρέχει το efbot-update.bat στον υπολογιστή του bot)' : '⚠️ Κωδικοί: χωρίς κρυπτογράφηση (λείπει το βοηθητικό των Windows)')+'</div>';
     if(window.authRole==='admin') h += '<div class="mbst" style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:14px;line-height:1.4"><b>🔐 Κωδικοί του bot</b><br><span style="color:#64748B">Στείλε κωδικό από εδώ — κρυπτογραφείται στη συσκευή σου και ανοίγει μόνο στον υπολογιστή του νοσοκομείου.</span></span><button onclick="pdxCredOpen()" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:10px 14px;font-weight:800;font-size:14.5px">Νέος…</button></div>';
-    if(window.authRole==='admin') h += '<div class="mbst" style="display:flex;flex-wrap:wrap;gap:8px"><button onclick="pdxRxAmka()" style="flex:1 1 200px;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:11px;font-size:15px;font-weight:700">💊 Συνταγογράφηση με ΑΜΚΑ</button><button onclick="pdxEvoradProbe()" style="flex:1 1 140px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:12px;padding:11px;font-size:15px;font-weight:700">🩻 Evorad: χαρτογράφηση</button><button onclick="pdxFindPacs()" style="flex:1 1 140px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:12px;padding:11px;font-size:15px;font-weight:700">🔎 Βρες τον Evorad</button></div>';
+    // 10/11 βράδυ (χρήστης): χωρίς «Συνταγογράφηση με ΑΜΚΑ» / «Evorad: χαρτογράφηση» (δεν χρησιμοποιούνται πια) — εδώ και οι ενέργειες
+    h += '<div class="mbst" style="display:flex;flex-wrap:wrap;gap:8px"><button onclick="pdxDo(\'botlog\')" style="flex:1 1 200px;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:11px;font-size:15px;font-weight:700">📜 Όλες οι ενέργειες bot</button>'+(window.authRole==='admin' ? '<button onclick="pdxFindPacs()" style="flex:1 1 140px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:12px;padding:11px;font-size:15px;font-weight:700">🔎 Βρες τον Evorad</button>' : '')+'</div>';
     if(!S.jobs) return h + '<div class="msec">Φόρτωση…</div><div style="height:96px"></div>' + (page ? botPgFoot : tabs());
     const J = S.jobs.filter(j=>!window.pdxMineKeep || !j.room || pdxMineKeep(j.room)), act = J.filter(j=>['new','running','review','approve','seen'].indexOf(j.status)>=0), rest = J.filter(j=>act.indexOf(j)<0);
     h += '<div class="msec"><h3>Σε αναμονή · '+act.length+'</h3>'+(act.length ? act.map(jobRow).join('') : '<div class="mjob mu">Καμία εντολή σε αναμονή.</div>')+'</div>';
@@ -8324,8 +8325,8 @@ document.head.appendChild(st);
         att && {ic:'📞', t:'Κλήσεις για εκτίμηση', on:go("pdxDo('consult')")}
       ]);
       h += iosGroup('Bot', [
-        bot && {ic:'🤖', t:'Bot υπολογιστή', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:go("pdxDo('bot')")},
-        {ic:'🤖', t:'Ενέργειες bot', on:go("pdxDo('botlog')")},
+        // 10/11 βράδυ (χρήστης): «Υπολογιστής» + «Ενέργειες» σε ΜΙΑ ενότητα (μέσα στη σελίδα: «📜 Όλες οι ενέργειες»)
+        bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:go("pdxDo('bot')")} : {ic:'🤖', t:'Ενέργειες bot', on:go("pdxDo('botlog')")},
         {ic:'🩺', t:'Κατάσταση συστημάτων', on:go("pdxHealth()")},
         adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:go("pdxAutoApprove()")},
         adm && {ic:'🔐', t:'Κωδικοί του bot', on:go("pdxDo('cred')")},
@@ -14507,7 +14508,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const it = (x, ep, sub)=>'<button type="button" class="exl-it" data-exn="'+E(x.n)+'" data-exk="'+E(x.k||'')+'" data-exep="'+(ep?1:0)+'"><span>'+E(x.n)+'</span><small>'+(ep?'<b class="ok">✓</b> ':'')+E(sub||x.k||'')+'</small></button>';
     const render = (q, st)=>{
       const w = rfN(q).split(' ').filter(Boolean), have = opt.have ? opt.have() : [];
-      const fav = window.pdxRefFav.filter(f=>w.every(t=>rfN(f[0]).includes(t))).filter(f=>!have.some(n=>rfN(n)===rfN(f[0]))).slice(0,6);
+      const fav = opt.noFav ? [] : window.pdxRefFav.filter(f=>w.every(t=>rfN(f[0]).includes(t))).filter(f=>!have.some(n=>rfN(n)===rfN(f[0]))).slice(0,6);
       let h = fav.length ? '<div class="exl-h">Συχνές στην κλινική</div>'+fav.map(f=>it({n:f[0], k:f[1]}, !!f[2])).join('') : '';
       h += '<div class="exl-h">Κατάλογος e-prescription</div>';
       if(q.length<3 && !(st && st.items)) h += '<div class="exl-st">Γράψε τουλάχιστον 3 γράμματα…</div>';
@@ -14601,22 +14602,24 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       box.innerHTML = R.length ? '<div class="h" style="margin-top:12px">Πρόσφατοι<button data-rclr style="color:#B42318;min-height:44px">Καθαρισμός</button></div><div class="g">'+R.map(x=>'<div class="med" style="padding-top:4px;padding-bottom:4px"><div class="m" data-ra="'+E(x.amka)+'" style="cursor:pointer;min-height:44px;display:flex;flex-direction:column;justify-content:center"><b style="font-size:16px">'+E(/^Α\.Μ\.Κ\.Α\./.test(x.name)?'Ασθενής':x.name)+'</b><span>ΑΜΚΑ ··'+E(x.amka.slice(-4))+'</span></div><button class="del" data-rdel="'+E(x.amka)+'" aria-label="Αφαίρεση από τους πρόσφατους" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('')+'</div>' : ''; }
     function draw(){
       const d = S.k ? recOf(S.k) : null;
-      let h = '<div class="seg"><button data-mode="rx" class="'+(S.mode==='rx'?'on':'')+'">💊 Συνταγή</button><button data-mode="ref" class="'+(S.mode==='ref'?'on':'')+'">🧾 Παραπεμπτικό</button></div>';
+      // 10/11 βράδυ (χρήστης): ΠΡΩΤΑ ο ΑΜΚΑ (ασθενής) και από κάτω επιλογή Συνταγή / Παραπεμπτικό — ΜΙΑ κοινή επίσκεψη (χωρίς διακόπτη «μαζί με τη συνταγή»)
       // 1) Ασθενής
-      h += '<div class="h">Ασθενής<span style="display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:flex-end"><button data-a="ephist" style="min-height:44px">🗂 Ιστορικό</button><button data-a="vclose" style="min-height:44px;color:#1F6F43;font-weight:700">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</span></div><div class="g">';
+      let h = '<div class="h">Ασθενής<span style="display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:flex-end"><button data-a="ephist" style="min-height:44px">🗂 Ιστορικό</button><button data-a="vclose" style="min-height:44px;color:#1F6F43;font-weight:700">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</span></div><div class="g">';
       if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
       else h += '<div class="r"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'"></div><div class="who" data-who></div>';
       h += '</div>';
       if(!d) h += '<div data-recent></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
       // 2) Λογαριασμός
       h += '<div class="h">Λογαριασμός e-prescription</div><div class="g"><div class="r"><select data-epsel2><option value="">⏳ φόρτωση…</option></select><span style="color:#C7C7CC">⌄</span></div></div>';
+      h += '<div class="seg" style="margin-top:14px"><button data-mode="rx" class="'+(S.mode==='rx'?'on':'')+'">💊 Συνταγή</button><button data-mode="ref" class="'+(S.mode==='ref'?'on':'')+'">🧾 Παραπεμπτικό</button></div>'
+        + '<div class="f" style="margin-top:2px">Ίδια επίσκεψη για συνταγή και παραπεμπτικό· στο τέλος «✅ Κλείσιμο επίσκεψης».</div>';
       if(S.mode==='ref'){
         h += '<div class="h">Εξετάσεις'+(S.ex.length?' · '+S.ex.length:'')+'</div><div class="g" data-exl></div>';
         h += '<div class="g" style="margin-top:8px"><div class="r"><input class="t" data-exq type="search" autocomplete="off" placeholder="🔎 Εξέταση (π.χ. υπέρηχος κοιλίας, PSA)…" enterkeyhint="search"></div><div data-exres></div></div>';
         h += '<div class="f">Διάλεξε όνομα με <b style="color:#1F6F43">✓</b>: είναι ακριβώς από τον κατάλογο του e-prescription, ώστε το bot να το βρει χωρίς λάθος.</div>';
-        h += '<div class="h" style="margin-top:12px">Συχνές στην κλινική<span style="display:flex;gap:14px;white-space:nowrap;flex:none"><button data-a="refedit" style="min-height:44px">✎ Αλλαγή</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:44px">📦 Πακέτα</button>':'')+'</span></div><div class="chs chw" data-exfavs></div>';
+        // 10/11 βράδυ (χρήστης): χωρίς τις δικές μας «συχνές» (π.χ. «Γενική ούρων» δεν υπάρχει στον κατάλογο) — ΜΟΝΟ ο κατάλογος e-prescription της χαρτογράφησης
         h += '<div class="h">Διάγνωση ICD-10</div><div class="g icdw" data-icdw>'+window.pdxIcdChips(['N40','N39','N20','R31','C61','N30'].concat(S.icdSurg && S.icdSurg!=='N39' ? [S.icdSurg] : []), S.icd, RX_ICD_PIN)+'</div>';
-        h += '<div class="h">Επιλογές</div><div class="g"><div class="r"><span style="flex:1;font-size:17px">Επείγον</span><button class="tg'+(S.urg?' on':'')+'" data-tg="urg" aria-label="Επείγον"></button></div><div class="r"><span style="flex:1;font-size:17px">Μαζί με τη συνταγή (ίδια επίσκεψη)</span><button class="tg'+(S.withRx?' on':'')+'" data-tg="withRx" aria-label="Μαζί με τη συνταγή"></button></div></div>';
+        // (χωρίς «Επείγον» / «Μαζί με τη συνταγή»: το bot δεν τα χρησιμοποιούσε — η επίσκεψη είναι πάντα κοινή)
         h += '<div class="f">Το bot ανοίγει την επίσκεψη στο e-prescription, γράφει το παραπεμπτικό και <b>σταματά πριν από την «Καταχώριση»</b>· το ελέγχεις και το καταχωρίζεις εσύ.'+(window.PDX_REF_ON?'':' <b>Η αποστολή ενεργοποιείται μόλις το bot μάθει τη φόρμα παραπεμπτικού</b> (χρειάζεται μία κανονική επίσκεψη στο e-prescription από υπολογιστή της κλινικής).')+'</div>';
         h += '<div class="g" data-jobs style="margin-top:22px;display:none"></div>';
         h += '<div class="bar"><button class="go" data-a="goref">Ετοίμασε παραπεμπτικό</button><div class="sum" data-sum></div></div>';
@@ -14625,7 +14628,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         drawEx(); drawRecent(); drawJobs(); refresh();
         const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); }
         const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
-        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n)});
+        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true, free:false});
         return;
       }
       // 3) Φάρμακα
