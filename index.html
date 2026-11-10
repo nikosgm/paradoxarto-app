@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-09y-v267';
+const APP_VER = '2026-11-10a-v268';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -11538,7 +11538,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         try{ const id = await epxJob('eprxcancel', {amka, bc}, name); const j = await epxWaitSt(id, ['review'], 120000);
           if(!j){ S.msg='⚠ το bot δεν απάντησε'; }
           else if(j.status!=='review'){ S.msg='⚠ '+E(j.note||'δεν ακυρώθηκε'); }
-          else if(!confirm('ΟΡΙΣΤΙΚΗ ακύρωση της συνταγής '+bc+'\n'+((S.d.meds||[]).map(m=>m.name).join(', '))+'\n\nΔεν αναιρείται.')){ await sb6.from('oncall_jobs').update({status:'dismissed', note:'✖ η ακύρωση δεν έγινε (ο γιατρός πάτησε «Όχι»)'}).eq('id', id); S.msg='Δεν έγινε ακύρωση.'; }
+          else if(!confirm('ΟΡΙΣΤΙΚΗ ακύρωση της συνταγής '+bc+'\n'+((S.d.meds||[]).map(m=>m.name).join(', '))+'\n\n👤 Θα γίνει ως: '+(S.d.doctor||'ο γιατρός της συνταγής')+'\nΔεν αναιρείται.')){ await sb6.from('oncall_jobs').update({status:'dismissed', note:'✖ η ακύρωση δεν έγινε (ο γιατρός πάτησε «Όχι»)'}).eq('id', id); S.msg='Δεν έγινε ακύρωση.'; }
           else { await sb6.from('oncall_jobs').update({status:'approve'}).eq('id', id).eq('status','review'); S.msg='⏳ Ακύρωση…'; pg.redraw();
             const k = await epxWaitSt(id, ['approved','failed'], 150000); S.msg = k ? E(k.note||'') : '⚠ δεν ήρθε απάντηση — ελέγξτε στο e-prescription';
             if(k && k.status==='approved'){ S.d.status='Ακυρωμένη'; onChange && onChange(); } }
