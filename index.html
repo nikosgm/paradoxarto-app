@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10l-v279';
+const APP_VER = '2026-11-10m-v280';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13764,21 +13764,28 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       finally{ polling = false; } };
     setTimeout(()=>{ syncJobs().finally(poll); }, 300);
     const save = async ()=>{ const r = await sb6.from('oncall_config').upsert({key:'dayunit', value:C, updated_at:new Date().toISOString()}, {onConflict:'key'}); msg = r.error ? 'Δεν αποθηκεύτηκε: '+r.error.message : '✓ Αποθηκεύτηκε'; pg.redraw(); };
+    // 👨‍⚕️ 10/11 (χρήστης): κάθε μέρα άλλος ειδικός — επιλογή του σημερινού (κοινή σε όλες τις συσκευές)· είναι ο λογαριασμός ΝΠΣ ΚΑΙ ο θεράπων
+    const todayK = ()=>{ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    const todayDoc = ()=>C.today && C.today.d===todayK() ? C.today.doc : '';
+    const emrU = ()=>todayDoc() || C.user || 'KDOUROUMIS';
     const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px;background:var(--card,#fff);color:inherit"';
     const pg = iosPage('Ουρολογικό Ημέρας', 'Εργαλεία', ()=>{
       let h = '<div class="ios-h">Ιατρικές πράξεις (όνομα · κωδικός ΝΠΣ)</div><div class="ios-g noic" style="padding:10px 14px">';
       C.procs.forEach((x,i)=>{ h += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input data-pn="'+i+'" value="'+E2(x.name)+'" placeholder="π.χ. Κυστεοσκόπηση" '+inp+'><input data-pc="'+i+'" value="'+E2(x.code)+'" placeholder="κωδικός" '+inp.replace('width:100%','width:42%')+'><label title="Ζητά πλευρά (Δεξιά/Αριστερά/Άμφω)" style="display:flex;align-items:center;gap:3px;font-size:13px;white-space:nowrap"><input type="checkbox" data-psd="'+i+'"'+(needSide(x)?' checked':'')+(/στομ/i.test(String(x.name||''))?' disabled':'')+'>↔</label><button data-pdel="'+i+'" aria-label="διαγραφή" style="border:0;background:none;color:#B91C1C;font-size:20px;min-width:40px">✕</button></div>'; });
       h += '<button data-a="padd" style="border:0;background:none;color:#0A84FF;font-size:16px;padding:6px 0;min-height:40px">＋ Πράξη</button></div>';
       h += '<div class="ios-h">Θεράποντες (όπως στο ΝΠΣ, ένας ανά γραμμή)</div><div class="ios-g noic" style="padding:10px 14px"><textarea data-docs rows="4" '+inp+'>'+E2((C.docs||[]).join('\n'))+'</textarea></div>';
-      h += '<div class="ios-h">Ώρα εξόδου · λογαριασμός ΝΠΣ</div><div class="ios-g noic" style="padding:10px 14px;display:flex;gap:8px"><input data-time type="time" value="'+E2(C.time)+'" '+inp+'><input data-user value="'+E2(C.user)+'" placeholder="KDOUROUMIS" '+inp+'></div>';
+      h += '<div class="ios-h">Ώρα εξόδου</div><div class="ios-g noic" style="padding:10px 14px;display:flex;gap:8px"><input data-time type="time" value="'+E2(C.time)+'" '+inp+'></div>';
       h += '<div style="margin:10px 16px"><button data-a="save" style="width:100%;height:46px;border:0;border-radius:12px;background:var(--acc,#0A84FF);color:#fff;font-size:17px;font-weight:600">Αποθήκευση ρυθμίσεων</button></div>';
       h += '<div class="ios-h">Ασθενείς σήμερα (ΝΠΣ 3434)</div><div class="ios-g noic" style="padding:10px 14px">';
+      { const td = todayDoc(); h += '<div style="font-size:13px;font-weight:700;color:#6D6D72;margin-bottom:6px">ΣΗΜΕΡΙΝΟΣ ΕΙΔΙΚΟΣ <span style="font-weight:500">(λογαριασμός ΝΠΣ + θεράπων)</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'
+        + (C.docs||[]).map(d=>'<button type="button" data-td="'+E2(d)+'" style="border-radius:999px;padding:7px 12px;font-size:14px;font-weight:700;min-height:38px;border:1.5px solid #1D4E80;background:'+(td===d?'#1D4E80;color:#fff':'none;color:#1D4E80')+'">'+E2(d)+'</button>').join('')
+        + '</div>' + (td ? '' : '<div style="font-size:13px;color:#B45309;margin:-4px 0 10px">Διάλεξε τον σημερινό ειδικό πριν φέρεις ασθενείς.</div>'); }
       h += '<button data-a="load" '+(busy?'disabled ':'')+'style="width:100%;height:44px;border:1.5px solid #1D4E80;border-radius:12px;background:none;color:#1D4E80;font-size:16px;font-weight:600">'+(busy?'⏳ '+E2(busy):(rows?'🔄 Ανανέωση από ΝΠΣ':'🔄 Φέρε ασθενείς από ΝΠΣ'))+'</button>'+(rows && loadedAt && !busy ? '<div class="ios-f" style="margin:6px 0 0">Από το ΝΠΣ στις '+new Date(loadedAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'})+' · μένει όλη τη μέρα</div>' : '');
       if(rows){
         if(!rows.length) h += '<div style="padding:10px 0;color:#6D6D72">Κανένας ασθενής στο 3434.</div>';
         const nDone = rows.filter((r,i)=>isDone(sel[i])).length;
         if(rows.length && nDone===rows.length && !showDone) h += '<div style="padding:10px 0;color:#15803D">✅ Όλοι οι ασθενείς πήραν εξιτήριο.</div>';
-        rows.forEach((r,i)=>{ const s0 = sel[i] || (sel[i] = {on:false, proc:0, doc:(C.docs||[])[0]||''});
+        rows.forEach((r,i)=>{ const s0 = sel[i] || (sel[i] = {on:false, proc:0, doc:todayDoc()||(C.docs||[])[0]||''});
           if(isDone(s0) && !showDone) return;
           h += '<div style="border-top:1px solid #EEF2F6;padding:10px 0"><label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" data-on="'+i+'"'+(s0.on?' checked':'')+' style="width:22px;height:22px"><b style="flex:1">'+E2(r.name||r.cells.join(' · '))+'</b><span style="font-size:13px;color:#6D6D72">'+E2(r.admit||'')+'</span></label>'
             + (s0.on ? '<div style="display:flex;gap:8px;margin-top:6px"><select data-pr="'+i+'" '+inp+'>'+C.procs.map((x,k)=>'<option value="'+k+'"'+(k===+s0.proc?' selected':'')+'>'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'</select>'
@@ -13790,6 +13797,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(nDone) h += '<button data-a="sdone" style="margin-top:8px;width:100%;border:0;background:none;color:#15803D;font-size:14.5px;min-height:40px;text-align:left">✅ '+nDone+' εξιτήρι'+(nDone===1?'ο':'α')+' σήμερα · '+(showDone?'απόκρυψη ▴':'εμφάνιση ▾')+'</button>';
         const n = Object.keys(sel).filter(k=>sel[k].on && rows[k]).length;
         const nn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))).length;
+        { const nOn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && !isDone(sel[k])).length;
+          if(rows.length) h += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="font-size:14px;font-weight:600;flex:none">Πράξη για '+nOn+' επιλεγμένους:</span><select data-bulkpr '+(nOn?'':'disabled ')+inp+'><option value="">— διάλεξε —</option>'+C.procs.map((x,k)=>'<option value="'+k+'">'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'</select></div>'; }
         if(rows.length) h += '<button data-a="dc" '+(nn?'':'disabled ')+'style="margin-top:10px;width:100%;height:46px;border:0;border-radius:12px;background:'+(nn?'#1D4E80':'#E5E7EB')+';color:'+(nn?'#fff':'#6B7280')+';font-size:16px;font-weight:700">📄 Εξιτήρια για '+nn+' επιλεγμένους</button><div class="ios-f" style="margin:6px 0 0">Ένα-ένα, όπως της κλινικής: το bot μπαίνει με τον λογαριασμό του Ημέρας (3434), συμπληρώνει το εξιτήριο και περιμένει τον «👀 Έλεγχο». Μετά την έγκριση ακολουθεί ο επόμενος.</div><div style="display:none">Ενεργοποιείται μόλις το bot χαρτογραφήσει τη φόρμα «Συγκεντρωτικό Εξιτήριο» του ΝΠΣ. Πριν από κάθε καταχώριση θα βλέπεις προεπισκόπηση και θα πατάς «Έγκριση».</div>';
       }
       h += '</div>';
@@ -13801,12 +13810,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
       q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ sel[e.dataset.dc].doc = e.value; }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = e.value; }); selSave(); };
     pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-tx]'); if(t){ sel[t.dataset.tx].txt = t.value; selSave(); } });
-    pg.el.addEventListener('change', e=>{ rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); } });
+    pg.el.addEventListener('change', e=>{ const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && !sel[k].job){ sel[k].proc = +bp.value; delete sel[k].txt; } }); selSave(); } pg.redraw(); return; }
+      rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); } });
     pg.el.addEventListener('click', async e=>{ const rv = e.target.closest('[data-rev]'); if(rv){ if(window.pdxBotReview) pdxBotReview(+rv.dataset.rev); return; }
+      const tdb = e.target.closest('[data-td]'); if(tdb){ rd(); const v = tdb.dataset.td; C.today = {d:todayK(), doc:v}; Object.keys(sel).forEach(k=>{ if(!sel[k].job) sel[k].doc = v; }); selSave(); await save(); msg = '✓ Σήμερα: '+v; pg.redraw(); return; }
       const sb = e.target.closest('[data-sd]'); if(sb){ rd(); const s1 = sel[sb.dataset.sd]; if(s1){ s1.side = s1.side===sb.dataset.v ? '' : sb.dataset.v; selSave(); pg.redraw(); } return; }
       const b = e.target.closest('[data-a],[data-pdel]'); if(!b) return; rd();
       if(b.dataset.pdel!=null){ C.procs.splice(+b.dataset.pdel,1); if(!C.procs.length) C.procs.push({name:'',code:''}); return pg.redraw(); }
       const a = b.dataset.a;
+      if((a==='load' || a==='dc') && !todayDoc() && (C.docs||[]).length){ alert('Διάλεξε πρώτα τον σημερινό ειδικό (λογαριασμός ΝΠΣ + θεράπων).'); return; }
       if(a==='padd'){ C.procs.push({name:'',code:''}); return pg.redraw(); }
       if(a==='sdone'){ showDone = !showDone; return pg.redraw(); }
       if(a==='dc'){
@@ -13818,14 +13830,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(!confirm('Εξιτήρια για '+L.length+' ασθενείς; Το bot τα συμπληρώνει ένα-ένα και κάθε ένα περιμένει τον δικό σου «Έλεγχο» πριν την αποθήκευση.')) return;
         for(const k of L){ const r = rows[k], s1 = sel[k], pr = C.procs[+s1.proc||0] || {};
           const txt = String(txOf(s1)).trim();
-          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:C.user||'KDOUROUMIS', proc:pr.name||'', code:pr.code||'', side:needSide(pr) ? (s1.side||'') : '', actAt:actAt(k)}, amka:r.amka||''}}).select('id').single();
+          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:emrU(), proc:pr.name||'', code:pr.code||'', side:needSide(pr) ? (s1.side||'') : '', actAt:actAt(k)}, amka:r.amka||''}}).select('id').single();
             if(ins.error) throw ins.error; s1.job = ins.data.id; s1.st = '📤 στάλθηκε στο bot'; }catch(x){ s1.st = '✗ δεν στάλθηκε: '+(x.message||x); }
         }
         selSave(); pg.redraw(); poll(); return;
       }
       if(a==='save'){ C.procs = C.procs.filter(x=>x.name||x.code); if(!C.procs.length) C.procs = DEF.procs.slice(); return save(); }
       if(a==='load'){ msg = ''; busy = 'στέλνω στον υπολογιστή…'; pg.redraw();
-        let id = 0; try{ const ins = await sb6.from('oncall_jobs').insert({kind:'dayunit', name:'Ουρολογικό Ημέρας', name_key:'zzz_dayunit', status:'new', payload:{emrUser:C.user||'KDOUROUMIS', map:true, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message); id = ins.data.id; }
+        let id = 0; try{ const ins = await sb6.from('oncall_jobs').insert({kind:'dayunit', name:'Ουρολογικό Ημέρας', name_key:'zzz_dayunit', status:'new', payload:{emrUser:emrU(), map:true, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message); id = ins.data.id; }
         catch(x){ busy = ''; msg = 'Δεν στάλθηκε: '+(x.message||x); return pg.redraw(); }
         const t0 = Date.now(); job = id;
         while(job===id && Date.now()-t0 < 240e3){ await new Promise(ok=>setTimeout(ok, 3000));
