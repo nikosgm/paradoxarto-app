@@ -2273,7 +2273,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v304';
+const APP_VER = '2026-11-10z-v305';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7205,9 +7205,9 @@ document.head.appendChild(st);
         + '</div>';
     }
     if(S.vault) h += '<div class="mbst" style="font-size:14px;line-height:1.45">'+esc(S.vault==='dpapi' ? '🔒 Κωδικοί: κρυπτογραφημένοι με τα Windows' : S.vault==='locked' ? '⚠️ Κωδικοί: κλειδωμένοι — δεν ανοίγουν (να τρέχει το efbot-update.bat στον υπολογιστή του bot)' : '⚠️ Κωδικοί: χωρίς κρυπτογράφηση (λείπει το βοηθητικό των Windows)')+'</div>';
-    if(window.authRole==='admin') h += '<div class="mbst" style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-size:14px;line-height:1.4"><b>🔐 Κωδικοί του bot</b><br><span style="color:#64748B">Στείλε κωδικό από εδώ — κρυπτογραφείται στη συσκευή σου και ανοίγει μόνο στον υπολογιστή του νοσοκομείου.</span></span><button onclick="pdxCredOpen()" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:10px 14px;font-weight:800;font-size:14.5px">Νέος…</button></div>';
+    // 10/11 βράδυ (χρήστης): «Κωδικοί του bot» ΟΧΙ εδώ — υπάρχουν ήδη στις Ρυθμίσεις
     // 10/11 βράδυ (χρήστης): χωρίς «Συνταγογράφηση με ΑΜΚΑ» / «Evorad: χαρτογράφηση» (δεν χρησιμοποιούνται πια) — εδώ και οι ενέργειες
-    h += '<div class="mbst" style="display:flex;flex-wrap:wrap;gap:8px"><button onclick="pdxDo(\'botlog\')" style="flex:1 1 200px;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:11px;font-size:15px;font-weight:700">📜 Όλες οι ενέργειες bot</button>'+(window.authRole==='admin' ? '<button onclick="pdxFindPacs()" style="flex:1 1 140px;border:1.5px solid var(--mp,#1D4E80);background:#fff;color:var(--mp,#1D4E80);border-radius:12px;padding:11px;font-size:15px;font-weight:700">🔎 Βρες τον Evorad</button>' : '')+'</div>';
+    h += '<div class="mbst" style="display:flex;flex-wrap:wrap;gap:8px"><button onclick="pdxDo(\'botlog\')" style="flex:1 1 200px;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:11px;font-size:15px;font-weight:700">📜 Όλες οι ενέργειες bot</button>'+'</div>';   // (χωρίς «Βρες τον Evorad» — δεν έχει πια νόημα)
     if(!S.jobs) return h + '<div class="msec">Φόρτωση…</div><div style="height:96px"></div>' + (page ? botPgFoot : tabs());
     const J = S.jobs.filter(j=>!window.pdxMineKeep || !j.room || pdxMineKeep(j.room)), act = J.filter(j=>['new','running','review','approve','seen'].indexOf(j.status)>=0), rest = J.filter(j=>act.indexOf(j)<0);
     h += '<div class="msec"><h3>Σε αναμονή · '+act.length+'</h3>'+(act.length ? act.map(jobRow).join('') : '<div class="mjob mu">Καμία εντολή σε αναμονή.</div>')+'</div>';
@@ -8126,7 +8126,9 @@ document.head.appendChild(st);
       const btn = (a, id, txt, bg, fg)=>'<button data-db="'+a+'" data-id="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px 6px;font-size:15px;font-weight:600;background:'+bg+';color:'+fg+'"'+(busy?' disabled':'')+'>'+txt+'</button>';
       const card = (s, extra, btns)=>({t:'<b>'+esc(String(s.dicom_name||'—').replace(/\^/g,' '))+'</b>'+extra, sub:esc([s.modality, s.descr, pdxDbDate(s.date), s.n_images ? s.n_images+' εικόνες' : ''].filter(Boolean).join(' · ')) + '<div style="display:flex;gap:8px;margin-top:9px">'+btns+'</div>'});
       if((ov.staged||[]).length) h += iosGroup('Περιμένουν έγκριση ('+ov.staged.length+')', ov.staged.map(s=>card(s, s.dicom_pid ? ' <span style="color:#34C759;font-size:13px">ΑΜΚΑ/ID ✓</span>' : '', btn('acc', s.id, '✓ Αποθήκευση', 'var(--acc,#0A84FF)', '#fff') + btn('rej', s.id, '✕ Όχι', '#FBECEB', '#C0362C'))), 'Η αξονική πηγαίνει στον ασθενή με το ίδιο ΑΜΚΑ/όνομα. «Όχι» = σβήνονται οι εικόνες.');
-      if((ov.pending||[]).length) h += iosGroup('Σε ποιον ανήκει; ('+ov.pending.length+')', ov.pending.map(s=>card(s, '', (s.suggest_id ? btn('asg', s.id+':'+s.suggest_id, '→ '+esc(((s.sg_surname||'')+' '+(s.sg_firstname||'')).trim()), 'var(--acc,#0A84FF)', '#fff') : '<span style="flex:1;font-size:13px;color:#8E8E93;align-self:center">χωρίς πρόταση — από την εφαρμογή του υπολογιστή</span>') + btn('rej', s.id, '✕ Όχι', '#FBECEB', '#C0362C'))));
+      if((ov.pending||[]).length) h += iosGroup('Σε ποιον ανήκει; ('+ov.pending.length+')', ov.pending.map(s=>card(s, '', (s.suggest_id ? btn('asg', s.id+':'+s.suggest_id, '→ '+esc(((s.sg_surname||'')+' '+(s.sg_firstname||'')).trim()), 'var(--acc,#0A84FF)', '#fff') : '') + btn('pick', s.id, '🔎 Διάλεξε ασθενή', '#EEF2F6', 'var(--acc,#0A84FF)') + btn('rej', s.id, '✕ Όχι', '#FBECEB', '#C0362C'))),
+        // 10/11 βράδυ (χρήστης: «σε ποιον ανήκει μια αξονική — μόνο "Όχι", τι να την κάνω;»): εξήγηση + επιλογή ασθενή από το κινητό
+        'Αξονική από CD χωρίς ΑΜΚΑ/όνομα που να ταιριάζει με ασθενή της βάσης. «🔎 Διάλεξε ασθενή» = γράψε όνομα ή ΑΜΚΑ και πέρασέ την σε αυτόν · «Όχι» = σβήνονται οι εικόνες.');
       if(!(ov.staged||[]).length && !(ov.pending||[]).length) h += iosGroup('Εγκρίσεις', [{t:'Καμία αξονική δεν περιμένει', sub:'όταν μπει CD στο Παράθυρο, εμφανίζεται εδώ'}]);
       const lock = att ? '' : 'μόνο επιμελητές αλλάζουν ρυθμίσεις';
       h += iosGroup('Εισαγωγή CD', [
@@ -8218,6 +8220,18 @@ document.head.appendChild(st);
             if(r.data && /^(done|failed)$/.test(r.data.status)){ syncNote = (r.data.status==='done' ? '✓ ' : '⚠ ') + String(r.data.note||'').replace(/^🗂\s*τωρινοί ασθενείς:?\s*/,'').replace(/\s*·\s*⏱.*$/,''); break; } }
           if(/^⏳/.test(syncNote)) syncNote = '⚠ το Παράθυρο δεν απάντησε'; }catch(er){ syncNote = '⚠ '+er.message; }
         busy = ''; pg.redraw(); return load(); }
+      if(a==='pick'){ const nm = String(((ov.pending||[]).find(x=>String(x.id)===String(id))||{}).dicom_name||'').replace(/\^/g,' ').trim();
+        const q = prompt('Σε ποιον ασθενή ανήκει; Γράψε επώνυμο ή ΑΜΚΑ', nm.split(' ')[0]||''); if(!q || !q.trim()) return;
+        busy = 'pick'; pg.redraw(); let rows = [];
+        try{ rows = ((await pdxDbCall('GET', '/api/patients?q='+encodeURIComponent(q.trim())+'&lim=12')) || {}).rows || []; }catch(er){ busy = ''; msg = '⚠ '+er.message; pg.redraw(); return; }
+        busy = ''; pg.redraw();
+        if(!rows.length){ alert('Κανένας ασθενής στη βάση με «'+q.trim()+'».'); return; }
+        const L = rows.map((r,i)=>(i+1)+'. '+[r.surname, r.firstname].filter(Boolean).join(' ')+(r.amka ? ' · ΑΜΚΑ '+r.amka : '')+(r.birth ? ' · '+pdxDbDate(r.birth) : '')).join('\n');
+        const ch = prompt('Διάλεξε αριθμό:\n\n'+L, rows.length===1 ? '1' : ''); const r0 = rows[(+ch||0)-1]; if(!r0) return;
+        if(!confirm('Η αξονική «'+nm+'» → '+[r0.surname, r0.firstname].filter(Boolean).join(' ')+';')) return;
+        busy = 'asg'; pg.redraw();
+        try{ await pdxDbCall('POST', '/api/studies/'+id+'/assign', {patient_id:+r0.id}); msg = '✓ η αξονική πέρασε στον ασθενή'; }catch(er){ msg = '⚠ '+er.message; }
+        return load(); }
       if(a==='acc' || a==='rej' || a==='asg'){
         if(a==='rej' && !confirm('Να σβηστούν οι εικόνες αυτής της αξονικής από τη βάση;')) return;
         busy = a; pg.redraw();
@@ -17613,7 +17627,7 @@ Z99.2:C|αιμοκάθαρση
 
   function top(title, sub, left){
     setTimeout(()=>document.querySelectorAll('#labsFull .lf-top:not(.lf-wrap)').forEach(t=>{ const b = t.querySelector(':scope>b'); if(b && b.scrollWidth > b.clientWidth + 1) t.classList.add('lf-wrap'); }), 0);   // ολόκληρο όνομα σε δική του γραμμή
-    return '<div class="lf-top">'+(left||'')+'<b>'+title+(sub?'<br><span class="lf-sub">'+sub+'</span>':'')+'</b><button onclick="labsFullSettings()" title="Ρυθμίσεις">⚙︎</button>'+(cur && cur!=='@ext' ? '<button data-medgo class="lm-ic" title="Φέρε τώρα από το Medilabi">⟳</button>' : '<button onclick="labsFullReload()" title="Ανανέωση">⟳</button>')+'<button onclick="labsFullClose()">Κλείσιμο</button></div>';
+    return '<div class="lf-top">'+(left||'')+'<b>'+title+(sub?'<br><span class="lf-sub">'+sub+'</span>':'')+'</b><button onclick="labsFullSettings()" title="Ρυθμίσεις">⚙︎</button>'+(cur!=='@ext' ? '<button data-medgo class="lm-ic" title="Φέρε τώρα από το Medilabi">⟳</button>' : '<button onclick="labsFullReload()" title="Ανανέωση">⟳</button>')+'<button onclick="labsFullClose()">Κλείσιμο</button></div>';
   }
   // 🖥 σαν το Medilabi: ΟΛΟΙ οι ασθενείς × βασικές εξετάσεις (τελευταία τιμή), πάτημα → πλήρες ιστορικό ασθενή
   const LF_COLS = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp','inr'];   // 7/11: σειρά του βιβλίου εργαστηριακών
@@ -18141,10 +18155,11 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     if(!window.pdxBotAlive) return;
     pdxBotAlive().then(a=>{
       if(!box.classList.contains('on')) return;
-      if(box.classList.contains('lm') || (cur && cur!=='@ext')){   // 🧪 9/11 · 10/11 βράδυ: και στον ασθενή (το «Φέρε τώρα» είναι το ⟳): λίστα κινητού — χωρίς κίτρινη μπάρα (περισσότερος χώρος)· η κατάσταση στο ⟳ και, αν το bot είναι εκτός, στη γραμμή κάτω από τον τίτλο
+      if(true){   // 🧪 9/11 κινητό · 10/11 βράδυ (χρήστης): ΠΑΝΤΟΥ — κινητό ΚΑΙ υπολογιστής, λίστα ΚΑΙ ασθενής — χωρίς κίτρινη μπάρα· «Φέρε τώρα» = ⟳ πάνω δεξιά
         const txt = a.ok===false ? pdxBotDownTxt(a) : (a.medilabi ? pdxMedTxt(a.medilabi) : '');
         const g = box.querySelector('.lm-top [data-medgo], .lf-top [data-medgo]'); if(g && txt) g.title = txt;
         const st = box.querySelector('#lmMedSt'); if(st && a.ok===false && !st.textContent) st.textContent = ' · ⚠ '+txt;
+        if(a.ok===false){ const sub = box.querySelector('.lf-top .lf-sub'); if(sub && !sub.querySelector('.lf-down')) sub.insertAdjacentHTML('beforeend', ' <span class="lf-down" style="color:#B42318">· ⚠ '+E(txt)+'</span>'); }
         const old = box.querySelector('#lfMed'); if(old) old.remove(); return; }
       let el = box.querySelector('#lfMed');
       if(!el){ el = document.createElement('div'); el.id='lfMed'; el.style.cssText='padding:8px 12px;font-size:13.5px;line-height:1.45;background:#FFFBEB;border-bottom:1px solid #F3E3B5;color:#5B4300;display:flex;gap:8px;align-items:center;flex-wrap:wrap'; const t = box.querySelector('.lf-top,.lm-hd'); if(t) t.after(el); else box.prepend(el); }
@@ -18155,7 +18170,8 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
   box.addEventListener('change', e=>{ const sl = e.target.closest && e.target.closest('[data-lsortsel]'); if(!sl) return; mSort = sl.value; try{ localStorage.setItem('pdx_lf_sort', mSort); }catch(x){} mobRedraw(); });   // 🧪 9/11: ταξινόμηση = λίστα επιλογής
   // κουμπί «Φέρε τώρα»: κείμενο (παλιά μπάρα) ή εικονίδιο ⟳ (λίστα κινητού)
   const medLbl = (b, st)=>{ const ic = b.classList.contains('lm-ic'); b.textContent = st==='sent' ? (ic?'⏳':'⏳ Στάλθηκε…') : st==='run' ? (ic?'⏳':'⏳ Φέρνει…') : (ic?'⟳':'🤖 Φέρε τώρα'); };
-  const medSay = t=>{ const el = box.querySelector('#lfMed span') || box.querySelector('#lmMedSt'); if(el) el.textContent = (el.id==='lmMedSt' && t ? ' · ' : '')+t; };
+  const medSay = t=>{ const el = box.querySelector('#lfMed span') || box.querySelector('#lmMedSt'); if(el){ el.textContent = (el.id==='lmMedSt' && t ? ' · ' : '')+t; return; }
+    const sub = box.querySelector('.lf-top .lf-sub'); if(sub){ let x = sub.querySelector('.lf-say'); if(!x){ x = document.createElement('span'); x.className = 'lf-say'; sub.appendChild(x); } x.textContent = ' · '+t; } };
   box.addEventListener('click', e=>{
     const b = e.target.closest('[data-medgo]'); if(!b || !window.pdxBotSend) return;
     const P = pts(), k = cur || (P[0] && P[0].k); if(!k){ alert('Χρειάζεται τουλάχιστον ένας ασθενής στη λίστα.'); return; }
