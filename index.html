@@ -2269,7 +2269,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v293';
+const APP_VER = '2026-11-10z-v294';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18523,6 +18523,10 @@ window.pdxOpNoteFromScan = function(p){
         const t = String(b.clinic||'').replace(/^★\s*/,''), ours = /^★/.test(String(b.clinic||''));
         return {t:'<div data-aev="'+k+'" style="cursor:pointer"><b>'+(ours?'★ ':'')+E4(t||'Νοσηλεία')+'</b> <span style="color:var(--acc,#0A84FF)">'+(on?'▾':'▸')+'</span><div style="font-size:13.5px;color:#8E8E93">'+dmy(String(b.from||a.date||''))+' → '+(/^\d/.test(String(b.to||''))?dmy(b.to):E4(b.to||'—'))+(ins.length?' · '+ins.length+' έγγραφα':'')+'</div></div>'
           + (on ? '<div style="margin-top:6px">'+(ins.length ? ins.map(e=>'<div style="padding:6px 0;border-top:.5px solid rgba(60,60,67,.18)"><div style="font-size:13px;color:#8E8E93">'+(KIND[e.kind]||['📝',''])[0]+' '+dmy(e.date)+'</div><div style="font-size:14.5px;font-weight:600">'+E4(e.title)+'</div>'+what(e)+'</div>').join('') : '<div style="color:#8E8E93;font-size:13.5px">Κανένα έγγραφο αυτής της νοσηλείας στη βάση ακόμα.</div>')+'</div>' : '')}; }));
+      // 📄 έγγραφα (PDF) της βάσης — π.χ. εξιτήρια που κράτησε το bot
+      if((p.docs||[]).length) h += iosGroup('📄 Έγγραφα · '+p.docs.length, p.docs.map(d=>{ const k = 'd'+d.id, P = st.pdf[k]||{};
+        return {t:'<div data-adoc="'+d.id+'" style="cursor:pointer"><span style="color:#8E8E93;font-size:13px">'+dmy(d.date)+'</span> <b>'+E4(d.title||'Έγγραφο')+'</b> <span style="color:var(--acc,#0A84FF)">📄</span><div style="font-size:12.5px;color:#8E8E93">'+Math.round((d.bytes||0)/1024)+' KB</div></div>'
+          + (P.busy?'<div style="color:#8E8E93;font-size:13.5px">⏳ '+E4(P.busy)+'</div>':'') + (P.err?'<div style="color:#FF3B30;font-size:13.5px">⚠ '+E4(P.err)+'</div>':'') + (P.html?'<div class="apdf" style="margin:6px -8px 0">'+P.html+'</div>':'')}; }));
       // 🩻 απεικονίσεις
       if((p.studies||[]).length) h += iosGroup('🩻 Απεικονίσεις · '+p.studies.length, p.studies.map(s=>({t:'<b>'+E4([s.modality, s.descr].filter(Boolean).join(' · ')||'Απεικόνιση')+'</b>', sub:[dmy(s.date), s.n_images+' εικόνες', s.institution, s.src==='cd'?'από CD':''].filter(Boolean).map(E4).join(' · ')+(s.netPath?'<div style="font-size:12.5px">📁 '+E4(s.netPath)+'</div>':'')})), 'Ανοίγουν στους υπολογιστές: εφαρμογή «Αρχείο Ασθενών» → ασθενής → απεικόνιση.');
       // 🎗 συμβούλια
@@ -18547,8 +18551,11 @@ window.pdxOpNoteFromScan = function(p){
           if(Date.now()-t0 > 600000){ st.busy=''; st.msg = '⚠ δεν τελείωσε σε 10′ — θα συνεχίσει στο παρασκήνιο'; pg.redraw(); return; }
           if(x.note){ st.busy = label+': '+String(x.note).slice(0,100); pg.redraw(); } } }
       catch(e){ st.busy=''; st.msg = '⚠ '+(e.message||e); pg.redraw(); } };
-    async function pdfOpen(k){ const e = (st.p.events||[]).find(x=>String(x.id)===k); if(!e) return; const b = parseB(e.body), P = st.pdf[k] = {busy:'Το bot τραβά το PDF από το Medilabi…'}; pg.redraw();
-      try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_arch', name:(st.p.surname+' '+(st.p.firstname||'')).trim(), room:null, kind:'bxpdf', payload:{pid:b.pid, docId:b.docId||'', link:b.link||''}, status:'new'}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
+    async function pdfOpen(k, docId){ let kind, payload, P;
+      if(docId){ kind = 'pdxdoc'; payload = {id:docId, only:(typeof PDX_DB_BOT!=='undefined'?PDX_DB_BOT:'bmw51w96b7zncz'), quiet:true}; P = st.pdf[k] = {busy:'Το Παράθυρο στέλνει το έγγραφο (κρυπτογραφημένο)…'}; }
+      else { const e = (st.p.events||[]).find(x=>String(x.id)===k); if(!e) return; const b = parseB(e.body); kind = 'bxpdf'; payload = {pid:b.pid, docId:b.docId||'', link:b.link||''}; P = st.pdf[k] = {busy:'Το bot τραβά το PDF από το Medilabi…'}; }
+      pg.redraw();
+      try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_arch', name:(st.p.surname+' '+(st.p.firstname||'')).trim(), room:null, kind, payload, status:'new'}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
         const jid = ins.data.id; let j = null; for(let i=0;i<150 && !j;i++){ await new Promise(r=>setTimeout(r, 1000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', jid).maybeSingle(); if(q.data && /^(done|failed|cancelled|dismissed)$/.test(q.data.status)) j = q.data; else if(q.data && q.data.note){ P.busy = q.data.note; pg.redraw(); } }
         if(!j) throw new Error('το bot δεν απάντησε'); if(j.status!=='done') throw new Error(j.note||'απέτυχε');
         P.busy = 'Αποκρυπτογράφηση…'; pg.redraw(); await pdxCK.ready();
@@ -18562,6 +18569,7 @@ window.pdxOpNoteFromScan = function(p){
     pg.el.addEventListener('click', async e=>{
       const cp = e.target.closest('[data-copy]'); if(cp){ try{ await navigator.clipboard.writeText(cp.dataset.copy); st.msg = '✓ αντιγράφηκε'; pg.redraw(); }catch(x){} return; }
       const pd = e.target.closest('[data-apdf]'); if(pd){ e.stopPropagation(); return pdfOpen(pd.dataset.apdf); }
+      const dc = e.target.closest('[data-adoc]'); if(dc){ const k = 'd'+dc.dataset.adoc; if(st.pdf[k] && st.pdf[k].html){ st.pdf[k].html = ''; pg.redraw(); return; } return pdfOpen(k, +dc.dataset.adoc); }
       const bx = e.target.closest('[data-abx]'); if(bx){ e.stopPropagation(); const v = bx.dataset.v==='1' ? true : bx.dataset.v==='0' ? false : null; st.busy = 'Αποθήκευση χαρακτηρισμού…'; pg.redraw();
         try{ await pdxDbCall('POST', '/api/events/'+bx.dataset.abx+'/bx', {malignant:v}); st.msg = v===true ? '✓ 🎗 Κακοήθεια' : v===false ? '✓ Καλοήθης' : '✓ χωρίς χαρακτηρισμό'; }catch(er){ st.msg = '⚠ '+er.message; } st.busy=''; return load(true); }
       if(e.target.closest('.apdf, button, a')) return;
