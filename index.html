@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11b-v327';
+const APP_VER = '2026-11-11c-v328';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19127,7 +19127,7 @@ window.pdxCtInbox = async function(){
         const btn = m==='ok' ? '<span style="color:#1F8A4C">✓ στο αρχείο</span>' : m==='run' ? '<span style="color:#6B7280">⏳ μετακίνηση…</span>' : (m && m.err) ? '<span style="color:#B42318">⚠ '+E6(m.err)+'</span>'
           : '<button data-ctmv="'+i+'" style="border:0;background:'+(x.sure?'#0A84FF':'#8E8E93')+';color:#fff;border-radius:9px;padding:7px 11px;font-size:13.5px;font-weight:600">📦 Στο αρχείο</button>';
         return {t:'<div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><div><b>'+E6(x.name)+'</b><div style="font-size:12.5px;color:#6B7280">'+E6(x.folder)+' · ανέβηκε '+dt(x.up)+(x.ad?' · εισαγωγή '+E6(x.ad):'')+' · '+(x.n||0)+' αρχεία'
-          +(x.amOk?' · <span style="color:#1F8A4C">✓ ΑΜ στο DICOM</span>':'')+(x.sure?'':' · <span style="color:#B26A00">έλεγξε (συνεπώνυμοι/χωρίς εικόνες)</span>')+'</div></div>'+btn+'</div>'}; }));
+          +(x.amOk?' · <span style="color:#1F8A4C">✓ ΑΜ στο DICOM</span>':'')+(x.sure?'':' · <span style="color:#B26A00">έλεγξε ('+(x.noAd?'χωρίς ημ. εισαγωγής ΝΠΣ':'συνεπώνυμοι/χωρίς εικόνες')+')</span>')+'</div></div>'+btn+'</div>'}; }));
     });
     const nS = rows.filter((x,i)=>x.sure && !st.mv[i]).length;
     if(nS > 1) h += iosGroup('', [{t:'<b style="color:#0A84FF">📦 Μετακίνηση όλων των σίγουρων ('+nS+')</b>', on:'window.__ctAll && __ctAll()'}]);
@@ -19138,7 +19138,11 @@ window.pdxCtInbox = async function(){
   const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','ctinbox').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload.result.enc){ await pdxCK.ready(); st.R = await pdxCK.decrypt(j.payload.result.enc); st.at = st.R.at || Date.parse(j.updated_at); } }catch(e){ st.msg = 'Αποκρυπτογράφηση: '+(e.message||e); } pg.redraw(); };
   window.__ctScan = async ()=>{ if(st.busy) return;
-    const pts = []; [data, extraPatients].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) pts.push({key:k, name:d.name, fname:d.fname||'', ad:d.admitDate||'', amka:pdxAmkaOk(d.amka)?String(d.amka):'', am:/^\d{8}$/.test(String(d.am||''))?String(d.am):''}); }));
+    // ημ. εισαγωγής ΝΠΣ: από τον ασθενή, αλλιώς από την τελευταία «Εικόνα κλινικής» (clinicview) με το όνομα
+    let cv = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','clinicview').eq('status','done').order('id',{ascending:false}).limit(1); cv = ((r.data||[])[0]||{}).payload?.result?.rows || []; }catch(e){}
+    const nz = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim(), srt = x=>nz(x).split(' ').sort().join(' ');
+    const adOf = d=>{ if(d.admitDate) return d.admitDate; const r = cv.find(x=>nz(x.name)===nz(d.name)) || cv.find(x=>srt(x.name)===srt(d.name)); return (r && r.admit) || ''; };
+    const pts = []; [data, extraPatients].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) pts.push({key:k, name:d.name, fname:d.fname||'', ad:adOf(d), amka:pdxAmkaOk(d.amka)?String(d.amka):'', am:/^\d{8}$/.test(String(d.am||''))?String(d.am):''}); }));
     if(!pts.length){ st.msg='Καμία λίστα ασθενών.'; pg.redraw(); return; }
     st.busy = 'Το bot διαβάζει τους φακέλους των ειδικευομένων…'; st.msg=''; pg.redraw();
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctinbox', name:'🩻 Αξονικές ειδικευομένων', room:null, kind:'ctinbox', payload:{pts, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
