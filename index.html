@@ -1048,7 +1048,10 @@ window.pdxLabsSweep = async function(){
   if(!live.length) return {skip:'κενή λίστα'};   // ασφάλεια: χωρίς φορτωμένους ασθενείς δεν σβήνουμε τίποτα
   const links = new Set(live.map(x=>x.ahfyLabs && x.ahfyLabs.key).filter(Boolean)), names = new Set(live.map(x=>_nrmL(x.name)).filter(Boolean));
   const old = Date.now() - 24*3600e3;
-  const del = r.data.filter(x=>!/^(efbot|pushpref|pack)\|/.test(x.name_key) && Date.parse(x.updated_at||0) < old && (/^ahfy\|/.test(x.name_key) ? !links.has(x.name_key) : !names.has(x.name_key))).map(x=>x.name_key);
+  // 11/11 νυχτερινό: ΣΒΗΝΟΝΤΑΙ ΜΟΝΟ εργαστηριακά ασθενών (κλειδί = όνομα χωρίς «|», ή ahfy|…). Πριν έσβηνε ΚΑΙ κοινούς καταλόγους
+  // (epcat|med, epcat|icd χάθηκαν· σειρά είχαν epcat|exam, npsmed|cat, orsched|…, diag|…) → η άμεση αναζήτηση φαρμάκων/ICD έπεφτε στο αργό bot.
+  const del = r.data.filter(x=>{ const k = String(x.name_key||''); if(!(Date.parse(x.updated_at||0) < old)) return false;
+    return /^ahfy\|/.test(k) ? !links.has(k) : (k.indexOf('|') < 0 && !names.has(k)); }).map(x=>x.name_key);
   for(const k of del) await sb6.from('oncall_labs').delete().eq('name_key', k);
   return {deleted: del.length};
 };
@@ -2274,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-10z-v325';
+const APP_VER = '2026-11-11a-v326';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
