@@ -1,1 +1,1 @@
-{"version": "0.21.256", "zip": "ef-bot-0.21.256.zip", "sha256": "ed4b4cdf287ef61afab29beadb891279ccba8a39a8095b43e2521b4ab050d38a", "notes": "printinfo: εκτυπωτές Windows + Zebra + τοπική υπηρεσία ετικετών (μόνο ανάγνωση)"}
+{"version": "0.21.257", "zip": "ef-bot-0.21.257.zip", "sha256": "a08f5bc80700bce5a51c41e707489978b2ef7dc1c5f0d2b2e33b2940acce1905", "notes": "Zebra: δοκιμαστική ετικέτα (zebratest, ZPL μέσω βοηθητικού rawprint) · ΑΗΦΥ χάρτης με ασθενή: τσεκ δήλωσης με ρητό «ναι» χρήστη → λίστα πρόσφατων"}
