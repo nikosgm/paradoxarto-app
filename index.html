@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v341';
+const APP_VER = '2026-11-11i-v342';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17670,6 +17670,8 @@ Z99.2:C|αιμοκάθαρση
     const urine = /ουρ/.test(nrm(g||''));
     const tag = urine ? '|u' : '';
     if(/μαρτυρ|control/.test(nrm(t))) return {k: 'n:' + nrm(t) + tag, lbl: t};   // χρόνος μάρτυρα ≠ PT του ασθενή
+    // 11/11 (έλεγχος όλων των εργαστηριακών): βιολογικά υγρά (υγρό παροχέτευσης κ.λπ.) ΠΟΤΕ στη θέση της κρεατινίνης/ουρίας/K του αίματος
+    if(/βιολ\.? υγρ|υγρο παροχετ|υγρων/.test(nrm(t)+' '+nrm(g||''))) return {k: 'n:' + nrm(t) + '|' + nrm(g||''), lbl: t};
     let c = null; try{ c = window.__pdxCanonOf ? window.__pdxCanonOf(t + (urine ? ' (ουρων)' : '')) : null; }catch(e){}
     if(c && !/^w:/.test(c[0])){ const pk = (/%/.test(t) || String(u||'').trim()==='%') && PCT_OK.test(c[0]); return {k: c[0] + (pk ? '%' : ''), lbl: (c[1] || t) + (pk ? ' %' : '')}; }
     return {k: 'n:' + nrm(t) + tag, lbl: t};
@@ -17691,7 +17693,7 @@ Z99.2:C|αιμοκάθαρση
         // 11/11 20:01 (χρήστης: «ασθενής έχει τα πρώτα του αποτελέσματα»): το Medilabi γράφει την ΙΔΙΑ εξέταση με/χωρίς δείγμα στο τέλος
         // («HCT - Αιματοκρίτης (Αίμα)» σε παλιές λήψεις, «HCT - Αιματοκρίτης» στις νέες) → ήταν «διαφορετικές» και η στήλη Ht έδειχνε την ΠΑΛΙΑ (2006).
         // Ίδια εξέταση χωρίς την παρένθεση δείγματος → ΕΝΩΝΟΝΤΑΙ (νεότερη τιμή πρώτη)
-        const bare = t=>nrm(String(t||'').replace(/\s*\((αιμα|αίμα|ορος|ορός|ουρα|ούρα|πλασμα|πλάσμα|ολικο αιμα|ολικό αίμα)\)\s*$/i,''));
+        const bare = t=>nrm(String(t||'').replace(/\s*\((αιμα|αίμα|ορος|ορός|πλασμα|πλάσμα|ολικο αιμα|ολικό αίμα)\)\s*$/i,''));   // ΟΧΙ «(Ούρα)»: ούρα ≠ αίμα
         if(byK[kk] && nrm(byK[kk].t)!==nrm(r.t) && bare(byK[kk].t)!==bare(r.t)) kk = 'n:' + nrm(r.t) + '|' + nrm(g);
         seenName[nameId] = kk;
         if(!byK[kk]){ byK[kk] = {k:kk, lbl:x.lbl, t:r.t, u:r.u||'', r:r.r||'', g, pts:[]}; order.push(kk); }
