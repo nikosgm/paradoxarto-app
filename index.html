@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11f-v331';
+const APP_VER = '2026-11-11g-v332';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -2357,7 +2357,7 @@ window.syncRemote = syncRemote;
     if(autoBusy || !navigator.onLine) return; autoBusy = true;
     try{
       const t = await (await fetch(location.pathname + '?vc=' + Date.now(), {cache:'no-store'})).text();
-      const m = /const APP_VER = '2026-11-11f-v331']+)'/.exec(t); const v = m && m[1];
+      const m = /const APP_VER = '([^']+)'/.exec(t); const v = m && m[1];
       if(!v || v === APP_VER) return;
       let tried=''; try{ tried = sessionStorage.getItem('pdx_auto_tried')||''; }catch(e){}
       if(tried === v) return;   // ήδη δοκιμάστηκε σε αυτή τη συνεδρία
