@@ -1867,6 +1867,29 @@ const QUICK_INSTRUCTIONS = [
 function qiGroups(){ const g=[]; QUICK_INSTRUCTIONS.forEach(q=>{ const c=q.cat||'Άλλα'; let x=g.find(y=>y.cat===c); if(!x){ x={cat:c,items:[]}; g.push(x); } x.items.push(q); }); return g; }
 function qiHtml(fn){ return qiGroups().map(g=>'<div class="qicat">'+g.cat+'</div>'+g.items.map(fn).join('')).join(''); }
 const THERAPISTS = ["Αν","Αδ","Στρ","Φρ","Μουλ","Λεβ","Δουρ"];
+// 11/11 (χρήστης: «έβαλες θεράποντα ακαταλαβίστικο όνομα ενώ ξεκινούσε από Φ· όταν ξεκινά από το αρχικό ενός, μπαίνει ο αντίστοιχος·
+// Αναστασίου/Αδαμάκης → και το 2ο ή κάποιο από τα επόμενα κοινά»): αντιστοίχιση γραμμένου ονόματος → συντομογραφία θεράποντα
+function pdxTherMatch(t){
+  const F = window.THERAPIST_FULL || {'Αν':'Αναστασίου','Αδ':'Αδαμάκης','Στρ':'Στραβοδήμος','Φρ':'Φραγκιάδης','Μουλ':'Μουλαβασίλης','Λεβ':'Λεβής','Δουρ':'Δουρούμης'};
+  const z = x=>String(x==null?'':x).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^Α-ΩA-Z]/g,'')
+    .replace(/[A-Z]/g, c=>({A:'Α',B:'Β',E:'Ε',Z:'Ζ',H:'Η',I:'Ι',K:'Κ',M:'Μ',N:'Ν',O:'Ο',P:'Ρ',T:'Τ',Y:'Υ',X:'Χ',F:'Φ',D:'Δ',L:'Λ',S:'Σ',G:'Γ',R:'Ρ',U:'Υ',V:'Β',C:'Κ'})[c]||'');
+  // πάρε τη λέξη που μοιάζει επώνυμο (Δρ./κ. κ.λπ. έξω)
+  const ws = String(t==null?'':t).split(/[\s,.;:\/()\-]+/).map(z).filter(w=>w.length>=1 && !/^(ΔΡ|Κ|ΚΟΣ|ΚΑ|ΙΑΤΡΟΣ|ΘΕΡΑΠΩΝ|ΚΑΘ|ΚΑΘΗΓΗΤΗΣ|ΕΠΙΜ|ΕΠΙΜΕΛΗΤΗΣ|ΑΝΑΠΛ)$/.test(w));
+  if(!ws.length) return '';
+  const keys = Object.keys(F), full = k=>z(F[k]);
+  const lcs = (a,b)=>{ const d = Array(b.length+1).fill(0); for(let i=1;i<=a.length;i++){ let p = 0; for(let j=1;j<=b.length;j++){ const q = d[j]; d[j] = a[i-1]===b[j-1] ? p+1 : Math.max(d[j], d[j-1]); p = q; } } return d[b.length]; };
+  for(const w of ws){
+    const ex = keys.find(k=>z(k)===w || full(k)===w); if(ex) return ex;
+    const c1 = keys.filter(k=>full(k).charAt(0)===w.charAt(0)); if(!c1.length) continue;
+    if(c1.length===1) return c1[0];
+    // ίδιο αρχικό σε πολλούς: τα επόμενα γράμματα με τη σειρά (κοινή υπακολουθία) — μετράει όποιος ταιριάζει περισσότερα
+    const sc = c1.map(k=>({k, s:lcs(w.slice(1), full(k).slice(1)), p:(()=>{ let i=1; while(i<w.length && w[i]===full(k)[i]) i++; return i; })()}))
+      .sort((a,b)=>b.p-a.p || b.s-a.s);
+    if(sc[0].p>sc[1].p || sc[0].s>sc[1].s) return sc[0].k;
+  }
+  return '';
+}
+window.pdxTherMatch = pdxTherMatch;
 
 let data = {}; // "room-bed" -> object
 let extraPatients = {}; // { 'extra-1': {...same shape as a room patient, plus arrival} }
@@ -2277,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v336';
+const APP_VER = '2026-11-11i-v337';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8707,7 +8730,7 @@ document.head.appendChild(st);
   function nvTher(t){ t = String(t||'').trim(); if(!t) return ''; if((typeof THERAPISTS!=='undefined'?THERAPISTS:[]).includes(t)) return t;
     const F = window.THERAPIST_FULL || {'Αν':'Αναστασίου','Αδ':'Αδαμάκης','Στρ':'Στραβοδήμος','Φρ':'Φραγκιάδης','Μουλ':'Μουλαβασίλης','Λεβ':'Λεβής','Δουρ':'Δουρούμης'};
     const z = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/Σ$/,'Σ').trim();
-    const k = Object.keys(F).find(a=>z(F[a])===z(t) || z(t).indexOf(z(F[a]))===0 || z(F[a]).indexOf(z(t))===0 && z(t).length>=3); return k || t; }
+    const k = Object.keys(F).find(a=>z(F[a])===z(t) || z(t).indexOf(z(F[a]))===0 || z(F[a]).indexOf(z(t))===0 && z(t).length>=3); return k || pdxTherMatch(t) || t; }
   function nvShort(n){ const w = String(n||'').trim().split(/\s+/); return w.length>1 ? w[0]+' '+w[1].charAt(0)+'.' : ''; }
   try{ window.addEventListener('resize', ()=>{ clearTimeout(window.__nvFitT); window.__nvFitT = setTimeout(()=>{ try{ window.nvFitNames(); }catch(x){} }, 120); }); }catch(x){}
   window.nvFitNames = function(){
@@ -19932,7 +19955,7 @@ function buildForm(d){
       var scored = THERAPISTS.map(function(t){ var full = nk(FULL[t]||t); return { t:t, d:(att.length>=3 && full.indexOf(att)===0 ? 0 : lev(att, full)), lim:Math.max(1, Math.floor(full.length/4)) }; })
                     .filter(function(x){ return x.d<=x.lim; }).sort(function(a,b){ return a.d-b.d; });
       if(scored.length && (scored.length===1 || scored[1].d>scored[0].d)){ f.therapist = scored[0].t; f.therapistHint = 'Στο φύλλο: «'+String(d.attending||'').trim()+'» → '+scored[0].t+' ('+FULL[scored[0].t]+'). Έλεγξέ το.'; }
-      else f.therapistHint = 'Στο φύλλο γράφει θεράποντα: '+String(d.attending||'').trim()+' — διάλεξε χειροκίνητα';
+      else { var pm = pdxTherMatch(d.attending); if(pm){ f.therapist = pm; f.therapistHint = 'Στο φύλλο: «'+String(d.attending||'').trim()+'» → '+pm+' ('+(FULL[pm]||pm)+', από τα αρχικά γράμματα). Έλεγξέ το.'; } else f.therapistHint = 'Στο φύλλο γράφει θεράποντα: '+String(d.attending||'').trim()+' — διάλεξε χειροκίνητα'; }
     }
   }
 
