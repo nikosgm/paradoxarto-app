@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11c-v328';
+const APP_VER = '2026-11-11d-v329';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19138,6 +19138,7 @@ window.pdxCtInbox = async function(){
   const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','ctinbox').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload.result.enc){ await pdxCK.ready(); st.R = await pdxCK.decrypt(j.payload.result.enc); st.at = st.R.at || Date.parse(j.updated_at); } }catch(e){ st.msg = 'Αποκρυπτογράφηση: '+(e.message||e); } pg.redraw(); };
   window.__ctScan = async ()=>{ if(st.busy) return;
+    try{ const a = await sb6.from('oncall_jobs').select('id').eq('kind','ctinbox').in('status',['new','seen','running']).limit(1); if(a.data && a.data[0]){ follow(a.data[0].id); return; } }catch(e){}
     // ημ. εισαγωγής ΝΠΣ: από τον ασθενή, αλλιώς από την τελευταία «Εικόνα κλινικής» (clinicview) με το όνομα
     let cv = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','clinicview').eq('status','done').order('id',{ascending:false}).limit(1); cv = ((r.data||[])[0]||{}).payload?.result?.rows || []; }catch(e){}
     const nz = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim(), srt = x=>nz(x).split(' ').sort().join(' ');
@@ -19156,8 +19157,18 @@ window.pdxCtInbox = async function(){
   window.__ctAll = async ()=>{ const L = (st.R && st.R.rows || []).map((x,i)=>[x,i]).filter(([x,i])=>x.sure && !st.mv[i]); for(const [,i] of L) await move(i); };
   pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-ctmv]'); if(!b) return; e.stopPropagation(); const i = +b.dataset.ctmv, x = st.R.rows[i];
     if(!x.sure && !confirm('Δεν είναι σίγουρη η ταυτοποίηση ('+x.folder+'). Μετακίνηση παρ\' όλα αυτά;')) return; move(i); });
+  // 07:10 (χρήστης: «πατάω σάρωση, βγαίνω, ξαναμπαίνω και το χάνει»): η σάρωση τρέχει στο bot — όταν ξαναμπαίνεις, η σελίδα ΣΥΝΔΕΕΤΑΙ στην εντολή που τρέχει
+  async function follow(id){ st.busy = 'Η σάρωση τρέχει στο bot…'; pg.redraw(); const x = await poll(id, n=>{ st.busy = String(n).slice(0,100); pg.redraw(); }); st.busy='';
+    if(!x) st.msg='⚠ το bot δεν απάντησε'; else if(x.status!=='done') st.msg='⚠ '+(x.note||x.status); else { st.mv = {}; await load(); return; } pg.redraw(); }
   await load();
-  if(!st.R || Date.now()-st.at > 6*3600e3) __ctScan();
+  try{ const a = await sb6.from('oncall_jobs').select('id,status').eq('kind','ctinbox').in('status',['new','seen','running']).order('id',{ascending:false}).limit(1);
+    const j = (a.data||[])[0]; if(j){ follow(j.id); }
+    else if(!st.R || Date.now()-st.at > 6*3600e3) __ctScan(); }catch(e){}
+  // μετακινήσεις που τρέχουν ακόμα (από προηγούμενη είσοδο) → εμφανίζονται ως «μετακίνηση…» και ενημερώνονται
+  try{ const m = await sb6.from('oncall_jobs').select('id,status,note,payload').eq('kind','imgmove').order('id',{ascending:false}).limit(30);
+    (m.data||[]).forEach(j=>{ const i = ((st.R&&st.R.rows)||[]).findIndex(x=>x.rel===(j.payload||{}).rel); if(i<0 || st.mv[i]) return;
+      if(j.status==='done') st.mv[i]='ok'; else if(/new|seen|running/.test(j.status)){ st.mv[i]='run'; poll(j.id).then(r=>{ st.mv[i] = r && r.status==='done' ? 'ok' : {err:String((r&&r.note)||'χωρίς απάντηση').slice(0,90)}; pg.redraw(); }); }
+      else if(j.status==='failed') st.mv[i]={err:String(j.note||'απέτυχε').replace(/^📦\s*/,'').slice(0,90)}; }); pg.redraw(); }catch(e){}
 };
 window.pdxNpsFind = async function(q){
   const E5 = x=>esc(String(x==null?'':x)), st = {q:String(q||'').trim(), busy:'', msg:'', res:null};
