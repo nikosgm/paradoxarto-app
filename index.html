@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v337';
+const APP_VER = '2026-11-11i-v338';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -9265,22 +9265,39 @@ document.head.appendChild(st);
   // Partin Tables 2016 update (Tosoian et al., Johns Hopkins, cohort 2010-2015): [OC,ECE,SV,LN] %, ανά cT / PSA / Grade Group. Τιμές με «>» στην πηγή (T1c 6.1-10 GG1 OC, T2a 0-4 GG5 OC) διαβάστηκαν ως 87 και 41 (το άθροισμα 100).
   const PARTIN_CI = {"T1c":{"0-4":{"GG1":["90-93","6-9","0-1","0-0"],"GG2":["74-80","17-23","1-3","0-1"],"GG3-4":["62-72","21-28","4-10","1-4"],"GG5":["41-57","24-39","7-20","3-11"]},"4.1-6":{"GG1":["89-92","7-10","0-1","0-0"],"GG2":["71-77","20-26","1-3","0-1"],"GG3-4":["60-68","24-31","4-9","1-4"],"GG5":["39-55","27-42","8-19","2-9"]},"6.1-10":{"GG1":["85-89","10-14","1-2","0-1"],"GG2":["63-71","24-31","2-6","0-2"],"GG3-4":["49-58","27-36","8-15","2-6"],"GG5":["28-44","28-44","12-27","5-15"]},">10":{"GG1":["75-84","13-20","1-4","0-2"],"GG2":["46-58","29-40","5-12","3-8"],"GG3-4":["30-41","27-39","14-27","7-17"],"GG5":["13-26","22-40","18-38","13-34"]}},"T2a":{"0-4":{"GG1":["86-91","9-13","0-1","0-0"],"GG2":["65-74","22-31","1-4","0-2"],"GG3-4":["53-64","26-36","4-11","1-6"],"GG5":["32-50","29-48","7-21","3-15"]},"4.1-6":{"GG1":["83-89","10-15","0-1","0-0"],"GG2":["62-71","25-35","1-4","0-2"],"GG3-4":["50-61","30-40","4-10","1-5"],"GG5":["30-48","33-51","7-20","3-12"]},"6.1-10":{"GG1":["78-86","13-20","1-2","0-1"],"GG2":["52-64","30-42","2-6","1-3"],"GG3-4":["39-51","33-45","7-16","2-8"],"GG5":["21-37","33-53","11-29","5-18"]},">10":{"GG1":["67-79","17-28","1-6","0-3"],"GG2":["36-50","35-49","5-13","2-11"],"GG3-4":["22-35","31-47","12-28","6-21"],"GG5":["9-21","24-46","15-39","12-38"]}},"T2b/c":{"0-4":{"GG1":["73-83","15-25","1-2","0-2"],"GG2":["44-58","32-47","3-7","2-7"],"GG3-4":["30-44","33-48","7-18","5-16"],"GG5":["15-28","30-51","10-27","11-33"]},"4.1-6":{"GG1":["69-81","17-28","1-2","0-2"],"GG2":["41-55","37-51","2-7","2-7"],"GG3-4":["28-42","37-52","7-17","5-15"],"GG5":["14-27","34-54","10-26","10-29"]},"6.1-10":{"GG1":["61-75","21-34","1-5","0-4"],"GG2":["31-45","40-56","4-12","3-12"],"GG3-4":["19-31","36-51","11-24","8-22"],"GG5":["8-18","28-49","13-33","15-40"]},">10":{"GG1":["45-63","26-42","3-10","1-14"],"GG2":["17-29","37-55","7-20","9-30"],"GG3-4":["8-16","25-43","14-32","21-44"],"GG5":["3-8","16-34","14-36","32-62"]}}};
   const PARTIN_DATA = {"T1c":{"0-4":{"GG1":[92,8,1,0],"GG2":[77,20,2,1],"GG3-4":[67,24,7,2],"GG5":[50,31,13,6]},"4.1-6":{"GG1":[90,9,1,0],"GG2":[74,23,2,1],"GG3-4":[64,28,6,2],"GG5":[47,35,12,5]},"6.1-10":{"GG1":[87,12,1,0],"GG2":[67,28,4,1],"GG3-4":[53,32,11,4],"GG5":[35,36,19,9]},">10":{"GG1":[80,17,3,1],"GG2":[52,34,8,5],"GG3-4":[35,33,20,11],"GG5":[19,30,28,22]}},"T2a":{"0-4":{"GG1":[88,11,1,0],"GG2":[70,27,2,1],"GG3-4":[58,31,7,3],"GG5":[41,38,13,7]},"4.1-6":{"GG1":[87,12,1,0],"GG2":[66,30,2,1],"GG3-4":[55,35,7,3],"GG5":[38,42,12,6]},"6.1-10":{"GG1":[82,16,1,0],"GG2":[58,36,4,2],"GG3-4":[45,39,11,4],"GG5":[28,42,18,10]},">10":{"GG1":[73,22,3,1],"GG2":[43,42,9,6],"GG3-4":[28,39,20,13],"GG5":[14,34,26,24]}},"T2b/c":{"0-4":{"GG1":[79,19,1,1],"GG2":[52,40,5,4],"GG3-4":[37,40,12,10],"GG5":[21,40,18,21]},"4.1-6":{"GG1":[76,22,1,0],"GG2":[48,44,4,4],"GG3-4":[35,44,11,9],"GG5":[20,44,17,19]},"6.1-10":{"GG1":[69,27,3,1],"GG2":[38,48,7,6],"GG3-4":[25,44,17,14],"GG5":[13,38,22,26]},">10":{"GG1":[54,34,6,5],"GG2":[23,46,12,18],"GG3-4":[12,33,22,32],"GG5":[5,23,23,48]}}};
-  function calcKind(d){
+  // 🧪 11/11 (χρήστης: «πού είναι οι υπολογιστές π.χ. GFR για τους ασθενείς — σε όλους, και στους ΝΠΣ»): Cr από τα εργαστηριακά
+  // (Medilabi/ΑΗΦΥ ή χειρόγραφα), ηλικία/φύλο από ΑΜΚΑ (ΗΗΜΜΕΕ…, 10ο ψηφίο μονό = άνδρας) → eGFR σε ΚΑΘΕ ασθενή με κρεατινίνη
+  function calcAuto(d, k){
+    const o = {};
+    try{ const M = (k && window.pdxPtLabs) ? window.pdxPtLabs(k) : null; const T = M && M.b && M.b.tests.find(t=>t.k==='creat'); const P = T ? T.pts.filter(p=>p.n!=null) : [];
+      if(P.length){ o.cr = +P[0].n; o.crAt = String(P[0].d||'').slice(0,8); } }catch(e){}
+    if(o.cr==null){ const lh = d.labHist||{}; const ds = Object.keys(lh).sort().reverse().filter(t=>lh[t] && String(lh[t].cr||'').trim()); if(ds.length){ const v = parseFloat(String(lh[ds[0]].cr).replace(',','.')); if(!isNaN(v)) { o.cr = v; o.crAt = ds[0]; } } }
+    if(o.cr==null && d.cr!=null && String(d.cr).trim()!==''){ const v = parseFloat(String(d.cr).replace(',','.')); if(!isNaN(v)) o.cr = v; }
+    const am = String(d.amka||'').replace(/\D/g,'');
+    if(/^\d{11}$/.test(am)){ const dd=+am.slice(0,2), mm=+am.slice(2,4), yy=+am.slice(4,6), now=new Date(); let y=2000+yy; if(y>now.getFullYear()) y-=100;
+      if(dd>=1&&dd<=31&&mm>=1&&mm<=12){ let a = now.getFullYear()-y; if(now.getMonth()+1<mm || (now.getMonth()+1===mm && now.getDate()<dd)) a--; if(a>=0&&a<120) o.age=a; }
+      o.sex = (+am[9])%2 ? 'M' : 'F'; }
+    if(o.age==null && d.age!=null && +d.age>0) o.age = +d.age;
+    if(!o.sex && /^(M|F)$/.test(String(d.sex||''))) o.sex = d.sex;
+    return o;
+  }
+  window.pdxCalcAuto = calcAuto;
+  function calcKind(d, k0){
     const ss=[d.surgery,d.surgery2].map(x=>String(x||'').trim()).filter(Boolean);
     const k=[];
     if(ss.some(x=>/(^|\s)(rrp|rarp|larp)$/i.test(x))) k.push('eau','partin');
     if(ss.some(x=>/(^|\s)p?nx$/i.test(x))) k.push('renal');
-    if(d.cr!=null && String(d.cr).trim()!=='') k.push('egfr');
+    if((d.cr!=null && String(d.cr).trim()!=='') || calcAuto(d, k0).cr!=null) k.push('egfr');
     return k;
   }
-  window.pdxCalcKind=function(d){ return calcKind(d); };
+  window.pdxCalcKind=function(d, k0){ return calcKind(d, k0); };
   function calcText(d){
     const out=[d.dx||'', d.historyCustom||'', d.findingsCustom||''];
     const walk=(o,key)=>{ if(o==null) return; if(typeof o==='string'){ out.push(o); return; } if(Array.isArray(o)){ o.forEach(x=>walk(x)); return; } if(typeof o==='object') Object.keys(o).forEach(k=>{ if(k==='suggestions'||k==='uncertain'||k==='medications') return; walk(o[k],k); }); };
     if(d.caseHist && d.caseHist.d) walk(d.caseHist.d);
     return out.join(' \n ');
   }
-  function calcGuess(d){
+  function calcGuess(d, k0){
     const c=Object.assign({},d.calc||{}); const t=calcText(d);
     if(c.size==null){ const m=t.match(/(\d+(?:[.,]\d+)?)\s*(cm|εκ|mm|χιλ)/i); if(m){ let v=parseFloat(m[1].replace(',','.')); if(/mm|χιλ/i.test(m[2])) v/=10; c.size=v; } }
     if(c.psa==null){ const m=t.match(/(?:psa|πσα)\s*(?:\([^)]*\))?\s*[:=]?\s*(?:ng\/ml\s*)?(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|—|έως|εως|to)\s*(\d+(?:[.,]\d+)?))?/i); if(m){ const lo=parseFloat(m[1].replace(',','.')), hi=m[2]?parseFloat(m[2].replace(',','.')):null; c.psa=(hi!=null&&hi>lo)?(m[1]+'-'+m[2]).replace(/\./g,','):lo; } }
@@ -9289,6 +9306,7 @@ document.head.appendChild(st);
     if(c.isup==null){ let m=t.match(/\b([2-5])\s*\+\s*([2-5])\b/); if(m){ const a=+m[1], b=+m[2], sm=a+b; c.isup=sm<=6?1:sm===7?(a===3?2:3):sm===8?4:5; }
       else { m=t.match(/(?:isup|gg|grade\s*group)\s*[:=]?\s*([1-5])/i); if(m) c.isup=+m[1]; else { m=t.match(/(?:gleason|\bgs)\s*(?:score|gs)?\s*[:=]?\s*(\d+)/i); if(m){ const g=+m[1]; if(g<=6) c.isup=1; else if(g===8) c.isup=4; else if(g>=9) c.isup=5; } } } }
     if(c.cr==null && d.cr!=null && String(d.cr).trim()!==''){ const v=parseFloat(String(d.cr).replace(',','.')); if(!isNaN(v)) c.cr=v; }
+    { const a = calcAuto(d, k0); if(c.cr==null && a.cr!=null) c.cr=a.cr; if(c.age==null && a.age!=null) c.age=a.age; if(!c.sex && a.sex) c.sex=a.sex; }
     return c;
   }
   function renalScore(c){
@@ -9334,7 +9352,7 @@ document.head.appendChild(st);
     return {e,g};
   }
   window.mobCalc=function(k,only){
-    const d=k?rec(k):{}; if(!d) return; const kinds=only?[only]:calcKind(d); let c=k?calcGuess(d):{};
+    const d=k?rec(k):{}; if(!d) return; const kinds=only?[only]:calcKind(d, k); let c=k?calcGuess(d, k):{};
     let ov=document.getElementById('calcOv'); if(ov) ov.remove();
     ov=document.createElement('div'); ov.id='calcOv';
     ov.style.cssText='position:fixed;inset:0;z-index:9500;background:#F2F2F7;color:#1C1C1E;overflow:auto;font-family:-apple-system,"Segoe UI",sans-serif;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 40px';
@@ -9623,7 +9641,7 @@ document.head.appendChild(st);
           + (Array.isArray(ch.medications) ? kv('Φάρμακα', ch.medications.map(m=>[m.name,m.dose,m.schedule,m.note].filter(Boolean).join(' '))) : '') + kv('Αλλεργίες', ch.allergies);
         if(b) h += '<div class="ptgh"><span>Ιστορικό εισαγωγής'+(d.caseHist.reviewed===false?' · για έλεγχο':'')+'</span><button onclick="__histOpenPending(\''+xk+'\','+_x+')" style="border:0;background:none;color:#0A84FF;font-weight:600;font-size:13px">Άνοιγμα ›</button></div><div class="ptg chv">'+b+'</div>'; } }
       h += secs(k2=>HIST.indexOf(k2)>=0);
-      { const ck=calcKind(d); if(ck.length){ h+='<div class="msec" onclick="mobCalc(\''+xk+'\')" style="cursor:pointer"><h3>Υπολογιστές<em>›</em></h3><div class="mbig">'+ck.map(x=>x==='renal'?'R.E.N.A.L.':x==='egfr'?'eGFR':x==='eau'?'EAU risk':'Partin').join(' · ')+'</div></div>'; } }
+      { const ck=calcKind(d, k); const eg = ck.includes('egfr') ? egfrCalc(calcGuess(d, k)) : null; if(ck.length){ h+='<div class="msec" onclick="mobCalc(\''+xk+'\')" style="cursor:pointer"><h3>Υπολογιστές<em>›</em></h3><div class="mbig">'+ck.map(x=>x==='renal'?'R.E.N.A.L.':x==='egfr'?(eg?'eGFR '+eg.e+' ('+eg.g+')':'eGFR'):x==='eau'?'EAU risk':'Partin').join(' · ')+'</div></div>'; } }
     } else {
       h += ptLabsHtml(k, d) + ptSurgHtml(k, d);
       h += secs(k2=>HIST.indexOf(k2)<0);
