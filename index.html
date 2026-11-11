@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v344';
+const APP_VER = '2026-11-11i-v345';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7510,7 +7510,7 @@ document.head.appendChild(st);
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
       bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"],   // 10/11 22:46 (χρήστης): στην «Κλινική»
       bot && ['🩻','Αξονικές ειδικευομένων','ταυτοποίηση & μετακίνηση στο αρχείο απεικονίσεων', "pdxCtInbox()"],   // 11/11 (χρήστης)
-      bot && ['🦓','Ετικέτα Zebra','αριθμός / barcode σε εκτυπωτή ετικετών', "pdxLabelPrint()"]   // 11/11 20:43 (χρήστης)
+      bot && ['🦓','Ετικέτα Zebra','μεγάλος αριθμός σε όλο το πλάτος', "pdxLabelPrint()"]   // 11/11 20:43 (χρήστης)
     ]);
     h += grp('Για έναν ασθενή', [
       bot && ['💊','Συνταγή e-prescription','με ΑΜΚΑ', "pdxDo('rxout')"],
@@ -22799,8 +22799,8 @@ window.pdxLabelPrint = function(){
   const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
   const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:11px;font-size:17px"';
   const pg = iosPage('Ετικέτα Zebra', 'Εργαλεία', ()=>{
-    let h = '<div class="ios-h">Αριθμός (barcode)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="code" inputmode="numeric" value="'+E3(st.code)+'" placeholder="π.χ. 626120301" '+inp+'></div>';
-    h += '<div class="ios-h">Κείμενο (προαιρετικό, λατινικά στην ετικέτα)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
+    let h = '<div class="ios-h">Αριθμός (μεγάλα γράμματα σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="code" inputmode="numeric" value="'+E3(st.code)+'" placeholder="π.χ. 345" '+inp+'></div>';
+    h += '<div class="ios-h">2η γραμμή (προαιρετική · τυπώνεται με λατινικά)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
     h += '<div class="ios-h">Αντίγραφα</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+[1,2,3,4,5].map(n=>'<button data-c="'+n+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:16px;font-weight:700;background:'+(st.copies===n?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+n+'</button>').join('')+'</div>';
     h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:700;background:'+(pc===id?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+nm+'</button>').join('')+'</div>';
     h += '<div style="margin:16px"><button data-go style="width:100%;border:0;border-radius:14px;padding:15px;font-size:17px;font-weight:800;background:#0A84FF;color:#fff">🦓 Εκτύπωση</button><div style="margin-top:10px;color:#475569;font-size:14px">'+E3(st.msg)+'</div></div>';
@@ -22810,9 +22810,9 @@ window.pdxLabelPrint = function(){
     const c = e.target.closest('[data-c]'); if(c){ st.copies = +c.dataset.c; return pg.redraw(); }
     const b = e.target.closest('[data-pc]'); if(b){ pc = b.dataset.pc; try{ localStorage.setItem('pdx_label_pc', pc); }catch(x){} return pg.redraw(); }
     if(e.target.closest('[data-go]')){
-      const code = String(st.code||'').replace(/[^0-9A-Za-z-]/g,''); if(!code){ st.msg = 'Γράψε αριθμό.'; return pg.redraw(); }
+      const code = String(st.code||'').trim().slice(0,40); if(!code && !String(st.text||'').trim()){ st.msg = 'Γράψε αριθμό.'; return pg.redraw(); }
       st.msg = 'Στέλνεται…'; pg.redraw();
-      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+code, room:null, kind:'labelprint', payload:{code, text:st.text||'', copies:st.copies, only:pc, bot:pc, quiet:true}, status:'new'}).select('id').single();
+      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+code, room:null, kind:'labelprint', payload:{line1:code, line2:st.text||'', copies:st.copies, only:pc, bot:pc, quiet:true}, status:'new'}).select('id').single();
         if(r.error) throw r.error; st.msg = '✓ Στάλθηκε στον Zebra ('+(PCS.find(x=>x[0]===pc)||[])[1]+').'; }catch(x){ st.msg = 'Δεν στάλθηκε: '+(x.message||x); }
       pg.redraw(); }
   });
