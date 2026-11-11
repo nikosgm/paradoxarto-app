@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11h-v333';
+const APP_VER = '2026-11-11i-v334';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14151,12 +14151,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // ↔ 9/11 (χρήστης): στις στομίες το ΝΠΣ ρωτά πλευρά στην προσθήκη πράξης → Δεξιά / Αριστερά / Άμφω
     const SIDES = ['Δεξιά','Αριστερά','Άμφω'];
     const needSide = pr=>!!(pr && (pr.side || /στομ/i.test(String(pr.name||''))));
-    const prOf = s1=>(C.procs||[])[+((s1||{}).proc)||0] || {};
-    const dtext = s1=>{ const pr = prOf(s1), sd = needSide(pr) && s1 && s1.side ? ' ('+String(s1.side).toLowerCase()+')' : ''; return 'Ασθενής υπεβλήθη σε '+String(pr.name||'ιατρική πράξη').toLowerCase()+(pr.code?' ('+pr.code+')':'')+sd+'. Εξέρχεται σε καλή γενική κατάσταση.'; };
+    // 11/11 15:24 (χρήστης: «βάλε επιλογή εξιτήριο χωρίς ιατρική πράξη»): proc = -1 → καμία πράξη (το bot δεν προσθέτει πράξη όταν δεν υπάρχει κωδικός)
+    const prOf = s1=>(+((s1||{}).proc)===-1) ? {name:'', code:'', none:true} : ((C.procs||[])[+((s1||{}).proc)||0] || {});
+    // 11/11 15:22 (χρήστης): «υπεβλήθη σε αλλαγή στομιών» · ΚΑΝΕΝΑΣ κωδικός πράξης στο κείμενο (σε όλες τις πράξεις)
+    const dtext = s1=>{ const pr = prOf(s1), sd = needSide(pr) && s1 && s1.side ? ' ('+String(s1.side).toLowerCase()+')' : ''; if(pr.none) return 'Εξέρχεται σε καλή γενική κατάσταση.'; return 'Ασθενής υπεβλήθη σε '+(/στομ/i.test(String(pr.name||'')) ? 'αλλαγή στομιών' : String(pr.name||'ιατρική πράξη').toLowerCase().replace(/\s*\([\d.\s]+\)\s*/g,' ').trim())+sd+'. Εξέρχεται σε καλή γενική κατάσταση.'; };
+    const dtextOld = s1=>{ const pr = prOf(s1), sd = needSide(pr) && s1 && s1.side ? ' ('+String(s1.side).toLowerCase()+')' : ''; return 'Ασθενής υπεβλήθη σε '+String(pr.name||'ιατρική πράξη').toLowerCase()+(pr.code?' ('+pr.code+')':'')+sd+'. Εξέρχεται σε καλή γενική κατάσταση.'; };
     // το κείμενο ακολουθεί την πράξη/πλευρά όσο είναι το αυτόματο (οποιασδήποτε πράξης)· αν το άλλαξες με το χέρι, μένει το δικό σου
     // 🕘 9/11 (χρήστης): ημ. εκτέλεσης πράξης = σήμερα 09:00 + 20′ × θέση στη λίστα (09:00, 09:20, 09:40…) — ίδια και στην επανάληψη
     const actAt = k=>{ const m = 9*60 + 20*(+k||0), d = new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
-    const isDef = t=>{ const x = String(t==null?'':t).trim(); if(!x) return true; return (C.procs||[]).some((p,k)=>[undefined].concat(SIDES).some(sd=>dtext({proc:k, side:sd}).trim()===x)); };
+    const isDef = t=>{ const x = String(t==null?'':t).trim(); if(!x) return true; return x===dtext({proc:-1}).trim() || (C.procs||[]).some((p,k)=>[undefined].concat(SIDES).some(sd=>dtext({proc:k, side:sd}).trim()===x || dtextOld({proc:k, side:sd}).trim()===x)); };
     const txOf = s1=>(s1 && s1.txt!=null && !isDef(s1.txt)) ? s1.txt : dtext(s1);
     // κατάσταση των εξιτηρίων που στάλθηκαν (μέχρι να εγκριθούν/αποτύχουν)
     const ST = {new:'⏳ στην ουρά', seen:'⏳ στην ουρά', running:'⏳ το bot συμπληρώνει…', review:'👀 περιμένει τον έλεγχό σου', approve:'⏳ εγκρίθηκε — αποθήκευση…', approved:'✅ εγκρίθηκε', done:'✅ ολοκληρώθηκε', failed:'✗ απέτυχε', cancelled:'✗ ακυρώθηκε', dismissed:'✗ ακυρώθηκε'};
@@ -14209,7 +14212,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         rows.forEach((r,i)=>{ const s0 = sel[i] || (sel[i] = {on:false, proc:0, doc:todayDoc()||(C.docs||[])[0]||''});
           if(isDone(s0) && !showDone) return;
           h += '<div style="border-top:1px solid #EEF2F6;padding:10px 0"><label style="display:flex;gap:10px;align-items:center;min-height:40px"><input type="checkbox" data-on="'+i+'"'+(s0.on?' checked':'')+' style="width:22px;height:22px"><b style="flex:1">'+E2(r.name||r.cells.join(' · '))+'</b><span style="font-size:13px;color:#6D6D72">'+E2(r.admit||'')+'</span></label>'
-            + (s0.on ? '<div style="display:flex;gap:8px;margin-top:6px"><select data-pr="'+i+'" '+inp+'>'+C.procs.map((x,k)=>'<option value="'+k+'"'+(k===+s0.proc?' selected':'')+'>'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'</select>'
+            + (s0.on ? '<div style="display:flex;gap:8px;margin-top:6px"><select data-pr="'+i+'" '+inp+'>'+C.procs.map((x,k)=>'<option value="'+k+'"'+(k===+s0.proc?' selected':'')+'>'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'<option value="-1"'+(+s0.proc===-1?' selected':'')+'>— χωρίς ιατρική πράξη —</option></select>'
               + '<select data-dc="'+i+'" '+inp+'>'+['<option value="">— θεράπων —</option>'].concat((C.docs||[]).map(d=>'<option'+(d===s0.doc?' selected':'')+'>'+E2(d)+'</option>')).join('')+'</select></div>'
               + (needSide(prOf(s0)) ? '<div style="display:flex;gap:6px;margin-top:6px">'+SIDES.map(sd=>'<button type="button" data-sd="'+i+'" data-v="'+sd+'" style="flex:1;min-height:40px;border-radius:10px;font-size:15px;font-weight:700;border:1.5px solid '+(s0.side===sd?'#1D4E80;background:#1D4E80;color:#fff':'#CBD5E1;background:none;color:inherit')+'">'+sd+'</button>').join('')+'</div>'+(s0.side?'':'<div style="font-size:13px;color:#B42318;margin-top:4px">Διάλεξε πλευρά</div>') : '')
               + '<textarea data-tx="'+i+'" rows="2" placeholder="Κείμενο εξιτηρίου" '+inp.replace('padding:9px 10px','padding:9px 10px;margin-top:6px')+'>'+E2(txOf(s0))+'</textarea>' : '')
@@ -14219,7 +14222,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const n = Object.keys(sel).filter(k=>sel[k].on && rows[k]).length;
         const nn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))).length;
         { const nOn = Object.keys(sel).filter(k=>sel[k].on && rows[k] && !isDone(sel[k])).length;
-          if(rows.length) h += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="font-size:14px;font-weight:600;flex:none">Πράξη για '+nOn+' επιλεγμένους:</span><select data-bulkpr '+(nOn?'':'disabled ')+inp+'><option value="">— διάλεξε —</option>'+C.procs.map((x,k)=>'<option value="'+k+'">'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'</select></div>'; }
+          if(rows.length) h += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="font-size:14px;font-weight:600;flex:none">Πράξη για '+nOn+' επιλεγμένους:</span><select data-bulkpr '+(nOn?'':'disabled ')+inp+'><option value="">— διάλεξε —</option>'+C.procs.map((x,k)=>'<option value="'+k+'">'+E2(x.name)+(x.code?' ('+E2(x.code)+')':'')+'</option>').join('')+'<option value="-1">— χωρίς ιατρική πράξη —</option></select></div>'; }
         if(rows.length) h += '<button data-a="dc" '+(nn?'':'disabled ')+'style="margin-top:10px;width:100%;height:46px;border:0;border-radius:12px;background:'+(nn?'#1D4E80':'#E5E7EB')+';color:'+(nn?'#fff':'#6B7280')+';font-size:16px;font-weight:700">📄 Εξιτήρια για '+nn+' επιλεγμένους</button><div class="ios-f" style="margin:6px 0 0">Ένα-ένα, όπως της κλινικής: το bot μπαίνει με τον λογαριασμό του Ημέρας (3434), συμπληρώνει το εξιτήριο και περιμένει τον «👀 Έλεγχο». Μετά την έγκριση ακολουθεί ο επόμενος.</div><div style="display:none">Ενεργοποιείται μόλις το bot χαρτογραφήσει τη φόρμα «Συγκεντρωτικό Εξιτήριο» του ΝΠΣ. Πριν από κάθε καταχώριση θα βλέπεις προεπισκόπηση και θα πατάς «Έγκριση».</div>';
       }
       h += '</div>';
