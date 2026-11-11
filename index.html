@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11j-v349';
+const APP_VER = '2026-11-11k-v350';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14400,6 +14400,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+(st.when==='Αύριο πρωί'?'<span style="font-size:13px;color:#64748B">ώρα παραγγελίας 08:00</span>':'')+'</div>'
         + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" style="'+C+(st.pat===id?CON:'')+'">'+E(nm)+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="Ο υπολογιστής δεν απαντά τώρα" style="'+C+';opacity:.45;border-style:dashed">'+E(window.__ordOff[id])+' · εκτός</button>').join('')+'</div>' : '')
+        // ➕ 11/11 (χρήστης): «για να προσθέτουμε εξετάσεις που ξεχάσαμε σε ήδη παραγγελθείσες» → πράσινο «+» της τελευταίας παραγγελίας στο Medilabi
+        + (MULTI ? '' : '<div style="margin-top:8px"><button data-addto style="'+C+(st.addTo?CON:'')+'">➕ Στην τελευταία παραγγελία (ξεχάστηκε)</button>'+(st.addTo?'<div style="font-size:12.5px;color:#475569;margin-top:4px">Μπαίνουν στο ίδιο σωληνάριο/barcode — μόνο μεμονωμένες εξετάσεις, όχι πακέτα.</div>':'')+'</div>')
         + '<input data-note placeholder="Σημείωση (προαιρετικά)" value="'+E(st.note)+'" style="width:100%;box-sizing:border-box;margin-top:8px;font-size:16px;padding:9px 11px;border:1.5px solid #D5DCE3;border-radius:12px">'
         + (st.msg?'<div style="color:#B42318;font-size:13.5px;margin-top:6px">'+E(st.msg)+'</div>':'')
         + '<button data-go style="margin-top:10px;width:100%;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:14px;padding:13px;font-size:16.5px;font-weight:800">Αποστολή στο bot'+(st.sel.length?' · '+st.sel.length+' εξετ.':'')+(st.pks.length?' · '+st.pks.length+' πακ.':'')+'</button></div></div>';
@@ -14425,6 +14427,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const tt = t.closest('[data-t]'); if(tt){ toggle(tt.dataset.t); return draw(); }
       const w = t.closest('[data-w]'); if(w){ st.when = w.dataset.w; return draw(); }
       const u = t.closest('[data-u]'); if(u){ st.urg = u.dataset.u; return draw(); }
+      if(t.closest('[data-addto]')){ st.addTo = !st.addTo; st.msg = ''; return draw(); }
       const pa = t.closest('[data-pat]'); if(pa){ const prev = st.pat; st.pat = pa.dataset.pat; try{ localStorage.setItem('pdx_print_at', st.pat); }catch(x){}
         // ⚡ 8/11: άλλαξε ο υπολογιστής εκτύπωσης → η φόρμα ετοιμάζεται ΕΚΕΙ (αλλιώς η παραγγελία ξεκινούσε από την αρχή: +10–20″)
         // ⚡ 8/11: ΜΙΑ προετοιμασία μετά από 1,5″ χωρίς νέα αλλαγή (πριν: 1 ανά πάτημα → 5 εργασίες σε 15″ έπιαναν τα bots)· οι προηγούμενες που δεν ξεκίνησαν ακυρώνονται
@@ -14435,6 +14438,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         return draw(); }
       if(t.closest('[data-go]')){
         if(!st.sel.length && !st.pks.length){ st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
+        if(st.addTo && st.pks.length){ st.msg = '➕ Στην τελευταία παραγγελία μπαίνουν μόνο μεμονωμένες εξετάσεις — βγάλε τα πακέτα.'; return draw(); }
         const pks = st.pks.map(i=>P.packs[i]).filter(Boolean);
         // 🛡 προστασία από διπλή παραγγελία: ίδια εξέταση για τον ίδιο ασθενή τις τελευταίες 12 ώρες (σταλμένη ή καταχωρημένη)
         if(!MULTI) try{ const since = new Date(Date.now()-12*3600e3).toISOString();
@@ -14444,6 +14448,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         }catch(e){}
         const PL = Object.assign({tests:st.sel.slice(), packs:pks.map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:st.when, urgency:st.urg, note:(st.note||'').trim()}, st.pat ? {printAt:st.pat, printName:BN[st.pat]||''} : {});
         // ⚡ 7/11: «Τυχαία» → στον υπολογιστή που έχει ΗΔΗ ανοιχτή τη φόρμα (προετοιμασία), όχι σε άλλον που θα την ξανανοίξει (13″ αντί 30″+)
+        if(st.addTo && !MULTI) PL.addTo = 'last';
         try{ const MP = window.__medPath || {}, PA = {}; st.sel.forEach(t=>{ if(t.indexOf('@@')<0 && MP[t]) PA[t] = MP[t]; }); if(Object.keys(PA).length) PL.paths = PA; }catch(e){}
         if(!st.pat && !MULTI) try{ const r = await sb6.from('oncall_jobs').select('payload,status,updated_at').eq('kind','orderprep').eq('name_key', nrm(d.name)).in('status',['done','running','seen']).gte('created_at', new Date(Date.now()-6*60000).toISOString()).order('id',{ascending:false}).limit(1);
           const pb = r.data && r.data[0] && r.data[0].payload && r.data[0].payload.bot; if(pb){ PL.printAt = pb; PL.printName = BN[pb] || ''; } }catch(e){}
