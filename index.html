@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v347';
+const APP_VER = '2026-11-11i-v348';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22798,7 +22798,7 @@ window.pdxLabelPrint = function(){
   const st = {code:'', text:'', copies:1, msg:'', kb:'num'};   // 11/11 20:55 (χρήστης): «επιλογή και γράμματα να τυπώνω»
   try{ st.kb = localStorage.getItem('pdx_label_kb') || 'num'; }catch(e){}
   // 11/11 21:02 (χρήστης: «να ρυθμίζω εγώ πλάτος μήκος από την εφαρμογή και γραμματοσειρά, bold»): μορφή ανά εκτυπωτή (localStorage)
-  const FDEF = {w:50, h:25, m:4, dx:0, font:0, sz:0, bold:false, setH:false};
+  const FDEF = {w:50, h:25, m:1, dx:0, font:0, sz:0, bold:false, setH:false};
   const fmtGet = ()=>{ try{ return Object.assign({}, FDEF, JSON.parse(localStorage.getItem('pdx_label_fmt_'+pc)||'{}')); }catch(e){ return Object.assign({}, FDEF); } };
   const fmtSet = f=>{ try{ localStorage.setItem('pdx_label_fmt_'+pc, JSON.stringify(f)); }catch(e){} };
   let fmt = fmtGet(), fmtOpen = false;
