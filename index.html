@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11a-v326';
+const APP_VER = '2026-11-11b-v327';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7484,7 +7484,8 @@ document.head.appendChild(st);
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
-      bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"]   // 10/11 22:46 (χρήστης): στην «Κλινική»
+      bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"],   // 10/11 22:46 (χρήστης): στην «Κλινική»
+      bot && ['🩻','Αξονικές ειδικευομένων','ταυτοποίηση & μετακίνηση στο αρχείο απεικονίσεων', "pdxCtInbox()"]   // 11/11 (χρήστης)
     ]);
     h += grp('Για έναν ασθενή', [
       bot && ['💊','Συνταγή e-prescription','με ΑΜΚΑ', "pdxDo('rxout')"],
@@ -8446,6 +8447,7 @@ document.head.appendChild(st);
       ['📁','Αρχεία κλινικής','αρχεια φακελος ουρολογικης pronas αξονικη μαγνητικη απεικονιση dicom pdf', k=>pdxFiles(), false],
       ['💻','Αξονικές: εφαρμογή υπολογιστή (3D)','αξονικες viewer ct dicom 3d radiant εγκατασταση εφαρμογη υπολογιστη cd', k=>{ location.href='ct?install=1'; }, false],
       ['🔬','Βιοψίες','βιοψιες βιοψια παθολογοανατομικο ιστολογικη αποτελεσμα gleason', bot?(k=>pdxBiopsies()):null, false],
+      ['🩻','Αξονικές ειδικευομένων','αξονικες ειδικευομενων φακελος ct μετακινηση αρχειο απεικονισεων cd', bot?(k=>pdxCtInbox()):null, false],
       ['📑','ΕΨΙΝΕ (Ενιαίο Ψηφιακό Ιστορικό)','εψινε ενιαιο ψηφιακο ιστορικο νοσηλειας οριστικοποιηση', bot?(k=>pdxEpsineOpen()):null, false],
       ['📂','Αρχείο ασθενών (βάση)','αρχειο ασθενων βαση φακελος νοσηλειες εξιτηριο πρακτικο ιστορικο', k=>pdxArchOpen(''), false],
       ['☑','Εκκρεμότητα σε πολλούς','εκκρεμοτητα πολλους μαζικα bulk', k=>pdxDo('bulk'), false],
@@ -8804,7 +8806,7 @@ document.head.appendChild(st);
     const nN = window.pdxNpsCount ? pdxNpsCount() : null;   // 🏥 9/11 (χρήστης): «Ασθενείς ΝΠΣ» κάτω από τους «Ασθενείς»
     h += '<div><div class="dks-h">ΚΛΙΝΙΚΗ</div>' + a('Ασθενείς', tab==='pts' && !window.__npsView, "window.__npsView=false;mobTab('pts')", mine!==all ? mine+'/'+all : all) + (bot ? '<button class="dks-a'+(tab==='pts' && window.__npsView && !A?' on':'')+'" onclick="pdxNpsFilter(true)">Ασθενείς ΝΠΣ'+(nN==null?'':'<small>'+nN+'</small>')+'</button>' : '') + a('Εκκρεμότητες', tab==='todo', "mobTab('todo')", nT) + '</div>';
     h += '<div><div class="dks-h">ΕΡΓΑΛΕΙΑ</div>' + a('Αρχείο ασθενών', false, "pdxPtArch()", '', 'ptx') + a('Εργαστηριακά', false, "window.labsFullOpen ? labsFullOpen('') : pdxCmd()", '', 'labs')
-      + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('ΕΨΙΝΕ', false, "pdxEpsineOpen()", '', 'epsine') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
+      + (bot ? a('Βιοψίες', false, "pdxBiopsies()", '', 'bx') + a('Αξονικές ειδικ.', false, "pdxCtInbox()", '', 'ctinbox') + a('ΕΨΙΝΕ', false, "pdxEpsineOpen()", '', 'epsine') + a('Συνταγογράφηση', false, "pdxDo('rxout')", '', 'rx') : '')
       + a('Ενέργειες bot', false, "pdxDo('botlog')", bn ? '⚠ '+bn : '', 'botlog') + a('Κατάσταση', false, "pdxHealth()", '', 'health') + a('Όλα τα εργαλεία', tab==='tools', "mobTab('tools')") + '</div>';
     h += '<div style="margin-top:auto">' + a('Πλήρης πίνακας', false, "mobFull()") + a('Ρυθμίσεις', tab==='me', "mobTab('me')") + '</div>';
     return h;
@@ -13310,7 +13312,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // Κάθε εργασία που έστειλε αυτός ο χρήστης (τελευταία 30′): κάψουλα με κυκλάκι προόδου + τι κάνει τώρα. Πάτημα → οθόνη
   // προόδου με όλες τις εργασίες. Τέλος → ✓/⚠ για λίγα δευτερόλεπτα· «για έγκριση» → πορτοκαλί, πάτημα = έγκριση.
   (function(){
-    const LBL = {epsine:'ΕΨΙΝΕ', bxscan:'Βιοψίες', order:'Παραγγελία', rx:'Συνταγή', rxname:'ΑΜΚΑ → όνομα', consult:'Εκτίμηση', discharge:'Εξιτήριο', comorb:'Συννοσηρότητες', ehrdx:'Διαγνώσεις ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά', medbx:'Βιοψίες', imgdir:'Φάκελος ασθενή', imgget:'Εικόνες', evoradimg:'Ακτινογραφία', clinicview:'Εισαγωγές', logins:'Έλεγχος συνδέσεων', cred:'Κωδικοί'};
+    const LBL = {epsine:'ΕΨΙΝΕ', bxscan:'Βιοψίες', order:'Παραγγελία', rx:'Συνταγή', rxname:'ΑΜΚΑ → όνομα', consult:'Εκτίμηση', discharge:'Εξιτήριο', comorb:'Συννοσηρότητες', ehrdx:'Διαγνώσεις ΑΗΦΥ', ehrlabs:'Εργαστηριακά ΑΗΦΥ', medlabs:'Εργαστηριακά', medbx:'Βιοψίες', imgdir:'Φάκελος ασθενή', imgget:'Εικόνες', ctinbox:'Αξονικές ειδικευομένων', imgmove:'Μετακίνηση αξονικής', evoradimg:'Ακτινογραφία', clinicview:'Εισαγωγές', logins:'Έλεγχος συνδέσεων', cred:'Κωδικοί'};
     const SKIP = /^(orderprep|imgmap|fsls|fsfind|botcfg|emrmap|medbxprobe|evoradprobe|evoradsrc|evoradfind|findpacs|emrmedmap)$/;
     const ACT = ['new','seen','running','approve'];
     const css = document.createElement('style'); css.textContent =
@@ -19104,6 +19106,55 @@ window.pdxEpsineOpen = function(){
 };
 // 🔎 10/11 23:10 (χρήστης: «ο φακός να ψάχνει ασθενή σε ΟΛΟ το ΝΠΣ»): εντολή npsfind (μόνο ανάγνωση, εκτός κλινικής, από 2000) → λίστα·
 // πάτημα → 📂 Φάκελος ΝΠΣ του ασθενή (pdxDossierOpen) ή 🌐 Αρχείο (Medilabi)
+// 🩻 11/11 Αξονικές στους φακέλους ειδικευομένων → ταυτοποίηση (ίδιο επώνυμο + ανέβηκε ίδια μέρα ή μετά την εισαγωγή στο ΝΠΣ + ΑΜ στο DICOM)
+// → «Μετακίνηση στο ΑΡΧΕΙΟ ΑΠΕΙΚΟΝΙΣΕΩΝ» (εντολή imgmove, μόνο με πάτημα). Ο ειδικευόμενος παίρνει ειδοποίηση από το bot.
+window.pdxCtInbox = async function(){
+  if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
+  const E6 = x=>esc(String(x==null?'':x)), st = {busy:'', msg:'', R:null, at:0, mv:{}};
+  const dt = t=>t ? new Date(t).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  const destOf = x=>{ const nm = String(x.name||'').replace(/\s+/g,' ').trim(); const d = x.up ? new Date(x.up) : new Date();
+    const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    return nm + (x.amka ? ' - '+x.amka : x.am ? ' - ΑΜ '+x.am : '') + '\\' + iso + ' ' + String(x.folder||'CT').slice(0,40) + ' (από ' + x.res + ')'; };
+  const pg = iosPage('Αξονικές ειδικευομένων', 'Πίσω', ()=>{
+    let h = '<div style="margin:0 16px 10px;font-size:13.5px;color:#6B7280">Φάκελοι ειδικευομένων στο \\\\pronas\\OUROLOGIKH_KLINIKH · ταιριάζουν επώνυμο <b>και</b> ημερομηνία ανεβάσματος (ίδια μέρα ή μετά την εισαγωγή στο ΝΠΣ)'+(st.at?' · '+dt(st.at):'')+'</div>';
+    if(st.busy) h += '<div style="margin:12px 16px;color:#6B7280">⏳ '+E6(st.busy)+'</div>';
+    if(st.msg) h += '<div style="margin:12px 16px;color:#B42318">'+E6(st.msg)+'</div>';
+    const rows = (st.R && st.R.rows) || [];
+    if(st.R && !rows.length) h += iosGroup('', [{t:'Καμία αξονική ασθενή της κλινικής στους φακέλους ειδικευομένων.'}]);
+    const by = {}; rows.forEach((x,i)=>{ (by[x.res] = by[x.res] || []).push([x,i]); });
+    Object.keys(by).sort().forEach(r=>{
+      h += iosGroup('📁 '+r+' · '+by[r].length, by[r].map(([x,i])=>{ const m = st.mv[i];
+        const btn = m==='ok' ? '<span style="color:#1F8A4C">✓ στο αρχείο</span>' : m==='run' ? '<span style="color:#6B7280">⏳ μετακίνηση…</span>' : (m && m.err) ? '<span style="color:#B42318">⚠ '+E6(m.err)+'</span>'
+          : '<button data-ctmv="'+i+'" style="border:0;background:'+(x.sure?'#0A84FF':'#8E8E93')+';color:#fff;border-radius:9px;padding:7px 11px;font-size:13.5px;font-weight:600">📦 Στο αρχείο</button>';
+        return {t:'<div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><div><b>'+E6(x.name)+'</b><div style="font-size:12.5px;color:#6B7280">'+E6(x.folder)+' · ανέβηκε '+dt(x.up)+(x.ad?' · εισαγωγή '+E6(x.ad):'')+' · '+(x.n||0)+' αρχεία'
+          +(x.amOk?' · <span style="color:#1F8A4C">✓ ΑΜ στο DICOM</span>':'')+(x.sure?'':' · <span style="color:#B26A00">έλεγξε (συνεπώνυμοι/χωρίς εικόνες)</span>')+'</div></div>'+btn+'</div>'}; }));
+    });
+    const nS = rows.filter((x,i)=>x.sure && !st.mv[i]).length;
+    if(nS > 1) h += iosGroup('', [{t:'<b style="color:#0A84FF">📦 Μετακίνηση όλων των σίγουρων ('+nS+')</b>', on:'window.__ctAll && __ctAll()'}]);
+    h += iosGroup('', [{t:'<b style="color:#0A84FF">↻ Σάρωση τώρα</b>', on:'window.__ctScan && __ctScan()'}]);
+    return h + '<div class="ios-f">Η μετακίνηση πάει τον φάκελο στο «ΑΡΧΕΙΟ ΑΠΕΙΚΟΝΙΣΕΩΝ\\ΑΣΘΕΝΗΣ - ΑΜΚΑ\\ημερομηνία…» — δεν σβήνεται τίποτα.</div><div style="height:40px"></div>'; });
+  const poll = async (id, onNote)=>{ for(let k=0;k<200;k++){ await new Promise(r=>setTimeout(r, 3000)); const r = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const x = r && r.data; if(!x) continue;
+      if(/new|seen|running/.test(x.status)){ onNote && x.note && onNote(x.note); continue; } return x; } return null; };
+  const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','ctinbox').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
+      const j = (r.data||[])[0]; if(j && j.payload.result.enc){ await pdxCK.ready(); st.R = await pdxCK.decrypt(j.payload.result.enc); st.at = st.R.at || Date.parse(j.updated_at); } }catch(e){ st.msg = 'Αποκρυπτογράφηση: '+(e.message||e); } pg.redraw(); };
+  window.__ctScan = async ()=>{ if(st.busy) return;
+    const pts = []; [data, extraPatients].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) pts.push({key:k, name:d.name, fname:d.fname||'', ad:d.admitDate||'', amka:pdxAmkaOk(d.amka)?String(d.amka):'', am:/^\d{8}$/.test(String(d.am||''))?String(d.am):''}); }));
+    if(!pts.length){ st.msg='Καμία λίστα ασθενών.'; pg.redraw(); return; }
+    st.busy = 'Το bot διαβάζει τους φακέλους των ειδικευομένων…'; st.msg=''; pg.redraw();
+    try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctinbox', name:'🩻 Αξονικές ειδικευομένων', room:null, kind:'ctinbox', payload:{pts, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+      const x = await poll(ins.data.id, n=>{ st.busy = String(n).slice(0,100); pg.redraw(); }); st.busy='';
+      if(!x) st.msg='⚠ το bot δεν απάντησε'; else if(x.status!=='done') st.msg='⚠ '+(x.note||x.status); else { st.mv = {}; await load(); return; }
+    }catch(e){ st.busy=''; st.msg='⚠ '+(e.message||e); } pg.redraw(); };
+  const move = async (i)=>{ const x = (st.R && st.R.rows || [])[i]; if(!x || st.mv[i]) return; st.mv[i] = 'run'; pg.redraw();
+    try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_imgmove', name:'📦 '+String(x.name).slice(0,40)+' → αρχείο', room:null, kind:'imgmove', payload:{ri:x.ri, rel:x.rel, name:destOf(x), key:x.key, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+      const r = await poll(ins.data.id); st.mv[i] = r && r.status==='done' ? 'ok' : {err: String((r && r.note) || 'χωρίς απάντηση').replace(/^📦\s*/,'').slice(0,90)};
+    }catch(e){ st.mv[i] = {err: String(e.message||e).slice(0,90)}; } pg.redraw(); };
+  window.__ctAll = async ()=>{ const L = (st.R && st.R.rows || []).map((x,i)=>[x,i]).filter(([x,i])=>x.sure && !st.mv[i]); for(const [,i] of L) await move(i); };
+  pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-ctmv]'); if(!b) return; e.stopPropagation(); const i = +b.dataset.ctmv, x = st.R.rows[i];
+    if(!x.sure && !confirm('Δεν είναι σίγουρη η ταυτοποίηση ('+x.folder+'). Μετακίνηση παρ\' όλα αυτά;')) return; move(i); });
+  await load();
+  if(!st.R || Date.now()-st.at > 6*3600e3) __ctScan();
+};
 window.pdxNpsFind = async function(q){
   const E5 = x=>esc(String(x==null?'':x)), st = {q:String(q||'').trim(), busy:'', msg:'', res:null};
   const pg = iosPage('Αναζήτηση στο ΝΠΣ', 'Πίσω', ()=>{
