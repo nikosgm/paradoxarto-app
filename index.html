@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v340';
+const APP_VER = '2026-11-11i-v341';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17688,7 +17688,11 @@ Z99.2:C|αιμοκάθαρση
         const x = keyOfName(r.t, r.u, g);
         kk = x.k;
         // δύο ΔΙΑΦΟΡΕΤΙΚΕΣ εξετάσεις που πέφτουν στο ίδιο κλειδί (π.χ. «PT» και «Χρόνος Μάρτυρα (PT)») μένουν χωριστά
-        if(byK[kk] && nrm(byK[kk].t)!==nrm(r.t)) kk = 'n:' + nrm(r.t) + '|' + nrm(g);
+        // 11/11 20:01 (χρήστης: «ασθενής έχει τα πρώτα του αποτελέσματα»): το Medilabi γράφει την ΙΔΙΑ εξέταση με/χωρίς δείγμα στο τέλος
+        // («HCT - Αιματοκρίτης (Αίμα)» σε παλιές λήψεις, «HCT - Αιματοκρίτης» στις νέες) → ήταν «διαφορετικές» και η στήλη Ht έδειχνε την ΠΑΛΙΑ (2006).
+        // Ίδια εξέταση χωρίς την παρένθεση δείγματος → ΕΝΩΝΟΝΤΑΙ (νεότερη τιμή πρώτη)
+        const bare = t=>nrm(String(t||'').replace(/\s*\((αιμα|αίμα|ορος|ορός|ουρα|ούρα|πλασμα|πλάσμα|ολικο αιμα|ολικό αίμα)\)\s*$/i,''));
+        if(byK[kk] && nrm(byK[kk].t)!==nrm(r.t) && bare(byK[kk].t)!==bare(r.t)) kk = 'n:' + nrm(r.t) + '|' + nrm(g);
         seenName[nameId] = kk;
         if(!byK[kk]){ byK[kk] = {k:kk, lbl:x.lbl, t:r.t, u:r.u||'', r:r.r||'', g, pts:[]}; order.push(kk); }
       }
@@ -18386,7 +18390,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
         if(sig1!==sig0 && window.mobRefresh && !(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))) mobRefresh(); }, ()=>{});
     }
     const p = pts().find(x=>x.k===k), lab = p && labOf(p);
-    // 11/11 19:38 (χρήστης: «ο Κόκκαλης δεν ανανεώνεται — εργαστηριακά, δεν μπορούμε να μην έχουμε σωστές τιμές»): ασθενής της λίστας ΝΠΣ
+    // 11/11 19:38 (χρήστης: «ασθενής δεν ανανεώνεται — εργαστηριακά, δεν μπορούμε να μην έχουμε σωστές τιμές»): ασθενής της λίστας ΝΠΣ
     // (εκτός κρεβατιού) έδειχνε ΠΑΓΩΜΕΝΟ αντίγραφο (_medLab, της ώρας που ανοίχτηκε), όχι τα τρέχοντα του bot → πρώτα τα ΤΡΕΧΟΝΤΑ (oncall_labs)
     if(!lab){ const r = (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[k]; if(r){ const live = r.name ? labOf({k, d:r}) : null; if(live) return {b:B(live), alarm:alarmOf}; if(r._medLab) return {b:B(r._medLab), alarm:alarmOf}; } }   // ασθενής ΝΠΣ: τρέχοντα, αλλιώς το αντίγραφο του Medilabi
     return lab ? {b:B(lab), alarm:alarmOf} : null;
