@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v346';
+const APP_VER = '2026-11-11i-v347';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22797,6 +22797,12 @@ window.pdxLabelPrint = function(){
   let pc = ''; try{ pc = localStorage.getItem('pdx_label_pc') || ''; }catch(e){} if(!PCS.some(x=>x[0]===pc)) pc = PCS[0][0];
   const st = {code:'', text:'', copies:1, msg:'', kb:'num'};   // 11/11 20:55 (χρήστης): «επιλογή και γράμματα να τυπώνω»
   try{ st.kb = localStorage.getItem('pdx_label_kb') || 'num'; }catch(e){}
+  // 11/11 21:02 (χρήστης: «να ρυθμίζω εγώ πλάτος μήκος από την εφαρμογή και γραμματοσειρά, bold»): μορφή ανά εκτυπωτή (localStorage)
+  const FDEF = {w:50, h:25, m:4, dx:0, font:0, sz:0, bold:false, setH:false};
+  const fmtGet = ()=>{ try{ return Object.assign({}, FDEF, JSON.parse(localStorage.getItem('pdx_label_fmt_'+pc)||'{}')); }catch(e){ return Object.assign({}, FDEF); } };
+  const fmtSet = f=>{ try{ localStorage.setItem('pdx_label_fmt_'+pc, JSON.stringify(f)); }catch(e){} };
+  let fmt = fmtGet(), fmtOpen = false;
+  const FONTS = [[0,'Αυτόματη'],[5,'5 · πολύ μεγάλη (μόνο κεφαλαία)'],[4,'4 · μεγάλη'],[3,'3 · μεσαία'],[2,'2 · μικρή'],[1,'1 · πολύ μικρή']];
   const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
   const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:11px;font-size:17px"';
   const pg = iosPage('Ετικέτα Zebra', 'Εργαλεία', ()=>{
@@ -22804,17 +22810,37 @@ window.pdxLabelPrint = function(){
     h += '<div class="ios-h">2η γραμμή (προαιρετική · τυπώνεται με λατινικά)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
     h += '<div class="ios-h">Αντίγραφα</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+[1,2,3,4,5].map(n=>'<button data-c="'+n+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:16px;font-weight:700;background:'+(st.copies===n?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+n+'</button>').join('')+'</div>';
     h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:700;background:'+(pc===id?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+nm+'</button>').join('')+'</div>';
+    const stp = (k,l,u,step)=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0"><span style="font-size:15px">'+l+'</span><span style="display:flex;align-items:center;gap:8px"><button data-st="'+k+'" data-d="-'+step+'" style="width:38px;height:34px;border:0;border-radius:9px;background:#EEF2F6;font-size:19px;font-weight:700">−</button><b style="min-width:62px;text-align:center;font-size:16px">'+(k==='sz'&&!fmt.sz?'Αυτόμ.':fmt[k]+u)+'</b><button data-st="'+k+'" data-d="'+step+'" style="width:38px;height:34px;border:0;border-radius:9px;background:#EEF2F6;font-size:19px;font-weight:700">+</button></span></div>';
+    h += '<div class="ios-h" data-fo style="cursor:pointer">⚙️ Μορφή ετικέτας ('+((PCS.find(x=>x[0]===pc)||[])[1]||'')+') '+(fmtOpen?'▾':'▸')+'</div>';
+    if(fmtOpen){
+      const ar = Math.max(0.15, Math.min(1.2, fmt.h/fmt.w)), prev = [String(st.code||'').trim()||'345', String(st.text||'').trim()].filter(Boolean);
+      h += '<div class="ios-g noic" style="padding:10px 14px">'
+        + '<div style="margin:4px auto 10px;width:240px;height:'+Math.round(240*ar)+'px;border:1px dashed #94A3B8;border-radius:6px;background:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;box-sizing:border-box;padding:0 '+Math.round(240*fmt.m/fmt.w)+'px;transform:translateX('+Math.round(240*fmt.dx/fmt.w)+'px);overflow:hidden">'+prev.map(t=>'<div style="font-family:monospace;font-weight:'+(fmt.bold?900:600)+';white-space:nowrap;line-height:1;font-size:'+Math.max(9,Math.min(Math.round(240*ar*0.8/prev.length), Math.round((240-2*240*fmt.m/fmt.w)/(Math.max(1,t.length)*0.62)*(fmt.sz?Math.min(1,fmt.sz/4):1))))+'px">'+E3(t.slice(0,40))+'</div>').join('')+'</div>'
+        + stp('w','Πλάτος ετικέτας',' mm',1) + stp('h','Ύψος (μήκος) ετικέτας',' mm',1) + stp('m','Περιθώριο αριστερά/δεξιά',' mm',1) + stp('dx','Μετατόπιση (− αριστερά, + δεξιά)',' mm',1) + stp('sz','Μέγεθος γραμμάτων','×',1)
+        + '<div style="padding:7px 0"><div style="font-size:15px;margin-bottom:6px">Γραμματοσειρά</div><select data-ff style="width:100%;font-size:16px;padding:9px;border-radius:10px;border:1px solid #D1D5DB">'+FONTS.map(([v,l])=>'<option value="'+v+'"'+(+fmt.font===v?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'
+        + '<label style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;font-size:15px">Έντονα (bold)<input type="checkbox" data-fb '+(fmt.bold?'checked':'')+' style="width:22px;height:22px"></label>'
+        + '<label style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;font-size:15px">Στείλε και το ύψος στον εκτυπωτή<input type="checkbox" data-fh '+(fmt.setH?'checked':'')+' style="width:22px;height:22px"></label>'
+        + '<div style="font-size:12.5px;color:#64748B">Η προεπισκόπηση είναι κατά προσέγγιση. Οι ρυθμίσεις κρατιούνται χωριστά για κάθε εκτυπωτή.</div>'
+        + '<button data-fr style="margin-top:8px;border:0;background:none;color:#0A84FF;font-size:15px;padding:4px 0">Επαναφορά προεπιλογών</button></div>';
+    }
     h += '<div style="margin:16px"><button data-go style="width:100%;border:0;border-radius:14px;padding:15px;font-size:17px;font-weight:800;background:#0A84FF;color:#fff">🦓 Εκτύπωση</button><div style="margin-top:10px;color:#475569;font-size:14px">'+E3(st.msg)+'</div></div>';
     return h; });
   pg.el.addEventListener('input', e=>{ const f = e.target.getAttribute('data-f'); if(f) st[f] = e.target.value; });
+  pg.el.addEventListener('change', e=>{ const t = e.target;
+    if(t.matches('[data-ff]')){ fmt.font = +t.value; fmtSet(fmt); return pg.redraw(); }
+    if(t.matches('[data-fb]')){ fmt.bold = t.checked; fmtSet(fmt); return pg.redraw(); }
+    if(t.matches('[data-fh]')){ fmt.setH = t.checked; fmtSet(fmt); return pg.redraw(); } });
   pg.el.addEventListener('click', async e=>{
     const kb = e.target.closest('[data-kb]'); if(kb){ st.kb = kb.dataset.kb; try{ localStorage.setItem('pdx_label_kb', st.kb); }catch(x){} pg.redraw(); setTimeout(()=>{ const i = document.querySelector('#iosPg [data-f=code]'); if(i) i.focus(); }, 50); return; }
+    if(e.target.closest('[data-fo]')){ fmtOpen = !fmtOpen; return pg.redraw(); }
+    if(e.target.closest('[data-fr]')){ fmt = Object.assign({}, FDEF); fmtSet(fmt); return pg.redraw(); }
+    const sb = e.target.closest('[data-st]'); if(sb){ const k = sb.dataset.st, lim = {w:[20,104], h:[10,150], m:[0,20], dx:[-20,20], sz:[0,8]}[k]; fmt[k] = Math.max(lim[0], Math.min(lim[1], (+fmt[k]||0) + (+sb.dataset.d))); fmtSet(fmt); return pg.redraw(); }
     const c = e.target.closest('[data-c]'); if(c){ st.copies = +c.dataset.c; return pg.redraw(); }
-    const b = e.target.closest('[data-pc]'); if(b){ pc = b.dataset.pc; try{ localStorage.setItem('pdx_label_pc', pc); }catch(x){} return pg.redraw(); }
+    const b = e.target.closest('[data-pc]'); if(b){ pc = b.dataset.pc; try{ localStorage.setItem('pdx_label_pc', pc); }catch(x){} fmt = fmtGet(); return pg.redraw(); }
     if(e.target.closest('[data-go]')){
       const code = String(st.code||'').trim().slice(0,40); if(!code && !String(st.text||'').trim()){ st.msg = 'Γράψε αριθμό.'; return pg.redraw(); }
       st.msg = 'Στέλνεται…'; pg.redraw();
-      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+code, room:null, kind:'labelprint', payload:{line1:code, line2:st.text||'', copies:st.copies, only:pc, bot:pc, quiet:true}, status:'new'}).select('id').single();
+      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+code, room:null, kind:'labelprint', payload:{line1:code, line2:st.text||'', copies:st.copies, fmt:Object.assign({}, fmt), only:pc, bot:pc, quiet:true}, status:'new'}).select('id').single();
         if(r.error) throw r.error; st.msg = '✓ Στάλθηκε στον Zebra ('+(PCS.find(x=>x[0]===pc)||[])[1]+').'; }catch(x){ st.msg = 'Δεν στάλθηκε: '+(x.message||x); }
       pg.redraw(); }
   });
