@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v345';
+const APP_VER = '2026-11-11i-v346';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22793,13 +22793,14 @@ window.CLS_MODE='A';
 // 🦓 11/11 20:43 (χρήστης: «πρέπει να τυπώνουμε στο Zebra νούμερα»): ετικέτα με αριθμό (barcode) + κείμενο → bot στον υπολογιστή του Zebra
 // (EPL· ΟΧΙ Παράθυρο, ΟΧΙ Εξωτερικά)
 window.pdxLabelPrint = function(){
-  const PCS = [['bmw51nismmo82h','Μεσαίος'],['bmw51yicermfhw','Γωνιακός'],['bmw53id81dnv9z','Πόρτα']];
+  const PCS = [['bmw51nismmo82h','Μεσαίος'],['bmw51yicermfhw','Γωνιακός'],['bmw53id81dnv9z','Πόρτα'],['bmwammethy0htb','Εξωτερικά']];   // 11/11 20:55 (χρήστης): και τα Εξωτερικά ως επιλογή
   let pc = ''; try{ pc = localStorage.getItem('pdx_label_pc') || ''; }catch(e){} if(!PCS.some(x=>x[0]===pc)) pc = PCS[0][0];
-  const st = {code:'', text:'', copies:1, msg:''};
+  const st = {code:'', text:'', copies:1, msg:'', kb:'num'};   // 11/11 20:55 (χρήστης): «επιλογή και γράμματα να τυπώνω»
+  try{ st.kb = localStorage.getItem('pdx_label_kb') || 'num'; }catch(e){}
   const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
   const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:11px;font-size:17px"';
   const pg = iosPage('Ετικέτα Zebra', 'Εργαλεία', ()=>{
-    let h = '<div class="ios-h">Αριθμός (μεγάλα γράμματα σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="code" inputmode="numeric" value="'+E3(st.code)+'" placeholder="π.χ. 345" '+inp+'></div>';
+    let h = '<div class="ios-h">Τι τυπώνεται (μεγάλα, σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><div style="display:flex;gap:8px;margin-bottom:10px">'+[['num','123 Αριθμοί'],['txt','ΑΒΓ Γράμματα']].map(([k,l])=>'<button data-kb="'+k+'" style="flex:1;border:0;border-radius:10px;padding:9px;font-size:15px;font-weight:700;background:'+(st.kb===k?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+l+'</button>').join('')+'</div><input data-f="code" inputmode="'+(st.kb==='num'?'numeric':'text')+'" autocapitalize="characters" value="'+E3(st.code)+'" placeholder="'+(st.kb==='num'?'π.χ. 345':'π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ')+'" '+inp+'>'+(st.kb==='txt'?'<div style="font-size:13px;color:#64748B;margin-top:6px">Τα ελληνικά τυπώνονται με λατινικά (ο εκτυπωτής δεν έχει ελληνικά).</div>':'')+'</div>';
     h += '<div class="ios-h">2η γραμμή (προαιρετική · τυπώνεται με λατινικά)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
     h += '<div class="ios-h">Αντίγραφα</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+[1,2,3,4,5].map(n=>'<button data-c="'+n+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:16px;font-weight:700;background:'+(st.copies===n?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+n+'</button>').join('')+'</div>';
     h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:700;background:'+(pc===id?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+nm+'</button>').join('')+'</div>';
@@ -22807,6 +22808,7 @@ window.pdxLabelPrint = function(){
     return h; });
   pg.el.addEventListener('input', e=>{ const f = e.target.getAttribute('data-f'); if(f) st[f] = e.target.value; });
   pg.el.addEventListener('click', async e=>{
+    const kb = e.target.closest('[data-kb]'); if(kb){ st.kb = kb.dataset.kb; try{ localStorage.setItem('pdx_label_kb', st.kb); }catch(x){} pg.redraw(); setTimeout(()=>{ const i = document.querySelector('#iosPg [data-f=code]'); if(i) i.focus(); }, 50); return; }
     const c = e.target.closest('[data-c]'); if(c){ st.copies = +c.dataset.c; return pg.redraw(); }
     const b = e.target.closest('[data-pc]'); if(b){ pc = b.dataset.pc; try{ localStorage.setItem('pdx_label_pc', pc); }catch(x){} return pg.redraw(); }
     if(e.target.closest('[data-go]')){
