@@ -358,7 +358,21 @@ function wkHandle(daikon, msg){
     const img=daikon.Series.parseImage(new DataView(buf));
     if(!img||!img.hasPixelData()||!img.getRows()) return {msg:{id:msg.id, skip:true, bytes:buf.byteLength}, tr:[]};
     const frames=img.getNumberOfFrames()||1, pi=String(img.getPhotometricInterpretation()||'').trim(), rgb=/RGB|YBR/.test(pi);
-    const dec=f=>compact(f>=0?img.getInterpretedData(false,false,f):img.getInterpretedData(false,false), rgb);
+    // 11/11 (χρήστης: «σε κάποιες τομές χαλάει η αντίθεση»): δική μας ερμηνεία των τιμών (όπως cornerstone/dicomParser): το daikon ΔΕΝ κάνει
+    // επέκταση προσήμου για BitsStored<16 (π.χ. 12-bit signed, συχνά σε συμπιεσμένες JPEG-lossless τομές → αρνητικές HU γίνονται +4095)
+    // και αφήνει «σκουπίδια» (overlay bits) πάνω από το BitsStored. Μόνο για μονόχρωμες 16-bit (CT/MR)· τα υπόλοιπα όπως πριν.
+    const own16=(f)=>{ try{
+        if(rgb || pi==='MONOCHROME1' || img.getBitsAllocated()!==16) return null;
+        const bs=Math.max(1, Math.min(16, +img.getBitsStored()||16)), sg=+img.getPixelRepresentation()===1;
+        const raw=img.getRawData(); if(!raw) return null; const dv=new DataView(raw.buffer||raw, raw.byteOffset||0, raw.byteLength), le=img.littleEndian!==false;
+        const tot=Math.floor(dv.byteLength/2), per=Math.floor(tot/frames), n=f>=0?per:tot, off=f>=0?f*per:0;
+        const sl=+img.getDataScaleSlope()||1, ic=+img.getDataScaleIntercept()||0, mk=bs>=16?0xFFFF:((1<<bs)-1), top=1<<(bs-1), full=1<<bs;
+        const out=(sl===1 && Number.isInteger(ic)) ? new Int32Array(n) : new Float32Array(n);
+        for(let i=0;i<n;i++){ let v=dv.getUint16((off+i)*2, le)&mk; if(sg && (v&top)) v-=full; out[i]=v*sl+ic; }
+        // ασφάλεια: αν οι τιμές βγαίνουν παράλογες για CT (όλες ίδιες/εκτός ορίων), πίσω στο daikon
+        return out;
+      }catch(e){ return null; } };
+    const dec=f=>{ const o=own16(f); if(o) return compact(o, rgb); return compact(f>=0?img.getInterpretedData(false,false,f):img.getInterpretedData(false,false), rgb); };
     if(msg.decodeOnly){ const d=dec(msg.frame); return {msg:{id:msg.id, px:[d]}, tr:d?[d.buffer]:[]}; }
     const tags={}; for(const [g,e] of TAGS){ const v=tv(img,g,e); if(v) tags[g+','+e]=v; }
     const meta={base:img.getSeriesId()||'σειρά', rows:img.getRows(), cols:img.getCols(), frames, pos:img.getImagePosition(), dirs:img.getImageDirections(), sp:img.getPixelSpacing(), pi,
@@ -1493,7 +1507,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-09b';
+const CT_VER = '2026-11-11a';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
@@ -1503,9 +1517,14 @@ async function deskOpen(root){
   S.src = L.name || root;
   const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
   const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
-  (async ()=>{ const F=L.files, B=24;
-    for(let i=0;i<F.length;i+=B){ const part=await DESK.read(F.slice(i,i+B).map(x=>x.p)).catch(()=>[]);
-      for(const x of part) if(x && x.b) st.buf.push(new File([x.b], (x.p.split(/[\\/]/).pop()||'f'), {type:'application/dicom'}));
+  // 💿 11/11 (χρήστης: «κολλάει να φορτώσει CD»): CD = αργή ανάγνωση με αναζήτηση → μικρότερες παρτίδες, πρόοδος στην οθόνη,
+  // και ΜΟΝΟ αρχεία DICOM (σήμα «DICM» ή αρχή με ετικέτα 0002/0008) — τα αρχεία του προγράμματος προβολής του CD δεν «κολλάνε» τον αναλυτή
+  const isCD=/^[A-Za-z]:\\?$/.test(String(root).trim()), isDcm=b=>{ try{ const u=b instanceof Uint8Array?b:new Uint8Array(b.buffer||b, b.byteOffset||0, Math.min(b.byteLength||0,140)); if(u.length>=132 && u[128]===68&&u[129]===73&&u[130]===67&&u[131]===77) return true; return u.length>=8 && (u[0]===2||u[0]===8) && u[1]===0 && u[3]===0; }catch(e){ return true; } };
+  (async ()=>{ const F=L.files, B=isCD?8:24; let n=0, sk=0;
+    for(let i=0;i<F.length;i+=B){ const part=await Promise.race([DESK.read(F.slice(i,i+B).map(x=>x.p)), new Promise(r=>setTimeout(()=>r(null), 60000))]).catch(()=>[]);
+      if(part===null){ status('Το CD αργεί πολύ στα αρχεία '+(i+1)+'–'+(i+B)+' — συνεχίζω με τα επόμενα…'); continue; }
+      for(const x of (part||[])) if(x && x.b){ if(!isDcm(x.b)){ sk++; continue; } n++; st.buf.push(new File([x.b], (x.p.split(/[\\/]/).pop()||'f'), {type:'application/dicom'})); }
+      if(isCD || F.length>400) status('Διαβάζω '+(isCD?'το CD':'τον φάκελο')+'… '+Math.min(F.length,i+B)+'/'+F.length+' αρχεία'+(sk?' ('+sk+' όχι εικόνες)':''));
       wake(); }
     st.done=true; wake(); })();
   if(await ingest([], st)) verifyPatient();
@@ -1887,10 +1906,12 @@ const RC = (()=>{
 /* ================= 🗂 Αρχείο Ασθενών (server κλινικής): /ct?pdxStudy=ID#k=ΚΛΕΙΔΙ ================= */
 (async ()=>{
   const sp = new URLSearchParams(location.search), sid = sp.get('pdxStudy'); if(!sid) return;
-  const key = decodeURIComponent((location.hash.match(/k=([^&]+)/)||[])[1]||''); if(key){ try{ localStorage.setItem('pdx_key', JSON.stringify(key)); }catch(e){} history.replaceState(null,'',location.pathname+location.search); }
+  const key = decodeURIComponent((location.hash.match(/k=([^&]+)/)||[])[1]||''); const hash0 = location.hash; if(key){ try{ localStorage.setItem('pdx_key', JSON.stringify(key)); }catch(e){} history.replaceState(null,'',location.pathname+location.search); }
   let K = key; if(!K){ try{ K = JSON.parse(localStorage.getItem('pdx_key')||'""'); }catch(e){} }
   // 🌐 9/11: «local=1» = CD αυτού του υπολογιστή (δορυφόρος) — αλλιώς ο τοπικός server το ζητά από τον κεντρικό (Παράθυρο)
-  const H = {'x-pdx-key':K, 'x-pdx-user':'viewer'}; if(sp.get('local')==='1') H['x-pdx-scope'] = 'local';
+  // 🔒 10/11: συνεδρία του κωδικού εισόδου (από την εφαρμογή: #s=… ή sessionStorage)
+  let SS = decodeURIComponent((hash0.match(/[#&]s=([^&]+)/)||[])[1]||''); try{ if(SS) sessionStorage.setItem('pdx_sess', SS); else SS = sessionStorage.getItem('pdx_sess')||''; }catch(e){}
+  const H = {'x-pdx-key':K, 'x-pdx-user':'viewer', 'x-pdx-sess':SS}; if(sp.get('local')==='1') H['x-pdx-scope'] = 'local';
   let s; try{ const r = await fetch('/api/studies/'+encodeURIComponent(sid), {headers:H}); s = await r.json(); if(!r.ok) throw new Error(s.err||r.status); }
   catch(e){ status('Αρχείο Ασθενών: '+e.message, true); return; }
   const sops = []; s.series.slice().sort((a,b)=>b.sops.length-a.sops.length).forEach(se=>se.sops.forEach(x=>sops.push(x)));
