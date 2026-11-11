@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v335';
+const APP_VER = '2026-11-11i-v336';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22334,7 +22334,7 @@ window.CLS_MODE='A';
       const hex = [...S0.otk.raw].map(b=>b.toString(16).padStart(2,'0')).join(''), tag = '#s'+S0.qid+'k'+hex;
       window.__pdxScanTag = tag;
       // 11/11 07:50 (χρήστης): ΝΕΑ συζήτηση Claude με έτοιμο μήνυμα (η σελίδα-artifact δεν ανοίγει σε συναδέλφους)
-      const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο.'; window.__pdxScanAsk = ask;
+      const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο (σύνδεσμος Παραδόχαρτο/Paradoxarto, εργαλεία scan_read και scan_save).'; window.__pdxScanAsk = ask;
       try{ navigator.clipboard && navigator.clipboard.writeText(ask).catch(()=>{}); }catch(e){}
       const u = 'claude://claude.ai/new?q=' + encodeURIComponent(ask); if(window.__pdxNoNav){ window.__pdxNav = u; close(); claudeFallback(); return; }
       close(); try{ location.href = u; }catch(e){} setTimeout(()=>{ if(!document.hidden) claudeFallback(); }, 1800); }, S0.multi ? 400 : 250);
