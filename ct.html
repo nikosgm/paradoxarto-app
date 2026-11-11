@@ -1507,7 +1507,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-11a';
+const CT_VER = '2026-11-11b';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
@@ -1677,11 +1677,15 @@ const EVO_G = {Α:'A',Β:'V',Γ:'G',Δ:'D',Ε:'E',Ζ:'Z',Η:'I',Θ:'TH',Ι:'I',�
 const evoLat = t=>evoNz(t).replace(/ΟΥ/g,'OU').replace(/ΑΙ/g,'AI').replace(/ΕΙ/g,'EI').replace(/ΟΙ/g,'OI').replace(/ΜΠ/g,'MP').replace(/ΝΤ/g,'NT').replace(/[Α-Ω]/g,c=>EVO_G[c]||'');
 // παραλλαγές γραφής (ο Evorad γράφει αλλού ελληνικά, αλλού λατινικά, Υ→Y/I/U, ΟΥ→OU/U, Η→I/H, Β→V/B, Χ→CH/H/X)
 function evoVariants(s){ const g=evoNz(s), L=evoLat(s), V=new Set([g, L]);
+  // 11/11 21:17 (χρήστης: «να βγάζει όλα τα παρεμφερή και στις δύο γλώσσες»): ΑΥ/ΕΥ → AV/EV/AF/EF, ΓΓ/ΓΚ → NG/G, και ελληνικά με μικρά (αν ο Evorad τα έχει έτσι)
+  const tc = g.charAt(0)+g.slice(1).toLowerCase().replace(/σ$/,'ς'); V.add(tc); V.add(g.toLowerCase().replace(/σ$/,'ς'));
+  V.add(L.replace(/([AE])Y/g,'$1V')); V.add(L.replace(/([AE])Y/g,'$1F')); V.add(L.replace(/GG/g,'NG')); V.add(L.replace(/^GK/,'G'));
   V.add(L.replace(/Y/g,'I')); V.add(L.replace(/Y/g,'U')); V.add(L.replace(/OU/g,'U')); V.add(L.replace(/I/g,'H')); V.add(L.replace(/V/g,'B')); V.add(L.replace(/CH/g,'H')); V.add(L.replace(/CH/g,'X'));
-  return [...V].filter(x=>x && x.length>=2).slice(0,9); }
+  return [...V].filter(x=>x && x.length>=2).slice(0,16); }
 // 8/11 (εντολή χρήστη): «σκελετός» ονόματος — ίδιος για ελληνικά/λατινικά και για τις διαφορές γραφής
 // (Υ=Y=I=U, ΟΥ=OU=U, Η=I=H, Β=V=B, ΜΠ=B, ΝΤ=D, Χ=CH=H, Ω=O, ΑΙ=E, ΕΙ/ΟΙ=I, Θ=TH, Φ=F=PH, Ξ=X=KS, Κ=C=K, διπλά γράμματα = ένα)
 const evoSk = t=>{ let x = evoLat(t).toLowerCase().replace(/[^a-z]/g,'');
+  x = x.replace(/([ae])[yuvf](?=[a-z])/g,'$1v').replace(/gg|gk|ng(?=[aeiouy])/g,'g').replace(/^gk/,'g').replace(/tz/g,'z');   // 21:17: ΕΥ=EV=EF, ΓΓ=ΓΚ=NG=G, ΤΖ=Z
   x = x.replace(/ou/g,'u').replace(/ch/g,'h').replace(/ks/g,'x').replace(/th/g,'8').replace(/ph/g,'f').replace(/ps/g,'q').replace(/mp/g,'b').replace(/nt/g,'d').replace(/ai/g,'e').replace(/[eo]i/g,'i');
   x = x.replace(/h/g,'').replace(/v/g,'b').replace(/w/g,'o').replace(/c/g,'k').replace(/j/g,'z').replace(/[yu]/g,'i').replace(/(.)\1+/g,'$1');
   return x; };
@@ -1717,9 +1721,10 @@ async function evoSearch(){
       // ολόκληρο όνομα (όλες οι γραφές) + αρχές 3 γραμμάτων σε ελληνικά ΚΑΙ λατινικά → μετά φιλτράρισμα με τον «σκελετό»
       const sur = q.sur.trim(), isLat = !/[\u0370-\u03ff]/.test(sur), L = evoLat(sur), names = new Set(evoVariants(sur));
       const pre = new Set([L.slice(0,3), L.slice(0,3).replace(/Y/g,'I'), L.slice(0,3).replace(/Y/g,'U'), L.slice(0,3).replace(/I/g,'Y'), L.slice(0,3).replace(/U/g,'OU')]);
-      if(isLat) evoGrPre(sur).forEach(x=>pre.add(x)); else pre.add(evoNz(sur).slice(0,3));
+      if(isLat) evoGrPre(sur).forEach(x=>pre.add(x)); else { const g3 = evoNz(sur).slice(0,3); pre.add(g3); pre.add(g3.charAt(0)+g3.slice(1).toLowerCase()); pre.add(evoLat(sur).replace(/([AE])Y/g,'$1V').slice(0,3)); }
       if(sur.length > 3) pre.forEach(x=>{ if(x.length>=2) names.add(x); });
-      calls = [...names].filter(x=>x && x.length>=2).slice(0,16).map(v=>'/api/getExams?name='+encodeURIComponent(v)+'&fromDate='+from+'&toDate='+to+'&');
+      calls = [...names].filter(x=>x && x.length>=2).slice(0,24).map(v=>'/api/getExams?name='+encodeURIComponent(v)+'&fromDate='+from+'&toDate='+to+'&');
+      if(/^\d{4,}$/.test(q.amka.trim())) calls.push('/api/getExams?patientid='+encodeURIComponent(q.amka.trim())+'&fromDate='+from+'&toDate='+to+'&');   // 21:17: και με ΑΜΚΑ μαζί
     }
     else if(/^\d{4,}$/.test(q.amka.trim())) calls = ['/api/getExams?patientid='+encodeURIComponent(q.amka.trim())+'&fromDate='+from+'&toDate='+to+'&'];
     else calls = ['/api/getExams?fromDate='+from+'&toDate='+to+'&'];
@@ -1729,10 +1734,16 @@ async function evoSearch(){
     res.flat().forEach(d=>{ if(!d || seen.has(d.examid)) return; seen.add(d.examid); all.push({examid:d.examid, date:String(d.examdate||''), mod:String(d.exammodalitytype||''), desc:String(d.studydescription||''), first:String(d.firstname||''), last:String(d.lastname||''), amka:String(d.amka||''), pid:String(d.patientid||''), pid2:String(d.secondarypatientid||''), birth:String(d.birthdate||'')}); });
     const dig = x=>String(x||'').replace(/\D/g,'');
     const sk = evoSk(q.sur.trim()), skf = evoSk(q.fn.trim());
-    EVO.exams = all.filter(x=>(!sk || evoSk(x.last).startsWith(sk) || evoSk(x.last+' '+x.first).startsWith(sk)) && (!skf || evoSk(x.first).startsWith(skf) || evoSame(x.first, q.fn.trim()))
-      && (!q.amka.trim() || [x.amka,x.pid,x.pid2].some(v=>dig(v).indexOf(dig(q.amka))>=0))
-      && (!q.mod || q.mod==='*' || (q.mod==='XR' ? /^(DX|CR|XR)$/i.test(x.mod) : x.mod.toUpperCase()===q.mod)))
-      .sort((a,b)=>b.date.localeCompare(a.date));
+    // 11/11 21:17 (χρήστης: δεν έβγαλε όνομα γραμμένο κανονικά στα ελληνικά): ο ΑΜΚΑ ΔΕΝ κόβει όσους ταιριάζουν στο όνομα (ο Evorad συχνά δεν έχει ΑΜΚΑ)·
+    // το μικρό όνομα ταιριάζει και με συντομογραφίες/άλλη γραφή, και αν δεν βγει κανείς → ό,τι ταιριάζει μόνο στο επώνυμο
+    const amOk = x=>!!q.amka.trim() && [x.amka,x.pid,x.pid2].some(v=>dig(v) && dig(v).indexOf(dig(q.amka))>=0);
+    const surOk = x=>!sk || [x.last, x.last+' '+x.first, x.first+' '+x.last].some(v=>{ const k = evoSk(v); return k.startsWith(sk) || (k.length>=4 && sk.startsWith(k)); });
+    const fnOk = x=>!skf || [x.first, x.last+' '+x.first].some(v=>{ const k = evoSk(v); return k.startsWith(skf) || (k.length>=3 && skf.startsWith(k)) || k.indexOf(skf)>=0; }) || evoSame(x.first, q.fn.trim()) || evoSk(x.first).slice(0,3)===skf.slice(0,3);
+    const modOk = x=>!q.mod || q.mod==='*' || (q.mod==='XR' ? /^(DX|CR|XR)$/i.test(x.mod) : x.mod.toUpperCase()===q.mod);
+    let ex = all.filter(x=>modOk(x) && (amOk(x) || (sk && surOk(x) && fnOk(x)) || (!sk && !q.amka.trim() && fnOk(x))));
+    if(!ex.length && sk) ex = all.filter(x=>modOk(x) && surOk(x) && fnOk(x));
+    if(!ex.length && sk && skf) { ex = all.filter(x=>modOk(x) && surOk(x)); if(ex.length) EVO.msg = ''; }
+    EVO.exams = ex.sort((a,b)=>b.date.localeCompare(a.date));
   }catch(e){ if(my!==EVO.seq) return; EVO.exams=[]; EVO.msg = e.login ? '' : 'Σφάλμα: '+e.message; }
   EVO.busy=false; evoPaint();
 }
