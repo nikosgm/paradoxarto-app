@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11g-v332';
+const APP_VER = '2026-11-11h-v333';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19075,7 +19075,8 @@ window.pdxEpsineOpen = function(){
       h += P.length ? iosGroup('Εκκρεμούν · '+P.length, P.map(r=>({t:'<b>'+E5(r.name)+'</b>', sub:E5(r.adm)+' → '+E5(r.dc)+' · '+E5(r.st), on:'void 0', data:'data-ept="'+E5(r.amka)+'"'}))) : '<div style="margin:16px;color:#8E8E93">Καμία εκκρεμότητα 🎉</div>';
       if(D.length) h += iosGroup('Ολοκληρωμένα · '+D.length, D.slice(0,30).map(r=>({t:E5(r.name), sub:E5(r.dc)+' · '+E5(r.sub)}))); }
     return h + '<div style="height:50px"></div>'; });
-  const loadList = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','epsinelist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(1);
+  // 11/11 15:17 (χρήστης: «ενώ είχε κατεβάσει τη λίστα, τη χάνει»): η τελευταία ανάγνωση με 0 (λάθος ανάγνωση) έκρυβε την καλή → παίρνουμε την πιο πρόσφατη με ασθενείς
+  const loadList = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','epsinelist').in('status',['done','dismissed']).not('payload->result','is',null).gt('payload->result->n', 0).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && j.payload.result.enc){ await pdxCK.ready(); const d = await pdxCK.decrypt(j.payload.result.enc); st.rows = d.rows||[]; st.at = d.at; } }catch(e){ st.msg = '⚠ '+(e.message||e); } pg.redraw(); };
   const fetchList = async ()=>{ if(st.busy) return; st.busy = 'Το bot διαβάζει τη λίστα ΕΨΙΝΕ από το ΝΠΣ…'; st.msg=''; pg.redraw();
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_eps', name:'📑 ΕΨΙΝΕ', room:null, kind:'epsinelist', payload:{quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
