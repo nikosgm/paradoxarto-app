@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v339';
+const APP_VER = '2026-11-11i-v340';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18386,12 +18386,14 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
         if(sig1!==sig0 && window.mobRefresh && !(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.tagName==='SELECT'))) mobRefresh(); }, ()=>{});
     }
     const p = pts().find(x=>x.k===k), lab = p && labOf(p);
-    if(!lab){ const r = (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[k]; if(r && r._medLab) return {b:B(r._medLab), alarm:alarmOf}; }   // ασθενής ΝΠΣ: από το Medilabi
+    // 11/11 19:38 (χρήστης: «ο Κόκκαλης δεν ανανεώνεται — εργαστηριακά, δεν μπορούμε να μην έχουμε σωστές τιμές»): ασθενής της λίστας ΝΠΣ
+    // (εκτός κρεβατιού) έδειχνε ΠΑΓΩΜΕΝΟ αντίγραφο (_medLab, της ώρας που ανοίχτηκε), όχι τα τρέχοντα του bot → πρώτα τα ΤΡΕΧΟΝΤΑ (oncall_labs)
+    if(!lab){ const r = (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[k]; if(r){ const live = r.name ? labOf({k, d:r}) : null; if(live) return {b:B(live), alarm:alarmOf}; if(r._medLab) return {b:B(r._medLab), alarm:alarmOf}; } }   // ασθενής ΝΠΣ: τρέχοντα, αλλιώς το αντίγραφο του Medilabi
     return lab ? {b:B(lab), alarm:alarmOf} : null;
   };
   window.pdxPtLabChart = function(k, tk){
-    { const r = (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[k]; if(r && r._npsTemp){ if(r._medLab && tk){ const b = B(r._medLab); return chartOpen({b, name:r.name, label:'', adm:''}, tk); } return window.pdxLabsFor && pdxLabsFor({name:r.name, amka:r.amka, am:r.am, medPid:r.medPid, k}); } }
-    const p = pts().find(x=>x.k===k), c = p && ctxOf(p);
+    { const r = (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[k]; const liveR = r && r._npsTemp && r.name ? labOf({k, d:r}) : null; if(liveR && tk){ return chartOpen({b:B(liveR), name:r.name, label:'', adm:''}, tk); } if(r && r._npsTemp && !liveR){ if(r._medLab && tk){ const b = B(r._medLab); return chartOpen({b, name:r.name, label:'', adm:''}, tk); } return window.pdxLabsFor && pdxLabsFor({name:r.name, amka:r.amka, am:r.am, medPid:r.medPid, k}); } }
+    const p = pts().find(x=>x.k===k) || (()=>{ const r = (typeof extraPatients!=='undefined' && extraPatients) && extraPatients[k]; return r && r.name ? {k, d:r, label:'Εκτός θαλάμου'} : null; })(), c = p && ctxOf(p);
     if(!c){   // χωρίς αποτελέσματα Medilabi: οθόνη εργαστηριακών νοσοκομείου· το παλιό γράφημα (labChart) μόνο για χειρόγραφες τιμές πολλών ημερών
       let man = 0; try{ const d = (typeof data!=='undefined' && data && data[k]) || (typeof extraPatients!=='undefined' && extraPatients && extraPatients[k]) || {}; man = Object.keys(d.labHist||{}).length; }catch(e){}
       if(man >= 2 && window.labChart) return labChart(k);
