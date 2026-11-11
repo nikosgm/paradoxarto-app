@@ -253,15 +253,35 @@
       const used = new Set(P.pts.map((p) => p.key).filter(Boolean));
       const L = inpatients().filter((x) => !used.has(x.k));
       const ov = sheet('<div style="display:flex;align-items:center;margin-bottom:8px"><b style="flex:1;font-size:17px">' + E(ORP.roomLabel(room)) + '</b><button data-x style="border:0;background:none;font-size:22px">✕</button></div><input data-q placeholder="Αναζήτηση ονόματος/κρεβατιού" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #C7CDD4;border-radius:10px">'
-        + '<div data-list></div><button data-man style="margin-top:10px;width:100%;min-height:44px;border:0;border-radius:12px;background:#fff;color:#0A84FF;font-weight:700">✍ Χειροκίνητη προσθήκη</button>');
-      const list = ov.querySelector("[data-list]");
-      const show = (q) => { const z = NZ(q); list.innerHTML = L.filter((x) => !z || NZ(x.d.name + " " + x.k).indexOf(z) >= 0).map((x) => '<div data-k="' + E(x.k) + '" style="background:#fff;margin-top:6px;padding:10px 12px;border-radius:10px;display:flex;gap:8px;align-items:center"><span style="flex:1"><b>' + E(x.d.name) + '</b><br><span style="color:#6B7280;font-size:13px">' + E([x.nps ? "🏥 ΝΠΣ (όχι στο Παραδόχαρτο)" : x.k.replace(/^extra-\d+$/, "εκτός θαλάμου"), x.d.therapist, x.d.surgery || x.d.surgeryCustom, x.d.pod === "Προς Χ/Ο" ? "προς Χ/Ο" : ""].filter(Boolean).join(" · ")) + "</span></span><span style=\"color:#0A84FF;font-weight:700\">＋</span></div>").join("") || '<div style="padding:12px;color:#6B7280">Κανένας</div>'; };
-      show("");
-      ov.querySelector("[data-q]").addEventListener("input", (e) => show(e.target.value));
+        + '<div data-list></div><div data-npsall></div><button data-man style="margin-top:10px;width:100%;min-height:44px;border:0;border-radius:12px;background:#fff;color:#0A84FF;font-weight:700">✍ Χειροκίνητη προσθήκη</button>');
+      const list = ov.querySelector("[data-list]"), nb = ov.querySelector("[data-npsall]");
+      // 🏥 12/11 (χρήστης: «ασθενείς από ΟΛΟ το ΝΠΣ — ναι ακριβώς»): αναζήτηση επωνύμου σε όλο το νοσοκομείο (εντολή npsfind, εκτός κλινικής, από 2000)
+      let ns = { q: "", busy: false, msg: "" };
+      const nbDraw = (q) => { const t = String(q || "").trim(); nb.innerHTML = t.length >= 3 ? '<button data-npsq style="margin-top:8px;width:100%;min-height:44px;border:1px dashed #0A84FF;border-radius:12px;background:#fff;color:#0A84FF;font-weight:700"' + (ns.busy ? " disabled" : "") + ">" + (ns.busy ? "⏳ " + E(ns.msg || "Το bot ψάχνει στο ΝΠΣ…") : "🏥 Αναζήτηση «" + E(t) + "» σε όλο το ΝΠΣ") + "</button>" + (ns.msg && !ns.busy ? '<div style="margin-top:6px;color:#6B7280;font-size:13px">' + E(ns.msg) + "</div>" : "") : ""; };
+      const show = (q) => { const z = NZ(q); list.innerHTML = L.filter((x) => !z || NZ(x.d.name + " " + x.k).indexOf(z) >= 0).map((x) => '<div data-k="' + E(x.k) + '" style="background:#fff;margin-top:6px;padding:10px 12px;border-radius:10px;display:flex;gap:8px;align-items:center"><span style="flex:1"><b>' + E(x.d.name) + '</b><br><span style="color:#6B7280;font-size:13px">' + E([x.all ? "🏥 ΝΠΣ · εκτός κλινικής" + (x.d.lastAdm ? " · τελ. εισ. " + x.d.lastAdm : "") : x.nps ? "🏥 ΝΠΣ (όχι στο Παραδόχαρτο)" : x.k.replace(/^extra-\d+$/, "εκτός θαλάμου"), x.d.therapist, x.d.surgery || x.d.surgeryCustom, x.d.pod === "Προς Χ/Ο" ? "προς Χ/Ο" : ""].filter(Boolean).join(" · ")) + "</span></span><span style=\"color:#0A84FF;font-weight:700\">＋</span></div>").join("") || '<div style="padding:12px;color:#6B7280">Κανένας</div>'; };
+      show(""); nbDraw("");
+      ov.querySelector("[data-q]").addEventListener("input", (e) => { show(e.target.value); if (!ns.busy) ns.msg = ""; nbDraw(e.target.value); });
+      const npsAll = async () => { const q = String(ov.querySelector("[data-q]").value || "").trim(); if (q.length < 3 || ns.busy) return; ns = { q, busy: true, msg: "" }; nbDraw(q);
+        try { const ins = await SB().from("oncall_jobs").insert({ name_key: "zzz_find", name: "🔎 ΝΠΣ: " + q.slice(0, 40), room: null, kind: "npsfind", payload: { q, quiet: true }, status: "new" }).select("id").single(); if (ins.error) throw new Error(ins.error.message);
+          let x = null; for (let i = 0; i < 90 && ov.isConnected; i++) { await new Promise((r) => setTimeout(r, 2000)); const r = await SB().from("oncall_jobs").select("status,note,payload").eq("id", ins.data.id).maybeSingle(); x = r.data;
+            if (x && /^(done|failed|dismissed|cancelled)$/.test(x.status)) break; if (x && x.note) { ns.msg = String(x.note).slice(0, 80); nbDraw(q); } x = null; }
+          if (!x) throw new Error("το bot δεν απάντησε"); if (x.status !== "done") throw new Error(String(x.note || "απέτυχε"));
+          const R = await CK().decrypt(x.payload.result.enc); const H = R.heads || [], ix = (re) => H.findIndex((h) => re.test(h));
+          const iN = ix(/Ον\/?νυμο|Επώνυμο|Όνομα/i), iA = ix(/ΑΜΚΑ/), iM = ix(/^Α\.?Μ\.?$|Μητρώ|Κωδικός/i), iI = ix(/Εισαγ/i);
+          const have = new Set(L.map((y) => NZ(y.d.name))), seen = new Set(); let n = 0;
+          for (const c of R.rows || []) { const nm = String(c[iN] || "").replace(/\s+/g, " ").trim(); if (!nm) continue; const am = iM >= 0 ? String(c[iM] || "").trim() : "", amka = iA >= 0 ? String(c[iA] || "").replace(/\D/g, "") : "";
+            const id = "npsall:" + (am || amka || nm); if (seen.has(id) || used.has(id)) continue; seen.add(id);
+            if (have.has(NZ(nm))) continue;   // ήδη στη λίστα (Παραδόχαρτο / ΝΠΣ κλινικής)
+            L.push({ k: id, d: { name: nm, am, amka, lastAdm: iI >= 0 ? String(c[iI] || "").trim() : "" }, nps: true, all: true }); n++; }
+          ns = { q, busy: false, msg: n ? "🏥 " + n + " από όλο το ΝΠΣ (στην κορυφή της λίστας)" : "Κανένας επιπλέον στο ΝΠΣ για «" + q + "»" };
+          L.sort((a, b) => (b.all ? 1 : 0) - (a.all ? 1 : 0)); show(q); }
+        catch (er) { ns = { q, busy: false, msg: "⚠ " + (er.message || er) }; }
+        if (ov.isConnected) nbDraw(ov.querySelector("[data-q]").value); };
       // η λίστα ΝΠΣ φορτώνει την 1η φορά → ξανά σε λίγο (χωρίς να χαθεί η αναζήτηση)
       if (!L.some((x) => x.nps)) setTimeout(() => { if (!ov.isConnected) return; const add = inpatients().filter((x) => x.nps && !used.has(x.k) && !L.some((y) => y.k === x.k)); if (add.length) { L.push(...add); show(ov.querySelector("[data-q]").value); } }, 1800);
       ov.addEventListener("click", (e) => {
         if (e.target.closest("[data-x]")) { ov.remove(); return; }
+        if (e.target.closest("[data-npsq]")) { npsAll(); return; }
         const r = e.target.closest("[data-k]");
         if (r) { const x = L.find((y) => y.k === r.dataset.k); const p = fromPatient(x.k, x.d); p.room = room; p.n = P.pts.filter((q) => q.room === room).length + 1; P.pts.push(p); ov.remove(); touch(); if (!p.t) edit(p); return; }
         if (e.target.closest("[data-man]")) { const p = { id: "m" + Date.now().toString(36), key: "", room, n: P.pts.filter((q) => q.room === room).length + 1, bed: "", adm: "", nm: "", dx: "", an: "ΓΕΝΙΚΗ", bl: "", ca: "", t: "", side: "", t2: "", side2: "", surg: "" }; P.pts.push(p); ov.remove(); touch(); edit(p); }
