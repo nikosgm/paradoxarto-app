@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v348';
+const APP_VER = '2026-11-11j-v349';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16433,9 +16433,9 @@ Z99.2:C|αιμοκάθαρση
     if(U.length) d.comorbSuggest = {text, at: Date.now(), src: 'ΑΗΦΥ'}; else delete d.comorbSuggest;
     d.comorbAuto = {status:'ok', at: Date.now(), n: items.length, c: C.length, u: U.length};
     // 🩺 10/11 22:58 (χρήστης: «ναι» — αυτόματα και με Αποθήκευση): τα ΝΕΑ χρόνια φεύγουν μόνα τους στο «Ατομικό ιστορικό» του ΝΠΣ (save:true)·
-    // τα αμφίβολα ΠΟΤΕ αυτόματα. Μία φορά ανά σύνολο κωδικών (comorbNps.sig).
-    const newC = C.filter(i=>!(d.comorbNps && (d.comorbNps.codes||[]).indexOf(i.code)>=0)).map(i=>({code:i.code, desc:i.desc||''}));
-    if(newC.length && window.pdxBotSend){ d.comorbNps = {codes: ((d.comorbNps&&d.comorbNps.codes)||[]).concat(newC.map(x=>x.code)), at: Date.now()};
+    // τα αμφίβολα ΠΟΤΕ αυτόματα. Μία φορά ανά σύνολο κωδικών (comorbNps.sig).  // 11/11: comorbNps2 — η παλιά ροή δεν καταχώρισε ποτέ τίποτα → όλα ξαναστέλνονται μία φορά
+    const newC = C.filter(i=>!(d.comorbNps2 && (d.comorbNps2.codes||[]).indexOf(i.code)>=0)).map(i=>({code:i.code, desc:i.desc||''}));
+    if(newC.length && window.pdxBotSend){ d.comorbNps2 = {codes: ((d.comorbNps2&&d.comorbNps2.codes)||[]).concat(newC.map(x=>x.code)), at: Date.now()};
       try{ window.pdxBotSend(k, 'comorb', {codes: newC, targets: ['hist'], save: true, auto: true}); }catch(e){} }
     saveRec(k, d);
     return {ok:true, c: C.length, u: U.length, nps: newC.length};
