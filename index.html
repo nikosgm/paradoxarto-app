@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v334';
+const APP_VER = '2026-11-11i-v335';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14159,7 +14159,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // το κείμενο ακολουθεί την πράξη/πλευρά όσο είναι το αυτόματο (οποιασδήποτε πράξης)· αν το άλλαξες με το χέρι, μένει το δικό σου
     // 🕘 9/11 (χρήστης): ημ. εκτέλεσης πράξης = σήμερα 09:00 + 20′ × θέση στη λίστα (09:00, 09:20, 09:40…) — ίδια και στην επανάληψη
     const actAt = k=>{ const m = 9*60 + 20*(+k||0), d = new Date(); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
-    const isDef = t=>{ const x = String(t==null?'':t).trim(); if(!x) return true; return x===dtext({proc:-1}).trim() || (C.procs||[]).some((p,k)=>[undefined].concat(SIDES).some(sd=>dtext({proc:k, side:sd}).trim()===x || dtextOld({proc:k, side:sd}).trim()===x)); };
+    // 11/11 15:40 (χρήστης: «λέει σε όλους υπεβλήθη σε διουρηθρική καταστροφή»): ΚΑΘΕ αυτόματο κείμενο (και πράξης που διαγράφηκε/άλλαξε θέση) = αυτόματο → ακολουθεί την επιλεγμένη πράξη
+    const AUTO_RE = /^Ασθενής υπεβλήθη σε [^\n]{1,120}? \(\d{3}[\d.]*\)( \([^()\n]{1,20}\))?\. Εξέρχεται σε καλή γενική κατάσταση\.$/;   // παλιό αυτόματο με κωδικό
+    const isDef = t=>{ const x = String(t==null?'':t).trim(); if(!x) return true; if(AUTO_RE.test(x)) return true; return x===dtext({proc:-1}).trim() || (C.procs||[]).some((p,k)=>[undefined].concat(SIDES).some(sd=>dtext({proc:k, side:sd}).trim()===x || dtextOld({proc:k, side:sd}).trim()===x)); };
     const txOf = s1=>(s1 && s1.txt!=null && !isDef(s1.txt)) ? s1.txt : dtext(s1);
     // κατάσταση των εξιτηρίων που στάλθηκαν (μέχρι να εγκριθούν/αποτύχουν)
     const ST = {new:'⏳ στην ουρά', seen:'⏳ στην ουρά', running:'⏳ το bot συμπληρώνει…', review:'👀 περιμένει τον έλεγχό σου', approve:'⏳ εγκρίθηκε — αποθήκευση…', approved:'✅ εγκρίθηκε', done:'✅ ολοκληρώθηκε', failed:'✗ απέτυχε', cancelled:'✗ ακυρώθηκε', dismissed:'✗ ακυρώθηκε'};
@@ -14232,7 +14234,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       q('[data-pn]').forEach(e=>{ C.procs[+e.dataset.pn].name = e.value.trim(); }); q('[data-psd]').forEach(e=>{ C.procs[+e.dataset.psd].side = !!e.checked; }); q('[data-pc]').forEach(e=>{ C.procs[+e.dataset.pc].code = e.value.trim(); });
       const d = pg.el.querySelector('[data-docs]'); if(d) C.docs = d.value.split('\n').map(x=>x.trim()).filter(Boolean);
       const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
-      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ const s1 = sel[e.dataset.dc]; if(s1.doc !== e.value){ s1.doc = e.value; s1.docManual = true; } }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = e.value; }); selSave(); };
+      q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ const s1 = sel[e.dataset.dc]; if(s1.doc !== e.value){ s1.doc = e.value; s1.docManual = true; } }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = isDef(e.value) ? null : e.value; }); selSave(); };
     pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-tx]'); if(t){ sel[t.dataset.tx].txt = t.value; selSave(); } });
     pg.el.addEventListener('change', e=>{ const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))){ sel[k].proc = +bp.value; if(!needSide(prOf(sel[k]))) delete sel[k].side; } }); selSave(); } pg.redraw(); return; }
       rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); }
@@ -14241,7 +14243,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const tdb = e.target.closest('[data-td]'); if(tdb){ rd(); const v = tdb.dataset.td; C.today = {d:todayK(), doc:v}; Object.keys(sel).forEach(k=>{ if(!isDone(sel[k]) && !sel[k].docManual) sel[k].doc = v; }); selSave(); await save(); msg = '✓ Σήμερα: '+v; pg.redraw(); return; }
       const sb = e.target.closest('[data-sd]'); if(sb){ rd(); const s1 = sel[sb.dataset.sd]; if(s1){ s1.side = s1.side===sb.dataset.v ? '' : sb.dataset.v; selSave(); pg.redraw(); } return; }
       const b = e.target.closest('[data-a],[data-pdel]'); if(!b) return; rd();
-      if(b.dataset.pdel!=null){ C.procs.splice(+b.dataset.pdel,1); if(!C.procs.length) C.procs.push({name:'',code:''}); return pg.redraw(); }
+      if(b.dataset.pdel!=null){ const di = +b.dataset.pdel; C.procs.splice(di,1); Object.values(sel).forEach(x=>{ if(!x || x.proc==null) return; const k = +x.proc; if(k===di) x.proc = 0; else if(k>di) x.proc = k-1; }); selSave();   // οι επιλογές ασθενών ακολουθούν τη μετατόπιση της λίστας
+ if(!C.procs.length) C.procs.push({name:'',code:''}); return pg.redraw(); }
       const a = b.dataset.a;
       if((a==='load' || a==='dc') && !todayDoc() && (C.docs||[]).length){ alert('Διάλεξε πρώτα τον σημερινό ειδικό (λογαριασμός ΝΠΣ + θεράπων).'); return; }
       if(a==='padd'){ C.procs.push({name:'',code:''}); return pg.redraw(); }
