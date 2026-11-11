@@ -139,11 +139,11 @@ $('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
   if(false) $('msg').insertAdjacentHTML('beforeend', '<button class="btn" id="chatpin" style="width:100%;max-width:340px;text-align:left;background:#ffffff1f"><b>💬 ' + (cur0 ? 'Ίδια συζήτηση Claude ✓' : 'Νέα συζήτηση Claude σε κάθε σάρωση') + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + (cur0 ? 'πάτα για αλλαγή ή για νέα κάθε φορά' : 'πάτα για να ορίσεις μία συζήτηση για όλες') + '</span></button>');
   // 📄 10/11 (χρήστης: «σε υπάρχουσα συζήτηση αλλά να μην επικολλώ»): η εφαρμογή Claude ΔΕΝ δέχεται έτοιμο μήνυμα σε υπάρχουσα συζήτηση → εναλλακτικά
   // η «Σελίδα Σάρωσης» (artifact): ΠΑΝΤΑ η ίδια σελίδα, διαβάζει ΜΟΝΗ της τη σάρωση (χωρίς νέα συζήτηση, χωρίς επικόλληση). Επιλογή ανά συσκευή (pdx_scan_via).
-  { let v0 = 'page'; try{ v0 = localStorage.getItem('pdx_scan_via') || 'page'; }catch(e){}
+  { let v0 = 'chat'; try{ v0 = localStorage.getItem('pdx_scan_via3') || 'chat'; }catch(e){}
     $('msg').insertAdjacentHTML('beforeend', '<div style="width:100%;max-width:340px;margin-top:10px;font-size:13px;opacity:.8">Πού διαβάζεται:</div>'
       + '<button class="btn" data-via="page" style="width:100%;max-width:340px;text-align:left;background:' + (v0 === 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>📄 Σελίδα Σάρωσης</b><br><small style="opacity:.8">πάντα η ίδια · διαβάζεται μόνη της · χωρίς επικόλληση</small></button>'
       + '<button class="btn" data-via="chat" style="width:100%;max-width:340px;text-align:left;background:' + (v0 !== 'page' ? '#0A84FF' : '#ffffff1f') + '"><b>💬 Νέα συζήτηση Claude</b><br><small style="opacity:.8">εφεδρικά (κάθε σάρωση νέα συζήτηση)</small></button>');
-    $('msg').querySelectorAll('[data-via]').forEach((x)=>x.onclick = ()=>{ try{ localStorage.setItem('pdx_scan_via', x.dataset.via); }catch(e){} $('msg').querySelectorAll('[data-via]').forEach(y=>y.style.background = y === x ? '#0A84FF' : '#ffffff1f'); }); }
+    $('msg').querySelectorAll('[data-via]').forEach((x)=>x.onclick = ()=>{ try{ localStorage.setItem('pdx_scan_via3', x.dataset.via); }catch(e){} $('msg').querySelectorAll('[data-via]').forEach(y=>y.style.background = y === x ? '#0A84FF' : '#ffffff1f'); }); }
   if($('chatpin')) $('chatpin').onclick = ()=>{ const v = prompt('Σύνδεσμος της συζήτησης Claude (https://claude.ai/chat/…). Κενό = νέα συζήτηση κάθε φορά.', cur0); if(v == null) return;
     const t = v.trim();
     // 10/11: σύνδεσμος «Κοινοποίησης» (claude.ai/share/…) = αντίγραφο μόνο για ανάγνωση· δεν συνεχίζει τη συζήτηση
@@ -373,14 +373,16 @@ async function send(srcs, w0, h0){
     const chatPath = '/new';
     const chatW = 'https://claude.ai' + chatPath + '?q=' + encodeURIComponent(ask), chatU = chatW.replace(/^https:\/\//, 'claude://');
     // 9/11 (χρήστης: «το πάτημα της λήψης να είναι και εντολή αποστολής στο Claude, χωρίς κουμπί»): προεπιλογή = συζήτηση Claude ΑΜΕΣΑ
-    let via = 'page'; try{ via = localStorage.getItem('pdx_scan_via') || 'page'; }catch(e){}   // 10/11 (χρήστης): προεπιλογή η ΙΔΙΑ Σελίδα Σάρωσης για όλους — όχι νέες συζητήσεις
+    // 11/11 07:50 (χρήστης: «η σάρωση δεν ανοίγει το artifact στους συναδέλφους — κάν' το με νέα συνομιλία»): προεπιλογή = ΝΕΑ συζήτηση Claude για όλους
+    // (νέο κλειδί μνήμης pdx_scan_via3 → οι παλιές επιλογές «page» δεν μετράνε)· η Σελίδα Σάρωσης μένει ως δεύτερο κουμπί
+    let via = 'chat'; try{ via = localStorage.getItem('pdx_scan_via3') || 'chat'; }catch(e){}
     if(op) via = 'page';
     window.__scanNav = via === 'page' ? CLAUDE_APP + tag : via === 'chat' ? chatU : '';
     window.__scanAsk = ask; if(window.__clipRes) window.__clipRes.ok(ask);
     msg('<div style="font-size:54px">🤖</div><div>' + (via ? 'Ανοίγει το Claude…' : 'Πού να διαβαστεί;') + '</div>'
       + (op ? '' : '<a class="go" id="vchat" href="' + chatU + '">💬 Συζήτηση Claude</a><a class="go2" href="' + chatW + '" target="_blank" rel="noopener">ή στον browser</a><div style="font-size:13px;opacity:.75;max-width:320px;text-align:center">με τη σύνδεση «Παραδόχαρτο» στον λογαριασμό σου (συνάδελφοι)· αν δεν γραφτεί μόνο του το μήνυμα: Επικόλληση</div>')
       + '<a class="go2" id="vpage" href="' + CLAUDE_APP + tag + '">📄 Σελίδα Σάρωσης (διαχειριστής)</a>');
-    const remember = (v)=>{ try{ localStorage.setItem('pdx_scan_via', v); }catch(e){} };
+    const remember = (v)=>{ try{ localStorage.setItem('pdx_scan_via3', v); }catch(e){} };
     if($('vchat')) $('vchat').onclick = ()=>{ remember('chat'); try{ navigator.clipboard && navigator.clipboard.writeText(ask); }catch(e){} };
     $('vpage').onclick = ()=>{ if(!op) remember('page'); };
     if(via === 'chat' && !window.__clipRes){ try{ navigator.clipboard && navigator.clipboard.writeText(ask).catch(()=>{}); }catch(e){} }

@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11d-v329';
+const APP_VER = '2026-11-11e-v330';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22326,7 +22326,10 @@ window.CLS_MODE='A';
       const m = S0.ov.querySelector('[data-msg]'); if(m) m.innerHTML = '<div style="font-size:54px">🤖</div><div>Ανοίγει το Claude…</div>';
       const hex = [...S0.otk.raw].map(b=>b.toString(16).padStart(2,'0')).join(''), tag = '#s'+S0.qid+'k'+hex;
       window.__pdxScanTag = tag;
-      const u = CLAUDE_APP()+tag; if(window.__pdxNoNav){ window.__pdxNav = u; close(); claudeFallback(); return; }
+      // 11/11 07:50 (χρήστης): ΝΕΑ συζήτηση Claude με έτοιμο μήνυμα (η σελίδα-artifact δεν ανοίγει σε συναδέλφους)
+      const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο.'; window.__pdxScanAsk = ask;
+      try{ navigator.clipboard && navigator.clipboard.writeText(ask).catch(()=>{}); }catch(e){}
+      const u = 'claude://claude.ai/new?q=' + encodeURIComponent(ask); if(window.__pdxNoNav){ window.__pdxNav = u; close(); claudeFallback(); return; }
       close(); try{ location.href = u; }catch(e){} setTimeout(()=>{ if(!document.hidden) claudeFallback(); }, 1800); }, S0.multi ? 400 : 250);
   }
   // αν δεν άνοιξε η εφαρμογή Claude (δεν είναι εγκατεστημένη/παλιά έκδοση): μικρό παράθυρο με τις δύο επιλογές
@@ -22334,7 +22337,7 @@ window.CLS_MODE='A';
     let d = document.getElementById('pdxClaudeGo'); if(d) d.remove();
     d = document.createElement('div'); d.id = 'pdxClaudeGo';
     d.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:100003;background:#fff;color:#1F2933;border-radius:18px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:-apple-system,system-ui,sans-serif';
-    d.innerHTML = '<div style="font-size:15px;font-weight:700;margin-bottom:10px">✓ Η σάρωση ανέβηκε — άνοιξε το Claude για ανάγνωση</div><a href="'+CLAUDE_APP()+(window.__pdxScanTag||'')+'" style="display:block;text-align:center;text-decoration:none;background:#1D4E80;color:#fff;border-radius:12px;padding:13px;font-weight:800;font-size:16px">Άνοιγμα στην εφαρμογή Claude</a><div style="display:flex;gap:8px;margin-top:8px"><a href="'+CLAUDE_URL()+(window.__pdxScanTag||'')+'" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;border:1.5px solid #CBD5E1;color:#1D4E80;border-radius:12px;padding:10px;font-weight:700;font-size:14px">στον browser</a><button data-x style="flex:1;border:0;background:#F2F2F7;border-radius:12px;padding:10px;font-size:14px">Κλείσιμο</button></div>';
+    d.innerHTML = '<div style="font-size:15px;font-weight:700;margin-bottom:10px">✓ Η σάρωση ανέβηκε — άνοιξε το Claude για ανάγνωση</div><a href="'+(window.__pdxScanAsk ? 'claude://claude.ai/new?q='+encodeURIComponent(window.__pdxScanAsk) : CLAUDE_APP()+(window.__pdxScanTag||''))+'" style="display:block;text-align:center;text-decoration:none;background:#1D4E80;color:#fff;border-radius:12px;padding:13px;font-weight:800;font-size:16px">Άνοιγμα στην εφαρμογή Claude</a><div style="display:flex;gap:8px;margin-top:8px"><a href="'+CLAUDE_URL()+(window.__pdxScanTag||'')+'" target="_blank" rel="noopener" style="flex:1;text-align:center;text-decoration:none;border:1.5px solid #CBD5E1;color:#1D4E80;border-radius:12px;padding:10px;font-weight:700;font-size:14px">στον browser</a><button data-x style="flex:1;border:0;background:#F2F2F7;border-radius:12px;padding:10px;font-size:14px">Κλείσιμο</button></div>';
     d.querySelector('[data-x]').onclick = ()=>d.remove(); d.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>setTimeout(()=>d.remove(), 600)));
     document.body.appendChild(d);
   }
