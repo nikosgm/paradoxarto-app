@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11i-v338';
+const APP_VER = '2026-11-11i-v339';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -5507,6 +5507,7 @@ function persistCurrent(){
   const cleanRecord = JSON.parse(JSON.stringify(record)); // strips any undefined values Firebase would otherwise reject
   const _old = isExtra ? extraPatients[current] : data[current];
   if(_old && _old.caseHist) cleanRecord.caseHist = JSON.parse(JSON.stringify(_old.caseHist));   // το ιστορικό από φωτογραφία ακολουθεί τον ασθενή
+  if(_old && _old.caseHistPrev) cleanRecord.caseHistPrev = JSON.parse(JSON.stringify(_old.caseHistPrev));   // 11/11: το προηγούμενο ιστορικό (πριν το αυτόματο νέο)
   if(_old && _old.histImgs) cleanRecord.histImgs = JSON.parse(JSON.stringify(_old.histImgs));   // φωτογραφίες πρωτότυπου ιστορικού
   if(_old && _old.histId) cleanRecord.histId = _old.histId;
   if(_old && _old.calc) cleanRecord.calc = JSON.parse(JSON.stringify(_old.calc));   // υπολογιστές (RENAL/Partin/eGFR) ακολουθούν τον ασθενή
@@ -6063,7 +6064,7 @@ function buildPatientRow(label, d, clickInfo){
     const _chKey = isPrint ? '' : ((clickInfo.bedNum===null || clickInfo.bedNum===undefined) ? clickInfo.roomNum : (clickInfo.roomNum+'-'+clickInfo.bedNum));
     const _chExtra = isPrint ? false : (clickInfo.bedNum===null || clickInfo.bedNum===undefined);
     const _chPend = !isPrint && window.HIST_PEND && window.HIST_PEND[_chKey];
-    const histBtn = isPrint ? '' : `<button class="ch-rowbtn${d.caseHist?' has':''}${_chPend?' pend':''}" title="${_chPend?'Νέο ιστορικό προς έλεγχο':'Ιστορικό'}" onclick="event.stopPropagation(); __histOpenPending('${_chKey}', ${_chExtra})">📄</button>`;
+    const histBtn = isPrint ? '' : `<button class="ch-rowbtn${d.caseHist?' has':''}${_chPend?' pend':''}" title="${_chPend?'Ιστορικό προς διόρθωση':'Ιστορικό'}" onclick="event.stopPropagation(); __histOpenPending('${_chKey}', ${_chExtra})">📄</button>`;
     row.innerHTML =
       `<td class="f-therapist"${jumpAttr('jumpSectionTherapist')}><div class="cell-clip">${d.therapist||''}</div></td>` +
       `<td class="f-room" style="position:relative;"${jumpAttr('FULL')}><div class="cell-clip">${label}</div>${histBtn}</td>` +
@@ -8870,6 +8871,8 @@ document.head.appendChild(st);
   function ntModel(){
     const all = entries(true), day = ntDay(), seen = ntSeen(all), HP = window.HIST_PEND || {}, HD = ntHid();
     const hist = Object.keys(HP).map(k=>({k, e:all.find(x=>x.k===k)})).filter(x=>x.e && !HD['h:'+x.k]);
+    // ✏️ 11/11: ιστορικά που μπήκαν αυτόματα στον ασθενή και δεν έχουν διορθωθεί ακόμα → «προς διόρθωση»
+    all.forEach(e=>{ const c = e.d && e.d.caseHist; if(c && c.auto && c.reviewed===false && !hist.some(x=>x.k===e.k) && !HD['h:'+e.k+':'+(c.at||0)]) hist.push({k:e.k, e, fix:true, at:c.at||0}); });
     const att = all.filter(e=>{ const a = attVis(e); return a.length && seen[e.k] && seen[e.k].d===day; });
     const td = all.filter(e=>todos(e.d).length && !HD[ntTdId(e)]);
     const rep0 = window.__pdxRepN || 0, un0 = window.HIST_UNASSIGNED || 0;
@@ -8878,7 +8881,7 @@ document.head.appendChild(st);
   }
   window.pdxNtDel = function(id, k){ try{ if(id==='att') window.pdxAttAck && pdxAttAck(k); else ntHide([id]); }catch(_){} try{ window.__ntPg && window.__ntPg.el.isConnected && window.__ntPg.redraw(); }catch(_){} try{ window.nvBellRefresh && nvBellRefresh(); }catch(_){} };
   window.pdxNtClear = function(){ const M = ntModel(), ids = [];
-    M.hist.forEach(x=>ids.push('h:'+x.k)); M.td.forEach(e=>ids.push(ntTdId(e))); if(M.rep) ids.push('r:'+M.rep); if(M.un) ids.push('u:'+M.un); ntHide(ids);
+    M.hist.forEach(x=>ids.push(x.fix ? 'h:'+x.k+':'+x.at : 'h:'+x.k)); M.td.forEach(e=>ids.push(ntTdId(e))); if(M.rep) ids.push('r:'+M.rep); if(M.un) ids.push('u:'+M.un); ntHide(ids);
     M.att.forEach(e=>{ try{ const a = attOf(e.d); if(a.length){ const o = attAck(); o[e.k] = {sig:attSig(e,a), at:Date.now()}; localStorage.setItem('pdx_att_ack', JSON.stringify(o)); } }catch(_){} });
     try{ render(); }catch(_){} try{ window.__ntPg && window.__ntPg.redraw(); }catch(_){} };
   window.pdxNotifCount = function(){ try{ return ntModel().n; }catch(_){ return 0; } };
@@ -8892,7 +8895,7 @@ document.head.appendChild(st);
       const M = ntModel(); let h = '';
       if(M.n || M.td.length) h += '<div style="display:flex;justify-content:flex-end;margin:0 16px 4px"><button onclick="pdxNtClear()" style="border:0;background:#FFE9E7;color:#B42318;font-weight:700;font-size:15px;border-radius:12px;padding:9px 14px">🧹 Καθαρισμός όλων</button></div>';
       else h += '<div style="margin:30px 16px;text-align:center;color:#8E8E93">✓ Καμία ειδοποίηση</div>';
-      const H = M.hist.map(x=>row(x.e, 'νέο ιστορικό — επεξεργασία & αβέβαια', "(function(){ try{ iosPageCloseAll(); }catch(e){} window.__histOpenPending && __histOpenPending('"+esc(x.k)+"', "+(String(x.k).indexOf('extra')===0)+"); })()", '📝', X('h:'+x.k)));
+      const H = M.hist.map(x=>row(x.e, x.fix ? '✏️ ιστορικό προς διόρθωση — αποθηκεύτηκε, διόρθωσε τα αβέβαια' : 'ιστορικό προς διόρθωση — επεξεργασία & αβέβαια', "(function(){ try{ iosPageCloseAll(); }catch(e){} window.__histOpenPending && __histOpenPending('"+esc(x.k)+"', "+(String(x.k).indexOf('extra')===0)+"); })()", '📝', X(x.fix ? 'h:'+x.k+':'+x.at : 'h:'+x.k)));
       if(M.un) H.push({ic:'📥', t:'Νέα ιστορικά χωρίς ασθενή · '+M.un, sub:'διάλεξε σε ποιον ασθενή ανήκουν', on:"(function(){ try{ iosPageCloseAll(); openCaseHistNew(); setTimeout(function(){ var b=document.getElementById('chGoInbox'); b&&b.click(); },120); }catch(e){} })()", raw:'<span class="ios-c">›</span>'+X('u:'+M.un)});
       // 8/11: ιστορικά & πορίσματα για έλεγχο = ΚΑΡΦΙΤΣΩΜΕΝΑ πάνω πάνω (μένουν ορατά και όταν κυλάς) μέχρι να γίνει αποδοχή
       if(M.rep) H.push({ic:'📋', t:'<b>'+M.rep+'</b> πόρισμα'+(M.rep===1?'':'τα')+' από σάρωση', sub:'ταυτοποίηση ασθενή & αποθήκευση', on:"(function(){ try{ iosPageCloseAll(); }catch(e){} window.pdxRepQueue && pdxRepQueue(); })()", raw:'<span class="ios-c">›</span>'+X('r:'+M.rep)});
@@ -9609,7 +9612,7 @@ document.head.appendChild(st);
     const CH = Object.assign({}, CHD, MOB_CFG.chips||{});
     const EMP = {findings:()=>!((d.findingsSelected||[]).length||d.findingsCustom), allergy:()=>!d.allergy, anticoag:()=>!window.mobAcSum(d).length, antibiotics:()=>!((d.antibioticsSelected||[]).length||d.antibioticsCustom), history:()=>!window.mobHxSum(d), onc:()=>!window.mobOncSum(d), misc:()=>!window.mobMiscSum(d)};
     const addC = [];
-    { const hp = window.HIST_PEND && window.HIST_PEND[k]; if(hp){ const ago = Math.max(1, Math.round((Date.now() - new Date(hp.row.created_at).getTime())/60000)); h += '<button class="mpend" onclick="__histOpenPending(\''+esc(k)+'\','+(k.indexOf('extra')===0)+')"><span>📄 Νέο ιστορικό προς έλεγχο<small>'+esc(String(hp.row.label||'').trim())+(hp.level!=='ok'?' · πιθανή αντιστοίχιση':'')+' · '+(ago<60?ago+'\' πριν':Math.round(ago/60)+' ώρ. πριν')+'</small></span>›</button>'; } }
+    { const hp = window.HIST_PEND && window.HIST_PEND[k]; if(hp){ const ago = Math.max(1, Math.round((Date.now() - new Date(hp.row.created_at).getTime())/60000)); h += '<button class="mpend" onclick="__histOpenPending(\''+esc(k)+'\','+(k.indexOf('extra')===0)+')"><span>📄 Ιστορικό προς διόρθωση<small>'+esc(String(hp.row.label||'').trim())+(hp.level!=='ok'?' · πιθανή αντιστοίχιση':'')+' · '+(ago<60?ago+'\' πριν':Math.round(ago/60)+' ώρ. πριν')+'</small></span>›</button>'; } }
     // μία σειρά καρτέλες: Σήμερα · Εκκρεμότητες (n) · Ιστορικό — τίποτα δεν χάνεται: Εξετάσεις/Απεικονίσεις ως γραμμές
     const tab = (window.__ptTab && window.__ptTab.k===k) ? window.__ptTab.t : 'today', nT = todos(d).length, hpd = !!(window.HIST_PEND && window.HIST_PEND[k]);
     const tb = (id, full, short)=>'<button role="tab" aria-selected="'+(tab===id)+'" data-pttab="'+id+'" class="'+(tab===id?'on':'')+'" onclick="mobPtTab(\''+xk+'\',\''+id+'\')"><span class="lf">'+full+'</span><span class="ls">'+(short||full)+'</span></button>';
@@ -19498,7 +19501,11 @@ function histPendRefresh(){
       // (reviewed:false) — ο γιατρός τα βλέπει όταν ανοίξει το ιστορικό. Ασθενής με ήδη ιστορικό ή πολλοί πιθανοί → όπως πριν («Νέα ιστορικά»).
       Object.keys(m).forEach(function(k){ try{
         var it = m[k], rec = store(it.extra)[k], d0 = (it.row && it.row.data) || {};
-        if(!rec || rec.caseHist || !d0._scan || (window.__histAuto = window.__histAuto || {})[it.row.id]) return;
+        // 11/11 18:32 (χρήστης: «όταν ανεβάζουμε ιστορικό, ταίριαξε όνομα+επίθετο με τον ασθενή και βάλ' το ΕΣΥ εκεί — να μένει μόνο
+        // "ιστορικό προς διόρθωση", όχι προς έγκριση»): ΚΑΘΕ ιστορικό με ΣΙΓΟΥΡΗ αντιστοίχιση (όχι μόνο σάρωση, και σε ασθενή με ήδη ιστορικό —
+        // το προηγούμενο κρατιέται στο caseHistPrev) → αποθηκεύεται στον ασθενή, reviewed:false = «προς διόρθωση» (τα αβέβαια σημειωμένα)
+        if(!rec) return; if((window.__histAuto = window.__histAuto || {})[it.row.id]){ delete m[k]; return; }
+        if(rec.caseHist && rec.caseHist.d && JSON.stringify(rec.caseHist.d).length > 20) rec.caseHistPrev = rec.caseHist;
         window.__histAuto[it.row.id] = 1;
         var parsed = JSON.parse(JSON.stringify(d0)); Object.keys(parsed).forEach(function(x){ if(x.charAt(0)==='_') delete parsed[x]; });
         try{ if(typeof rulesApply==='function') rulesApply(parsed); }catch(e){}
@@ -19507,7 +19514,7 @@ function histPendRefresh(){
         rec.caseHist = { v:1, at:Date.now(), imgId:null, d:parsed, reviewed:false, auto:true };
         saveEntryToStorage(k, it.extra, rec, true);
         delete m[k]; histInboxDone(it.row.id);
-        try{ if(!d0._uid || d0._uid === window.authUid) toast('✓ Ιστορικό '+String(rec.name||it.row.label||'').slice(0,40)+' μπήκε αυτόματα', 2500); }catch(e){}
+        try{ if(!d0._uid || d0._uid === window.authUid) toast('✓ Ιστορικό '+String(rec.name||it.row.label||'').slice(0,40)+' αποθηκεύτηκε στον ασθενή — προς διόρθωση', 3000); }catch(e){}
       }catch(e){} });
       // 👤 9/11 (χρήστης: «κάθε ειδικευόμενος βλέπει ως ειδοποίηση ΜΟΝΟ τα ιστορικά που ανέβασε ο ίδιος»): ό,τι έχει ανεβάσει άλλος λογαριασμός
       // (data._uid ≠ εμένα) δεν εμφανίζεται εδώ. Παλιά χωρίς _uid → σε όλους (όπως πριν). Η αυτόματη καταχώριση στον ασθενή γίνεται για όλα.
