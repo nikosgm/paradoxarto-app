@@ -2277,7 +2277,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-11e-v330';
+const APP_VER = '2026-11-11f-v331';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -2357,7 +2357,7 @@ window.syncRemote = syncRemote;
     if(autoBusy || !navigator.onLine) return; autoBusy = true;
     try{
       const t = await (await fetch(location.pathname + '?vc=' + Date.now(), {cache:'no-store'})).text();
-      const m = /const APP_VER = '([^']+)'/.exec(t); const v = m && m[1];
+      const m = /const APP_VER = '2026-11-11f-v331']+)'/.exec(t); const v = m && m[1];
       if(!v || v === APP_VER) return;
       let tried=''; try{ tried = sessionStorage.getItem('pdx_auto_tried')||''; }catch(e){}
       if(tried === v) return;   // ήδη δοκιμάστηκε σε αυτή τη συνεδρία
@@ -19070,7 +19070,7 @@ window.pdxEpsineOpen = function(){
         h += '<div style="display:flex;gap:8px;margin:12px 16px"><button data-ex style="flex:1;border:0;border-radius:12px;height:48px;background:rgba(118,118,128,.14);font-size:16px">Άκυρο</button><button data-eok style="flex:2;border:0;border-radius:12px;height:48px;background:#34C759;color:#fff;font-size:17px;font-weight:700">✓ Οριστικοποίηση</button></div>';
       } else if(c.job) h += '<div style="margin:0 16px 10px;font-size:14.5px;white-space:pre-wrap">'+E5(c.job.note||'')+'</div><div style="margin:0 16px"><button data-ex style="width:100%;border:0;border-radius:12px;height:44px;background:rgba(118,118,128,.14)">← Λίστα</button></div>';
       return h + '<div style="height:50px"></div>'; }
-    h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">↻ Φέρε τη λίστα από το ΝΠΣ</b>', sub: st.at ? 'τελευταία: '+new Date(st.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'μόνο ανάγνωση', on:'void 0', data:'data-erl'}]);
+    h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">↻ Φέρε τη λίστα από το ΝΠΣ</b>', sub: (st.at ? 'τελευταία: '+new Date(st.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · ' : '')+'αυτόματα κάθε νύχτα 01:10 · μόνο ανάγνωση', on:'void 0', data:'data-erl'}]);
     if(st.rows){ const P = st.rows.filter(pend), D = st.rows.filter(r=>!pend(r));
       h += P.length ? iosGroup('Εκκρεμούν · '+P.length, P.map(r=>({t:'<b>'+E5(r.name)+'</b>', sub:E5(r.adm)+' → '+E5(r.dc)+' · '+E5(r.st), on:'void 0', data:'data-ept="'+E5(r.amka)+'"'}))) : '<div style="margin:16px;color:#8E8E93">Καμία εκκρεμότητα 🎉</div>';
       if(D.length) h += iosGroup('Ολοκληρωμένα · '+D.length, D.slice(0,30).map(r=>({t:E5(r.name), sub:E5(r.dc)+' · '+E5(r.sub)}))); }
@@ -19102,7 +19102,7 @@ window.pdxEpsineOpen = function(){
     if(e.target.closest('[data-ex]')){ const c = st.cur; if(c && c.job && c.job.status==='review') sb6.from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε (ΕΨΙΝΕ)'}).eq('id', c.job.id).eq('status','review').then(()=>{},()=>{}); st.cur = null; pg.redraw(); }
   });
   // 📑 10/11 23:30 (χρήστης: «γράφεις ότι εκκρεμούν 10 — δεν είναι μόνο 10»): παλιά λίστα (> 2 ώρες) → νέα αυτόματα (εύρος 4 μηνών, bot ≥0.21.226)
-  loadList().then(()=>{ if(!st.busy && (!st.at || Date.now() - st.at > 2*3600e3)) fetchList(); }); return pg;
+  loadList().then(()=>{ if(!st.busy && !st.at) fetchList(); }); return pg;   // 11/11 (χρήστης): η λίστα γίνεται ΤΗ ΝΥΧΤΑ (01:10)· τη μέρα μόνο αν δεν υπάρχει καμία ή με «↻»
 };
 // 🔎 10/11 23:10 (χρήστης: «ο φακός να ψάχνει ασθενή σε ΟΛΟ το ΝΠΣ»): εντολή npsfind (μόνο ανάγνωση, εκτός κλινικής, από 2000) → λίστα·
 // πάτημα → 📂 Φάκελος ΝΠΣ του ασθενή (pdxDossierOpen) ή 🌐 Αρχείο (Medilabi)
