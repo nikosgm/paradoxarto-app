@@ -908,7 +908,7 @@ function drawLayout(r){
       ctx.save(); ctx.shadowColor='#000'; ctx.shadowBlur=3; ctx.font='600 12px system-ui,sans-serif'; ctx.fillStyle='#fff';
       const t1=String(ser.desc||'').slice(0, Math.max(8, Math.floor(q.w/7.5))); ctx.fillText(t1, q.x+8, q.y+17);
       ctx.font='12px system-ui,sans-serif'; ctx.fillStyle=A; ctx.fillText(PLN+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(ser.thick?' · '+fmt(ser.thick)+' mm':'')+(c._far&&LY.sync?' · εκτός εύρους':''), q.x+8, q.y+33);
-      ctx.fillStyle='#cbd5e1'; ctx.textAlign='right'; ctx.fillText('Π '+Math.round(S.ww)+' · Κ '+Math.round(S.wc)+(S.zoom!==1?' · '+Math.round(S.zoom*100)+'%':''), q.x+q.w-8, q.y+17); ctx.textAlign='left'; ctx.restore();
+      ctx.fillStyle='#cbd5e1'; ctx.textAlign='right'; ctx.fillText('Π '+Math.round(S.ww)+' · Κ '+Math.round(S.wc)+(S.zoom!==1?' · '+Math.round(S.zoom*100)+'%':''), q.x+q.w-(q.x+q.w>=r.width-4?44:8), q.y+17);   // δεξιά άκρη: όχι κάτω από τη μπάρα τομών ctx.textAlign='left'; ctx.restore();
     }
     ctx.strokeStyle = j===LY.act ? A : '#2E3036'; ctx.lineWidth = j===LY.act ? 2 : 1; ctx.strokeRect(q.x+.5,q.y+.5,q.w-1,q.h-1);
   });
@@ -1627,7 +1627,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-12a';
+const CT_VER = '2026-11-12b';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
