@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12i-v360';
+const APP_VER = '2026-11-12j-v361';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19538,7 +19538,7 @@ function barHtml(items){
   // island: Ασθενής | Ιστορικό
   var isl = $('chIsl');
   if(isl){
-    var show = ctx && !ctx.isNew && !ctx.review && window.innerWidth<=700;
+    var show = false;   // 12/11 21:12 (χρήστης, στιγμιότυπο: «έχει ξεμείνει παλιό island» στο Ιστορικό ασθενή) — η παλιά μπάρα Ασθενής/Εκκρεμότητες/Ιστορικό ΔΕΝ εμφανίζεται· πίσω = «‹ Πίσω» πάνω
     isl.style.display = show ? 'flex' : 'none';
     if(show){ isl.innerHTML=''; var p1=document.createElement('button'); p1.innerHTML='<i>👤</i><span>Ασθενής</span>'; p1.onclick=function(){ var k0=ctx&&ctx.key; closeOv(); if(!ctx && k0 && window.mobOpen){ try{ window.mobOpen(k0); }catch(e){} } }; var pt=document.createElement('button'); pt.innerHTML='<i>☑</i><span><span class="lf">Εκκρεμότητες</span><span class="ls">Εκκρ.</span></span>'; pt.onclick=function(){ var k0=ctx&&ctx.key; closeOv(); if(k0 && window.mobTodoPage){ try{ window.mobTodoPage(k0); }catch(e){} } }; var p2=document.createElement('button'); p2.className='cur'; p2.innerHTML='<i>📄</i><span>Ιστορικό</span>'; isl.appendChild(p1); isl.appendChild(pt); isl.appendChild(p2); }
   }
