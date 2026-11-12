@@ -1,1 +1,1 @@
-{"version": "0.21.311", "zip": "ef-bot-0.21.311.zip", "sha256": "3e047a2cd9c3ffe55b5838f87400593e166b251ba5ff504c5a2622cc68c82f10", "notes": "εξιτήριο κλινικής: δοκιμή όλων των ιατρικών πράξεων (payload.acts + mapOnly, χωρίς έκδοση)"}
+{"version": "0.21.312", "zip": "ef-bot-0.21.312.zip", "sha256": "2abcd313a7b77bffb8d3fa357a46b78f10b736d99e9a0cf91eeb758fb7149db0", "notes": "📺 tvinfo: οθόνες/τηλεόραση (EDID, HDMI), κάρτες, προσαρμογέας CEC — μόνο ανάγνωση"}
