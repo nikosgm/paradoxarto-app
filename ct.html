@@ -154,6 +154,13 @@ body.is3d .ov,body.is3d .slider{display:none}
 #evoOv .evo-ser img{width:128px;height:128px;object-fit:contain;background:#000;border-radius:6px}
 #evoOv .evo-ser .nt{font-size:48px;height:128px;display:flex;align-items:center}
 #evoOv .evo-ser small{color:var(--muted)}
+#lyPick{position:fixed;z-index:60;background:var(--panel);border:1px solid #000;border-radius:10px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);display:grid;grid-template-columns:repeat(4,auto);gap:8px}
+#lyPick button{background:#14161A;border:1px solid #2E3036;border-radius:8px;padding:6px;cursor:pointer;color:var(--fg);font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:4px}
+#lyPick button.on{border-color:#E8B04A}
+#lyPick .g{display:grid;gap:2px;width:44px;height:32px}
+#lyPick .g i{background:#5EB8E6;border-radius:2px;opacity:.85}
+#lyPick .h{grid-column:1/-1;font-size:12px;color:var(--muted)}
+.rail .ser.ly{outline:2px solid #5EB8E6;outline-offset:-2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -190,6 +197,8 @@ body.is3d .ov,body.is3d .slider{display:none}
       <button class="ib" id="refl" title="Γραμμές αναφοράς">✛</button>
       <button class="ib" id="mpr3" title="MPR: AX + COR + SAG μαζί, με σταυρό αναφοράς (X)">⊞ MPR</button>
       <button class="ib" id="b3d" title="3D απόδοση όγκου (D)">3D</button>
+      <button class="ib" id="lyBtn" title="Πολλαπλή προβολή σειρών: δίπλα-δίπλα, πάνω-κάτω, 2×2… (L)">▦<span>Πολλαπλή</span></button>
+      <button class="ib" id="lySync" hidden title="Συγχρονισμός τομών και zoom μεταξύ των παραθύρων (F5)">🔗<span>Συγχρ.</span></button>
     </div>
     <i class="sep"></i>
     <div class="grp seg" role="group" aria-label="MIP">
@@ -773,7 +782,7 @@ function geom(f){
   const iw=(ax1-ax0)*f.sx, ih=(ay1-ay0)*f.sy, fit=Math.min(r.width/iw, r.height/ih)*0.97;
   const sc=fit*S.zoom, w=f.W*f.sx*sc, h=f.H*f.sy*sc;
   const cx=(ax0+ax1)/2*f.sx*sc, cy=(ay0+ay1)/2*f.sy*sc;
-  const ox = RR ? RR.x : 0, oy = RR ? RR.y : 0, zp = RR ? 0 : 1;
+  const ox = RR ? RR.x : 0, oy = RR ? RR.y : 0, zp = RR && !RR.pan ? 0 : 1;   // πολλαπλή προβολή: κάθε παράθυρο με δική του μετακίνηση
   return {r, x:ox+r.width/2-cx+S.panX*zp, y:oy+r.height/2-cy+S.panY*zp, w, h, px:sc*f.sx, py:sc*f.sy};
 }
 const toImg=(g,cx,cy)=>[(cx-g.x)/g.px, (cy-g.y)/g.py];
@@ -827,10 +836,115 @@ function mprSet(p,cx,cy){ const act=S.view; S.view=p; S._rect=mprRects(view.getB
   if(ix<0||iy<0||ix>=f.W||iy>=f.H) return;
   if(p==='ax'){ S.ix.sag=ix; S.ix.cor=iy; } else if(p==='cor'){ S.ix.sag=ix; S.ix.ax=iy; } else { S.ix.cor=ix; S.ix.ax=iy; }
   draw(); }
+
+/* ===== 12/11 (χρήστης: «πολλαπλή προβολή ακολουθιών — 2-3 μαζί, οριζόντια ή κάθετα, όπως στο RadiAnt»):
+   διάταξη r×c · κάθε παράθυρο με δική του σειρά/τομή/παράθυρο/zoom · κλικ = ενεργό (εκεί πάνε εργαλεία, μπάρα, σειρά από αριστερά)
+   · σύρσιμο σειράς από αριστερά μέσα σε παράθυρο · συγχρονισμός (F5): τομή κατά ΘΕΣΗ (ίδιο επίπεδο) + zoom/μετακίνηση, όπως το RadiAnt ===== */
+const LY = { on:false, r:1, c:1, cells:[], act:0, sync:true, oc:[], pk:[], fc:[] };
+const LKEYS = ['cur','view','ix','ww','wc','zoom','panX','panY','mip','inv'];
+const LAYOUTS = [[1,1,'Μία'],[1,2,'Δίπλα'],[2,1,'Πάνω-κάτω'],[1,3,'3 δίπλα'],[3,1,'3 κάθετα'],[2,2,'2×2'],[2,3,'2×3'],[3,3,'3×3']];
+function lyGet(){ const o={}; for(const k of LKEYS) o[k] = k==='ix' ? {...S.ix} : S[k]; return o; }
+function lyPut(o){ for(const k of LKEYS) S[k] = k==='ix' ? {...o.ix} : o[k]; }
+function lyRects(r){ const g=3, W=(r.width-g*(LY.c-1))/LY.c, H=(r.height-g*(LY.r-1))/LY.r, out=[];
+  for(let i=0;i<LY.r;i++) for(let j=0;j<LY.c;j++) out.push({x:Math.round(j*(W+g)), y:Math.round(i*(H+g)), w:Math.round(W), h:Math.round(H), pan:true});
+  return out; }
+function lyAt(cx,cy){ const R=lyRects(view.getBoundingClientRect()); return R.findIndex(q=>cx>=q.x&&cx<q.x+q.w&&cy>=q.y&&cy<q.y+q.h); }
+function lyCellFor(ser){ const mid=Math.floor(ser.slices.length/2), d=ser.slices[mid]&&(ser.slices[mid].data||decode(ser.slices[mid]));
+  const [ww,wc] = (S.cur && S.cur.modality==='CT' && ser.modality==='CT') ? [S.ww,S.wc] : autoWin(ser,d);
+  return {cur:ser, view:'ax', ix:{ax:mid, cor:ser.rows>>1, sag:ser.cols>>1}, ww, wc, zoom:1, panX:0, panY:0, mip:0, inv:false}; }
+function lyActivate(j){ if(j<0 || j===LY.act || !LY.on) return false;
+  LY.cells[LY.act] = lyGet(); LY.act = j; const c = LY.cells[j];
+  if(c && c.cur) lyPut(c); else { S.cur=null; S.mip=0; }
+  S._rect = lyRects(view.getBoundingClientRect())[j]; S.drag=null; PK=null; renderRail(); draw(); return true; }
+function setLayout(r,c){
+  if(r*c===1){ if(!LY.on) return; LY.cells[LY.act]=lyGet(); LY.on=false; S._rect=null; PK=null; FC=null; if(!S.cur){ const f=LY.cells.find(x=>x&&x.cur); if(f) lyPut(f); } }
+  else {
+    if(S.mpr3) S.mpr3=false; if(V3.on) set3d(false); if(typeof VK!=='undefined' && VK.on) set3dVK(false);
+    if(!LY.on){ LY.cells=[lyGet()]; LY.act=0; }
+    else LY.cells[LY.act]=lyGet();
+    const n=r*c; if(LY.act>=n){ const keep=LY.cells[LY.act]; LY.cells[LY.act]=LY.cells[0]; LY.cells[0]=keep; LY.act=0; }
+    LY.cells=LY.cells.slice(0,n); LY.r=r; LY.c=c; LY.on=true;
+    // κενά παράθυρα → οι επόμενες κύριες σειρές που δεν φαίνονται ήδη (π.χ. χωρίς/με σκιαγραφικό)
+    const shown=new Set(LY.cells.filter(x=>x&&x.cur).map(x=>x.cur)), pool=S.series.filter(isMain).concat(S.series.filter(x=>!isMain(x)&&!x.loc&&x.slices.length>1)).filter(x=>!shown.has(x));
+    for(let i=0;i<n;i++) if(!LY.cells[i] || !LY.cells[i].cur){ const ser=pool.shift(); LY.cells[i] = ser ? lyCellFor(ser) : null; }
+    LY.oc=[]; LY.pk=[]; LY.fc=[]; S._rect=lyRects(view.getBoundingClientRect())[LY.act];
+  }
+  $('lyBtn').classList.toggle('on',LY.on); $('lySync').hidden=!LY.on; $('lySync').classList.toggle('on',LY.sync);
+  renderRail(); draw();
+}
+// συγχρονισμός: τα άλλα παράθυρα (ίδιο επίπεδο λήψης, αξονική όψη) πάνε στην τομή με την πλησιέστερη ΘΕΣΗ· ίδιο zoom/μετακίνηση
+function lySyncFrom(a){
+  if(!a || !a.cur) return;
+  // μόνο όταν ΚΙΝΗΘΗΚΕ το ενεργό παράθυρο (τομή/zoom/μετακίνηση) — το απλό κλικ σε άλλο παράθυρο δεν μετακινεί τα υπόλοιπα
+  const key=LY.act+'|'+a.cur.uid+'|'+a.view+'|'+a.ix[a.view]+'|'+a.zoom+'|'+a.panX+'|'+a.panY, prev=LY.lastKey; LY.lastKey=key;
+  if(!LY.sync || !prev || prev.split('|')[0]!==String(LY.act) || prev===key) return;
+  const s0=a.cur.slices[a.ix.ax], pz=s0&&s0.pos, pl=a.cur.plane||'AX';
+  LY.cells.forEach((c,j)=>{ if(j===LY.act || !c || !c.cur) return;
+    c.zoom=a.zoom; c.panX=a.panX; c.panY=a.panY;
+    if(a.view==='ax' && c.view==='ax' && a.cur.usePos && c.cur.usePos && pz!=null && (c.cur.plane||'AX')===pl){
+      let bi=c.ix.ax, bd=Infinity; const L=c.cur.slices; for(let i=0;i<L.length;i++){ const d=Math.abs((L[i].pos||0)-pz); if(d<bd){ bd=d; bi=i; } } c.ix.ax=bi; c._far = bd > Math.max(5, (c.cur.thick||c.cur.zsp||2)*2); }
+    else if(a.view!=='ax' && c.view===a.view && c.cur.vol && a.cur.vol) c.ix[a.view]=Math.round(a.ix[a.view]/Math.max(1,count(a.view)-1)*((a.view==='cor'?c.cur.rows:c.cur.cols)-1));
+  });
+}
+function drawLayout(r){
+  const R=lyRects(r), live=lyGet(), fc0=FC; LY.cells[LY.act]=live; lySyncFrom(live);
+  $('msg').hidden=true; $('printBtn').disabled=!LY.cells.some(c=>c&&c.cur);
+  R.forEach((q,j)=>{ const c=LY.cells[j];
+    ctx.fillStyle='#000'; ctx.fillRect(q.x,q.y,q.w,q.h);
+    if(!c || !c.cur || !c.cur.slices.length){ ctx.fillStyle='#6B7280'; ctx.font='500 13px system-ui,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(j===LY.act ? 'Διάλεξε σειρά από αριστερά' : 'Κενό — κλικ εδώ, μετά σειρά από αριστερά', q.x+q.w/2, q.y+q.h/2); ctx.textAlign='left'; }
+    else {
+      lyPut(c); const ser=S.cur; for(const v of ['ax','cor','sag']) S.ix[v]=Math.max(0,Math.min(S.ix[v],count(v)-1)); if(S.view!=='ax' && !ser.vol) S.view='ax';
+      c.ix={...S.ix}; S._rect=q; FC=LY.fc[j]||null; const f=frame(); LY.fc[j]=FC;
+      if(f){ const oc2=LY.oc[j]||(LY.oc[j]=document.createElement('canvas')), c2=oc2.getContext('2d');
+        const pk=[f.d,f.W,f.H,ser.rgb&&S.view==='ax'&&!f.mip,ser.mono1!==!!S.inv,S.ww,S.wc];
+        if(!LY.pk[j] || pk.some((x,i)=>x!==LY.pk[j][i])){ paint(f.d,f.W,f.H,pk[3],pk[4],S.ww,S.wc,oc2,c2); LY.pk[j]=pk; }
+        const g=geom(f); ctx.save(); ctx.beginPath(); ctx.rect(q.x,q.y,q.w,q.h); ctx.clip();
+        ctx.imageSmoothingEnabled=S.zoom<3 || S.view!=='ax'; ctx.imageSmoothingQuality='high'; ctx.drawImage(oc2,g.x,g.y,g.w,g.h);
+        drawMeas(ctx, g, f, ser.modality==='CT');
+        if(j===LY.act && S.hover && !(ser.rgb&&S.view==='ax')){ const ix=Math.floor(S.hover[0]), iy=Math.floor(S.hover[1]); if(ix>=0&&iy>=0&&ix<f.W&&iy<f.H){ const v=f.d[iy*f.W+ix]; ctx.fillStyle='#fff'; ctx.font='12px system-ui,sans-serif'; ctx.fillText(ser.modality==='CT'?Math.round(v)+' HU':'τιμή '+Math.round(v), q.x+8, q.y+q.h-26); } }
+        ctx.restore(); }
+      const PLN={ax:'AX',cor:'COR',sag:'SAG'}[S.view];
+      ctx.save(); ctx.shadowColor='#000'; ctx.shadowBlur=3; ctx.font='600 12px system-ui,sans-serif'; ctx.fillStyle='#fff';
+      const t1=String(ser.desc||'').slice(0, Math.max(8, Math.floor(q.w/7.5))); ctx.fillText(t1, q.x+8, q.y+17);
+      ctx.font='12px system-ui,sans-serif'; ctx.fillStyle=A; ctx.fillText(PLN+' '+(S.ix[S.view]+1)+' / '+count(S.view)+(ser.thick?' · '+fmt(ser.thick)+' mm':'')+(c._far&&LY.sync?' · εκτός εύρους':''), q.x+8, q.y+33);
+      ctx.fillStyle='#cbd5e1'; ctx.textAlign='right'; ctx.fillText('Π '+Math.round(S.ww)+' · Κ '+Math.round(S.wc)+(S.zoom!==1?' · '+Math.round(S.zoom*100)+'%':''), q.x+q.w-8, q.y+17); ctx.textAlign='left'; ctx.restore();
+    }
+    ctx.strokeStyle = j===LY.act ? A : '#2E3036'; ctx.lineWidth = j===LY.act ? 2 : 1; ctx.strokeRect(q.x+.5,q.y+.5,q.w-1,q.h-1);
+  });
+  lyPut(live); FC=fc0; S._rect=R[LY.act];
+  const ser=S.cur, any=(LY.cells.find(c=>c&&c.cur)||{}).cur, pi0=(any&&any.pinfo)||{};
+  $('ovTL').innerHTML=''; $('ovTR').innerHTML=''; $('ovBL').textContent='';
+  $('ovBR').textContent = (pi0.name?pi0.name+' · ':'')+'Πολλαπλή '+LY.r+'×'+LY.c+(LY.sync?' · 🔗 συγχρ.':'')+' · '+TOOL_NAMES[S.tool];
+  if(ser){ $('sl').max=count(S.view)-1; $('sl').value=S.ix[S.view]; $('slv').textContent=(S.ix[S.view]+1)+' / '+count(S.view); }
+  else { $('sl').max=0; $('sl').value=0; $('slv').textContent='—'; }
+  document.querySelectorAll('[data-plane]').forEach(b=>b.classList.toggle('on',!!ser && b.dataset.plane===S.view));
+  document.querySelectorAll('[data-mip]').forEach(b=>b.classList.toggle('on',+b.dataset.mip===S.mip));
+  $('mpr3').classList.toggle('on',false); $('inv').classList.toggle('on',!!S.inv);
+}
+function lyPicker(){
+  const old=$('lyPick'); if(old){ old.remove(); return; }
+  const d=document.createElement('div'); d.id='lyPick';
+  d.innerHTML='<div class="h">Πολλαπλή προβολή — διάταξη</div>'+LAYOUTS.map(([r,c,l])=>'<button data-ly="'+r+','+c+'" class="'+((LY.on?LY.r===r&&LY.c===c:r*c===1)?'on':'')+'"><span class="g" style="grid-template-columns:repeat('+c+',1fr);grid-template-rows:repeat('+r+',1fr)">'+'<i></i>'.repeat(r*c)+'</span>'+l+'</button>').join('')
+    +'<div class="h" style="margin-top:2px">Κλικ σε παράθυρο = ενεργό · σειρά από αριστερά (κλικ ή σύρσιμο) · 🔗 F5 συγχρονισμός</div>';
+  const b=$('lyBtn').getBoundingClientRect(); d.style.left=Math.max(6,Math.min(innerWidth-330,b.left))+'px'; d.style.top=(b.bottom+6)+'px';
+  d.onclick=e=>{ const x=e.target.closest('[data-ly]'); if(!x) return; const [r,c]=x.dataset.ly.split(',').map(Number); d.remove(); setLayout(r,c); };
+  document.body.appendChild(d);
+  setTimeout(()=>document.addEventListener('pointerdown',function f(e){ if(!e.target.closest('#lyPick,#lyBtn')){ d.remove(); document.removeEventListener('pointerdown',f); } }),0);
+}
+$('lyBtn').onclick=()=>{ if(!S.series.length && !LY.on) return status('Άνοιξε πρώτα μια μελέτη.', true); lyPicker(); };
+$('lySync').onclick=()=>{ LY.sync=!LY.sync; $('lySync').classList.toggle('on',LY.sync); if(LY.sync) LY.lastKey=LY.act+'|force'; draw(); };
+// κλικ/ροδέλα σε παράθυρο → γίνεται ενεργό ΠΡΙΝ τρέξουν τα εργαλεία (capture)
+view.addEventListener('pointerdown',e=>{ if(!LY.on || e.target.closest('.slider')) return; const r=view.getBoundingClientRect(); lyActivate(lyAt(e.clientX-r.left,e.clientY-r.top)); },true);
+view.addEventListener('wheel',e=>{ if(!LY.on || e.target.closest('.slider')) return; const r=view.getBoundingClientRect(); lyActivate(lyAt(e.clientX-r.left,e.clientY-r.top)); },{capture:true, passive:true});
+view.addEventListener('dragover',e=>{ if(LY.on && e.dataTransfer && [...e.dataTransfer.types].includes('text/x-ser')){ e.preventDefault(); e.stopPropagation(); } },true);
+view.addEventListener('drop',e=>{ const k=e.dataTransfer && e.dataTransfer.getData('text/x-ser'); if(!LY.on || k==='' || k==null) return; e.preventDefault(); e.stopImmediatePropagation();
+  const r=view.getBoundingClientRect(), j=lyAt(e.clientX-r.left,e.clientY-r.top), ser=S.series[+k]; if(j<0||!ser) return; lyActivate(j); S.touched=true; select(ser); },true);
 function drawNow(){
   const dpr=window.devicePixelRatio||1, r=view.getBoundingClientRect();
   if(cv.width!==Math.round(r.width*dpr)||cv.height!==Math.round(r.height*dpr)){ cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr); }
   ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle='#000'; ctx.fillRect(0,0,r.width,r.height);
+  if(LY.on && !V3.on && !(typeof VK!=='undefined' && VK.on)){ drawLayout(r); return; }
   const ser=S.cur;
   $('msg').hidden = !!(ser && ser.slices.length);
   $('printBtn').disabled = !(ser && ser.slices.length);
@@ -925,7 +1039,8 @@ function renderRail(full){
   const main=S.series.filter(isMain), rest=S.series.filter(x=>!isMain(x));
   const list = (main.length && !S.showAll) ? main.concat(rest.includes(S.cur)?[S.cur]:[]) : S.series;
   for(const ser of list){
-    const b=document.createElement('button'); b.className='ser'+(ser===S.cur?' on':'');
+    const b=document.createElement('button'); b.className='ser'+(ser===S.cur?' on':'')+(LY.on && ser!==S.cur && LY.cells.some(c=>c&&c.cur===ser)?' ly':'');
+    b.draggable=true; b.addEventListener('dragstart',e=>{ e.dataTransfer.setData('text/x-ser', String(S.series.indexOf(ser))); e.dataTransfer.effectAllowed='copy'; });
     if(full||!ser._th||(ser._thN!==ser.slices.length&&ser.slices.length<3)){ ser._th=thumb(ser); ser._thN=ser.slices.length; }
     b.appendChild(ser._th);
     const t=document.createElement('div'); t.className='t';
@@ -994,6 +1109,7 @@ async function ingest(files, src){
   // νέα φόρτωση = νέα «γενιά»: ό,τι φέρνουν ακόμη οι workers της προηγούμενης αγνοείται
   const gen=++S.gen;
   S.series=[]; S.cur=null; S.meas={}; lru.length=0; FC=null; PK=null; S.touched=false; S.drag=null;
+  if(LY.on){ LY.on=false; LY.cells=[]; S._rect=null; $('lyBtn').classList.remove('on'); $('lySync').hidden=true; }
   const L={gen, mem:0, px:null, file:null, t0:performance.now(), total:files.length, done:0, ok:0, skip:0, dup:0, bytes:0, first:null, end:null, sops:new Set(), split:new Set(), posAcq:new Map()};
   S.load=L; status(); const q=files.slice(); let lastUi=0;
   const pull=()=>{ if(src){ const nw=src.take().filter(f=>isCand(f.name,f.size)); if(nw.length){ q.push(...nw); L.total+=nw.length; } } };
@@ -1062,14 +1178,14 @@ $('srvBtn').onclick = async ()=>{
   runSearch(h);
 };
 $('printBtn').onclick = ()=>{
-  const ser=S.cur; if(!ser) return;
+  const ser=S.cur; if(!ser && !LY.on) return;
   // 7/11: εκτύπωση σε ΥΨΗΛΗ ανάλυση (≈3000 px πλάτος, Α4 οριζόντια) — η εικόνα ξαναζωγραφίζεται από τα αρχικά pixel, όχι «φωτογραφία» της οθόνης
   const r=view.getBoundingClientRect(), k=Math.max(2, 3000/Math.max(1,r.width));
   const shot=document.createElement('canvas'); shot.width=Math.round(r.width*k); shot.height=Math.round(r.height*k);
   const sc=shot.getContext('2d'); sc.fillStyle='#000'; sc.fillRect(0,0,shot.width,shot.height);
   if(typeof VK!=='undefined' && VK.on && VK.grw){ vkRender(); sc.drawImage(VK.grw.getOpenGLRenderWindow().getCanvas(),0,0,shot.width,shot.height); }
   else if(V3.on){ render3(false); sc.drawImage($('cv3'),0,0,shot.width,shot.height); }
-  else if(S.mpr3){ sc.drawImage(cv,0,0,shot.width,shot.height); }
+  else if(S.mpr3 || LY.on){ drawNow(); sc.drawImage(cv,0,0,shot.width,shot.height); }
   else { const f=frame(); if(f){ const g=geom(f); sc.setTransform(k,0,0,k,0,0); sc.imageSmoothingEnabled=true; sc.imageSmoothingQuality='high'; sc.drawImage(oc,g.x,g.y,g.w,g.h); try{ drawMeas(sc,g,f,ser.modality==='CT'); }catch(e){} sc.setTransform(1,0,0,1,0,0); } }
   // τα στοιχεία (ασθενής, σειρά, παράθυρο) πάνω στην εικόνα, άσπρα στο μαύρο — καθαρά γράμματα
   { sc.save(); sc.setTransform(k,0,0,k,0,0); sc.fillStyle='#fff'; sc.shadowColor='#000'; sc.shadowBlur=2; sc.textBaseline='top';
@@ -1115,7 +1231,8 @@ const step=n=>{ if(!S.cur) return; S.touched=true; S.ix[S.view]=Math.max(0,Math.
 
 function zoomAt(fk, cx, cy){
   const f=frame(); if(!f) return; const g=geom(f); const nz=Math.max(.25,Math.min(16,S.zoom*fk)); fk=nz/S.zoom;
-  const ox=g.x+g.w/2-g.r.width/2, oy=g.y+g.h/2-g.r.height/2, mx=cx-g.r.width/2, my=cy-g.r.height/2;
+  const bx=(S._rect?S._rect.x:0)+g.r.width/2, by=(S._rect?S._rect.y:0)+g.r.height/2;
+  const ox=g.x+g.w/2-bx, oy=g.y+g.h/2-by, mx=cx-bx, my=cy-by;
   S.panX += (ox-mx)*(fk-1); S.panY += (oy-my)*(fk-1); S.zoom=nz; draw();
 }
 view.addEventListener('wheel',e=>{
@@ -1355,7 +1472,7 @@ function ui3(){
 }
 async function set3d(on){
   if(!on){ V3.on=false; $('cv3').hidden=true; $('p3').hidden=true; document.body.classList.remove('is3d'); draw(); return; }
-  const ser=S.cur; if(!ser) return;
+  const ser=S.cur; if(!ser) return; if(LY.on) setLayout(1,1);
   if(!ser.vol){ const ok=await buildVol(ser); if(!ok) return; }
   try{ if(!(await upload3(ser))){ status(V3.msg||'Το 3D δεν είναι διαθέσιμο σε αυτή τη συσκευή.', true); return; } }
   catch(e){ status('3D: '+e.message, true); return; }
@@ -1395,7 +1512,7 @@ function cine(on){ clearInterval(S.cineT); S.cineT=0; if(on && S.cur){ S.cineT=s
 $('cine').onclick=()=>{ if(V3.on) return; cine(!S.cineT); };
 $('inv').onclick=()=>{ S.inv=!S.inv; PK=null; draw(); };
 $('b3d').onclick=()=>set3d(!V3.on);
-async function setMpr3(on){ if(!S.cur) return; if(on){ if(V3.on) set3d(false); if(VK.on) set3dVK(false); if(!S.cur.vol){ const t=thinFor(S.cur); if(t){ select(t); } if(!(await buildVol(S.cur))) return; } S.mip=0; FC=null; }
+async function setMpr3(on){ if(!S.cur) return; if(on){ if(LY.on) setLayout(1,1); if(V3.on) set3d(false); if(VK.on) set3dVK(false); if(!S.cur.vol){ const t=thinFor(S.cur); if(t){ select(t); } if(!(await buildVol(S.cur))) return; } S.mip=0; FC=null; }
   S.mpr3=!!on; draw(); }
 $('mpr3').onclick=()=>setMpr3(!S.mpr3);
 // στο MPR: αριστερό σύρσιμο = σταυρός (κινεί τα άλλα δύο επίπεδα), ροδέλα = τομές στο παράθυρο που δείχνεις
@@ -1423,7 +1540,7 @@ function tagsShow(){
 $('tags').onclick=tagsShow;
 function keysShow(){
   const d=document.createElement('div'); d.className='inst';
-  d.innerHTML='<b>Συντομεύσεις</b><div style="font-family:var(--font-mono);font-size:12px;margin-top:6px;white-space:pre-line">↑ ↓ / ροδέλα: τομές · PgUp/PgDn: ±10\nCtrl+ροδέλα: zoom · δεξί σύρσιμο: zoom (κάτω = μεγέθυνση)\n1–5: παράθυρα · A/C/S: AX/COR/SAG · D: 3D\nM: MIP · P: cine · I: αντιστροφή · T: tags\nR: επαναφορά · διπλό κλικ: σταυρός MPR\n3D: σύρσιμο = περιστροφή, δεξί = κατώφλι,\nShift/μεσαίο = μετακίνηση, διπλό κλικ = επαναφορά</div><div class="row"><button class="btn">OK</button></div>';
+  d.innerHTML='<b>Συντομεύσεις</b><div style="font-family:var(--font-mono);font-size:12px;margin-top:6px;white-space:pre-line">↑ ↓ / ροδέλα: τομές · PgUp/PgDn: ±10\nCtrl+ροδέλα: zoom · δεξί σύρσιμο: zoom (κάτω = μεγέθυνση)\n1–5: παράθυρα · A/C/S: AX/COR/SAG · D: 3D\nM: MIP · P: cine · I: αντιστροφή · T: tags\nR: επαναφορά · διπλό κλικ: σταυρός MPR\nL: πολλαπλή προβολή (δίπλα/πάνω-κάτω/2×2) · F5: συγχρονισμός · Esc: μία\n3D: σύρσιμο = περιστροφή, δεξί = κατώφλι,\nShift/μεσαίο = μετακίνηση, διπλό κλικ = επαναφορά</div><div class="row"><button class="btn">OK</button></div>';
   d.querySelector('button').onclick=()=>d.remove(); document.body.appendChild(d);
 }
 $('keys').onclick=keysShow;
@@ -1433,6 +1550,9 @@ document.addEventListener('keydown',e=>{
   const k=(/^Key[A-Z]$/.test(e.code) && /[\u0370-\u03ff]/.test(e.key)) ? (e.shiftKey ? e.code.slice(3) : e.code.slice(3).toLowerCase()) : e.key;
   if(k==='d'||k==='D') set3dVK(!VK.on);
   else if(k==='x'||k==='X') setMpr3(!S.mpr3);
+  else if(k==='l'||k==='L') $('lyBtn').click();
+  else if(k==='F5' && LY.on){ e.preventDefault(); $('lySync').click(); }
+  else if(k==='Escape' && LY.on && !VK.on) setLayout(1,1);
   else if(k==='p'||k==='P') cine(!S.cineT);
   else if(k==='i'||k==='I'){ S.inv=!S.inv; PK=null; draw(); }
   else if(k==='t'||k==='T') tagsShow();
@@ -1507,7 +1627,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-11b';
+const CT_VER = '2026-11-12a';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 async function deskOpen(root){
@@ -1618,6 +1738,7 @@ async function vkBuild(ser){
 async function set3dVK(on){
   const box=$('vk3');
   if(!on){ VK.on=false; box.hidden=true; $('p3').hidden=true; document.body.classList.remove('is3d'); draw(); return; }
+  if(LY.on) setLayout(1,1);
   const ser=S.cur; if(!ser) return;
   if(!ser.vol){ const t=thinFor(ser); if(t) select(t); if(!(await buildVol(S.cur))) return; }
   S.mpr3=false; box.hidden=false; document.body.classList.add('is3d'); VK.on=true; $('p3').hidden=false; ui3vk();
