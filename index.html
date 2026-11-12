@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12l-v363';
+const APP_VER = '2026-11-12m-v364';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18765,8 +18765,11 @@ window.pdxDictate = function(k){
 window.pdxNpsMedCat = window.pdxNpsMedCat || {items:null, at:0};
 window.pdxNpsMedLoad = async function(){ const C = window.pdxNpsMedCat; if(C.items && Date.now()-C.at < 6*3600e3) return C.items;
   try{ if(!C.items){ const j = JSON.parse(localStorage.getItem('pdx_npsmed')||'null'); if(j && Array.isArray(j.items)){ C.items = j.items; C.at = 0; } } }catch(e){}
-  try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','npsmed|cat').maybeSingle(); const d = r.data && r.data.data; if(d && Array.isArray(d.items)){ C.items = d.items; C.at = Date.now(); try{ localStorage.setItem('pdx_npsmed', JSON.stringify({items:d.items})); }catch(e){} } }catch(e){}
+  try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','npsmed|cat').maybeSingle(); const d = r.data && r.data.data; if(d && Array.isArray(d.items)){ C.items = d.items; C.types = d.types || {}; C.at = Date.now(); try{ localStorage.setItem('pdx_npsmed', JSON.stringify({items:d.items})); }catch(e){} } }catch(e){}
   return C.items || []; };
+// 💊 12/11: «Τύπος Συνταγής» του φαρμάκου (21 = ειδικά αντιβιοτικά, 19 = ναρκωτικά) από τον κατάλογο — το bot ψάχνει εκεί πρώτα (και δοκιμάζει μόνο του αν δεν βρει)
+window.pdxNpsMedTypeOf = function(drug, product){ const C = window.pdxNpsMedCat || {}, T = C.types || {}, N = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); const d = N(drug), pr = N(product);
+  for(const it in T){ const n = N(it); if(d && n.indexOf(d)===0 && (!pr || n.indexOf(pr)>=0)) return T[it]; } return ''; };
 window.pdxNpsMedFind = function(q, L){ const N = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase(); const W = N(q).split(/[\s,()/:]+/).filter(Boolean); if(!W.length) return [];
   const out = []; for(const it of (L||[])){ const T = N(it), toks = T.split(/[\s,()/:]+/); if(W.every(w=>toks.some(t=>t.indexOf(w)===0))){ out.push(it); if(out.length>=40) break; } }
   const w0 = W[0]; return out.sort((x,y)=>(N(y).indexOf(w0)===0)-(N(x).indexOf(w0)===0) || x.length-y.length).slice(0,12); };
@@ -18821,7 +18824,7 @@ window.pdxMedOrder = function(k){
     const num = x=>{ const v = parseFloat(String(x).replace(',','.')); return isFinite(v) && v>0 ? v : null; };
     const sur = String(f.doctor).trim().split(/\s+/).pop();
     const nrm3 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
-    const payload = {name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,''), drug:nrm3(f.drug), product:nrm3(f.product), form:f.form, doctor:nrm3(sur), dose:num(f.dose), perDay:num(f.perDay), days:num(f.days), quiet:true};
+    const payload = {name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,''), drug:nrm3(f.drug), product:nrm3(f.product), form:f.form, doctor:nrm3(sur), dose:num(f.dose), perDay:num(f.perDay), days:num(f.days), quiet:true}; { const ty = window.pdxNpsMedTypeOf ? pdxNpsMedTypeOf(f.drug, f.product) : ''; if(ty) payload.drugType = ty; }
     st.saved = false; st.last = payload; run(payload, false); });
   const run = async (payload, appr)=>{ const nrm3 = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
     st.busy = appr ? 'Καταχώριση στο ΝΠΣ…' : 'Στάλθηκε στον υπολογιστή του νοσοκομείου…'; st.msg = ''; if(!appr) st.res = null; pg.redraw();
@@ -18896,7 +18899,7 @@ window.pdxMedPackRun = function(k, items, packName){
     return h + '<div style="height:40px"></div>'; });
   const one = async (x, appr)=>{ x.st = 'run'; x.note = ''; pg.redraw();
     const payload = appr ? Object.assign({}, x.payload, {approved:true, expect:{type:x.res.form.type, drug:x.res.form.drug, units:x.res.form.units, doc:x.res.form.doc, dose:x.res.form.dose, perDay:x.res.form.perDay, days:x.res.form.days}})
-      : {name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,''), drug:nrm3(x.drug), product:nrm3(x.product), form:x.form, doctor:nrm3(String(st.doc).trim().split(/\s+/).pop()), dose:(parseFloat(String(x.it.dose||'1').replace(',','.'))||1), perDay:(+x.it.freq||1), days:(+x.it.days||1), quiet:true, pack:packName||''};
+      : {drugType:(window.pdxNpsMedTypeOf ? pdxNpsMedTypeOf(x.drug, x.product) : '') || undefined, name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,''), drug:nrm3(x.drug), product:nrm3(x.product), form:x.form, doctor:nrm3(String(st.doc).trim().split(/\s+/).pop()), dose:(parseFloat(String(x.it.dose||'1').replace(',','.'))||1), perDay:(+x.it.freq||1), days:(+x.it.days||1), quiet:true, pack:packName||''};
     if(!appr) x.payload = payload;
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:nrm3(rec.name), name:rec.name||'', room:isX?null:k, kind:'npsmedorder', payload, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
       for(let i=0;i<180;i++){ await new Promise(r=>setTimeout(r, 2000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); const j = q.data; if(!j) continue;
