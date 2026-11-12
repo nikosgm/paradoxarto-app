@@ -363,9 +363,11 @@ function wkHandle(daikon, msg){
   const own=d=>{ if(!d) return d; if(d.byteOffset||d.buffer.byteLength!==d.byteLength) d=d.slice(); return d; };
   const compact=(d,rgb)=>{ if(!d||!d.length||d instanceof Int16Array) return own(d); for(let i=0;i<d.length;i+=7){ const v=d[i]; if(v!==(v|0)||v<-32768||v>32767) return own(d); }
     for(let i=0;i<d.length;i++){ const v=d[i]; if(v!==(v|0)||v<-32768||v>32767) return own(d); } return Int16Array.from(d); };
+  const now=()=>(typeof performance!=='undefined'?performance.now():Date.now()), t0=now(); let t1=0;   // 🩺 12/11: χρόνοι ανάγνωσης/ανάλυσης/αποκωδικοποίησης ανά αρχείο
   return msg.file.arrayBuffer().then(buf=>{
-    const img=daikon.Series.parseImage(new DataView(buf));
-    if(!img||!img.hasPixelData()||!img.getRows()) return {msg:{id:msg.id, skip:true, bytes:buf.byteLength}, tr:[]};
+    t1=now(); const img=daikon.Series.parseImage(new DataView(buf)); const t2=now();
+    if(!img||!img.hasPixelData()||!img.getRows()) return {msg:{id:msg.id, skip:true, bytes:buf.byteLength, tm:[t1-t0,t2-t1,0]}, tr:[]};
+    const ts=tv(img,0x0002,0x0010);
     const frames=img.getNumberOfFrames()||1, pi=String(img.getPhotometricInterpretation()||'').trim(), rgb=/RGB|YBR/.test(pi);
     // 11/11 (χρήστης: «σε κάποιες τομές χαλάει η αντίθεση»): δική μας ερμηνεία των τιμών (όπως cornerstone/dicomParser): το daikon ΔΕΝ κάνει
     // επέκταση προσήμου για BitsStored<16 (π.χ. 12-bit signed, συχνά σε συμπιεσμένες JPEG-lossless τομές → αρνητικές HU γίνονται +4095)
@@ -382,14 +384,14 @@ function wkHandle(daikon, msg){
         return out;
       }catch(e){ return null; } };
     const dec=f=>{ const o=own16(f); if(o) return compact(o, rgb); return compact(f>=0?img.getInterpretedData(false,false,f):img.getInterpretedData(false,false), rgb); };
-    if(msg.decodeOnly){ const d=dec(msg.frame); return {msg:{id:msg.id, px:[d]}, tr:d?[d.buffer]:[]}; }
+    if(msg.decodeOnly){ const d=dec(msg.frame); return {msg:{id:msg.id, px:[d], tm:[t1-t0,t2-t1,now()-t2], ts}, tr:d?[d.buffer]:[]}; }
     const tags={}; for(const [g,e] of TAGS){ const v=tv(img,g,e); if(v) tags[g+','+e]=v; }
     const meta={base:img.getSeriesId()||'σειρά', rows:img.getRows(), cols:img.getCols(), frames, pos:img.getImagePosition(), dirs:img.getImageDirections(), sp:img.getPixelSpacing(), pi,
       sdesc:img.getSeriesDescription(), idesc:img.getImageDescription(), snum:img.getSeriesNumber(), mod:img.getModality(), thick:img.getSliceThickness(),
       wc:img.getWindowCenter(), ww:img.getWindowWidth(), inum:img.getImageNumber(), tags};
     let px=null; const tr=[];
-    if(msg.keep){ px=[]; for(let f=0;f<frames;f++){ const d=dec(frames>1?f:-1); px.push(d); if(d) tr.push(d.buffer); } }
-    return {msg:{id:msg.id, meta, px, bytes:buf.byteLength}, tr};
+    const t3=now(); if(msg.keep){ px=[]; for(let f=0;f<frames;f++){ const d=dec(frames>1?f:-1); px.push(d); if(d) tr.push(d.buffer); } }
+    return {msg:{id:msg.id, meta, px, bytes:buf.byteLength, tm:[t1-t0,t3-t1,now()-t3], ts}, tr};
   }).catch(err=>({msg:{id:msg.id, err:String(err&&err.message||err)}, tr:[]}));
 }
 const WK=(()=>{
@@ -1116,16 +1118,18 @@ async function ingest(files, src){
   const gen=++S.gen;
   S.series=[]; S.cur=null; S.meas={}; lru.length=0; FC=null; PK=null; S.touched=false; S.drag=null;
   if(LY.on){ LY.on=false; LY.cells=[]; S._rect=null; $('lyBtn').classList.remove('on'); $('lySync').hidden=true; }
-  const L={gen, mem:0, px:null, file:null, t0:performance.now(), total:files.length, done:0, ok:0, skip:0, dup:0, bytes:0, first:null, end:null, sops:new Set(), split:new Set(), posAcq:new Map()};
+  const L={gen, mem:0, px:null, file:null, t0:performance.now(), total:files.length, done:0, ok:0, skip:0, dup:0, bytes:0, first:null, end:null, sops:new Set(), split:new Set(), posAcq:new Map(),
+    dg:{starve:0, wall:0, rd:0, prs:0, dec:0, keep:0, ts:{}, slow:0, maxw:0}};   // 🩺 διάγνωση φόρτωσης
+  DG.L=L; if(!src) DG.reset('αρχεία/φάκελος (browser)', files.length);
   S.load=L; status(); const q=files.slice(); let lastUi=0;
   const pull=()=>{ if(src){ const nw=src.take().filter(f=>isCand(f.name,f.size)); if(nw.length){ q.push(...nw); L.total+=nw.length; } } };
   async function worker(){
     while(gen===S.gen){
       if(!q.length) pull();
-      if(!q.length){ if(!src || src.done) break; await src.wait(); continue; }
+      if(!q.length){ if(!src || src.done) break; const tw=performance.now(); await src.wait(); L.dg.starve+=performance.now()-tw; continue; }
       const f=q.shift();
       try{
-        const r=await WK.parse(f, L.mem < MEM_BUDGET);
+        const tp=performance.now(), kp=L.mem < MEM_BUDGET; const r=await WK.parse(f, kp); { const w=performance.now()-tp, g=L.dg; g.wall+=w; if(w>g.maxw) g.maxw=w; if(w>1000) g.slow++; if(kp) g.keep++; if(r&&r.tm){ g.rd+=r.tm[0]; g.prs+=r.tm[1]; g.dec+=r.tm[2]; } const t=(r&&r.ts)||'?'; g.ts[t]=(g.ts[t]||0)+1; }
         if(gen!==S.gen) return;
         L.bytes+=r.bytes||0;
         if(r.meta){
@@ -1140,9 +1144,9 @@ async function ingest(files, src){
       const now=performance.now(); if(now-lastUi>250){ lastUi=now; status(); renderRail(); draw(); }
     }
   }
-  await Promise.all(Array.from({length:Math.max(6, WK.N*2)},worker));
+  L.dg.nw=Math.max(6, WK.N*2); await Promise.all(Array.from({length:L.dg.nw},worker));
   if(gen!==S.gen) return false;
-  L.end=performance.now()-L.t0;
+  L.end=performance.now()-L.t0; DG.done();
   // ανοίγει η σειρά με τις περισσότερες τομές (συνήθως η κύρια) — ΜΟΝΟ αν ο χρήστης δεν έχει ήδη αρχίσει να κοιτάει
   if(!S.touched){
     const main = S.series.slice().sort((a,b)=>(isMain(b)-isMain(a)) || b.slices.length-a.slices.length)[0];
@@ -1158,7 +1162,7 @@ function status(msg, warn){
   if(!L){ el.textContent='Άνοιξε τον φάκελο της κλινικής, ενός CD ή του δικτύου.'; return; }
   el.innerHTML='Αρχεία <b>'+L.done+' / '+L.total+'</b> · '+fmt(L.bytes/1048576,0)+' MB · '+S.series.length+' σειρ.'
     +(L.first!==null?' · πρώτη εικόνα σε <b class="good">'+fmt(L.first/1000)+' s</b>':'')
-    +(L.end!==null?' · όλα σε <b>'+fmt(L.end/1000)+' s</b>':' · φορτώνει…')
+    +(L.end!==null?' · όλα σε <b>'+fmt(L.end/1000)+' s</b>':' · φορτώνει…')+' <button class="ib" id="dgBtn" title="Διάγνωση φόρτωσης: τι αργεί (δίσκος/CD, ανάλυση, αποκωδικοποίηση)" style="height:22px;padding:0 5px">🩺</button>'
     +(S.cur&&S.cur._lastBuild?' · ανασύνθεση σε '+fmt(S.cur._lastBuild/1000)+' s':'')
     +(L.skip?' · '+L.skip+' παραλείφθηκαν (όχι εικόνες)':'')
     +(L.dup?' · '+L.dup+' διπλότυπα':'');
@@ -1551,6 +1555,7 @@ function keysShow(){
   d.querySelector('button').onclick=()=>d.remove(); document.body.appendChild(d);
 }
 $('keys').onclick=keysShow;
+document.addEventListener('click',e=>{ if(e.target.closest && e.target.closest('#dgBtn')) DG.show(); });
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
   // 8/11: συντομεύσεις και με ελληνικό πληκτρολόγιο (ε→E, χ→X, ρ→R…) — από τη θέση του πλήκτρου
@@ -1634,24 +1639,75 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-12c';
+const CT_VER = '2026-11-12d';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
+
+/* ===== 🩺 12/11 14:44 (χρήστης: «πάλι η φόρτωση από CD αργεί — πλήρης χαρτογράφηση να δούμε τι φταίει»): διάγνωση φόρτωσης.
+   ΜΟΝΟ χρόνοι/πλήθη/μεγέθη (καμία ονομασία, διαδρομή, εικόνα). Φαίνεται με το 🩺 στη γραμμή κατάστασης· κρατιέται η τελευταία (localStorage). ===== */
+const TSN = {'1.2.840.10008.1.2':'Implicit LE (ασυμπίεστο)','1.2.840.10008.1.2.1':'Explicit LE (ασυμπίεστο)','1.2.840.10008.1.2.2':'Explicit BE','1.2.840.10008.1.2.4.70':'JPEG Lossless SV1','1.2.840.10008.1.2.4.57':'JPEG Lossless','1.2.840.10008.1.2.4.50':'JPEG baseline','1.2.840.10008.1.2.4.90':'JPEG2000 lossless','1.2.840.10008.1.2.4.91':'JPEG2000','1.2.840.10008.1.2.5':'RLE','1.2.840.10008.1.2.4.80':'JPEG-LS lossless','1.2.840.10008.1.2.4.81':'JPEG-LS'};
+const DG = { r:null, L:null,
+  reset(kind, n){ this.r={ at:new Date().toISOString(), kind, files:n, list:0, batches:[], modes:{}, mode:'', v:(typeof CT_VER!=='undefined'?CT_VER:''), app:'', hw:navigator.hardwareConcurrency||0, mem:navigator.deviceMemory||0, wk:WK.N, budget:Math.round(MEM_BUDGET/1048576), skipNon:0, err:0, timeouts:0 };
+    try{ if(DESK) DESK.info().then(i=>{ if(this.r) this.r.app=(i&&i.version)||''; }).catch(()=>{}); }catch(e){} },
+  batch(n, ms, bytes, mode){ if(!this.r) return; this.r.batches.push([n, Math.round(ms), Math.round(bytes/1024)]); const m=this.r.modes[mode]||(this.r.modes[mode]={n:0,ms:0,kb:0}); m.n+=n; m.ms+=ms; m.kb+=bytes/1024; },
+  done(){ try{ localStorage.setItem('ct_diag_last', JSON.stringify(this.text())); }catch(e){} try{ const b=$('dgBtn'); if(b) b.hidden=false; }catch(e){} },
+  text(){
+    const r=this.r||{}, L=this.L||S.load||{}, g=L.dg||{}, n=Math.max(1,L.done||0), mb=(L.bytes||0)/1048576, tot=(L.end!=null?L.end:(performance.now()-(L.t0||0)))/1000;
+    const rdKB = (r.batches||[]).reduce((a,b)=>a+b[2],0), rdMs=(r.batches||[]).reduce((a,b)=>a+b[1],0);
+    const lines=[], f1=x=>fmt(x,1), ms=x=>Math.round(x)+' ms';
+    lines.push('🩺 Διάγνωση φόρτωσης — '+(r.kind||'?')+' · viewer '+(r.v||'')+(r.app?' · εφαρμογή '+r.app:''));
+    lines.push('Υπολογιστής: '+(r.hw||'?')+' πυρήνες · '+(r.mem?r.mem+' GB':'? GB')+' · '+(r.wk||WK.N)+' workers · μνήμη για έτοιμες τομές '+(r.budget||'?')+' MB');
+    lines.push('Αρχεία: '+(L.total||0)+' (εικόνες '+(L.ok||0)+', άλλα '+((L.skip||0)+(r.skipNon||0))+', διπλά '+(L.dup||0)+') · '+f1(mb)+' MB · σειρές '+S.series.length);
+    lines.push('Χρόνος: πρώτη εικόνα '+(L.first!=null?f1(L.first/1000)+' s':'—')+' · σύνολο '+f1(tot)+' s'+(L.end==null?' (φορτώνει ακόμα)':''));
+    if(r.list) lines.push('Λίστα αρχείων (από τον δίσκο): '+f1(r.list/1000)+' s');
+    if(rdMs) lines.push('Ανάγνωση από τον δίσκο: '+f1(rdKB/1024)+' MB σε '+f1(rdMs/1000)+' s = '+f1(rdKB/1024/Math.max(.001,rdMs/1000))+' MB/s · παρτίδες '+r.batches.length+(r.timeouts?' · ⚠ '+r.timeouts+' παρτίδες >60″':''));
+    for(const [k,m] of Object.entries(r.modes||{})) lines.push('   τρόπος «'+k+'»: '+m.n+' αρχεία · '+fmt(m.kb/1024/Math.max(.001,m.ms/1000),2)+' MB/s');
+    if(r.mode) lines.push('   → επιλέχθηκε: «'+r.mode+'»');
+    const stv=(g.starve||0)/1000/Math.max(1,g.nw||1);
+    lines.push('Αναμονή για αρχεία από τον δίσκο (οι workers άδειοι): '+f1(stv)+' s από τα '+f1(tot)+' s');
+    lines.push('Ανάλυση DICOM (workers, άθροισμα): ανάγνωση μνήμης '+f1((g.rd||0)/1000)+' s · ανάλυση '+f1((g.prs||0)/1000)+' s · αποκωδικοποίηση '+f1((g.dec||0)/1000)+' s · μέσος/αρχείο '+ms((g.wall||0)/n)+' · μέγιστο '+ms(g.maxw||0)+' · >1″: '+(g.slow||0));
+    lines.push('Αποκωδικοποιήθηκαν από πριν: '+(g.keep||0)+' / '+n+' (τα υπόλοιπα όταν τα δεις)');
+    const ts=Object.entries(g.ts||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>(TSN[k]||k)+' ×'+v).join(' · '); if(ts) lines.push('Συμπίεση: '+ts);
+    // συμπέρασμα
+    const rate=rdMs? rdKB/1024/(rdMs/1000) : 0, dec=(g.dec||0)/1000, par=(g.wall||0)/1000/Math.max(1,(r.wk||WK.N));
+    let why='';
+    if(rdMs && stv > tot*0.4) why='ΦΤΑΙΕΙ Ο ΔΙΣΚΟΣ/CD: η ανάλυση περίμενε αρχεία '+f1(stv)+' s από τα '+f1(tot)+' s (ανάγνωση '+fmt(rate,2)+' MB/s).';
+    else if(dec > (g.prs||0)/1000*2 && par > tot*0.4) why='ΦΤΑΙΕΙ Η ΑΠΟΚΩΔΙΚΟΠΟΙΗΣΗ (συμπιεσμένες τομές): '+f1(dec)+' s υπολογισμού σε '+(r.wk||WK.N)+' workers.';
+    else if(par > tot*0.4) why='ΦΤΑΙΕΙ Η ΑΝΑΛΥΣΗ των αρχείων ('+f1(par)+' s ανά worker).';
+    else why='Χωρίς σαφή «στενωπό» — μοιρασμένος χρόνος.';
+    lines.push('➜ '+why);
+    return lines.join('\n');
+  },
+  show(){ const t=this.r||this.L ? this.text() : (()=>{ try{ return JSON.parse(localStorage.getItem('ct_diag_last')||'""'); }catch(e){ return ''; } })();
+    const d=document.createElement('div'); d.className='inst'; d.innerHTML='<div style="font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;max-width:720px">'+esc(t||'Δεν υπάρχει ακόμα μέτρηση — άνοιξε ένα CD/φάκελο.')+'</div><div class="row"><button class="btn" data-cp>Αντιγραφή</button><button class="btn primary" data-ok>OK</button></div>';
+    d.querySelector('[data-ok]').onclick=()=>d.remove(); d.querySelector('[data-cp]').onclick=()=>{ try{ navigator.clipboard.writeText(t); d.querySelector('[data-cp]').textContent='✓ αντιγράφηκε'; }catch(e){} };
+    document.body.appendChild(d); }
+};
 async function deskOpen(root){
   if(!DESK || !root) return;
-  status('Ανοίγω '+root+'…');
+  status('Ανοίγω '+root+'…'); const tl0=performance.now();
   const L = await DESK.list(root); if(!L || L.err || !L.files || !L.files.length){ status(L&&L.err ? L.err : 'Δεν βρέθηκαν εικόνες σε αυτόν τον φάκελο.', true); return; }
   S.src = L.name || root;
+  const isCD0=/^[A-Za-z]:\\?$/.test(String(root).trim()); DG.reset(isCD0?'CD':'φάκελος', L.files.length); DG.r.list=performance.now()-tl0;
   const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
   const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
   // 💿 11/11 (χρήστης: «κολλάει να φορτώσει CD»): CD = αργή ανάγνωση με αναζήτηση → μικρότερες παρτίδες, πρόοδος στην οθόνη,
   // και ΜΟΝΟ αρχεία DICOM (σήμα «DICM» ή αρχή με ετικέτα 0002/0008) — τα αρχεία του προγράμματος προβολής του CD δεν «κολλάνε» τον αναλυτή
   const isCD=/^[A-Za-z]:\\?$/.test(String(root).trim()), isDcm=b=>{ try{ const u=b instanceof Uint8Array?b:new Uint8Array(b.buffer||b, b.byteOffset||0, Math.min(b.byteLength||0,140)); if(u.length>=132 && u[128]===68&&u[129]===73&&u[130]===67&&u[131]===77) return true; return u.length>=8 && (u[0]===2||u[0]===8) && u[1]===0 && u[3]===0; }catch(e){ return true; } };
-  (async ()=>{ const F=L.files, B=isCD?8:24; let n=0, sk=0;
-    for(let i=0;i<F.length;i+=B){ const part=await Promise.race([DESK.read(F.slice(i,i+B).map(x=>x.p)), new Promise(r=>setTimeout(()=>r(null), 60000))]).catch(()=>[]);
-      if(part===null){ status('Το CD αργεί πολύ στα αρχεία '+(i+1)+'–'+(i+B)+' — συνεχίζω με τα επόμενα…'); continue; }
+  // 🩺 12/11: στο CD δοκιμάζονται ΜΟΝΑ ΤΟΥΣ 3 τρόποι ανάγνωσης στα πρώτα αρχεία (ένα-ένα με τη σειρά / 4 μαζί / 8 μαζί — ο οπτικός δίσκος
+  // «χτυπά» με πολλές ταυτόχρονες αναζητήσεις) και τα υπόλοιπα διαβάζονται με τον πιο γρήγορο· όλα καταγράφονται στο 🩺
+  const MODES = isCD ? [['ένα-ένα',1,1],['4 μαζί',4,4],['8 μαζί',8,8]] : [['24 μαζί',24,24]];
+  const readPart = async (paths, conc)=>{ if(conc>=paths.length) return DESK.read(paths); const out=[]; for(let k=0;k<paths.length;k+=conc){ const r=await DESK.read(paths.slice(k,k+conc)); out.push(...(r||[])); } return out; };
+  (async ()=>{ const F=L.files; let n=0, sk=0, i=0, ti=0; const TRY=isCD?16:0;
+    while(i<F.length){
+      let md; if(isCD && ti<MODES.length*2){ md=MODES[ti%MODES.length]; ti++; } else { if(!DG.r.mode){ const best=Object.entries(DG.r.modes).filter(([,m])=>m.ms>0).sort((a,b)=>b[1].kb/b[1].ms-a[1].kb/a[1].ms)[0]; DG.r.mode=best?best[0]:MODES[MODES.length-1][0]; } md=MODES.find(m=>m[0]===DG.r.mode)||MODES[MODES.length-1]; }
+      const B=isCD&&ti<=MODES.length*2&&!DG.r.mode?Math.max(TRY/2,md[1]):Math.max(md[1],isCD?8:24), paths=F.slice(i,i+B).map(x=>x.p); i+=B;
+      const tb=performance.now(); const part=await Promise.race([readPart(paths, md[2]), new Promise(r=>setTimeout(()=>r(null), 60000))]).catch(()=>[]);
+      if(part===null){ DG.r.timeouts++; status('Το CD αργεί πολύ στα αρχεία '+(i-B+1)+'–'+i+' — συνεχίζω με τα επόμενα…'); continue; }
+      let by=0; for(const x of (part||[])){ if(x && x.err) DG.r.err++; if(x && x.skip) DG.r.skipNon++; if(x && x.b) by+=x.b.byteLength||x.b.length||0; }
+      DG.batch(paths.length, performance.now()-tb, by, md[0]);
       for(const x of (part||[])) if(x && x.b){ if(!isDcm(x.b)){ sk++; continue; } n++; st.buf.push(new File([x.b], (x.p.split(/[\\/]/).pop()||'f'), {type:'application/dicom'})); }
-      if(isCD || F.length>400) status('Διαβάζω '+(isCD?'το CD':'τον φάκελο')+'… '+Math.min(F.length,i+B)+'/'+F.length+' αρχεία'+(sk?' ('+sk+' όχι εικόνες)':''));
+      if(isCD || F.length>400) status('Διαβάζω '+(isCD?'το CD':'τον φάκελο')+'… '+Math.min(F.length,i)+'/'+F.length+' αρχεία'+(sk?' ('+sk+' όχι εικόνες)':''));
       wake(); }
     st.done=true; wake(); })();
   if(await ingest([], st)) verifyPatient();
