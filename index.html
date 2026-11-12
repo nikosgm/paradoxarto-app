@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12e-v356';
+const APP_VER = '2026-11-12f-v357';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15546,7 +15546,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
 
   // ---------- επιλογή ασθενή (από τη βιβλιοθήκη) ----------
   function pickPatient(p){
-    if(p.fam==='rx' && !(window.pdxIsBotUser && pdxIsBotUser())){ toast('🤖 Η συνταγογράφηση μέσω bot είναι μόνο για ενεργούς γιατρούς'); return; }
+    if((p.fam==='rx' || p.fam==='nps') && !(window.pdxIsBotUser && pdxIsBotUser())){ toast('🤖 '+(p.fam==='nps'?'Η καταχώριση φαρμάκων στο ΝΠΣ':'Η συνταγογράφηση')+' μέσω bot είναι μόνο για ενεργούς γιατρούς'); return; }
     const L = []; [typeof data!=='undefined'?data:{}, typeof extraPatients!=='undefined'?extraPatients:{}].forEach(st=>Object.keys(st||{}).forEach(k=>{ const d = st[k]; if(d && d.name && String(d.name).trim()) L.push({k, d}); }));
     L.sort((a,b)=>a.k.localeCompare(b.k,'el',{numeric:true}));
     let q = '';
@@ -15581,7 +15581,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
               + '</div><button class="sw'+(x.on?' on':'')+'" data-tog="'+i+'" aria-label="'+(x.on?'Εκτός':'Μέσα')+'"></button></div>'; }).join('')+'</div>'; };
       if(p.fam==='nps'){
         h += sec('Φάρμακα νοσηλείας', it);
-        h += '<div class="note w">💊 Η καταχώριση στη Φαρμακευτική Αγωγή του ΝΠΣ μέσω bot <b>δεν</b> είναι ακόμα ενεργή — ανοίγει μετά τη χαρτογράφηση της φόρμας. Το πακέτο είναι έτοιμο να χρησιμοποιηθεί τότε.</div>';
+        h += '<div class="note">💊 Ανοίγει η οθόνη «Πακέτο · ΝΠΣ»: <b>Έλεγχος όλων</b> (το bot γεμίζει τη Φαρμακευτική Αγωγή χωρίς αποθήκευση) → <b>Καταχώριση όλων</b> με μία έγκριση.</div>';
+        if(on.some(x=>x.prn || +x.days===0)) h += '<div class="note w">⚠ Το ΝΠΣ δεν έχει πεδίο «επί πόνου»· αυτά (και τα «Άπαξ») μένουν για χειροκίνητη καταχώριση.</div>';
       } else if(p.fam==='order'){
         h += sec('Εξετάσεις → Παραγγελία', it);
         h += '<div class="note">🧾 Ανοίγει το <b>φύλλο παραγγελίας</b> συμπληρωμένο'+(urg?' ως <b>Επείγον</b>':'')+'. Ελέγχεις και πατάς εκεί «Αποστολή» — ισχύουν όλοι οι έλεγχοι (π.χ. διπλή παραγγελία 12ώρου).</div>';
@@ -15592,8 +15593,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         h += '<div class="note">🔒 Η συνταγή <b>δεν</b> στέλνεται αμέσως: ανοίγει η Συνταγή συμπληρωμένη, το bot σταματά πριν την «Καταχώριση» και εμφανίζεται στο «Για έγκριση» — φεύγει μόνο όταν την εγκρίνεις στο κινητό.</div>';
         if(refs.some(x=>x.on) && !refOn) h += '<div class="note w">🧾 Τα παραπεμπτικά μέσω bot δεν είναι ακόμα ενεργά: οι εξετάσεις μπαίνουν στη λίστα του παραπεμπτικού, η αποστολή ανοίγει όταν ενεργοποιηθεί.</div>';
       }
-      const n = on.length, lbl = opt.onApply ? 'Προσθήκη' : p.fam==='order' ? 'Στο φύλλο παραγγελίας' : p.fam==='nps' ? 'Στο ΝΠΣ (μετά τη χαρτογράφηση)' : 'Στη Συνταγή';
-      h += '<button class="go" data-go'+(n && p.fam!=='nps'?'':' disabled')+'>'+lbl+' · '+n+' από '+it.length+'</button>';
+      const n = on.length, lbl = opt.onApply ? 'Προσθήκη' : p.fam==='order' ? 'Στο φύλλο παραγγελίας' : p.fam==='nps' ? 'Στο ΝΠΣ' : 'Στη Συνταγή';
+      h += '<button class="go" data-go'+(n && (p.fam!=='nps' || opt.k)?'':' disabled')+'>'+lbl+' · '+n+' από '+it.length+'</button>';
       const b = ov.querySelector('[data-b]'), top = b.scrollTop; b.innerHTML = h; b.scrollTop = top;
     };
     draw();
@@ -15604,7 +15605,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const cg = t.closest('[data-chg]'); if(cg){ const x = it[+cg.dataset.chg]; x.chg = !x.chg; draw(); return; }
       const dd = t.closest('[data-dd]'); if(dd){ const x = it[+dd.dataset.dd]; x.days = Math.max(1, Math.min(90, (+x.days||1) + (+dd.dataset.v))); draw(); return; }
       if(t.closest('[data-go]')){
-        const on = it.filter(x=>x.on); if(!on.length || p.fam==='nps') return;
+        const on = it.filter(x=>x.on); if(!on.length) return;
+        if(p.fam==='nps'){ if(!opt.k) return; ov.remove(); markUsed(p.id); if(window.pdxMedPackRun) pdxMedPackRun(opt.k, on.map(x=>{ const y = Object.assign({}, x); delete y.on; delete y.chg; return y; }), p.name); return; }
         ov.remove(); markUsed(p.id);
         if(p.fam==='order'){
           const r = {tests:on.filter(x=>x.t!=='prof').map(x=>x.n), profs:on.filter(x=>x.t==='prof').map(x=>x.n), urg:on.some(x=>x.urg), pack:p.name};
@@ -18896,6 +18898,51 @@ window.pdxMedOrder = function(k){
         if(/^(failed|cancelled|dismissed|review)$/.test(j.status)){ st.busy=''; st.ok=false; st.msg = (/^⚠|^💊 ⚠/.test(j.note||'')?'':'⚠ ')+(j.note||'απέτυχε'); if(appr) st.last = null; pg.redraw(); return; }
         if(j.note){ st.busy = j.note.slice(0,80); pg.redraw(); } } }
     catch(er){ st.busy=''; st.ok=false; st.msg = '⚠ '+(er.message||er); pg.redraw(); } };
+};
+// 📦💊 12/11 19:40 (χρήστης: πακέτα φαρμάκων ανά επέμβαση → ασθενής): ΟΛΑ τα φάρμακα του πακέτου ένα-ένα στο ΝΠΣ (npsmedorder) —
+// πρώτα «Έλεγχος όλων» (το bot γεμίζει και διαβάζει πίσω, ΧΩΡΙΣ αποθήκευση), μετά ΜΙΑ «Καταχώριση όλων» (ίδιος έλεγχος «ίδια φόρμα» ανά φάρμακο).
+// Χάρτης 3108: το ΝΠΣ ΔΕΝ έχει πεδίο «επί πόνου»/ταχύτητα/σχόλιο → αυτά τα φάρμακα μένουν ⚠ για χειροκίνητη καταχώριση· «Άπαξ» επίσης (μέχρι να χαρτογραφηθεί).
+window.pdxMedPackRun = function(k, items, packName){
+  const isX = String(k).indexOf('extra')===0, rec = (isX ? extraPatients : data)[k]; if(!rec) return;
+  const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const nrm3 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  const TF = window.THERAPIST_FULL || {}, docs = Object.values(TF).filter(Boolean);
+  const st = {doc: TF[rec.therapist] || docs[0] || '', busy:false, phase:'', L: items.map(it=>{ const m = /^(.*?)\s*\(([^)]*)\)\s*:\s*(.*)$/.exec(String(it.n||''));
+      const why = it.prn ? 'επί πόνου — το ΝΠΣ δεν έχει τέτοιο πεδίο' : +it.days===0 ? 'Άπαξ — δεν υποστηρίζεται ακόμα από το bot' : '';
+      return {it, drug: m ? m[1].trim() : String(it.n||''), form: m ? m[2].trim() : '', product: m ? m[3].trim() : '', skip: why, st:'', note:'', res:null, payload:null, saved:false}; })};
+  const pg = iosPage('📦 '+(packName||'Πακέτο')+' · ΝΠΣ', '', ()=>{
+    let h = '<div style="margin:6px 16px 0;font-size:14px;color:#6B7280">'+E5(rec.name||'')+(rec.amka?' · ΑΜΚΑ ••••'+E5(String(rec.amka).slice(-4)):'')+'</div>';
+    h += '<div style="margin:10px 16px 0"><div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:3px">Εντέλλων ιατρός *</div><select data-pdoc '+(st.busy?'disabled':'')+' style="width:100%;min-height:42px;font-size:16px;border:1px solid #C7CDD4;border-radius:10px;padding:6px 10px;background:#fff">'+docs.map(x=>'<option'+(x===st.doc?' selected':'')+'>'+E5(x)+'</option>').join('')+'</select></div>';
+    h += iosGroup('Φάρμακα', st.L.map(x=>{ const it = x.it; const sub = [(it.dose?String(it.dose).replace('.',',')+(it.u?' '+it.u:''):''), it.prn?'επί πόνου':(+it.days===0?'Άπαξ':(it.freq||1)+'×/ημ.'), (+it.days>0?it.days+' ημ.':''), it.note||''].filter(Boolean).join(' · ');
+      const ic = x.skip ? '⚠' : x.saved ? '✅' : x.st==='ok' ? '☑' : x.st==='bad' ? '✗' : x.st==='run' ? '⏳' : '○';
+      return {ic, t:'<b>'+E5(x.product||x.drug)+'</b><br><span style="font-size:13px;color:#6B7280">'+E5(sub)+'</span>'+(x.skip?'<br><span style="font-size:12.5px;color:#B45309">'+E5(x.skip)+' → χειροκίνητα</span>':x.note?'<br><span style="font-size:12.5px;color:'+(x.st==='bad'?'#B42318':'#1A7F37')+'">'+E5(String(x.note).slice(0,220))+'</span>':'')}; }));
+    const todo = st.L.filter(x=>!x.skip), ok = todo.filter(x=>x.st==='ok' && !x.saved), done = todo.filter(x=>x.saved);
+    h += '<button data-pchk '+(st.busy||!todo.length?'disabled':'')+' style="display:block;width:calc(100% - 32px);margin:14px 16px 6px;min-height:48px;border:0;border-radius:12px;background:'+(st.busy?'#9CA3AF':'#0A84FF')+';color:#fff;font-weight:700;font-size:15.5px">'+(st.busy&&st.phase==='chk'?'⏳ Έλεγχος…':'🔎 Έλεγχος όλων στο ΝΠΣ ('+todo.length+')')+'</button>';
+    if(ok.length && ok.length===todo.filter(x=>!x.saved).length) h += '<button data-pok '+(st.busy?'disabled':'')+' style="display:block;width:calc(100% - 32px);margin:6px 16px 4px;min-height:50px;border:0;border-radius:12px;background:'+(st.busy?'#9CA3AF':'#1A7F37')+';color:#fff;font-weight:800;font-size:16px">'+(st.busy&&st.phase==='save'?'⏳ Καταχώριση…':'✅ Καταχώριση όλων στο ΝΠΣ ('+ok.length+')')+'</button>';
+    else if(ok.length) h += '<div style="margin:6px 16px;font-size:13px;color:#B42318">Η «Καταχώριση όλων» ανοίγει όταν ΟΛΑ τα φάρμακα περάσουν τον έλεγχο (✗ → διόρθωσε το πακέτο ή κάνε το χειροκίνητα).</div>';
+    if(done.length) h += '<div style="margin:6px 16px;font-size:14px;color:#1A7F37;font-weight:700">✅ Καταχωρήθηκαν '+done.length+'/'+todo.length+'</div>';
+    h += '<div style="margin:6px 16px;font-size:12.5px;color:#8E8E93">Ένα-ένα: το bot ανοίγει τον ασθενή (έλεγχος ΑΜΚΑ) → Φαρμακευτική Αγωγή → Προσθήκη, συμπληρώνει και διαβάζει πίσω. Η «Ενημέρωση» πατιέται ΜΟΝΟ με «Καταχώριση», και μόνο αν η φόρμα είναι ίδια με τον έλεγχο.</div>';
+    return h + '<div style="height:40px"></div>'; });
+  const one = async (x, appr)=>{ x.st = 'run'; x.note = ''; pg.redraw();
+    const payload = appr ? Object.assign({}, x.payload, {approved:true, expect:{type:x.res.form.type, drug:x.res.form.drug, units:x.res.form.units, doc:x.res.form.doc, dose:x.res.form.dose, perDay:x.res.form.perDay, days:x.res.form.days}})
+      : {name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,''), drug:nrm3(x.drug), product:nrm3(x.product), form:x.form, doctor:nrm3(String(st.doc).trim().split(/\s+/).pop()), dose:(parseFloat(String(x.it.dose||'1').replace(',','.'))||1), perDay:(+x.it.freq||1), days:(+x.it.days||1), quiet:true, pack:packName||''};
+    if(!appr) x.payload = payload;
+    try{ const ins = await sb6.from('oncall_jobs').insert({name_key:nrm3(rec.name), name:rec.name||'', room:isX?null:k, kind:'npsmedorder', payload, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+      for(let i=0;i<180;i++){ await new Promise(r=>setTimeout(r, 2000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); const j = q.data; if(!j) continue;
+        if(j.status==='done'){ const good = !/⚠/.test(j.note||''); x.note = j.note||''; if(appr){ x.saved = good; x.st = good ? 'ok' : 'bad'; } else { x.st = good ? 'ok' : 'bad'; x.res = (j.payload||{}).result||null; if(!(x.res && x.res.form)) x.st = 'bad'; } pg.redraw(); return; }
+        if(/^(failed|cancelled|dismissed|review)$/.test(j.status)){ x.st = 'bad'; x.note = j.note||'απέτυχε'; pg.redraw(); return; }
+        if(j.note){ x.note = '⏳ '+j.note.slice(0,80); pg.redraw(); } }
+      x.st = 'bad'; x.note = 'δεν απάντησε ο υπολογιστής'; }
+    catch(er){ x.st = 'bad'; x.note = String(er.message||er); }
+    pg.redraw(); };
+  pg.el.addEventListener('change', e=>{ if(e.target.matches('[data-pdoc]')){ st.doc = e.target.value; st.L.forEach(x=>{ if(!x.saved){ x.st=''; x.res=null; x.note=''; } }); pg.redraw(); } });
+  pg.el.addEventListener('click', async e=>{
+    if(e.target.closest('[data-pchk]') && !st.busy){ st.busy = true; st.phase = 'chk'; pg.redraw(); for(const x of st.L) if(!x.skip && !x.saved) await one(x, false); st.busy = false; st.phase = ''; pg.redraw(); return; }
+    if(e.target.closest('[data-pok]') && !st.busy){ if(!confirm('Καταχώριση '+st.L.filter(x=>!x.skip && x.st==='ok' && !x.saved).length+' φαρμάκων στο ΝΠΣ για '+(rec.name||'')+';')) return;
+      st.busy = true; st.phase = 'save'; pg.redraw(); for(const x of st.L) if(!x.skip && x.st==='ok' && !x.saved && x.res) await one(x, true); st.busy = false; st.phase = ''; pg.redraw(); return; }
+  });
+  try{ pdxNpsWarm(rec, k, 'med'); }catch(e){}
+  return pg;
 };
 // 📝 9/11 (χρήστης): πρακτικά χειρουργείου ΜΕΣΑ στην καρτέλα ασθενή — προσθήκη/τροποποίηση/διαγραφή. Αποθήκευση: στον ασθενή
 // (rec.opnotes) + στη βάση της κλινικής (Παράθυρο: events 'opnote' στον ασθενή) → η βάση ξαναγράφει το «Πρακτικά_χειρουργείων.docx».
