@@ -1294,7 +1294,7 @@ document.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; const lf =
 // ===== 👤 Λογαριασμός: όνομα χρήστη, κωδικός, email επικοινωνίας / Claude, αποσύνδεση από τις άλλες συσκευές =====
 // Τα κάνει ο ίδιος ο χρήστης για τον εαυτό του (κωδικοί ΔΕΝ περνούν από κανέναν άλλον). Τα email μένουν στον λογαριασμό του
 // (user_metadata) — τα βλέπει μόνο ο ίδιος.
-window.changePw = function(){ window.pdxAccountOpen(); };
+
 window.pdxAccountOpen = async function(){
   const E = t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let u = null; try{ u = (await sb6.auth.getUser()).data.user; }catch(e){}
@@ -1865,7 +1865,7 @@ const QUICK_INSTRUCTIONS = [
   {label:"Exit", cat:"Άλλα", sub:["Σήμερα","Αύριο","Απόγευμα"]}
 ];
 function qiGroups(){ const g=[]; QUICK_INSTRUCTIONS.forEach(q=>{ const c=q.cat||'Άλλα'; let x=g.find(y=>y.cat===c); if(!x){ x={cat:c,items:[]}; g.push(x); } x.items.push(q); }); return g; }
-function qiHtml(fn){ return qiGroups().map(g=>'<div class="qicat">'+g.cat+'</div>'+g.items.map(fn).join('')).join(''); }
+
 const THERAPISTS = ["Αν","Αδ","Στρ","Φρ","Μουλ","Λεβ","Δουρ"];
 // 11/11 (χρήστης: «έβαλες θεράποντα ακαταλαβίστικο όνομα ενώ ξεκινούσε από Φ· όταν ξεκινά από το αρχικό ενός, μπαίνει ο αντίστοιχος·
 // Αναστασίου/Αδαμάκης → και το 2ο ή κάποιο από τα επόμενα κοινά»): αντιστοίχιση γραμμένου ονόματος → συντομογραφία θεράποντα
@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12h-v359';
+const APP_VER = '2026-11-12i-v360';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -6363,10 +6363,7 @@ function openExtraEntry(key){
   openEntry(key, null);
 }
 
-function openExtraView(){
-  buildExtraList();
-  document.getElementById('extraView').classList.add('active');
-}
+
 
 function closeExtraView(){
   document.getElementById('extraView').classList.remove('active');
@@ -7279,26 +7276,7 @@ document.head.appendChild(st);
     return '<div class="mqfs">'+mine+thb+c('all','Όλοι',all.length)+(nT?c('todos','Εκκρεμότητες',nT):'')+'</div>';
   }
   window.pdxAttToggle = function(){ try{ localStorage.setItem('pdx_att_open', localStorage.getItem('pdx_att_open')==='1'?'0':'1'); }catch(_){} render(); };
-  function attBox(all){
-    if(qf!=='all') return '';
-    const score = e=>attOf(e.d).reduce((n,x)=>n+x.s,0);
-    const ALL = all.filter(e=>attOf(e.d).length), VIS = ALL.filter(e=>attVis(e).length), nAck = ALL.length - VIS.length;
-    const A = (attShowAll ? ALL : VIS).slice().sort((a,b)=>score(b)-score(a));
-    if(!ALL.length) return '';
-    let open = false; try{ open = localStorage.getItem('pdx_att_open')==='1'; }catch(_){}
-    const hint = '<span style="font-size:13px;color:#64748B;text-transform:none;letter-spacing:0">';
-    if(!VIS.length && !attShowAll) return '<div class="matt ok" onclick="pdxAttShowAll()" style="cursor:pointer"><h3 style="margin:0;display:flex;align-items:center;color:#15803D"><span style="flex:1">✓ Προσοχή: όλα ελεγμένα ('+nAck+')</span>'+hint+'εμφάνιση ›</span></h3></div>';
-    if(!open) return '<div class="matt" onclick="pdxAttToggle()" style="cursor:pointer"><h3 style="margin:0;display:flex;align-items:center"><span style="flex:1">⚠ Χρειάζονται προσοχή · '+VIS.length+'</span>'+hint+'άνοιγμα ›</span></h3></div>';
-    const tag = x=>'<span class="mtag bad">'+esc(x.t)+(x.at?' <small class="aw">'+esc(attWhen(x.at))+'</small>':'')+'</span>';
-    const row = e=>{ const a = attOf(e.d), ack = !attVis(e).length;
-      return '<div class="mattr'+(ack?' ack':'')+'" onclick="mobOpen(\''+esc(e.k)+'\')"><b>'+esc(e.bed?e.room+'-'+e.bed:(e.room==='Έξτρα'?'Εκτός':e.room))+'</b><span class="an">'+esc(e.d.name||'—')+'</span>'
-        + (ack ? '' : '<button class="aok" title="Το είδα — κρύψε μέχρι να αλλάξει κάποια τιμή" onclick="event.stopPropagation();pdxAttAck(\''+esc(e.k)+'\')">✓</button>')
-        + '<span class="af">'+a.map(tag).join('')+'</span></div>'; };
-    return '<div class="matt"><h3 onclick="pdxAttToggle()" style="cursor:pointer;display:flex;align-items:center"><span style="flex:1">⚠ Χρειάζονται προσοχή · '+VIS.length+'</span>'+hint+'κλείσιμο ˄</span></h3>'
-      + A.map(row).join('')
-      + (nAck ? '<div class="mattf" onclick="pdxAttShowAll()">'+(attShowAll ? 'Κρύψε τους ελεγμένους' : '✓ '+nAck+' ελεγμένοι κρυμμένοι · εμφάνιση')+'</div>' : '')
-      + '</div>';
-  }
+  
   // στυλ νέου UI
   (function(){ const s=document.createElement('style'); s.textContent = `
   #mobView .mtag.bad{background:#FDECEA!important;color:#B42318!important;font-weight:800}
@@ -8427,40 +8405,9 @@ document.head.appendChild(st);
       {ic:'🔐', t:'Νέος κωδικός', sub:'ΝΠΣ · e-prescription · Medilabi · Evorad · Kerio (email)', on:"pdxDo('cred')"},
       {ic:'🔑', t:'Έλεγχος κωδικών', sub:'δοκιμή σύνδεσης σε κάθε σύστημα', on:"pdxCredCheck()"}], 'Οι κωδικοί κρυπτογραφούνται στη συσκευή σου και ανοίγουν μόνο στον υπολογιστή του νοσοκομείου.'));
   };
-  window.pdxKerioHub = function(){
-    iosPage('Kerio', 'Σάρωση', ()=>iosGroup('', [
-      {ic:'🔐', t:'Κωδικός Kerio', sub:'νέος κωδικός από το κινητό', on:"pdxCredOpen('kerio')"},
-      {ic:'📧', t:'Έλεγχος Kerio', sub:'σύνδεση + ομάδα, χωρίς αποστολή', on:"pdxKerioCheck()"}], 'Ο κωδικός κρυπτογραφείται στη συσκευή σου και ανοίγει μόνο στον υπολογιστή του νοσοκομείου.'));
-  };
+  
   // 🛠 «Διαχείριση» (admin) / «Περισσότερα»: ό,τι ΔΕΝ είναι καθημερινό — τίποτα δεν αφαιρέθηκε, απλώς μετακινήθηκε εδώ
-  window.pdxSetMore = function(){
-    const adm = window.authRole==='admin';
-    // κάθε επιλογή ανοίγει τη δική της οθόνη: κλείνει πρώτα αυτή (μία σελίδα τη φορά — όχι στρώματα πάνω-κάτω)
-    const go = js=>"pdxSetMoreGo(function(){"+js.replace(/"/g,'&quot;')+"})";
-    iosPage(adm ? 'Διαχείριση' : 'Περισσότερα', 'Ρυθμίσεις', ()=>{
-      const bot = window.pdxIsBotUser && window.pdxIsBotUser(), att = ['attending','admin'].indexOf(window.authRole)>=0;
-      const S = window.__botSt || {};
-      let h = '';
-      h += iosGroup('Λίστα', [
-        {ic:'☑', t:'Εκκρεμότητες', on:go("pdxDo('todoopts')")},
-        att && {ic:'📞', t:'Κλήσεις για εκτίμηση', on:go("pdxDo('consult')")}
-      ]);
-      h += iosGroup('Bot', [
-        // 10/11 βράδυ (χρήστης): «Υπολογιστής» + «Ενέργειες» σε ΜΙΑ ενότητα (μέσα στη σελίδα: «📜 Όλες οι ενέργειες»)
-        bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:go("pdxDo('bot')")} : {ic:'🤖', t:'Ενέργειες bot', on:go("pdxDo('botlog')")},
-        {ic:'🩺', t:'Κατάσταση συστημάτων', on:go("pdxHealth()")},
-        adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:go("pdxAutoApprove()")},
-        // 10/11 βράδυ (χρήστης: ομαδοποίηση): κωδικοί + έλεγχος σε ΜΙΑ γραμμή
-        (adm || bot) && {ic:'🔐', t:'Κωδικοί του bot', sub: adm ? 'νέος κωδικός · έλεγχος' : 'έλεγχος', on: adm ? go("pdxCredHub()") : go("pdxCredCheck()")},
-        adm && {ic:'🎛', t:'Κέντρο ελέγχου bot', on:go("pdxBotsPage()")},
-        adm && {ic:'⬇️', t:'Κατέβασμα / ενημέρωση bot', on:go("pdxBotDownload()")}
-      ]);
-      if(adm) h += iosGroup('Χρήστες', [{ic:'👥', t:'Χρήστες', v: window.__pdxPendingUsers ? window.__pdxPendingUsers+' νέοι' : '', on:go("pdxDo('users')")}]);
-      h += iosGroup('Ασφάλεια', [{ic:'🔐', t:'Κρυπτογράφηση', v:(window.pdxCryptoStatus?pdxCryptoStatus():''), on:go("pdxCryptoPage()")}]);
-      if(adm) h += iosGroup('Δεδομένα', [{ic:'📥', t:'Εισαγωγή JSON', on:"importFbJson()"}], 'Εισαγωγή λίστας από αρχείο JSON (παλιά έκδοση / αντίγραφο).');
-      return h;
-    });
-  };
+  
   window.pdxSetMoreGo = function(fn){ try{ fn(); }catch(e){ console.error(e); } };   // η υποσελίδα μπαίνει ΠΑΝΩ από τη «Διαχείριση» (στοίβα iosPage): «‹ Διαχείριση» γυρίζει εκεί
   // 🪶 Απλή λειτουργία: μόνο Ασθενείς + Εκκρεμότητες
   const SIMPLE = ()=>false; try{ localStorage.removeItem('pdx_simple'); }catch(e){}  // καταργήθηκε (v25)
@@ -8721,12 +8668,12 @@ document.head.appendChild(st);
     const p = podFmt(d.pod); if(p) return {t:p, c:/εξιτ/i.test(p) ? 'g' : /προς|αύριο|αυριο|χειρ|χε\b/i.test(p) ? 'p' : '', att:false};
     return {t:'', c:'', att:false};
   }
-  function nvLine(d){ return [surg(d), d.dx].filter(Boolean).join(' · '); }
+  
   // 🩺 10/11 (χρήστης): στην κάρτα της αρχικής το χειρουργείο· αν δεν έχει χειρουργείο, η αιτία σύντομα (π.χ. «Εμπύρ. αποφρ.»)
   function nvDxShort(t){ t = String(t||'').trim(); if(t.length <= 16) return t; const w = t.split(/\s+/).filter(Boolean).slice(0, 2);
     return w.map(x=>x.length > 6 ? x.slice(0, 5)+'.' : x).join(' '); }
   function nvOp(d){ const s = surg(d) || String(d.surgeryCustom||'').trim(); return s ? {t:s, op:true} : (d.dx ? {t:nvDxShort(d.dx), full:d.dx, op:false} : null); }
-  window.pdxOpLine = d=>{ const o = nvOp(d); return o ? o.t : ''; };
+  
   // 10/11 βράδυ (χρήστης): στις κάρτες η πλευρά σύντομα (Δε/Αρ/Αμφ) και η επέμβαση πιάνει ΚΑΙ 2η γραμμή αντί να κόβεται
   const nvSideShort = t=>String(t||'').replace(/(?<!\p{L})Δεξι(ά|α|ός|ού|ό)(?!\p{L})/giu,'Δε').replace(/(?<!\p{L})Αριστερ(ά|α|ός|ού|ό)(?!\p{L})/giu,'Αρ').replace(/(?<!\p{L})(Αμφοτερόπλευρ\p{L}*|Άμφω|Αμφω)(?!\p{L})/giu,'Αμφ');
   window.pdxSideShort = nvSideShort;
@@ -8739,7 +8686,7 @@ document.head.appendChild(st);
     const F = window.THERAPIST_FULL || {'Αν':'Αναστασίου','Αδ':'Αδαμάκης','Στρ':'Στραβοδήμος','Φρ':'Φραγκιάδης','Μουλ':'Μουλαβασίλης','Λεβ':'Λεβής','Δουρ':'Δουρούμης'};
     const z = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/Σ$/,'Σ').trim();
     const k = Object.keys(F).find(a=>z(F[a])===z(t) || z(t).indexOf(z(F[a]))===0 || z(F[a]).indexOf(z(t))===0 && z(t).length>=3); return k || pdxTherMatch(t) || t; }
-  function nvShort(n){ const w = String(n||'').trim().split(/\s+/); return w.length>1 ? w[0]+' '+w[1].charAt(0)+'.' : ''; }
+  
   try{ window.addEventListener('resize', ()=>{ clearTimeout(window.__nvFitT); window.__nvFitT = setTimeout(()=>{ try{ window.nvFitNames(); }catch(x){} }, 120); }); }catch(x){}
   window.nvFitNames = function(){
     const fit = (el, steps)=>{ el.style.fontSize = ''; el.style.letterSpacing = ''; if(el.scrollWidth <= el.clientWidth + 1) return true;
@@ -8768,7 +8715,7 @@ document.head.appendChild(st);
   const nvAirTag = d=>(d.arrival && !d.stillOutside) ? 'ΑΦΙΞΗ' : 'ΑΕΡΑΣ';
   const nvRoomKey = e=>{ const isX = String(e.k).indexOf('extra')===0; const ar = nvAirRoom(e); if(ar) return ar;
     const clin = isX && !!e.d.assignedWard && !/^\d+$/.test(String(e.d.assignedWard)); return clin ? 'Άλλες κλινικές' : isX ? ((e.room&&e.room!=='Έξτρα')?e.room:'Εκτός θαλάμου') : String(e.room); };
-  function nvSeg(){ const v = VM(); return '<div class="nv-seg">'+['grid','list','rooms'].map(x=>'<button class="'+(v===x?'on':'')+'" onclick="pdxViewSet(\''+x+'\')">'+VMS[x]+'</button>').join('')+'</div>'; }
+  
   function nvGroups(es){ const G = [], by = {}; es.forEach(e=>{ const r = nvRoomKey(e); if(!by[r]){ by[r] = {r, es:[]}; G.push(by[r]); } by[r].es.push(e); });
     // θάλαμοι με αριθμό κατά σειρά, μετά «Εκτός θαλάμου» / «Άλλες κλινικές» (όπως εμφανίστηκαν)
     const num = g=>/^\d+$/.test(g.r) ? +g.r : Infinity; return G.map((g,i)=>[g,i]).sort((a,b)=>(num(a[0])-num(b[0])) || (a[1]-b[1])).map(x=>x[0]); }
@@ -9112,13 +9059,8 @@ document.head.appendChild(st);
     });
     setTimeout(()=>{ const n=ov.querySelector('#mnName'); if(n) n.focus(); },300);
   };
-  window.mobExtraName = function(v){ const k=openKey, d=k&&rec(k); if(!d) return; d.name=String(v||'').trim().toUpperCase(); save(k); render(); };
-  window.mobExtraFlag = function(f){
-    const k=openKey, d=k&&rec(k); if(!d) return;
-    const on = !d[f]; d.arrival = false; d.ae = false; if(on) d[f] = true;
-    if(f==='arrival') d.stillOutside = on;
-    save(k); render();
-  };
+  
+  
   // ---- παροχετεύσεις: Χ0 απογευματινή · Χ1+ πρωί(άδειασμα)+μεσημέρι · Redon σωρευτικό ----
   function isoAdd(iso,n){ const x=new Date(iso+'T12:00:00'); x.setDate(x.getDate()+n); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
   function dlGet(d,key,day,f){ return (((d.dlog||{})[key]||{})[day]||{})[f]; }
@@ -9160,11 +9102,7 @@ document.head.appendChild(st);
     });
   }
   const REM_RE=/ ⏰ (\d\d)\/(\d\d) (\d\d):(\d\d)$/;
-  function todoRows(k, d){
-    return todos(d).map((l,i)=>{ const m=l.match(REM_RE), txt=l.replace(REM_RE,'');
-      const bell = m ? '<span class="mrb on" onclick="mobRowRem(\''+esc(k)+'\','+i+')">⏰ '+m[1]+'/'+m[2]+' '+m[3]+':'+m[4]+'</span><span class="mrx" onclick="mobRowRemClear(\''+esc(k)+'\','+i+')">✕</span>' : '<span class="mrb" onclick="mobRowRem(\''+esc(k)+'\','+i+')">🔔</span>';
-      return '<div class="mtodo"><span class="mcb" onclick="mobDone(\''+esc(k)+'\','+i+')"></span><span style="flex:1">'+esc(txt)+'</span>'+bell+'</div>'; }).join('');
-  }
+  
   window.mobRowRem=function(k,i){
     const d=rec(k); if(!d) return; const t=todos(d), l=t[i]; if(l==null) return;
     const m=l.match(REM_RE); let base=null;
@@ -9419,7 +9357,7 @@ document.head.appendChild(st);
     document.body.appendChild(ov); draw();
   };
   let rfQ=0; window.mobRefresh=function(){ if(rfQ) return; rfQ=requestAnimationFrame(()=>{ rfQ=0; try{ render(); }catch(e){} }); };
-  window.mobScrollTop=function(){ view.scrollTo({top:0,behavior:'smooth'}); };
+  
   // θέση scroll της καρτέλας ασθενή: κρατιέται όταν πας σε Εκκρ./Ιστορικό και γυρνάς πίσω
   window.mobSaveScroll=function(k){ try{ if(openKey===k && !window.__tp) window.__dret={k:k, y:view.scrollTop, t:Date.now()}; }catch(e){} };
   window.mobTakeScroll=function(k){ const r=window.__dret; window.__dret=null; return (r && r.k===k && Date.now()-r.t<15*60000) ? r.y : 0; };
@@ -9856,7 +9794,7 @@ document.head.appendChild(st);
     const t=todos(d); t.splice(Math.min(r.i,t.length),0,r.line); setTodos(r.k,t);
     toast.style.display='none'; lastRemoved=null; render();
   };
-  window.mobQkToggle=function(){ window.__qkOpen=!window.__qkOpen; const y=view.scrollTop; render(); view.scrollTop=y; };
+  
   // «⋯» στην καρτέλα: όνομα · μετακίνηση · ΑΕ · Άφιξη · εξιτήριο
   window.mobActions=function(k){
     const d=rec(k); if(!d) return;
@@ -10517,47 +10455,8 @@ document.head.appendChild(st);
       else if(e.target.id==='qeSgC'){ d.surgeryCustom = e.target.value.trim(); if(d.surgeryCustom){ d.surgery=''; d.side = d.side||''; } after(); }
     });
     qe.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.id==='qeIn'){ e.preventDefault(); act('insadd'); } });
-    window.qeOpenIns = function(k,sub,part){ qeK = k; qeFull = !part; qeOpen = 'ins'; qeSub = sub||null; qeConf = false; draw(); };
-    window.pdxMovePop = function(k){
-      const d=rec(k); if(!d) return; const isX=k.indexOf('extra')===0;
-      const f=freeBeds().filter(x=>x!==k);
-      const ov=document.createElement('div'); ov.id='mvPop';
-      ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.35);display:flex;align-items:flex-end';
-      const byRoom={}; f.forEach(x=>{ const r=x.split('-')[0]; (byRoom[r]=byRoom[r]||[]).push(x); });
-      ov.innerHTML='<div class="mvb" style="background:#fff;color:#1D2A33;width:100%;border-radius:22px 22px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .28s cubic-bezier(.22,1,.36,1);max-height:70vh;overflow:auto"><div style="font-weight:800;font-size:16px;margin-bottom:10px">Μετακίνηση '+esc(d.name||'')+' σε</div>'+(isX?'':'<button data-b="__out" style="border:1.5px solid #B23A3A;background:#fff;color:#B23A3A;border-radius:18px;padding:9px 14px;font-size:15px;font-weight:700;margin-bottom:6px">Εκτός θαλάμου</button>')
-        +(f.length?Object.keys(byRoom).map(r=>'<div style="font-size:12px;color:#6B7686;margin:8px 0 5px">'+esc(r)+'</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+byRoom[r].map(x=>'<button data-b="'+x+'" style="border:1.5px solid #1D4E80;background:#fff;color:#1D4E80;border-radius:18px;padding:10px 16px;font-size:17px;font-weight:700">'+esc(x)+'</button>').join('')+'</div>').join(''):'<div>Δεν υπάρχει ελεύθερο κρεβάτι.</div>')+'</div>';
-      document.body.appendChild(ov); requestAnimationFrame(()=>{ ov.querySelector('.mvb').style.transform='none'; });
-      const close=()=>{ const b=ov.querySelector('.mvb'); b.style.transform='translateY(100%)'; setTimeout(()=>ov.remove(),260); };
-      const t0=Date.now();
-      ov.addEventListener('click',e=>{
-        if(Date.now()-t0<450) return;
-        const b=e.target.closest('[data-b]'); if(!b){ if(e.target===ov) close(); return; }
-        const v=b.getAttribute('data-b');
-        if(v==='__out'){
-          extraCounter++; const nk='extra-'+extraCounter; const rc0=d; delete data[k];
-          rc0.arrival=true; rc0.stillOutside=true; rc0.touchedAt=Date.now(); extraPatients[nk]=rc0;
-          saveEntriesToStorage([{key:k,isExtra:false,record:null},{key:nk,isExtra:true,record:rc0}],true);
-          buildGrid(); buildExtraList(); close(); openKey=null; render();
-          window.pdxUndoable('Μετακινήθηκε εκτός θαλάμου', function(){
-            const r2=extraPatients[nk]; if(!r2) return; delete extraPatients[nk]; r2.arrival=false; r2.stillOutside=false; data[k]=r2;
-            saveEntriesToStorage([{key:nk,isExtra:true,record:null},{key:k,isExtra:false,record:r2}],true);
-            buildGrid(); buildExtraList(); render();
-          });
-          return;
-        }
-        if(data[v] && hasContent(data[v])) return;
-        const rc=d; if(isX) delete extraPatients[k]; else delete data[k];
-        try{ touchStay(rc, v); }catch(e){}
-        rc.arrival=false; rc.stillOutside=false; rc.touchedAt=Date.now(); data[v]=rc;
-        saveEntriesToStorage([{key:k,isExtra:isX,record:null},{key:v,isExtra:false,record:rc}],true);
-        buildGrid(); buildExtraList(); close(); render();
-        window.pdxUndoable('Μετακινήθηκε στο '+v, function(){
-          const r2=data[v]; if(!r2) return; delete data[v]; if(isX) extraPatients[k]=r2; else data[k]=r2;
-          saveEntriesToStorage([{key:v,isExtra:false,record:null},{key:k,isExtra:isX,record:r2}],true);
-          buildGrid(); buildExtraList(); render();
-        });
-      });
-    };
+    
+    
     window.qeOpenSheet = function(k,sec,only){ qeFull = false; qeOnly = (only&&sec)?sec:''; qeK = k; qeSurgX = false; qeExtX = false; qeG = {}; qeOpen = sec||''; qeSub = null; qeConf = false; draw(); if(sec){ const t=qe.querySelector('.qt[data-v="'+sec+'"]'); const qb=qe.querySelector('.qb'); if(t&&qb) qb.scrollTop=Math.max(0,t.offsetTop-60); } };
   })();
   // ---- Σύρσιμο προς τα αριστερά πάνω σε κάρτα ασθενή -> κουμπί «Εξιτήριο» (όπως τα μηνύματα του iPhone) ----
@@ -10576,7 +10475,7 @@ document.head.appendChild(st);
       if(!FX('swipeDelete') || openKey) return;
       const c = e.target.closest && e.target.closest('.mcard');
       if(openC && c!==openC) closeC(openC);
-      if(!c || e.target.closest('button') || e.touches[0].clientX<=28){ card=null; return; }
+      if(!c || c.hasAttribute('data-npsv') || e.target.closest('button') || e.touches[0].clientX<=28){ card=null; return; }   // 12/11 (χρήστης): στη λίστα ΝΠΣ οι κάρτες ΔΕΝ σέρνονται — το σύρσιμο αλλάζει καρτέλα
       card = c; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; mode = '';
     }, {passive:true});
     view.addEventListener('touchmove', e=>{
@@ -13184,18 +13083,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(ins.error) return toast('Σφάλμα: '+ins.error.message);
     toast('⚙️ Στάλθηκε στο bot'); setTimeout(()=>window.mobBotRefresh&&mobBotRefresh(true),800);
   };
-  window.pdxEvoradProbe = async function(){
-    if(typeof sb6==='undefined') return;
-    const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_evorad', name:'Evorad', room:null, kind:'evoradprobe', payload:{url:'http://172.16.1.26:2080/index.jsp'}, status:'new'});
-    if(ins.error) return toast('Σφάλμα: '+ins.error.message);
-    toast('🩻 Το bot χαρτογραφεί τον Evorad (μόνο ανάγνωση)…'); setTimeout(()=>window.mobBotRefresh&&mobBotRefresh(true),800);
-  };
-  window.pdxFindPacs = async function(){
-    if(typeof sb6==='undefined') return;
-    const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_findpacs', name:'Evorad / PACS', room:null, kind:'findpacs', payload:{}, status:'new'}).select('id').single();
-    if(ins.error) return toast('Σφάλμα: '+ins.error.message);
-    toast('🔎 Το bot ψάχνει τον Evorad στον υπολογιστή του νοσοκομείου…'); setTimeout(()=>window.mobBotRefresh&&mobBotRefresh(true),800);
-  };
+  
+  
 
   // 💊 Έλεγχος συνταγής στο κινητό (εντολή χρήστη 5/11): τι έγραψε το bot → «Καταχώριση» (το bot την πατά ΜΟΝΟ τότε),
   // «Αλλαγή» (ακύρωση + νέα εντολή με τα διορθωμένα φάρμακα/ICD) ή «Ακύρωση». ΠΟΤΕ αυτόματη καταχώριση.
@@ -13595,7 +13484,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       return pg;
     }
     window.pdxApvOpen = function(id){ const pg = document.getElementById('iosPg'); if(pg) pg.remove(); window.pdxBotReview && pdxBotReview(id); };
-    window.pdxApvList = ()=>L.slice();
+    
     // force: αμέσως (π.χ. μετά από έγκριση)· αλλιώς το πολύ μία φορά / 10″ και μόνο όταν η σελίδα φαίνεται
     window.pdxApvSync = async function(force){
       if(busy || (!force && (document.hidden || Date.now()-at < 10000))) return;
@@ -14640,7 +14529,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     out.sort((a,b)=>{ const A = EPC.idx[a][0], B = EPC.idx[b][0]; return (B.indexOf(W[0])===0) - (A.indexOf(W[0])===0) || A.length - B.length || (A<B?-1:1); });
     return out.slice(0, n||12).map(i=>{ const x = EPC.items[i]; return {name:x[0], eof:x[1], id:x[2], form:x[3]||'', pack:x[4]||'', cat:1}; });
   };
-  window.pdxEpCatInfo = ()=>({n: EPC.items ? EPC.items.length : 0, v: EPC.v});
+  
   setTimeout(()=>{ try{ window.pdxEpCatLoad(); }catch(e){} }, 9000);
   window.pdxEpMedNames = ()=>{ try{ return JSON.parse(localStorage.getItem('pdx_epmed_names')||'[]'); }catch(e){ return []; } };   // 8/11: μόνο ονόματα φαρμάκων (καμία πληροφορία ασθενή)
   window.pdxEpSearch = async function(what, q, opt){
@@ -17885,7 +17774,8 @@ Z99.2:C|αιμοκάθαρση
 
   function top(title, sub, left){
     setTimeout(()=>document.querySelectorAll('#labsFull .lf-top:not(.lf-wrap)').forEach(t=>{ const b = t.querySelector(':scope>b'); if(b && b.scrollWidth > b.clientWidth + 1) t.classList.add('lf-wrap'); }), 0);   // ολόκληρο όνομα σε δική του γραμμή
-    return '<div class="lf-top">'+(left||'')+'<b>'+title+(sub?'<br><span class="lf-sub">'+sub+'</span>':'')+'</b><button onclick="labsFullSettings()" title="Ρυθμίσεις">⚙︎</button>'+(cur!=='@ext' ? '<button data-medgo class="lm-ic" title="Φέρε τώρα από το Medilabi">⟳</button>' : '<button onclick="labsFullReload()" title="Ανανέωση">⟳</button>')+'<button onclick="labsFullClose()">Κλείσιμο</button></div>';
+    if(!left) left = '<button onclick="labsFullClose()" aria-label="Πίσω">‹</button>';   // 12/11: ίδια κουμπιά παντού — ‹ πάντα αριστερά
+    return '<div class="lf-top">'+(left||'')+'<b>'+title+(sub?'<br><span class="lf-sub">'+sub+'</span>':'')+'</b><button onclick="labsFullSettings()" title="Ρυθμίσεις">⚙︎</button>'+(cur!=='@ext' ? '<button data-medgo class="lm-ic" title="Φέρε τώρα από το Medilabi">⟳</button>' : '<button onclick="labsFullReload()" title="Ανανέωση">⟳</button>')+'</div>';
   }
   // 🖥 σαν το Medilabi: ΟΛΟΙ οι ασθενείς × βασικές εξετάσεις (τελευταία τιμή), πάτημα → πλήρες ιστορικό ασθενή
   const LF_COLS = ['hgb','hct','wbc','plt','glu','urea','creat','na','k','ca','crp','inr'];   // 7/11: σειρά του βιβλίου εργαστηριακών
@@ -18250,7 +18140,8 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
     if(!p){ cur=''; return renderList(); }
     const histHere = histOn && histOn.k===p.k;   // 📚 10/11 23:30 (χρήστης: «ίδια καρτέλα — μόνο η επιλογή νοσηλεία/σύνολο ιστορικού»)
     const lab = histHere && histOn.lab ? histOn.lab : labOf(p);
-    const nav = '<button onclick="labsFullOpen(\'\')" title="Λίστα">☰</button>';
+    // 12/11 20:32 (χρήστης: «από ασθενή → εργαστηριακά → πάνω αριστερά πάει στα εργαστηριακά· θέλω να πηγαίνει στον ασθενή»): ‹ = πίσω από όπου ήρθες
+    const nav = viaList ? '<button onclick="labsFullOpen(\'\')" aria-label="Πίσω στη λίστα">‹</button>' : '<button onclick="labsFullClose()" aria-label="Πίσω στον ασθενή">‹</button>';
     // 10/11 βράδυ (χρήστης): ΜΙΑ σειρά «🏥 Νοσοκομείο · 📈 ΑΗΦΥ · Κάρτα · Ανά ημέρα · Medilabi» — χωρίς «(όλο το ιστορικό)», χωρίς ‹ ›,
     // χωρίς «Εκτός ορίων / 4 / 7 / Όλες» (πάντα ΟΛΑ)· το «Φέρε τώρα» είναι το ⟳ πάνω δεξιά (όπως στη λίστα)
     const srcBtns = window.pdxAhfyLabsOpen ? '<button class="on">🏥 Νοσοκομείο</button><button onclick="pdxLabsUnified(\''+E(p.k)+'\',\'ahfy\')">📈 ΑΗΦΥ</button>' : '';
@@ -18720,7 +18611,7 @@ function applyFs(){ ov.style.setProperty('--fs', fsScale()); }
 })();
 
 /* ---------- Public entry points ---------- */
-window.__chClose = function(){ closeOv(); };
+
 // 📂 8/11: ΦΑΚΕΛΟΣ ΝΟΣΗΛΕΙΑΣ από το ΝΠΣ (εντολή npsdossier: κάθε βράδυ αργά + «Φέρε τώρα») — αποκρυπτογράφηση στη συσκευή
 // 🎤 8/11 (εντολή χρήστη): ΠΟΡΕΙΑ ΝΟΣΟΥ με υπαγόρευση από το κινητό — δωρεάν, καλά ελληνικά: Whisper large-v3-turbo στον Μεσαίο.
 // Ηχογράφηση → 16 kHz mono WAV → κρυπτογράφηση με το κλειδί της κλινικής → εντολή stt → κείμενο (προεπισκόπηση/διόρθωση) →
@@ -19893,11 +19784,7 @@ function renderPaste(){
     renderCard();
   };
 }
-function saveKey(){
-  var el = $('chKeyIn'); var v = el ? el.value.trim() : lsGet(CH_KEY_LS);
-  if(!v){ ctx.err = 'Βάλε πρώτα το κλειδί API (sk-ant-...).'; renderEmpty(); return false; }
-  lsSet(CH_KEY_LS, v); return true;
-}
+
 
 function renderBusy(msg, thumbs){
   barHtml([{title:'📄 Ιστορικό ασθενή'}]);
@@ -22533,7 +22420,7 @@ window.CLS_MODE='A';
   // 8/11: δύο τρόποι — «auto»: σελίδες → κρυπτογραφημένα στη βάση (scanq) → σελίδα του Claude (αναγνωρίζει τι είναι: ιστορικό/πόρισμα/πρόγραμμα)
   //                    «prog»: πρόγραμμα χειρουργείου → PDF → email (Kerio) απευθείας, χωρίς Claude
   const MODEFILE = 'pdx_scan_mode';
-  function modePref(){ try{ return localStorage.getItem(MODEFILE)==='prog' ? 'prog' : 'auto'; }catch(e){ return 'auto'; } }
+  
   function landPref(m){ try{ const v = localStorage.getItem('pdx_scan_land_'+m); return v===null ? m==='prog' : v==='1'; }catch(e){ return m==='prog'; } }
   const CLAUDE_URL = ()=>window.HIST_UPLOAD_URL || 'https://claude.ai/artifact/7WCs97EfWrAuqWokMGWLbd';
   // 8/11: άνοιγμα στην ΕΦΑΡΜΟΓΗ Claude (claude://claude.ai/…) — με https άνοιγε μέσα σε Safari χωρίς σύνδεση
@@ -23066,7 +22953,7 @@ window.CLS_MODE='A';
   document.addEventListener('touchstart', e=>{ x0 = null;
     const v = document.getElementById('mobView'); if(!v || !v.contains(e.target) || !seg() || e.touches.length>1) return;
     if(e.target.closest('input,textarea,select,.mtp-row,.tsw,[data-noswipe]')) return;
-    if(typeof FX==='function' && FX('swipeDelete') && e.target.closest('.mcard')) return;   // η κάρτα έχει δικές της ενέργειες με σύρσιμο
+    if(typeof FX==='function' && FX('swipeDelete') && e.target.closest('.mcard:not([data-npsv])')) return;   // η κάρτα έχει δικές της ενέργειες με σύρσιμο
     const t = e.touches[0]; if(t.clientX < 28 || t.clientX > innerWidth - 20) return;      // άκρες: «πίσω» του iPhone
     x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, {passive:true});
   document.addEventListener('touchend', e=>{ if(x0==null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
