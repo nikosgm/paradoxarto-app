@@ -1,1 +1,1 @@
-{"version": "0.21.312", "zip": "ef-bot-0.21.312.zip", "sha256": "2abcd313a7b77bffb8d3fa357a46b78f10b736d99e9a0cf91eeb758fb7149db0", "notes": "📺 tvinfo: οθόνες/τηλεόραση (EDID, HDMI), κάρτες, προσαρμογέας CEC — μόνο ανάγνωση"}
+{"version": "0.21.313", "zip": "ef-bot-0.21.313.zip", "sha256": "6cb71bad66eb6543de73ca359fc5f4efd0debb4fde7af93ca47724f004318e9e", "notes": "📺 tvfind: εντοπισμός LG webOS στο δίκτυο (SSDP/ARP/θύρες) — μόνο ανάγνωση"}
