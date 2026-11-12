@@ -1,1 +1,1 @@
-{"version": "0.21.317", "zip": "ef-bot-0.21.317.zip", "sha256": "d624a785f3645f23c9073fd12bfd96ab4de192a3a637f9d9deabe86b436c68c5", "notes": "🗺 npsmedorder mapForm/mapApax: πλήρης χάρτης φόρμας Φαρμακευτικής Αγωγής (χωρίς Ενημέρωση)"}
+{"version": "0.21.318", "zip": "ef-bot-0.21.318.zip", "sha256": "b80951c20cc3624d2e33c97cbccbf8f5ba8a40ddd642a990831d77ae0cc884b3", "notes": "συννοσηρότητες: κωδικός χωρίς υποκωδικό (N40) → αναζήτηση «N40.» + .90/.00"}
