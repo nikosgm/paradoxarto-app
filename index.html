@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12j-v361';
+const APP_VER = '2026-11-12k-v362';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7338,6 +7338,14 @@ document.head.appendChild(st);
   #mobView .mhdr span.r{background:#FDECEA;color:#B42318}
   #mobView .mact{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px;margin:10px 12px 0;padding-bottom:2px}
   #mobView .mact::-webkit-scrollbar{display:none}
+  #mobView .ptg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 4px;margin:10px 8px 4px;max-width:560px}
+  #mobView .ptg-b{display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;padding:0;cursor:pointer;color:var(--t1,#1F2933);-webkit-tap-highlight-color:transparent;min-width:0}
+  #mobView .ptg-i{position:relative;width:56px;height:56px;border-radius:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;font-size:25px}
+  #mobView .ptg-b:active .ptg-i{transform:scale(.94);background:#E5E5EA}
+  #mobView .ptg-d{position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#F79009;border:2px solid #fff}
+  #mobView .ptg-t{font-size:11.5px;font-weight:600;line-height:1.15;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #mobView .ptg-add{margin:8px 12px 0;border:0;border-radius:12px;background:#15803D;color:#fff;font-weight:700;font-size:15px;padding:10px 14px;min-height:44px}
+  html.pdx-night #mobView .ptg-i{background:#1C1C1E}html.pdx-night #mobView .ptg-b{color:#fff}
   #mobView .ptab{position:relative;display:flex;align-items:center;margin:8px 0 2px}
   #mobView .ptab-s{display:flex;gap:7px;overflow-x:auto;padding:2px 12px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scroll-padding-inline:12px;flex:1;min-width:0}
   #mobView .ptab-s::-webkit-scrollbar{display:none}
@@ -7482,24 +7490,23 @@ document.head.appendChild(st);
   function toolsTab2(){
     const bot = window.pdxIsBotUser && window.pdxIsBotUser(), att = ['attending','admin'].indexOf(window.authRole)>=0, adm = window.authRole==='admin';
     let h = nuiTop('Εργαλεία', 'ενέργειες χωρίς να ψάχνεις') + cmdBar;
+    // 12/11 βράδυ (Εργαστήριο εμφάνισης, «Πλέγμα 3»): τα 6 πιο συχνά σε πλέγμα 3 στηλών πάνω-πάνω, τα υπόλοιπα σε λίστα από κάτω
+    { const F = [bot && ['🧾','Παραγγελία σε πολλούς',"pdxOrderBulk()"], ['🧪','Εργαστηριακά όλων',"window.labsFullOpen && labsFullOpen('')"], bot && ['💊','Συνταγή',"pdxDo('rxout')"],
+        bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
+      h += '<div class="mtp-h" style="margin:14px 16px 6px">Τα πιο συχνά</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px;max-width:620px">'
+        + F.map(x=>'<div onclick="'+x[2]+'" style="background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)"><span style="font-size:26px">'+x[0]+'</span><b style="font-size:13px;line-height:1.2">'+x[1]+'</b></div>').join('') + '</div>'; }
     const clin = ['resident','attending','admin'].indexOf(window.authRole)>=0;
     if(clin) h += grp('Κλινική', [
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
-      bot && ['🔬','Βιοψίες','εκκρεμείς & αποτελέσματα', "pdxBiopsies()"],   // 10/11 22:46 (χρήστης): στην «Κλινική»
       bot && ['🩻','Αξονικές ειδικευομένων','ταυτοποίηση & μετακίνηση στο αρχείο απεικονίσεων', "pdxCtInbox()"],   // 11/11 (χρήστης)
       bot && ['🦓','Ετικέτα Zebra','μεγάλος αριθμός σε όλο το πλάτος', "pdxLabelPrint()"]   // 11/11 20:43 (χρήστης)
     ]);
-    h += grp('Για έναν ασθενή', [
-      bot && ['💊','Συνταγή e-prescription','με ΑΜΚΑ', "pdxDo('rxout')"],
-      // 10/11 22:15/22:38 (χρήστης): Κλήση για εκτίμηση, Παραγγελία, Απεικονίσεις (γίνονται μέσα από τον ασθενή) & Ασθενείς ΝΠΣ (είναι στην αρχική) = πλεονασμός → αφαιρέθηκαν
-    ]);
+    // (12/11: «Συνταγή e-prescription», «Βιοψίες», «Παραγγελία σε πολλούς», «Ουρολογικό Ημέρας» → στα «Τα πιο συχνά» πάνω)
     h += grp('Για πολλούς', [
       ['☑','Εκκρεμότητα σε πολλούς','', "pdxDo('bulk')"],
-      bot && ['🧾','Παραγγελία σε πολλούς','ίδιες εξετάσεις σε όλους', "pdxOrderBulk()"],
       adm && ['📅','Εισαγωγές & ΑΜ από ΝΠΣ','', "pdxDo('admits')"],
-      (bot || att) && ['🌤','Ουρολογικό Ημέρας','ασθενείς & μαζικά εξιτήρια', "pdxDayUnit()"],
       // 📑 10/11 22:15 (χρήστης: «τα ΕΨΙΝΕ πού τα έβαλες;») — υπήρχε ΜΟΝΟ στην αναζήτηση «Τι θέλεις να κάνεις;»
       bot && ['📑','ΕΨΙΝΕ','Ενιαίο Ψηφιακό Ιστορικό · οριστικοποίηση', "pdxEpsineOpen()"],
       // 🌙 12/11 (χρήστης): «όλα για κάθε ασθενή το βράδυ της εισαγωγής»
@@ -9365,20 +9372,24 @@ document.head.appendChild(st);
   window.mobTodoPage=function(k){ if(openKey!==k) mobOpen(k); window.__tp=false; window.__ptTab={k:k, t:'todo'}; render(); view.scrollTop=0; };
   // 6/11: ⚡ Ενέργειες σε οριζόντια μπάρα κάτω από τις καρτέλες (κινητό: σύρσιμο · υπολογιστής: βελάκια ‹ ›)
   const PTA_SHORT = {labs:'Εξετάσεις', ahfylabs:'ΑΗΦΥ', dcx:'Εξιτήριο', order:'Παραγγελία', rx:'Συνταγή', consult:'Εκτίμηση', comorb:'Συννοσηρότ.', ct:'Απεικονίσεις', ref:'Παραπεμπτικό'};
+  // 12/11 βράδυ (Εργαστήριο εμφάνισης, επιλογή χρήστη «Πλέγμα σαν iPhone»): ενέργειες ασθενή σε πλέγμα 4 στηλών με εικονίδια,
+  // με τη σειρά που έστησε ο χρήστης: Παραγγελία · Εργαστηριακά · Συνταγή · Φάρμακα ΝΠΣ · Πορεία νόσου · ΑΗΦΥ · Εκτίμηση · Απεικονίσεις · Σάρωση · Πρακτικό · Εξιτήριο
+  // (+ ό,τι άλλο υπάρχει, π.χ. Συννοσηρότητες/Παραπεμπτικό, και στο τέλος Εκκρεμότητα · Όλες). Ίδιο σε κινητό & υπολογιστή.
+  const PTA_ORDER = ['order','labs','rx','npsmed','course','ahfylabs','consult','ct','scan','opnote','dcx','comorb','ref'];
+  const PTA_GRID = {order:['🧾','Παραγγελία'], labs:['🧪','Εργαστηρ.'], rx:['💊','Συνταγή'], npsmed:['💉','Φάρμακα ΝΠΣ'], course:['📝','Πορεία νόσου'], ahfylabs:['🏛','ΑΗΦΥ'], consult:['📞','Εκτίμηση'], ct:['🩻','Απεικονίσεις'], scan:['📷','Σάρωση'], opnote:['✂️','Πρακτικό'], dcx:['📄','Εξιτήριο'], comorb:['🩺','Συννοσηρ.'], ref:['📋','Παραπεμπτ.']};
   function ptActBar(k, d){
     if(MOB_CFG.actionRow===false) return '';
-    const xk = esc(k), bot = window.pdxIsBotUser && window.pdxIsBotUser(), warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
-    const L0 = (window.pdxBotActions ? pdxBotActions() : []).filter(a=>a && a.id!=='labs' && a.id!=='ahfylabs' && (bot || a.id==='ct'));
-    // 8/11 (εντολή χρήστη): πρώτα Παραγγελία, Απεικονίσεις, Εξιτήριο, Κλήση για εκτίμηση· η συνταγή τέρμα δεξιά
-    const ord = ['order','ct','dcx','consult','comorb','ref','rx']; L0.sort((a,b)=>{ const i=ord.indexOf(a.id), j=ord.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
-    const it = (ic, t, act, dot)=>'<button onclick="'+act+'"><i>'+ic+'</i>'+t+(dot?' <b style="color:#F79009">●</b>':'')+'</button>';
-    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" style="background:#15803D;color:#fff"><i>＋</i>Προσθήκη σε κρεβάτι</button>' : '');   // 8/11: χωρίς «Εξετάσεις» (υπάρχει «Όλες οι εξετάσεις» κάτω από τα βασικά)
-    const one = a=>a.id==='ct' && window.pdxCtOpen ? it('🩻', 'Απεικονίσεις', "pdxCtOpen('"+xk+"')") : it(esc(a.icon||'🤖'), esc(PTA_SHORT[a.id]||a.label||a.id), "mobAct('"+xk+"','"+esc(a.id)+"')");
-    L0.filter(a=>a.id!=='rx').forEach(a=>{ h += one(a); });
-    h += it('🎤', 'Πορεία νόσου', "pdxDictate('"+xk+"')");   // 8/11: υπαγόρευση (Whisper στον Μεσαίο)
-    if(bot) h += it('💊', 'Φάρμακο', "pdxMedOrder('"+xk+"')");   // 9/11: παραγγελία φαρμάκου ΝΠΣ (έλεγχος)
-    h += it('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + L0.filter(a=>a.id==='rx').map(one).join('') + it('⋯', 'Όλες', "mobActions('"+xk+"')");
-    return '<div class="ptab"><button class="ptab-a l" aria-label="Προηγούμενες" onclick="this.parentNode.querySelector(\'.ptab-s\').scrollBy({left:-260,behavior:\'smooth\'})">‹</button><div class="ptab-s">'+h+'</div><button class="ptab-a r" aria-label="Επόμενες" onclick="this.parentNode.querySelector(\'.ptab-s\').scrollBy({left:260,behavior:\'smooth\'})">›</button></div>';
+    const xk = esc(k), bot = window.pdxIsBotUser && window.pdxIsBotUser();
+    const have = {}; (window.pdxBotActions ? pdxBotActions() : []).forEach(a=>{ if(a && a.id && (bot || a.id==='ct' || a.id==='labs')) have[a.id] = true; });
+    have.labs = true; have.course = true; if(bot) have.npsmed = true; if(window.pdxScanOpen) have.scan = true; if(window.pdxOpNotesOpen) have.opnote = true; if(window.pdxCtOpen) have.ct = true;
+    const go = {ct:"pdxCtOpen('"+xk+"')", course:"pdxDictate('"+xk+"')", npsmed:"pdxMedOrder('"+xk+"')", scan:"pdxScanOpen()", opnote:"pdxOpNotesOpen('"+xk+"')"};
+    const cell = (ic, t, act, dot)=>'<button class="ptg-b" onclick="'+act+'"><span class="ptg-i">'+ic+(dot?'<b class="ptg-d"></b>':'')+'</span><span class="ptg-t">'+t+'</span></button>';
+    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>' : '');
+    const warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
+    let g = '';
+    PTA_ORDER.forEach(id=>{ if(!have[id]) return; const m = PTA_GRID[id]; g += cell(m[0], m[1], go[id] || "mobAct('"+xk+"','"+id+"')", id==='labs' && warn); });
+    g += cell('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + cell('⋯', 'Όλες', "mobActions('"+xk+"')");
+    return h + '<div class="ptg">'+g+'</div>';
   }
   // κρίσιμα στοιχεία κάτω από το όνομα: αλλεργία, αντιπηκτικά, συννοσηρότητες (πάτημα → η αντίστοιχη ενότητα)
   function hdrChips(k, d){
