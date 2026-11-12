@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12c-v354';
+const APP_VER = '2026-11-12d-v355';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22940,6 +22940,10 @@ window.pdxLabelPrint = function(){
   let pc = ''; try{ pc = localStorage.getItem('pdx_label_pc') || ''; }catch(e){} if(!PCS.some(x=>x[0]===pc)) pc = PCS[0][0];
   const st = {code:'', text:'', copies:1, msg:'', kb:'num'};   // 11/11 20:55 (χρήστης): «επιλογή και γράμματα να τυπώνω»
   try{ st.kb = localStorage.getItem('pdx_label_kb') || 'num'; }catch(e){}
+  // 12/11 14:18 (χρήστης: «βάζω κεφαλαία και βγαίνουν μικρά»): διακόπτης ΑΒΓ (όλα κεφαλαία, προεπιλογή) / Αβγ (όπως τα γράφω)
+  st.caps = true; try{ st.caps = localStorage.getItem('pdx_label_caps') !== '0'; }catch(e){}
+  const UP = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').normalize('NFC').toUpperCase();   // κεφαλαία χωρίς τόνους (ελληνική ορθογραφία)
+  const tx = k=>{ const v = String(st[k]||'').trim(); return st.caps ? UP(v) : v; };
   // 11/11 21:02 (χρήστης: «να ρυθμίζω εγώ πλάτος μήκος από την εφαρμογή και γραμματοσειρά, bold»): μορφή ανά εκτυπωτή (localStorage)
   const FDEF = {w:50, h:25, m:1, dx:0, font:0, sz:0, bold:false, setH:false};
   const fmtGet = ()=>{ try{ return Object.assign({}, FDEF, JSON.parse(localStorage.getItem('pdx_label_fmt_'+pc)||'{}')); }catch(e){ return Object.assign({}, FDEF); } };
@@ -22949,12 +22953,13 @@ window.pdxLabelPrint = function(){
   const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
   // 🖼 12/11 11:13 (χρήστης: «μικρά… εικόνες και emoji»): η ετικέτα ζωγραφίζεται εδώ (canvas, 8 κουκκίδες/mm, 1-bit) και πάει ως εικόνα (EPL GW).
   // Αριθμοί/ΚΕΦΑΛΑΙΑ λατινικά μόνο → όπως πριν (γραμματοσειρά εκτυπωτή, πιο καθαρή). Οτιδήποτε άλλο (μικρά, ελληνικά, emoji, εικόνα) → εικόνα.
-  const lblBmp = ()=> st.kb==='img' || [st.code, st.text].some(t=>/[^A-Z0-9 .,:\/()+#-]/.test(String(t||'').trim()));
+  if(!document.getElementById('lblUpCss')){ const c=document.createElement('style'); c.id='lblUpCss'; c.textContent='#iosPg input[data-up="1"]{text-transform:uppercase}'; document.head.appendChild(c); }
+  const lblBmp = ()=> st.kb==='img' || [tx('code'), tx('text')].some(t=>/[^A-Z0-9 .,:\/()+#-]/.test(t));
   const lblDraw = ()=>{
     const LW = Math.round((+fmt.w||50)*8), LH = Math.round((+fmt.h||25)*8), M = Math.round((+fmt.m||0)*8), DX = Math.round((+fmt.dx||0)*8), W = Math.max(40, LW-2*M);
     const cv = document.createElement('canvas'); cv.width = LW; cv.height = LH; const g = cv.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0,0,LW,LH); g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const L = [String(st.code||'').trim(), String(st.text||'').trim()].filter(Boolean).map(t=>t.slice(0,60));
+    const L = [tx('code'), tx('text')].filter(Boolean).map(t=>t.slice(0,60));
     const FF = '"Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif', WT = fmt.bold ? 900 : 700;
     const fit = (t, maxH)=>{ let f = Math.max(8, Math.floor(maxH*0.9)); g.font = WT+' '+f+'px '+FF; const w = g.measureText(t).width; if(w > W) f = Math.max(8, Math.floor(f*W/w)); if(fmt.sz) f = Math.max(8, Math.round(f*Math.min(1, fmt.sz/4))); return f; };
     let top = 4, avail = LH-8, img = st.kb==='img' && st.img;
@@ -22975,8 +22980,8 @@ window.pdxLabelPrint = function(){
     g.putImageData(im,0,0); };
   const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:11px;font-size:17px"';
   const pg = iosPage('Ετικέτα Zebra', 'Εργαλεία', ()=>{
-    let h = '<div class="ios-h">Τι τυπώνεται (μεγάλα, σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><div style="display:flex;gap:8px;margin-bottom:10px">'+[['num','123 Αριθμοί'],['txt','Αβγ 😀 Κείμενο'],['img','🖼 Εικόνα']].map(([k,l])=>'<button data-kb="'+k+'" style="flex:1;border:0;border-radius:10px;padding:9px;font-size:15px;font-weight:700;background:'+(st.kb===k?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+l+'</button>').join('')+'</div><input data-f="code" inputmode="'+(st.kb==='num'?'numeric':'text')+'" autocapitalize="off" autocorrect="off" value="'+E3(st.code)+'" placeholder="'+(st.kb==='num'?'π.χ. 345':st.kb==='img'?'λεζάντα κάτω από την εικόνα (προαιρετική)':'π.χ. Παπαδόπουλος 🙂')+'" '+inp+'>'+(st.kb==='img'?'<label style="display:block;margin-top:10px;text-align:center;border:1px dashed #94A3B8;border-radius:10px;padding:12px;font-size:15px;font-weight:700;color:#1D4E80">'+(st.img?'🖼 Άλλη εικόνα':'🖼 Διάλεξε εικόνα / φωτογραφία')+'<input type="file" accept="image/*" data-img style="display:none"></label>':'')+(lblBmp()?'<div style="margin-top:10px;text-align:center"><canvas data-prev style="width:240px;max-width:100%;border:1px dashed #94A3B8;border-radius:6px;image-rendering:pixelated;background:#fff"></canvas><div style="font-size:12.5px;color:#64748B">Ακριβώς έτσι θα τυπωθεί (ασπρόμαυρο).</div></div>':'')+''+(st.kb==='txt'?'<div style="font-size:13px;color:#64748B;margin-top:6px">Μικρά, ελληνικά και emoji τυπώνονται όπως τα γράφεις.</div>':'')+'</div>';
-    h += '<div class="ios-h">2η γραμμή (προαιρετική)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
+    let h = '<div class="ios-h">Τι τυπώνεται (μεγάλα, σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><div style="display:flex;gap:8px;margin-bottom:10px">'+[['num','123 Αριθμοί'],['txt','Αβγ 😀 Κείμενο'],['img','🖼 Εικόνα']].map(([k,l])=>'<button data-kb="'+k+'" style="flex:1;border:0;border-radius:10px;padding:9px;font-size:15px;font-weight:700;background:'+(st.kb===k?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+l+'</button>').join('')+'</div><input data-f="code" inputmode="'+(st.kb==='num'?'numeric':'text')+'" autocapitalize="'+(st.caps?'characters':'off')+'" autocorrect="off" data-up="'+(st.caps?1:0)+'" value="'+E3(st.code)+'" placeholder="'+(st.kb==='num'?'π.χ. 345':st.kb==='img'?'λεζάντα κάτω από την εικόνα (προαιρετική)':'π.χ. Παπαδόπουλος 🙂')+'" '+inp+'>'+(st.kb==='img'?'<label style="display:block;margin-top:10px;text-align:center;border:1px dashed #94A3B8;border-radius:10px;padding:12px;font-size:15px;font-weight:700;color:#1D4E80">'+(st.img?'🖼 Άλλη εικόνα':'🖼 Διάλεξε εικόνα / φωτογραφία')+'<input type="file" accept="image/*" data-img style="display:none"></label>':'')+(lblBmp()?'<div style="margin-top:10px;text-align:center"><canvas data-prev style="width:240px;max-width:100%;border:1px dashed #94A3B8;border-radius:6px;image-rendering:pixelated;background:#fff"></canvas><div style="font-size:12.5px;color:#64748B">Ακριβώς έτσι θα τυπωθεί (ασπρόμαυρο).</div></div>':'')+''+(st.kb!=='num'?'<div style="display:flex;gap:8px;margin-top:10px">'+[[1,'ΑΒΓ Όλα κεφαλαία'],[0,'Αβγ Όπως τα γράφω']].map(([v,l])=>'<button data-caps="'+v+'" style="flex:1;border:0;border-radius:10px;padding:8px;font-size:14px;font-weight:700;background:'+((st.caps?1:0)===v?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+l+'</button>').join('')+'</div><div style="font-size:13px;color:#64748B;margin-top:6px">'+(st.caps?'Ό,τι γράψεις τυπώνεται με κεφαλαία.':'Μικρά, κεφαλαία, ελληνικά και emoji τυπώνονται όπως τα γράφεις.')+'</div>':'')+'</div>';
+    h += '<div class="ios-h">2η γραμμή (προαιρετική)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" autocapitalize="'+(st.caps&&st.kb!=='num'?'characters':'off')+'" data-up="'+(st.caps&&st.kb!=='num'?1:0)+'" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
     h += '<div class="ios-h">Αντίγραφα</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+[1,2,3,4,5].map(n=>'<button data-c="'+n+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:16px;font-weight:700;background:'+(st.copies===n?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+n+'</button>').join('')+'</div>';
     h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:700;background:'+(pc===id?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+nm+'</button>').join('')+'</div>';
     const stp = (k,l,u,step)=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0"><span style="font-size:15px">'+l+'</span><span style="display:flex;align-items:center;gap:8px"><button data-st="'+k+'" data-d="-'+step+'" style="width:38px;height:34px;border:0;border-radius:9px;background:#EEF2F6;font-size:19px;font-weight:700">−</button><b style="min-width:62px;text-align:center;font-size:16px">'+(k==='sz'&&!fmt.sz?'Αυτόμ.':fmt[k]+u)+'</b><button data-st="'+k+'" data-d="'+step+'" style="width:38px;height:34px;border:0;border-radius:9px;background:#EEF2F6;font-size:19px;font-weight:700">+</button></span></div>';
@@ -23004,17 +23009,18 @@ window.pdxLabelPrint = function(){
     if(t.matches('[data-fh]')){ fmt.setH = t.checked; fmtSet(fmt); return pg.redraw(); } });
   pg.el.addEventListener('click', async e=>{
     const kb = e.target.closest('[data-kb]'); if(kb){ st.kb = kb.dataset.kb; try{ localStorage.setItem('pdx_label_kb', st.kb); }catch(x){} pg.redraw(); setTimeout(()=>{ const i = document.querySelector('#iosPg [data-f=code]'); if(i) i.focus(); }, 50); return; }
+    const cp = e.target.closest('[data-caps]'); if(cp){ st.caps = cp.dataset.caps==='1'; try{ localStorage.setItem('pdx_label_caps', st.caps?'1':'0'); }catch(x){} return pg.redraw(); }
     if(e.target.closest('[data-fo]')){ fmtOpen = !fmtOpen; return pg.redraw(); }
     if(e.target.closest('[data-fr]')){ fmt = Object.assign({}, FDEF); fmtSet(fmt); return pg.redraw(); }
     const sb = e.target.closest('[data-st]'); if(sb){ const k = sb.dataset.st, lim = {w:[20,104], h:[10,150], m:[0,20], dx:[-20,20], sz:[0,8]}[k]; fmt[k] = Math.max(lim[0], Math.min(lim[1], (+fmt[k]||0) + (+sb.dataset.d))); fmtSet(fmt); return pg.redraw(); }
     const c = e.target.closest('[data-c]'); if(c){ st.copies = +c.dataset.c; return pg.redraw(); }
     const b = e.target.closest('[data-pc]'); if(b){ pc = b.dataset.pc; try{ localStorage.setItem('pdx_label_pc', pc); }catch(x){} fmt = fmtGet(); return pg.redraw(); }
     if(e.target.closest('[data-go]')){
-      const code = String(st.code||'').trim().slice(0,40); if(!code && !String(st.text||'').trim() && !(st.kb==='img' && st.img)){ st.msg = st.kb==='img' ? 'Διάλεξε εικόνα.' : 'Γράψε αριθμό.'; return pg.redraw(); }
+      const code = (st.kb==='num' ? String(st.code||'').trim() : tx('code')).slice(0,40); if(!code && !tx('text') && !(st.kb==='img' && st.img)){ st.msg = st.kb==='img' ? 'Διάλεξε εικόνα.' : 'Γράψε αριθμό.'; return pg.redraw(); }
       let bmp = null; if(lblBmp()){ const b = lblDraw(); if(b.out.length > 60000){ st.msg = 'Η ετικέτα είναι πολύ μεγάλη για εικόνα — μίκρυνε πλάτος/ύψος.'; return pg.redraw(); }
         let bin = ''; for(let i=0;i<b.out.length;i+=0x8000) bin += String.fromCharCode.apply(null, b.out.subarray(i, i+0x8000)); bmp = {w:b.LW, h:b.LH, b64:btoa(bin)}; }
       st.msg = 'Στέλνεται…'; pg.redraw();
-      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+(code||'🖼'), room:null, kind:'labelprint', payload:Object.assign({line1:code, line2:st.text||'', copies:st.copies, fmt:Object.assign({}, fmt), only:pc, bot:pc, quiet:true}, bmp?{bmp}:{}), status:'new'}).select('id').single();
+      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+(code||'🖼'), room:null, kind:'labelprint', payload:Object.assign({line1:code, line2:tx('text'), copies:st.copies, fmt:Object.assign({}, fmt), only:pc, bot:pc, quiet:true}, bmp?{bmp}:{}), status:'new'}).select('id').single();
         if(r.error) throw r.error; st.msg = '✓ Στάλθηκε στον Zebra ('+(PCS.find(x=>x[0]===pc)||[])[1]+').'; }catch(x){ st.msg = 'Δεν στάλθηκε: '+(x.message||x); }
       pg.redraw(); }
   });
