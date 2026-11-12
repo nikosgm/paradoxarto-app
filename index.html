@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12k-v362';
+const APP_VER = '2026-11-12l-v363';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7338,7 +7338,7 @@ document.head.appendChild(st);
   #mobView .mhdr span.r{background:#FDECEA;color:#B42318}
   #mobView .mact{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:7px;margin:10px 12px 0;padding-bottom:2px}
   #mobView .mact::-webkit-scrollbar{display:none}
-  #mobView .ptg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 4px;margin:10px 8px 4px;max-width:560px}
+  #mobView .pacts{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 4px;margin:12px 8px 6px;max-width:560px;padding-top:2px}
   #mobView .ptg-b{display:flex;flex-direction:column;align-items:center;gap:5px;border:0;background:none;padding:0;cursor:pointer;color:var(--t1,#1F2933);-webkit-tap-highlight-color:transparent;min-width:0}
   #mobView .ptg-i{position:relative;width:56px;height:56px;border-radius:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;font-size:25px}
   #mobView .ptg-b:active .ptg-i{transform:scale(.94);background:#E5E5EA}
@@ -7533,7 +7533,7 @@ document.head.appendChild(st);
      +'.ios-r:active{background:#E5E5EA}.ios-r.nt:active{background:transparent}'
      +'.ios-r+.ios-r:before{content:"";position:absolute;top:0;right:0;left:57px;border-top:.5px solid #C6C6C8}.ios-g.noic .ios-r+.ios-r:before{left:16px}'
      +'.ios-i{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}'
-     +'.ios-t{flex:1;padding:11px 0;line-height:1.25}.ios-t small{display:block;font-size:13px;color:#8E8E93}'
+     +'.ios-t{flex:1;min-width:0;overflow-wrap:anywhere;padding:11px 0;line-height:1.25}.ios-t small{display:block;font-size:13px;color:#8E8E93}'
      +'.ios-v{color:#8E8E93;font-size:17px;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ios-c{color:#C4C4C7;font-size:22px;font-weight:600;margin-left:2px}'
      +'.ios-sw{width:51px;height:31px;border-radius:16px;background:#E9E9EA;position:relative;flex:none;transition:background .25s}.ios-sw:after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .25s cubic-bezier(.32,.72,0,1)}'
      +'.ios-sw.on{background:#34C759}.ios-sw.on:after{transform:translateX(20px)}'
@@ -9375,7 +9375,8 @@ document.head.appendChild(st);
   // 12/11 βράδυ (Εργαστήριο εμφάνισης, επιλογή χρήστη «Πλέγμα σαν iPhone»): ενέργειες ασθενή σε πλέγμα 4 στηλών με εικονίδια,
   // με τη σειρά που έστησε ο χρήστης: Παραγγελία · Εργαστηριακά · Συνταγή · Φάρμακα ΝΠΣ · Πορεία νόσου · ΑΗΦΥ · Εκτίμηση · Απεικονίσεις · Σάρωση · Πρακτικό · Εξιτήριο
   // (+ ό,τι άλλο υπάρχει, π.χ. Συννοσηρότητες/Παραπεμπτικό, και στο τέλος Εκκρεμότητα · Όλες). Ίδιο σε κινητό & υπολογιστή.
-  const PTA_ORDER = ['order','labs','rx','npsmed','course','ahfylabs','consult','ct','scan','opnote','dcx','comorb','ref'];
+  // 12/11 21:44 (χρήστης): Συνταγή & Παραπεμπτικό ΔΕΝ γράφονται σε νοσηλευόμενους — μόνο μετά το εξιτήριο, από τις οδηγίες του → όχι στο πλέγμα
+  const PTA_ORDER = ['order','labs','npsmed','course','ahfylabs','consult','ct','scan','opnote','dcx','comorb'];
   const PTA_GRID = {order:['🧾','Παραγγελία'], labs:['🧪','Εργαστηρ.'], rx:['💊','Συνταγή'], npsmed:['💉','Φάρμακα ΝΠΣ'], course:['📝','Πορεία νόσου'], ahfylabs:['🏛','ΑΗΦΥ'], consult:['📞','Εκτίμηση'], ct:['🩻','Απεικονίσεις'], scan:['📷','Σάρωση'], opnote:['✂️','Πρακτικό'], dcx:['📄','Εξιτήριο'], comorb:['🩺','Συννοσηρ.'], ref:['📋','Παραπεμπτ.']};
   function ptActBar(k, d){
     if(MOB_CFG.actionRow===false) return '';
@@ -9389,7 +9390,7 @@ document.head.appendChild(st);
     let g = '';
     PTA_ORDER.forEach(id=>{ if(!have[id]) return; const m = PTA_GRID[id]; g += cell(m[0], m[1], go[id] || "mobAct('"+xk+"','"+id+"')", id==='labs' && warn); });
     g += cell('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + cell('⋯', 'Όλες', "mobActions('"+xk+"')");
-    return h + '<div class="ptg">'+g+'</div>';
+    return h + '<div class="pacts">'+g+'</div>';
   }
   // κρίσιμα στοιχεία κάτω από το όνομα: αλλεργία, αντιπηκτικά, συννοσηρότητες (πάτημα → η αντίστοιχη ενότητα)
   function hdrChips(k, d){
@@ -9812,23 +9813,46 @@ document.head.appendChild(st);
     const old=document.getElementById('mobSubPop'); if(old) old.remove();
     const ov=document.createElement('div'); ov.id='mobSubPop';
     ov.style.cssText='position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.3);display:flex;align-items:flex-end';
-    const B='display:flex;align-items:center;gap:12px;width:100%;border:0;border-top:1px solid #EEF1F4;background:none;text-align:left;padding:15px 4px;font-size:17px;font-weight:600;color:inherit';
-    const T=(f,l,on)=>'<button data-t="'+f+'" style="flex:1;border:1.5px solid var(--mp,#1D4E80);border-radius:14px;padding:12px;font-size:16px;font-weight:700;'+(on?'background:var(--mp,#1D4E80);color:#fff':'background:#fff;color:var(--mp,#1D4E80)')+'">'+l+(on?' ✓':'')+'</button>';
+    // 12/11 βράδυ (χρήστης: «η ενότητα Ενέργειες δεν μου αρέσει καθόλου»): φύλλο σε ύφος iPhone — γκρι φόντο, λευκές ομάδες,
+    // ΑΕ/Άφιξη ως διακόπτες, Μετακίνηση/Αφαίρεση σε ομάδα, οι ενέργειες του bot σε δική τους ομάδα με εικονίδιο σε τετράγωνο.
+    (function(){ if(document.getElementById('maCss')) return; const st=document.createElement('style'); st.id='maCss'; st.textContent=
+      '#mobSubPop .sb{background:#F2F2F7!important;color:#000!important;padding:8px 0 calc(22px + env(safe-area-inset-bottom,0px))!important}'
+     +'#mobSubPop .ma-grab{width:36px;height:5px;border-radius:3px;background:#C7C7CC;margin:0 auto 6px}'
+     +'#mobSubPop .ma-top{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 10px}#mobSubPop .ma-top b{font-size:20px;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+     +'#mobSubPop .ma-top button{border:0;background:none;color:var(--acc,#007AFF);font-size:17px;font-weight:600;padding:8px 4px;min-height:44px}'
+     +'#mobSubPop .ma-h{margin:18px 32px 6px;font-size:13px;color:#6D6D72;text-transform:uppercase;letter-spacing:.02em}'
+     +'#mobSubPop .ma-g{background:#fff;border-radius:12px;margin:0 16px;overflow:hidden}'
+     +'#mobSubPop .ma-g>*+*{box-shadow:inset 0 .5px 0 #C6C6C8}'
+     +'#mobSubPop .ma-in{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 16px;min-height:50px}'
+     +'#mobSubPop .ma-in input{flex:1;min-width:0;border:0!important;background:none;font-size:17px;padding:6px 0;outline:none;color:#000}'
+     +'#mobSubPop .ma-in small{font-size:12px;color:#8E8E93;flex:none}'
+     +'#mobSubPop .ma-in button{border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:9px;padding:7px 12px;font-size:15px;font-weight:600}'
+     +'#mobSubPop .ma-g button.ma-r,#mobSubPop .ma-g button[data-b]{display:flex!important;align-items:center;gap:12px;width:100%;border:0!important;background:#fff!important;text-align:left;padding:0 16px!important;min-height:50px;font-size:17px!important;font-weight:400!important;color:#000}'
+     +'#mobSubPop .ma-g button:active{background:#E5E5EA!important}'
+     +'#mobSubPop .ma-g button>span:first-child{width:30px;height:30px;border-radius:7px;background:#EEF2F7;display:flex!important;align-items:center;justify-content:center;font-size:17px!important;min-width:30px!important;flex:none}'
+     +'#mobSubPop .ma-g button .ma-tx{flex:1;padding:12px 0;line-height:1.25}#mobSubPop .ma-g button .ma-c{color:#C4C4C7;font-size:22px}'
+     +'#mobSubPop .ma-g button.red{color:#D70015!important}#mobSubPop .ma-g button.red>span:first-child{background:#FDECEC}'
+     +'#mobSubPop #pdxJobsMini{margin:8px 32px 0;font-size:13px;color:#6D6D72}'
+     +'html.pdx-night #mobSubPop .sb{background:#000!important;color:#fff!important}html.pdx-night #mobSubPop .ma-g,html.pdx-night #mobSubPop .ma-g button.ma-r,html.pdx-night #mobSubPop .ma-g button[data-b]{background:#1C1C1E!important;color:#fff}html.pdx-night #mobSubPop .ma-in input{color:#fff}html.pdx-night #mobSubPop .ma-g button>span:first-child{background:#2C2C2E}';
+      document.head.appendChild(st); })();
+    const B='';
+    const T=(f,l,on)=>'<button data-t="'+f+'" class="ma-r"><span>'+(f==='ae'?'🚑':f==='arrival'?'🛬':'•')+'</span><span class="ma-tx">'+l+'</span><i class="ios-sw'+(on?' on':'')+'"></i></button>';
     // ρυθμίζεται από τη βάση: oncall_config.mobile.actions = [{type:'name'},{type:'flag',f:'ae',label:'ΑΕ'},{type:'sheet',id:'mv',label:'…',icon:'⇄',red:false}]
     const ACT_DEF=[{type:'name'},{type:'flag',f:'ae',label:'ΑΕ'},{type:'flag',f:'arrival',label:'Άφιξη'},{type:'sheet',id:'mv',icon:'⇄',label:'Μετακίνηση σε άλλο κρεβάτι / θάλαμο'},{type:'sheet',id:'dc',icon:'⏏',label:'Αφαίρεση από λίστα (έξοδος)',red:true}];
     const ACT=Array.isArray(MOB_CFG.actions)&&MOB_CFG.actions.length?MOB_CFG.actions:ACT_DEF;
-    const draw=()=>{ const x=rec(k)||{}; let h='', fl=[];
-      const flush=()=>{ if(fl.length){ h+='<div style="display:flex;gap:8px;margin:4px 0 6px;flex-wrap:wrap">'+fl.join('')+'</div>'; fl=[]; } };
+    const draw=()=>{ const x=rec(k)||{}; let inp='', fl=[], sh=[];
       ACT.forEach(a=>{ if(!a) return;
         if(a.type==='flag' && a.f){ fl.push(T(a.f, esc(a.label||a.f), !!x[a.f])); return; }
-        flush();
-        if(a.type==='name') h+='<div style="display:flex;gap:8px;margin:6px 0 10px"><input id="maName" value="'+esc(x.name||'')+'" placeholder="'+esc(a.label||'Όνομα ασθενή')+'" autocapitalize="characters" style="flex:1;min-width:0;font-size:17px;padding:12px;border:1.5px solid #D5DCE3;border-radius:12px"><button data-n style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:0 16px;font-size:15px;font-weight:700">Αλλαγή</button></div>';
-        if(a.type==='name') h+='<div style="display:flex;gap:8px;align-items:center;margin:-2px 0 10px"><input id="maAmka" inputmode="numeric" maxlength="11" value="'+esc(String(x.amka||''))+'" placeholder="ΑΜΚΑ (11 ψηφία)" style="flex:1;min-width:0;font-size:17px;padding:12px;border:1.5px solid #D5DCE3;border-radius:12px;letter-spacing:.5px;font-variant-numeric:tabular-nums"><span id="maAmkaSt" style="font-size:13px;min-width:92px;text-align:right"></span></div>';
-        else if(a.type==='sheet' && a.id) h+='<button data-o="'+esc(a.id)+'" style="'+B+(a.red?';color:#B23A3A':'')+'"><span style="font-size:20px;min-width:22px">'+esc(a.icon||'›')+'</span>'+esc(a.id==='dc' && /^\s*εξιτήριο\s*$/i.test(a.label||'') ? 'Αφαίρεση από λίστα (έξοδος)' : (a.label||a.id))+'</button>';   // «Εξιτήριο» σκέτο μπερδευόταν με το 📄 Εξιτήριο του bot
-      }); flush();
-      window.__pdxMenuK=k; if(window.pdxBotMenuHtml && (window.pdxIsBotUser&&window.pdxIsBotUser())) h+=pdxBotMenuHtml(B);
-      ov.innerHTML='<div class="sb" style="background:#fff;color:#1D2A33;width:100%;border-radius:22px 22px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:calc(100vh - env(safe-area-inset-top,0px) - 24px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transform:'+(ov.dataset.up?'none':'translateY(100%)')+';transition:transform .25s cubic-bezier(.32,.72,0,1)">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><b style="font-size:18px">'+esc(x.name||'Ασθενής')+'</b><button data-x style="border:0;background:#EAEFF3;border-radius:12px;padding:8px 14px;font-size:15px">Κλείσιμο</button></div>'
+        if(a.type==='name'){ inp+='<div class="ma-in"><input id="maName" value="'+esc(x.name||'')+'" placeholder="'+esc(a.label||'Όνομα ασθενή')+'" autocapitalize="characters"><button data-n>Αλλαγή</button></div>';
+          inp+='<div class="ma-in"><input id="maAmka" inputmode="numeric" maxlength="11" value="'+esc(String(x.amka||''))+'" placeholder="ΑΜΚΑ (11 ψηφία)" style="letter-spacing:.5px;font-variant-numeric:tabular-nums"><small id="maAmkaSt"></small></div>'; }
+        else if(a.type==='sheet' && a.id) sh.push('<button data-o="'+esc(a.id)+'" class="ma-r'+(a.red?' red':'')+'"><span>'+esc(a.icon||'›')+'</span><span class="ma-tx">'+esc(a.id==='dc' && /^\s*εξιτήριο\s*$/i.test(a.label||'') ? 'Αφαίρεση από λίστα (έξοδος)' : (a.label||a.id))+'</span><span class="ma-c">›</span></button>');   // «Εξιτήριο» σκέτο μπερδευόταν με το 📄 Εξιτήριο του bot
+      });
+      let h = '';
+      if(inp || fl.length) h += '<div class="ma-h">Στοιχεία ασθενή</div><div class="ma-g">'+inp+fl.join('')+'</div>';
+      if(sh.length) h += '<div class="ma-h">Θέση στην κλινική</div><div class="ma-g">'+sh.join('')+'</div>';
+      window.__pdxMenuK=k; if(window.pdxBotMenuHtml && (window.pdxIsBotUser&&window.pdxIsBotUser())) h+=pdxBotMenuHtml(null);
+      ov.innerHTML='<div class="sb" style="width:100%;border-radius:14px 14px 0 0;max-height:calc(100vh - env(safe-area-inset-top,0px) - 24px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transform:'+(ov.dataset.up?'none':'translateY(100%)')+';transition:transform .25s cubic-bezier(.32,.72,0,1)">'
+        +'<div class="ma-grab"></div><div class="ma-top"><b>'+esc(x.name||'Ασθενής')+'</b><button data-x>Τέλος</button></div>'
         +h+'</div>'; if(window.pdxBotJobsMini) setTimeout(()=>pdxBotJobsMini(k),0); };
     draw(); document.body.appendChild(ov);
     requestAnimationFrame(()=>{ ov.dataset.up='1'; const s=ov.querySelector('.sb'); if(s) s.style.transform='none'; });
@@ -11212,6 +11236,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const ORD = ['rx','order','ref','dcx','consult','labs','comorb','ahfylabs','ct'];
     const L = pdxBotActions().filter(Boolean); if(!L.some(a=>a.id==='ref')) L.push({id:'ref', icon:'📋', label:'Παραπεμπτικό e-prescription'});
     L.sort((a,b)=>{ const i=ORD.indexOf(a.id), j=ORD.indexOf(b.id); return (i<0?99:i)-(j<0?99:j); });
+    if(B===null){ const row = a=>{ const pn = (a.id==='comorb' && window.pdxComorbPending && window.__pdxMenuK) ? pdxComorbPending(window.__pdxMenuK) : 0;
+          return '<button data-b="'+E(a.id)+'"><span>'+E(a.icon||'›')+'</span><span class="ma-tx">'+E(String(a.label||a.id).replace(/\s*\(από τις οδηγίες εξιτηρίου\)/,''))+(pn?' <b style="color:#B26A00">❓'+pn+'</b>':'')+'</span><span class="ma-c">›</span></button>'; };
+      const post = L.filter(a=>a.id==='rx'||a.id==='ref'), rest = L.filter(a=>a.id!=='rx'&&a.id!=='ref');
+      return '<div class="ma-h">Ενέργειες bot</div><div class="ma-g">'+rest.map(row).join('')+'</div>' + (post.length ? '<div class="ma-h">Μετά το εξιτήριο (από τις οδηγίες του)</div><div class="ma-g">'+post.map(row).join('')+'</div>' : '') + '<div id="pdxJobsMini"></div>'; }
+    if(false) return '<div class="ma-h">Ενέργειες bot</div><div class="ma-g">' + L.map(a=>{ const pn = (a.id==='comorb' && window.pdxComorbPending && window.__pdxMenuK) ? pdxComorbPending(window.__pdxMenuK) : 0;
+          return '<button data-b="'+E(a.id)+'"><span>'+E(a.icon||'›')+'</span><span class="ma-tx">'+E(String(a.label||a.id).replace(/\s*\(από τις οδηγίες εξιτηρίου\)/,''))+(pn?' <b style="color:#B26A00">❓'+pn+'</b>':'')+'</span><span class="ma-c">›</span></button>'; }).join('') + '</div><div id="pdxJobsMini"></div>';
     return '<div style="font-size:12.5px;color:#6B7686;margin:14px 0 2px;font-weight:700">⚡ Ενέργειες</div>'
       + L.map(a=>{ const pn = (a.id==='comorb' && window.pdxComorbPending && window.__pdxMenuK) ? pdxComorbPending(window.__pdxMenuK) : 0;
           return '<button data-b="'+E(a.id)+'" style="'+B+'"><span style="font-size:20px;min-width:22px">'+E(a.icon||'›')+'</span>'+E(a.label||a.id)+(pn?' <b style="color:#B26A00">❓'+pn+'</b>':'')+'</button>'; }).join('')
@@ -16455,10 +16485,10 @@ Z99.2:C|αιμοκάθαρση
     const box = document.createElement('div');
     box.style.cssText='background:#fff;color:#1A222B;border-radius:20px;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));width:min(680px,96vw);max-height:92vh;display:flex;flex-direction:column;gap:12px;overflow:auto;font-size:15px;box-shadow:0 12px 40px rgba(0,0,0,.25);';
     box.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:18px">🩺 Συννοσηρότητες · '+E(d.name)+'</b>'
+      // 12/11 21:45 (χρήστης): το «Τράβηγμα από ΑΗΦΥ» πάνω, δίπλα στο «Κλείσιμο»
+      '<div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🩺 Συννοσηρότητες · '+E(d.name)+'</b>'
+      +'<button data-pull class="btn btn-primary" style="flex:0 0 auto;font-size:14.5px;font-weight:700;padding:9px 12px;border-radius:12px;white-space:nowrap">🤖 Από ΑΗΦΥ</button>'
       +'<button data-x class="btn btn-secondary" style="flex:0 0 auto">Κλείσιμο</button></div>'
-      // 🩺 10/11 22:46 (χρήστης): πιο όμορφο · κατηγορίες που ανοίγουν (όπως ο ιατρικός φάκελος) · κύριο = Τράβηγμα από ΑΗΦΥ · χωρίς ΑΜΚΑ (είναι στην καρτέλα)
-      +'<button data-pull class="btn btn-primary" style="width:100%;font-size:16px;font-weight:700;padding:13px;border-radius:14px">🤖 Τράβηγμα από ΑΗΦΥ</button>'
       +'<div data-note style="display:none;background:#EEF6FF;color:#1D4E80;border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;line-height:1.4"></div>'
       +'<div data-list></div>'
       +'<details data-man style="border:1px solid #E5E9EE;border-radius:12px;padding:8px 12px"><summary style="cursor:pointer;font-size:14px;font-weight:700;color:#1D4E80;padding:4px 0">✍️ Χειροκίνητα (επικόλληση κωδικών · από το ιστορικό) <span data-cnt style="color:#6B7686;font-weight:500"></span></summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'
@@ -16487,7 +16517,7 @@ Z99.2:C|αιμοκάθαρση
       if(v) r.amka = v; else delete r.amka;
       if(v && r.comorbAuto && r.comorbAuto.status!=='ok') delete r.comorbAuto;   // ξανά στη σειρά για αυτόματη αναζήτηση
       saveRec(k, r); d.amka = r.amka; amShow();
-      if(v){ const note = $('[data-note]'); note.style.display='block'; note.textContent='✓ Ο ΑΜΚΑ αποθηκεύτηκε. Το bot θα ψάξει στον ΑΗΦΥ σε λίγο (ή πάτα «🤖 Τράβηγμα από ΑΗΦΥ»). Θα ελέγξει και ότι το όνομα στον ΑΗΦΥ ταιριάζει.'; }
+      if(v){ const note = $('[data-note]'); note.style.display='block'; note.textContent='✓ Ο ΑΜΚΑ αποθηκεύτηκε. Το bot θα ψάξει στον ΑΗΦΥ σε λίγο (ή πάτα «🤖 Από ΑΗΦΥ» πάνω). Θα ελέγξει και ότι το όνομα στον ΑΗΦΥ ταιριάζει.'; }
       try{ window.postMessage({efbotComorbWake:1}, '*'); }catch(e){} };
     amIn.addEventListener('input', ()=>{ amIn.value = amIn.value.replace(/\D/g,'').slice(0,11); amShow(); if(amIn.value.length===11 && pdxAmkaOk(amIn.value)) amSave(); });
     amIn.addEventListener('change', amSave);
@@ -16529,7 +16559,7 @@ Z99.2:C|αιμοκάθαρση
       const g = c=>items.filter(it=>it.cls===c);
       const C=g('C'), U=g('U'), A=g('A');
       let h = '';
-      if(!items.length) h = '<div style="color:#6B7686;font-size:14px;padding:6px 2px">'+(ta.value.trim()?'Δεν βρέθηκαν κωδικοί ICD-10.':'Πάτα «🤖 Τράβηγμα από ΑΗΦΥ» — ή «✍️ Χειροκίνητα» για επικόλληση.')+'</div>';
+      if(!items.length) h = '<div style="color:#6B7686;font-size:14px;padding:6px 2px">'+(ta.value.trim()?'Δεν βρέθηκαν κωδικοί ICD-10.':'Πάτα «🤖 Από ΑΗΦΥ» (πάνω) — ή «✍️ Χειροκίνητα» για επικόλληση.')+'</div>';
       // κατηγορίες ICD-10 (όπως ο ιατρικός φάκελος): χρόνια + «να αποφασίσεις» μαζί, ανά κεφάλαιο· ανοιχτές όσες έχουν «?» ή είναι λίγες
       const CU = C.concat(U), by = new Map(); CU.forEach(it=>{ const c = chOf(it.code); if(!by.has(c)) by.set(c, []); by.get(c).push(it); });
       const ORD = ['Κυκλοφορικό','Ενδοκρινικά · μεταβολικά','Αναπνευστικό','Νεοπλάσματα','Ουροποιογεννητικό','Πεπτικό','Νευρικό σύστημα','Ψυχικά','Αίμα'];
@@ -16612,9 +16642,9 @@ Z99.2:C|αιμοκάθαρση
       const b = $('[data-pull]'), note = $('[data-note]'), msg = $('[data-msg]');
       if(!window.pdxBotSend){ msg.textContent='Η ουρά εργασιών του bot δεν είναι διαθέσιμη.'; return; }
       const t0 = Date.now(), at0 = ((recOf(k)||{}).comorbAuto||{}).at || 0;
-      b.disabled = true; b.textContent = '⏳ Στάλθηκε στο bot…';
+      b.disabled = true; b.textContent = '⏳ Στάλθηκε…';
       window.pdxBotSend(k, 'ehrdx', {}).then(ok=>{
-        if(!ok){ b.disabled=false; b.textContent='🤖 Τράβηγμα από ΑΗΦΥ'; return; }
+        if(!ok){ b.disabled=false; b.textContent='🤖 Από ΑΗΦΥ'; return; }
         note.style.display='block'; note.textContent='⏳ Το bot του υπολογιστή ψάχνει: φάκελος → ΑΜΚΑ → ΑΗΦΥ. Συνήθως 1–2 λεπτά.';
         const nk = String(d.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/\s+/g,' ').trim();
         const tick = setInterval(()=>{
@@ -16624,12 +16654,12 @@ Z99.2:C|αιμοκάθαρση
           if(typeof sb6==='undefined') return;
           sb6.from('oncall_jobs').select('status,note').eq('name_key', nk).eq('kind','ehrdx').order('created_at',{ascending:false}).limit(1).then(r=>{
             const j = r && r.data && r.data[0]; if(!j || !document.body.contains(ov)) return;
-            if(j.status==='failed'){ clearInterval(tick); b.disabled=false; b.textContent='🤖 Τράβηγμα από ΑΗΦΥ'; note.textContent='⚠ Το bot δεν τα κατάφερε: '+(j.note||''); }
+            if(j.status==='failed'){ clearInterval(tick); b.disabled=false; b.textContent='🤖 Από ΑΗΦΥ'; note.textContent='⚠ Το bot δεν τα κατάφερε: '+(j.note||''); }
             else if(j.status==='done'){ clearInterval(tick); ov.remove(); pdxComorbOpen(k); }
             else if(j.status==='running') note.textContent='⚙️ Το bot δουλεύει τώρα σε αυτόν τον ασθενή…';
           });
         }, 2500);
-        setTimeout(()=>{ clearInterval(tick); if(document.body.contains(ov) && b.disabled){ b.disabled=false; b.textContent='🤖 Τράβηγμα από ΑΗΦΥ'; note.textContent='⌛ Δεν ήρθε απάντηση σε 5 λεπτά. Είναι ανοιχτός ο υπολογιστής με το bot και συνδεδεμένος στον ΑΗΦΥ;'; } }, 5*60000);
+        setTimeout(()=>{ clearInterval(tick); if(document.body.contains(ov) && b.disabled){ b.disabled=false; b.textContent='🤖 Από ΑΗΦΥ'; note.textContent='⌛ Δεν ήρθε απάντηση σε 5 λεπτά. Είναι ανοιχτός ο υπολογιστής με το bot και συνδεδεμένος στον ΑΗΦΥ;'; } }, 5*60000);
       });
     }
     function go(){
