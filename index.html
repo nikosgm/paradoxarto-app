@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12b-v353';
+const APP_VER = '2026-11-12c-v354';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22947,10 +22947,36 @@ window.pdxLabelPrint = function(){
   let fmt = fmtGet(), fmtOpen = false;
   const FONTS = [[0,'Αυτόματη'],[5,'5 · πολύ μεγάλη (μόνο κεφαλαία)'],[4,'4 · μεγάλη'],[3,'3 · μεσαία'],[2,'2 · μικρή'],[1,'1 · πολύ μικρή']];
   const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+  // 🖼 12/11 11:13 (χρήστης: «μικρά… εικόνες και emoji»): η ετικέτα ζωγραφίζεται εδώ (canvas, 8 κουκκίδες/mm, 1-bit) και πάει ως εικόνα (EPL GW).
+  // Αριθμοί/ΚΕΦΑΛΑΙΑ λατινικά μόνο → όπως πριν (γραμματοσειρά εκτυπωτή, πιο καθαρή). Οτιδήποτε άλλο (μικρά, ελληνικά, emoji, εικόνα) → εικόνα.
+  const lblBmp = ()=> st.kb==='img' || [st.code, st.text].some(t=>/[^A-Z0-9 .,:\/()+#-]/.test(String(t||'').trim()));
+  const lblDraw = ()=>{
+    const LW = Math.round((+fmt.w||50)*8), LH = Math.round((+fmt.h||25)*8), M = Math.round((+fmt.m||0)*8), DX = Math.round((+fmt.dx||0)*8), W = Math.max(40, LW-2*M);
+    const cv = document.createElement('canvas'); cv.width = LW; cv.height = LH; const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0,0,LW,LH); g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const L = [String(st.code||'').trim(), String(st.text||'').trim()].filter(Boolean).map(t=>t.slice(0,60));
+    const FF = '"Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif', WT = fmt.bold ? 900 : 700;
+    const fit = (t, maxH)=>{ let f = Math.max(8, Math.floor(maxH*0.9)); g.font = WT+' '+f+'px '+FF; const w = g.measureText(t).width; if(w > W) f = Math.max(8, Math.floor(f*W/w)); if(fmt.sz) f = Math.max(8, Math.round(f*Math.min(1, fmt.sz/4))); return f; };
+    let top = 4, avail = LH-8, img = st.kb==='img' && st.img;
+    if(img){ const capH = L.length ? Math.round(avail*0.28/L.length)*L.length : 0, ih = avail-capH, sc = Math.min(W/img.naturalWidth, ih/img.naturalHeight), w = img.naturalWidth*sc, h = img.naturalHeight*sc;
+      g.drawImage(img, Math.round((LW-w)/2)+DX, top+Math.round((ih-h)/2), w, h); top += ih; avail = capH; }
+    if(L.length && avail > 6){ const each = avail/L.length; L.forEach((t,i)=>{ const f = fit(t, each); g.font = WT+' '+f+'px '+FF; g.fillText(t, LW/2+DX, top+each*i+each/2); }); }
+    // σε ασπρόμαυρο: εικόνα → διάχυση σφάλματος (Floyd–Steinberg) · μόνο κείμενο → κατώφλι
+    const d = g.getImageData(0,0,LW,LH).data, gr = new Float32Array(LW*LH);
+    for(let i=0;i<LW*LH;i++){ const a = d[i*4+3]/255; gr[i] = 255 - a*(255 - (0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2])); }
+    const wb = Math.ceil(LW/8), out = new Uint8Array(wb*LH).fill(255);
+    for(let y=0;y<LH;y++) for(let x=0;x<LW;x++){ const i = y*LW+x, o = gr[i], n = o < 128 ? 0 : 255;
+      if(n===0) out[y*wb+(x>>3)] &= ~(0x80>>(x&7));
+      if(img){ const e = o-n; if(x+1<LW) gr[i+1] += e*7/16; if(y+1<LH){ if(x>0) gr[i+LW-1] += e*3/16; gr[i+LW] += e*5/16; if(x+1<LW) gr[i+LW+1] += e/16; } } }
+    return {LW, LH, wb, out};
+  };
+  const lblPrev = ()=>{ const c = document.querySelector('#iosPg [data-prev]'); if(!c) return; const b = lblDraw(); c.width = b.LW; c.height = b.LH; const g = c.getContext('2d'), im = g.createImageData(b.LW, b.LH);
+    for(let y=0;y<b.LH;y++) for(let x=0;x<b.LW;x++){ const k = (b.out[y*b.wb+(x>>3)] & (0x80>>(x&7))) ? 255 : 0, i = (y*b.LW+x)*4; im.data[i]=im.data[i+1]=im.data[i+2]=k; im.data[i+3]=255; }
+    g.putImageData(im,0,0); };
   const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:11px;font-size:17px"';
   const pg = iosPage('Ετικέτα Zebra', 'Εργαλεία', ()=>{
-    let h = '<div class="ios-h">Τι τυπώνεται (μεγάλα, σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><div style="display:flex;gap:8px;margin-bottom:10px">'+[['num','123 Αριθμοί'],['txt','ΑΒΓ Γράμματα']].map(([k,l])=>'<button data-kb="'+k+'" style="flex:1;border:0;border-radius:10px;padding:9px;font-size:15px;font-weight:700;background:'+(st.kb===k?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+l+'</button>').join('')+'</div><input data-f="code" inputmode="'+(st.kb==='num'?'numeric':'text')+'" autocapitalize="characters" value="'+E3(st.code)+'" placeholder="'+(st.kb==='num'?'π.χ. 345':'π.χ. ΠΑΠΑΔΟΠΟΥΛΟΣ')+'" '+inp+'>'+(st.kb==='txt'?'<div style="font-size:13px;color:#64748B;margin-top:6px">Τα ελληνικά τυπώνονται με λατινικά (ο εκτυπωτής δεν έχει ελληνικά).</div>':'')+'</div>';
-    h += '<div class="ios-h">2η γραμμή (προαιρετική · τυπώνεται με λατινικά)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
+    let h = '<div class="ios-h">Τι τυπώνεται (μεγάλα, σε όλο το πλάτος)</div><div class="ios-g noic" style="padding:12px 14px"><div style="display:flex;gap:8px;margin-bottom:10px">'+[['num','123 Αριθμοί'],['txt','Αβγ 😀 Κείμενο'],['img','🖼 Εικόνα']].map(([k,l])=>'<button data-kb="'+k+'" style="flex:1;border:0;border-radius:10px;padding:9px;font-size:15px;font-weight:700;background:'+(st.kb===k?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+l+'</button>').join('')+'</div><input data-f="code" inputmode="'+(st.kb==='num'?'numeric':'text')+'" autocapitalize="off" autocorrect="off" value="'+E3(st.code)+'" placeholder="'+(st.kb==='num'?'π.χ. 345':st.kb==='img'?'λεζάντα κάτω από την εικόνα (προαιρετική)':'π.χ. Παπαδόπουλος 🙂')+'" '+inp+'>'+(st.kb==='img'?'<label style="display:block;margin-top:10px;text-align:center;border:1px dashed #94A3B8;border-radius:10px;padding:12px;font-size:15px;font-weight:700;color:#1D4E80">'+(st.img?'🖼 Άλλη εικόνα':'🖼 Διάλεξε εικόνα / φωτογραφία')+'<input type="file" accept="image/*" data-img style="display:none"></label>':'')+(lblBmp()?'<div style="margin-top:10px;text-align:center"><canvas data-prev style="width:240px;max-width:100%;border:1px dashed #94A3B8;border-radius:6px;image-rendering:pixelated;background:#fff"></canvas><div style="font-size:12.5px;color:#64748B">Ακριβώς έτσι θα τυπωθεί (ασπρόμαυρο).</div></div>':'')+''+(st.kb==='txt'?'<div style="font-size:13px;color:#64748B;margin-top:6px">Μικρά, ελληνικά και emoji τυπώνονται όπως τα γράφεις.</div>':'')+'</div>';
+    h += '<div class="ios-h">2η γραμμή (προαιρετική)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
     h += '<div class="ios-h">Αντίγραφα</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+[1,2,3,4,5].map(n=>'<button data-c="'+n+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:16px;font-weight:700;background:'+(st.copies===n?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+n+'</button>').join('')+'</div>';
     h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" style="flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:700;background:'+(pc===id?'#1D4E80;color:#fff':'#EEF2F6;color:#334155')+'">'+nm+'</button>').join('')+'</div>';
     const stp = (k,l,u,step)=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0"><span style="font-size:15px">'+l+'</span><span style="display:flex;align-items:center;gap:8px"><button data-st="'+k+'" data-d="-'+step+'" style="width:38px;height:34px;border:0;border-radius:9px;background:#EEF2F6;font-size:19px;font-weight:700">−</button><b style="min-width:62px;text-align:center;font-size:16px">'+(k==='sz'&&!fmt.sz?'Αυτόμ.':fmt[k]+u)+'</b><button data-st="'+k+'" data-d="'+step+'" style="width:38px;height:34px;border:0;border-radius:9px;background:#EEF2F6;font-size:19px;font-weight:700">+</button></span></div>';
@@ -22968,8 +22994,11 @@ window.pdxLabelPrint = function(){
     }
     h += '<div style="margin:16px"><button data-go style="width:100%;border:0;border-radius:14px;padding:15px;font-size:17px;font-weight:800;background:#0A84FF;color:#fff">🦓 Εκτύπωση</button><div style="margin-top:10px;color:#475569;font-size:14px">'+E3(st.msg)+'</div></div>';
     return h; });
-  pg.el.addEventListener('input', e=>{ const f = e.target.getAttribute('data-f'); if(f) st[f] = e.target.value; });
+  { const _rd = pg.redraw; let had = lblBmp(); pg.redraw = function(){ _rd.apply(pg, arguments); had = lblBmp(); setTimeout(lblPrev, 0); }; setTimeout(lblPrev, 0);
+    pg.el.addEventListener('input', e=>{ const f = e.target.getAttribute('data-f'); if(!f) return; st[f] = e.target.value;
+      if(lblBmp() !== had){ const pos = e.target.selectionStart; pg.redraw(); setTimeout(()=>{ const i = document.querySelector('#iosPg [data-f='+f+']'); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(x){} } }, 0); } else lblPrev(); }); }
   pg.el.addEventListener('change', e=>{ const t = e.target;
+    if(t.matches('[data-img]')){ const f = t.files && t.files[0]; if(!f) return; const u = URL.createObjectURL(f), im = new Image(); im.onload = ()=>{ st.img = im; pg.redraw(); }; im.onerror = ()=>{ st.msg = 'Δεν διαβάστηκε η εικόνα.'; pg.redraw(); }; im.src = u; return; }
     if(t.matches('[data-ff]')){ fmt.font = +t.value; fmtSet(fmt); return pg.redraw(); }
     if(t.matches('[data-fb]')){ fmt.bold = t.checked; fmtSet(fmt); return pg.redraw(); }
     if(t.matches('[data-fh]')){ fmt.setH = t.checked; fmtSet(fmt); return pg.redraw(); } });
@@ -22981,9 +23010,11 @@ window.pdxLabelPrint = function(){
     const c = e.target.closest('[data-c]'); if(c){ st.copies = +c.dataset.c; return pg.redraw(); }
     const b = e.target.closest('[data-pc]'); if(b){ pc = b.dataset.pc; try{ localStorage.setItem('pdx_label_pc', pc); }catch(x){} fmt = fmtGet(); return pg.redraw(); }
     if(e.target.closest('[data-go]')){
-      const code = String(st.code||'').trim().slice(0,40); if(!code && !String(st.text||'').trim()){ st.msg = 'Γράψε αριθμό.'; return pg.redraw(); }
+      const code = String(st.code||'').trim().slice(0,40); if(!code && !String(st.text||'').trim() && !(st.kb==='img' && st.img)){ st.msg = st.kb==='img' ? 'Διάλεξε εικόνα.' : 'Γράψε αριθμό.'; return pg.redraw(); }
+      let bmp = null; if(lblBmp()){ const b = lblDraw(); if(b.out.length > 60000){ st.msg = 'Η ετικέτα είναι πολύ μεγάλη για εικόνα — μίκρυνε πλάτος/ύψος.'; return pg.redraw(); }
+        let bin = ''; for(let i=0;i<b.out.length;i+=0x8000) bin += String.fromCharCode.apply(null, b.out.subarray(i, i+0x8000)); bmp = {w:b.LW, h:b.LH, b64:btoa(bin)}; }
       st.msg = 'Στέλνεται…'; pg.redraw();
-      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+code, room:null, kind:'labelprint', payload:{line1:code, line2:st.text||'', copies:st.copies, fmt:Object.assign({}, fmt), only:pc, bot:pc, quiet:true}, status:'new'}).select('id').single();
+      try{ const r = await sb6.from('oncall_jobs').insert({name_key:'zzz_label', name:'🦓 Ετικέτα '+(code||'🖼'), room:null, kind:'labelprint', payload:Object.assign({line1:code, line2:st.text||'', copies:st.copies, fmt:Object.assign({}, fmt), only:pc, bot:pc, quiet:true}, bmp?{bmp}:{}), status:'new'}).select('id').single();
         if(r.error) throw r.error; st.msg = '✓ Στάλθηκε στον Zebra ('+(PCS.find(x=>x[0]===pc)||[])[1]+').'; }catch(x){ st.msg = 'Δεν στάλθηκε: '+(x.message||x); }
       pg.redraw(); }
   });
