@@ -989,6 +989,38 @@ const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
     // 9/11: και ΑΛΛΑΓΕΣ εντολών (έγκριση/ακύρωση από το κινητό: PATCH) → άμεσο σήμα (όχι αναμονή της ειδοποίησης της βάσης)
     if((m === 'POST' || m === 'PATCH') && /\/rest\/v1\/oncall_jobs(\?|$)/.test(url)) p.then(r=>{ if(r && r.ok) window.pdxJobPing(); }, ()=>{}); }catch(e){} return p; };
 }catch(e){} })();
+// 🖥 13/11 22:49 (χρήστης: «ξεχωριστό UI για υπολογιστή και για iPhone — macOS και iOS τύπου»): html.pdx-mac (υπολογιστής: φαρδιά οθόνη + ποντίκι)
+// ή html.pdx-ios (κινητό/tablet αφής). Ίδια λειτουργία, ΑΛΛΗ διάταξη: στον υπολογιστή πυκνές λίστες τύπου macOS, πλέγματα που γεμίζουν το πλάτος,
+// σελίδες ως παράθυρο στο κέντρο (όχι σπρώξιμο από δεξιά). Κλείσιμο: localStorage pdx_ui = 'ios' (ή 'mac' για να επιβληθεί).
+(function(){ const R = document.documentElement;
+  const f = ()=>{ let force = ''; try{ force = localStorage.getItem('pdx_ui') || ''; }catch(e){}
+    const mac = force ? force==='mac' : (window.innerWidth >= 820 && window.matchMedia && matchMedia('(pointer:fine)').matches);
+    R.classList.toggle('pdx-mac', mac); R.classList.toggle('pdx-ios', !mac); window.PDX_UI = mac ? 'mac' : 'ios'; };
+  f(); window.addEventListener('resize', f); window.pdxUiRefresh = f;
+  const st = document.createElement('style'); st.id = 'pdxMacCss'; st.textContent = [
+    'html.pdx-mac body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif}',
+    // Εργαλεία: πλέγμα που γεμίζει το πλάτος + ομάδες σε στήλες
+    'html.pdx-mac .mtp-freq{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important;max-width:none!important;gap:10px!important}',
+    'html.pdx-mac .mtp-freq>div{min-height:74px!important;border-radius:10px!important;border:1px solid rgba(0,0,0,.07);box-shadow:none!important;transition:background .12s}',
+    'html.pdx-mac .mtp-freq>div:hover{background:#F2F5F9!important}html.pdx-night.pdx-mac .mtp-freq>div:hover{background:#2C2C2E!important}',
+    'html.pdx-mac .mtp-cols{columns:2 360px;column-gap:18px;padding:0 4px}html.pdx-mac .mtp-cols .mtp-gw{break-inside:avoid;display:inline-block;width:100%}',
+    'html.pdx-mac .mtp-gl{border-radius:10px!important;border:1px solid rgba(0,0,0,.07)}html.pdx-mac .mtp-gr{padding:8px 12px!important;font-size:13.5px!important;gap:10px!important}',
+    'html.pdx-mac .mtp-gr:hover{background:#F2F5F9}html.pdx-night.pdx-mac .mtp-gr:hover{background:#2C2C2E}html.pdx-mac .mtp-gi{font-size:16px!important;width:20px!important}',
+    'html.pdx-mac .mtp-h{font-size:11px!important;letter-spacing:.04em}',
+    // σελίδες iOS → παράθυρο macOS στο κέντρο
+    'html.pdx-mac:not(.nv3) #iosPg{top:4vh!important;bottom:4vh!important;left:max(3vw,calc(50% - 540px))!important;right:auto!important;width:min(1080px,94vw)!important;border-radius:12px;overflow:hidden;transform:translateY(10px) scale(.985)!important;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s!important;box-shadow:0 22px 70px rgba(0,0,0,.35),0 0 0 .5px rgba(0,0,0,.25)!important}',
+    'html.pdx-mac:not(.nv3) #iosPg.on{transform:none!important;opacity:1;pointer-events:auto}',
+    'html.pdx-mac:not(.nv3) body:has(#iosPg.on)::before{content:"";position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:9599}',
+    'html.pdx-mac #iosPg .ios-nav{height:38px!important;padding-top:0!important;background:linear-gradient(#ECECEC,#E3E3E3)!important;border-bottom:1px solid #CFCFCF}',
+    'html.pdx-night.pdx-mac #iosPg .ios-nav{background:linear-gradient(#3A3A3C,#323234)!important;border-bottom-color:#111}',
+    'html.pdx-mac #iosPg .ios-ttl{font-size:13px!important;bottom:11px!important}html.pdx-mac #iosPg .ios-back{font-size:13px!important}html.pdx-mac #iosPg .ios-back b{font-size:20px!important}',
+    'html.pdx-mac #iosPg .ios-big{font-size:24px!important}html.pdx-mac .ios-h{margin:16px 24px 5px!important;font-size:11px!important}',
+    'html.pdx-mac .ios-g{border-radius:8px!important;border:1px solid rgba(0,0,0,.08)}html.pdx-night.pdx-mac .ios-g{border-color:rgba(255,255,255,.08)}',
+    'html.pdx-mac .ios-r{min-height:32px!important;font-size:13.5px!important;gap:9px!important;padding:0 12px!important}html.pdx-mac .ios-t{padding:6px 0!important}',
+    'html.pdx-mac .ios-t small{font-size:11.5px!important}html.pdx-mac .ios-i{width:22px!important;height:22px!important;font-size:13px!important;border-radius:5px!important}',
+    'html.pdx-mac .ios-r:hover{background:#F2F5F9}html.pdx-night.pdx-mac .ios-r:hover{background:#2C2C2E}html.pdx-mac .ios-r+.ios-r:before{left:43px!important}',
+    'html.pdx-mac .ios-v,html.pdx-mac .ios-r select{font-size:13.5px!important}html.pdx-mac .ios-f{margin:5px 24px 0!important;font-size:11.5px!important}'
+  ].join('\n'); (document.head || R).appendChild(st); })();
 const sb6 = window.supabase.createClient(SB6_URL, SB6_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});
 // Παλιά σημεία της εφαρμογής μιλούν στη βάση με το δημόσιο κλειδί (ανώνυμα): αρχείο, εισερχόμενα ιστορικά/εργαστηριακά,
 // λεξικό, ρυθμίσεις. Η βάση πλέον δίνει αυτά τα δεδομένα μόνο σε συνδεδεμένους, οπότε απαντούσε κενό ή «permission denied».
@@ -2311,7 +2343,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13k-v375';
+const APP_VER = '2026-11-13l-v376';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7464,7 +7496,7 @@ document.head.appendChild(st);
   };
   const nuiTop = (t, sub, right)=>'<div class="mtop"><div>'+t+(sub?'<br><span style="font-weight:400;font-size:12.5px;opacity:.85">'+sub+'</span>':'')+'</div>'+(right||'')+'</div>';
   const cmdBar = '<div onclick="pdxCmd()" style="margin:10px 12px 4px;background:#fff;border:2px solid var(--mp,#1D4E80);border-radius:16px;padding:12px 14px;font-size:15.5px;color:#64748B;cursor:pointer">🔎 Τι θέλεις να κάνεις;</div>';
-  const grp = (t, items)=>'<div class="mtp-h" style="margin:14px 16px 6px">'+t+'</div><div style="background:#fff;border-radius:16px;margin:0 12px;overflow:hidden">'+items.filter(Boolean).map(([ic,txt,sub,on])=>'<div onclick="'+on+'" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #EEF1F4;cursor:pointer;font-size:15.5px"><span style="font-size:20px;width:26px;text-align:center">'+ic+'</span><span style="flex:1">'+txt+'</span><small style="color:#94A3B8;font-size:13px">'+(sub||'›')+'</small></div>').join('')+'</div>';
+  const grp = (t, items)=>'<div class="mtp-gw"><div class="mtp-h" style="margin:14px 16px 6px">'+t+'</div><div class="mtp-gl" style="background:#fff;border-radius:16px;margin:0 12px;overflow:hidden">'+items.filter(Boolean).map(([ic,txt,sub,on])=>'<div class="mtp-gr" onclick="'+on+'" style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #EEF1F4;cursor:pointer;font-size:15.5px"><span class="mtp-gi" style="font-size:20px;width:26px;text-align:center">'+ic+'</span><span style="flex:1">'+txt+'</span><small style="color:#94A3B8;font-size:13px">'+(sub||'›')+'</small></div>').join('')+'</div></div>';
   // 📋 ΣΗΜΕΡΑ
   function todayParts(){
     const es = entries(), now = Date.now();
@@ -7504,9 +7536,10 @@ document.head.appendChild(st);
     // 12/11 βράδυ (Εργαστήριο εμφάνισης, «Πλέγμα 3»): τα 6 πιο συχνά σε πλέγμα 3 στηλών πάνω-πάνω, τα υπόλοιπα σε λίστα από κάτω
     { const F = [bot && ['🧾','Παραγγελία σε πολλούς',"pdxOrderBulk()"], ['🧪','Εργαστηριακά όλων',"window.labsFullOpen && labsFullOpen('')"], bot && ['💊','Συνταγή',"pdxDo('rxout')"],
         bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['📧','Email',"pdxMail()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
-      h += '<div class="mtp-h" style="margin:14px 16px 6px">Τα πιο συχνά</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px;max-width:620px">'
+      h += '<div class="mtp-h" style="margin:14px 16px 6px">Τα πιο συχνά</div><div class="mtp-freq" style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px;max-width:620px">'
         + F.map(x=>'<div onclick="'+x[2]+'" style="background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)"><span style="font-size:26px">'+x[0]+'</span><b style="font-size:13px;line-height:1.2">'+x[1]+'</b></div>').join('') + '</div>'; }
     const clin = ['resident','attending','admin'].indexOf(window.authRole)>=0;
+    h += '<div class="mtp-cols">';
     if(clin) h += grp('Κλινική', [
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
@@ -7532,6 +7565,7 @@ document.head.appendChild(st);
       ['🛟','Επαναφορά λίστας','', "pdxDo('snap')"]
     ]);
     h += grp('Υπολογιστές', [['🧮','Partin','', "mobCalc(null,'partin')"],['🫘','R.E.N.A.L.','', "mobCalc(null,'renal')"],['🧪','eGFR','', "mobCalc(null,'egfr')"],['🎯','EAU Risk Group','', "mobCalc(null,'eau')"]]);
+    h += '</div>';
     return h + '<div style="height:110px"></div>' + tabs();
   }
   // 👤 ΕΓΩ
@@ -8411,6 +8445,24 @@ document.head.appendChild(st);
     const order = CH.map(x=>x[1]).concat(['Άλλα','Χωρίς κωδικό']);
     return [...by.entries()].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).map(([cat, items])=>({cat, items:items.sort((x,y)=>x.code.localeCompare(y.code))}));
   };
+  // 🩺 13/11: διαγνώσεις χωρίς κωδικό → ICD-10 από τον κατάλογο του e-prescription (ακριβής τίτλος, αλλιώς όλες οι λέξεις ≥4 γραμμάτων) · κωδικοί χωρίς περιγραφή → τίτλος
+  window.pdxDxIcdify = function(G){ try{ const C = window.__pdxIcdC && window.__pdxIcdC.items; if(!C || !C.length){ if(window.pdxIcdCatLoad && !window.__dxIcdW){ window.__dxIcdW = 1; pdxIcdCatLoad(); } return G; }
+      const n = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+      const byCode = window.__dxByCode || (window.__dxByCode = new Map(C.map(x=>[String(x[0]).toUpperCase(), x[1]])));
+      const byTitle = window.__dxByTitle || (window.__dxByTitle = new Map(C.map(x=>[n(x[1]), x])));
+      const items = []; G.forEach(g=>g.items.forEach(x=>{ const y = Object.assign({}, x);
+        if(!y.code && y.desc){ const t = n(y.desc), ex = byTitle.get(t); if(ex){ y.code = ex[0]; y.desc = ex[1]; }
+          else { const w = t.split(' ').filter(z=>z.length>=4); const hit = w.length && window.pdxIcdCatFind ? pdxIcdCatFind(w, 1)[0] : null; if(hit){ y.orig = x.desc; y.code = hit[0]; y.desc = hit[1]; y.approx = true; } } }
+        else if(y.code && !y.desc){ const d = byCode.get(y.code.toUpperCase()); if(d) y.desc = d; }
+        items.push(y); }));
+      const codes = [], titles = [], meta = new Map(); items.forEach(y=>{ const k = y.code ? y.code.toUpperCase() : '?'+y.desc; if(meta.has(k)) return; meta.set(k, y); });
+      const out = new Map();
+      // ξανά ομαδοποίηση με τους νέους κωδικούς (ίδια σειρά κατηγοριών με pdxDxGroups)
+      const cats = window.pdxDxGroups(items.filter(y=>y.code).map(y=>'('+y.code+') '+y.desc), []); const idx = new Map(); cats.forEach(g=>g.items.forEach(z=>idx.set(z.code.toUpperCase(), g.cat)));
+      [...meta.values()].forEach(y=>{ const c = y.code ? (idx.get(y.code.toUpperCase()) || 'Άλλα') : 'Χωρίς κωδικό'; if(!out.has(c)) out.set(c, []); out.get(c).push(y); });
+      const order = cats.map(g=>g.cat).concat(['Άλλα','Χωρίς κωδικό']);
+      return [...out.entries()].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).map(([cat, it])=>({cat, items:it.sort((p,q)=>String(p.code).localeCompare(String(q.code)))}));
+    }catch(e){ return G; } };
   // ===== 📧 13/11 (χρήστης: «κανονική ενότητα mail σαν να μπαίνω από τον υπολογιστή — εισερχόμενα, απεσταλμένα, να στέλνω, συνημμένα, τα πάντα») =====
   // Όλα μέσω του bot του νοσοκομείου (Kerio της κλινικής, εντολή kmail op m*). Αποτελέσματα & συνημμένα ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΑ (κλειδί κλινικής)·
   // σβήνονται από τη βάση μόλις διαβαστούν. Το μήνυμα προς αποστολή (παραλήπτες/θέμα/κείμενο) φεύγει κρυπτογραφημένο. Κινητό ΚΑΙ υπολογιστής.
@@ -15233,16 +15285,31 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         return '<div class="med'+(op?' op':'')+'" style="flex-wrap:wrap" data-mi="'+i+'"><div class="m" data-mopen="'+i+'" style="cursor:pointer"><b>'+E(m.name)+' '+E(m.strength)+'</b><span>'+E(medSum(m))+'</span></div>'
         +'<span class="chev" data-mopen="'+i+'">'+(op?'▲':'▼')+'</span><button class="del" data-del="'+i+'" aria-label="Αφαίρεση" style="width:36px;height:36px;border-radius:18px">✕</button>'
         +(op ? edH(m, i) : '')+'</div>'; }).join('');
-      edWire(box); refresh();
+      edWire(box); refresh(); try{ drawFavs(); }catch(e){}
     }
+    // ⭐ 13/11 22:49 (χρήστης: «δε μπορώ να τα ξεεπιλέξω, δε μπορώ να προσθέσω/αφαιρέσω αγαπημένα»):
+    // πάτημα σε επιλεγμένο = αφαίρεση από τη συνταγή· ✎ = επεξεργασία (✕ αφαιρεί αγαπημένο, «＋ τα τωρινά» προσθέτει τα φάρμακα της συνταγής).
+    // Αποθήκευση στον λογαριασμό (user_metadata.rxFav = {add:[γραμμές], hide:[ΚΕΦΑΛΑΙΑ]}) → ίδια σε κινητό ΚΑΙ υπολογιστή.
+    const favKey = l=>{ const r = window.pdxRxSmart ? pdxRxSmart(l) : null; return r && r.name ? (r.name+'|'+(r.strength||'')).toUpperCase() : String(l).toUpperCase(); };
+    const favCfg = ()=>{ const u = (window.__pdxUser && window.__pdxUser.user_metadata && window.__pdxUser.user_metadata.rxFav) || null; let L = null; try{ L = JSON.parse(localStorage.getItem('pdx_rx_fav')||'null'); }catch(e){}
+      const c = u || L || {}; return {add: Array.isArray(c.add) ? c.add.slice(0,30) : [], hide: Array.isArray(c.hide) ? c.hide.slice(0,200) : []}; };
+    const favSave = async c=>{ try{ localStorage.setItem('pdx_rx_fav', JSON.stringify(c)); }catch(e){}
+      try{ const r = await sb6.auth.updateUser({data:{rxFav:c}}); if(r && r.data && r.data.user) window.__pdxUser = r.data.user; }catch(e){} };
+    if(!window.__pdxUser) sb6.auth.getUser().then(r=>{ if(r && r.data && r.data.user){ window.__pdxUser = r.data.user; try{ drawFavs(); }catch(e){} } }, ()=>{});
     function drawFavs(){
       const box = root.querySelector('[data-favs]'); if(!box) return;
-      const cnt = {};
+      const cnt = {}, C = favCfg(), hid = new Set(C.hide);
+      C.add.forEach(l=>{ const k = l.toUpperCase(); cnt[k] = {l, n:1e6}; });
       S.hist.forEach(j=>((j.payload||{}).meds||[]).forEach(m=>{ const l = mLineH(m); if(!l) return; const k = l.toUpperCase(); cnt[k] = cnt[k] || {l, n:0}; cnt[k].n++; }));
       const epOk = l=>{ const r = window.pdxRxSmart ? pdxRxSmart(l) : null; return !(r && r.name && window.pdxEpCatHas && pdxEpCatHas(r.name, r.strength)===false); };
-      const top = Object.keys(cnt).filter(k=>epOk(cnt[k].l)).sort((a,b)=>cnt[b].n-cnt[a].n).slice(0,12);
+      const top = Object.keys(cnt).filter(k=>!hid.has(k) && epOk(cnt[k].l)).sort((a,b)=>cnt[b].n-cnt[a].n).slice(0,14);
       if(window.pdxEpCatLoad && !box._epl){ box._epl = 1; pdxEpCatLoad().then(()=>{ try{ drawFavs(); }catch(e){} }); }
-      box.innerHTML = top.length ? top.map(k=>'<button class="ch" data-fav="'+E(cnt[k].l)+'">⭐ '+E(cnt[k].l.replace(/\s+για\s+(\d+)\s+ημέρες/,' · $1ημ.'))+'</button>').join('') : '';
+      const inRx = new Set(S.meds.map(m=>(m.name+'|'+m.strength).toUpperCase())), ed = !!S.favEd;
+      box.innerHTML = top.map(k=>{ const on = inRx.has(favKey(cnt[k].l));
+          return '<button class="ch'+(on?' on':'')+'" data-fav="'+E(cnt[k].l)+'">⭐ '+E(cnt[k].l.replace(/\s+για\s+(\d+)\s+ημέρες/,' · $1ημ.'))+(ed?' <span data-favx="'+E(k)+'" style="margin-left:4px;font-weight:700;color:#C62828">✕</span>':'')+'</button>'; }).join('')
+        + '<button class="ch" data-favedit style="opacity:.85">'+(ed?'✓ Τέλος':'✎ Αγαπημένα')+'</button>'
+        + (ed && S.meds.length ? '<button class="ch" data-favadd>＋ τα τωρινά ('+S.meds.length+')</button>' : '')
+        + (ed && C.hide.length ? '<button class="ch" data-favreset style="opacity:.8">↺ επαναφορά κρυμμένων ('+C.hide.length+')</button>' : '');
     }
     function drawHist(){
       const box = root.querySelector('[data-hist]'); if(!box) return;
@@ -15462,7 +15529,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         else if(m[1]==='f') x.freq = Math.max(1, Math.min(4, x.freq + (m[2]==='+'?1:-1))); else x.days = Math.max(1, Math.min(30, x.days + (m[2]==='+'?1:-1)));
         drawMeds(); return; }
       const dl = t.closest('[data-del]'); if(dl){ S.meds.splice(+dl.dataset.del, 1); drawMeds(); return; }
-      const fv = t.closest('[data-fav]'); if(fv){ const r = addLine(fv.dataset.fav); if(r && r.ok){ drawMeds(); fv.classList.add('on'); } else if(r && r.dup) fv.classList.add('on'); return; }
+      if(t.closest('[data-favedit]')){ S.favEd = !S.favEd; drawFavs(); return; }
+      if(t.closest('[data-favadd]')){ const C = favCfg(); S.meds.forEach(m=>{ const l = mLineH(m); if(l && !C.add.some(x=>x.toUpperCase()===l.toUpperCase())) C.add.unshift(l); C.hide = C.hide.filter(h=>h!==String(l).toUpperCase()); }); C.add = C.add.slice(0,30); favSave(C); drawFavs(); return; }
+      if(t.closest('[data-favreset]')){ const C = favCfg(); C.hide = []; favSave(C); drawFavs(); return; }
+      const fx = t.closest('[data-favx]'); if(fx){ e.stopPropagation(); const k = fx.dataset.favx, C = favCfg(); C.add = C.add.filter(x=>x.toUpperCase()!==k); if(!C.hide.includes(k)) C.hide.push(k); favSave(C); drawFavs(); return; }
+      const fv = t.closest('[data-fav]'); if(fv){ if(S.favEd) return;
+        const k = favKey(fv.dataset.fav), i = S.meds.findIndex(m=>(m.name+'|'+m.strength).toUpperCase()===k);
+        if(i>=0){ S.meds.splice(i,1); if(S.open===i) S.open = -1; drawMeds(); drawFavs(); return; }   // ξεεπιλογή
+        const r = addLine(fv.dataset.fav); if(r && r.ok){ drawMeds(); drawFavs(); } else if(r && r.notEp && window.toast) toast('Δεν υπάρχει στο e-prescription'); return; }
       const ra = t.closest('[data-ra]'); if(ra){ S.k=''; S.amka = ra.dataset.ra; lastA=''; const ia = root.querySelector('[data-amka]'); if(ia){ ia.value = S.amka; onAmka(); } return; }
       const rv = t.closest('[data-rev]'); if(rv){ if(window.pdxBotReview) pdxBotReview(+rv.dataset.rev); return; }
       // 🗑 ιστορικό: ΑΠΟΚΡΥΨΗ (payload.hid) — όχι διαγραφή από τη βάση· μόνο τελειωμένες (όχι σε εξέλιξη/για έλεγχο)
@@ -19563,9 +19637,15 @@ window.pdxOpNoteFromScan = function(p){
         h += iosGroup((KIND[kd]||['📝',kd])[0]+' '+(KIND[kd]||['',kd])[1]+' · '+L.length, L.map(row)); });
       const oth = ev.filter(e=>!KIND[e.kind] && e.kind!=='dc'); if(oth.length) h += iosGroup('📝 Άλλα · '+oth.length, oth.map(row));
       // 🩺 10/11 βράδυ (χρήστης): διαγνώσεις ΟΜΑΔΟΠΟΙΗΜΕΝΕΣ ανά κατηγορία ICD-10 (ΝΠΣ + κωδικοί του ασθενή, χωρίς διπλά)
-      { const G = window.pdxDxGroups(ev.filter(e=>e.kind==='dx').map(e=>e.title), String(p.dx||'').split(',').filter(Boolean));
-        if(G.length) h += '<div class="ios-h">🩺 Διαγνώσεις · '+G.reduce((a,g)=>a+g.items.length,0)+'</div>' + G.map(g=>'<div class="ios-g" style="margin-bottom:10px"><div style="padding:9px 16px 3px;font-size:13px;font-weight:700;color:#6D6D72">'+E4(g.cat)+' · '+g.items.length+'</div>'
-          + g.items.map(x=>'<div style="padding:7px 16px;border-top:.5px solid rgba(60,60,67,.12);font-size:15px"><b style="font-variant-numeric:tabular-nums">'+E4(x.code||'—')+'</b> '+E4(x.desc)+(x.tag?' <span style="color:#8E8E93;font-size:12.5px">'+E4(x.tag)+'</span>':'')+'</div>').join('')+'</div>').join(''); }
+      // 🩺 13/11 22:49 (χρήστης: «τις διαγνώσεις όλες σαν ICD-10 · ανά κατηγορία κανονικά σε less και αν θέλω expand»):
+      // χωρίς κωδικό → κωδικός από τον κατάλογο ICD-10 του e-prescription (≈ = κατά προσέγγιση)· κάθε κατηγορία κλειστή (2 πρώτες) → πάτημα = όλες
+      { const G = window.pdxDxIcdify(window.pdxDxGroups(ev.filter(e=>e.kind==='dx').map(e=>e.title), String(p.dx||'').split(',').filter(Boolean)));
+        st.dxOpen = st.dxOpen || {}; const allOpen = !!st.dxAll;
+        if(G.length) h += '<div class="ios-h" style="display:flex;justify-content:space-between;align-items:center">🩺 Διαγνώσεις · '+G.reduce((a,g)=>a+g.items.length,0)+'<button data-dxall style="border:0;background:none;color:var(--acc,#0A84FF);font-size:14px;font-weight:600;padding:0">'+(allOpen?'Σύμπτυξη':'Ανάπτυξη όλων')+'</button></div>'
+          + G.map(g=>{ const op = allOpen || st.dxOpen[g.cat], L = op ? g.items : g.items.slice(0,2), more = g.items.length - L.length;
+            return '<div class="ios-g" style="margin-bottom:10px"><div data-dxcat="'+E4(g.cat)+'" style="padding:9px 16px 3px;font-size:13px;font-weight:700;color:#6D6D72;cursor:pointer;display:flex;justify-content:space-between"><span>'+E4(g.cat)+' · '+g.items.length+'</span><span>'+(g.items.length>2?(op?'▲':'▼'):'')+'</span></div>'
+            + L.map(x=>'<div style="padding:7px 16px;border-top:.5px solid rgba(60,60,67,.12);font-size:15px"><b style="font-variant-numeric:tabular-nums">'+E4(x.code||'—')+'</b>'+(x.approx?'<span style="color:#8E8E93" title="κατά προσέγγιση από τον κατάλογο">≈</span>':'')+' '+E4(x.desc)+(x.orig?'<div style="color:#8E8E93;font-size:12.5px">ΝΠΣ: '+E4(x.orig)+'</div>':'')+(x.tag?' <span style="color:#8E8E93;font-size:12.5px">'+E4(x.tag)+'</span>':'')+'</div>').join('')
+            + (more>0 ? '<div data-dxcat="'+E4(g.cat)+'" style="padding:7px 16px;border-top:.5px solid rgba(60,60,67,.12);font-size:14px;color:var(--acc,#0A84FF);cursor:pointer">+ '+more+' ακόμα</div>' : '') + '</div>'; }).join(''); }
       if(!ev.length && !(p.studies||[]).length) h += '<div style="margin:16px;color:#8E8E93">Ο φάκελος είναι άδειος — πάτα «↻ Φέρε φάκελο από το ΝΠΣ».</div>';
       // 10/11 βράδυ (χρήστης: «πάτησα φέρε φάκελο αλλά δεν βλέπω το loading»): πρόοδος/αποτέλεσμα ΚΑΙ εδώ, στο κουμπί
       h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">'+(st.busy && /Φάκελος/.test(st.busy) ? '<span class="pdx-spin" style="display:inline-block;width:14px;height:14px;border-width:2px;vertical-align:-2px;margin-right:6px"></span>' : '↻ ')+'Φέρε φάκελο από το ΝΠΣ</b>',
@@ -19604,6 +19684,8 @@ window.pdxOpNoteFromScan = function(p){
       const dc = e.target.closest('[data-adoc]'); if(dc){ const k = 'd'+dc.dataset.adoc; if(st.pdf[k] && st.pdf[k].html){ st.pdf[k].html = ''; pg.redraw(); return; } return pdfOpen(k, +dc.dataset.adoc); }
       const bx = e.target.closest('[data-abx]'); if(bx){ e.stopPropagation(); const v = bx.dataset.v==='1' ? true : bx.dataset.v==='0' ? false : null; st.busy = 'Αποθήκευση χαρακτηρισμού…'; pg.redraw();
         try{ await pdxDbCall('POST', '/api/events/'+bx.dataset.abx+'/bx', {malignant:v}); st.msg = v===true ? '✓ 🎗 Κακοήθεια' : v===false ? '✓ Καλοήθης' : '✓ χωρίς χαρακτηρισμό'; }catch(er){ st.msg = '⚠ '+er.message; } st.busy=''; return load(true); }
+      if(e.target.closest('[data-dxall]')){ st.dxAll = !st.dxAll; st.dxOpen = {}; return pg.redraw(); }
+      { const dc = e.target.closest('[data-dxcat]'); if(dc){ st.dxOpen = st.dxOpen || {}; const k = dc.dataset.dxcat; st.dxOpen[k] = !st.dxOpen[k]; if(st.dxAll && !st.dxOpen[k]){ st.dxAll = false; } return pg.redraw(); } }
       if(e.target.closest('.apdf, button, a')) return;
       const ev = e.target.closest('[data-aev]'); if(ev){ const k = ev.dataset.aev; st.open[k] = !st.open[k]; pg.redraw(); return; }
       if(e.target.closest('[data-adoss]') && st.p){ const p = st.p; return job('npsdossier', {name:(p.surname+' '+(p.firstname||'')).trim(), amka:p.amka||'', todb:true}, '📂 Φάκελος ΝΠΣ'); }
@@ -19662,8 +19744,9 @@ window.pdxEpsineOpen = function(){
       return h + '<div style="height:50px"></div>'; }
     h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">↻ Φέρε τη λίστα από το ΝΠΣ</b>', sub: (st.at ? 'τελευταία: '+new Date(st.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' · ' : '')+'αυτόματα κάθε νύχτα 01:10 · μόνο ανάγνωση', on:'void 0', data:'data-erl'}]);
     if(st.rows){ const P = st.rows.filter(pend), D = st.rows.filter(r=>!pend(r));
-      const NG = st.night || {}, PN = P.filter(r=>NG[r.amka]), PO = P.filter(r=>!NG[r.amka]);
-      const row = r=>({t:'<b>'+E5(r.name)+'</b>', sub:E5(r.adm)+' → '+E5(r.dc)+' · '+E5(r.st)+(NG[r.amka]?' · 🌙 '+E5(NG[r.amka]):''), on:'void 0', data:'data-ept="'+E5(r.amka)+'"'});
+      const NG = st.night || {}, FLm = st.fail || {}, PF = P.filter(r=>FLm[r.amka]), PN = P.filter(r=>!FLm[r.amka] && NG[r.amka]), PO = P.filter(r=>!FLm[r.amka] && !NG[r.amka]);
+      const row = r=>({t:'<b>'+E5(r.name)+'</b>', sub:E5(r.adm)+' → '+E5(r.dc)+' · '+E5(r.st)+(FLm[r.amka]?'<div style="color:#FF453A;white-space:normal;margin-top:2px">⚠ '+E5(FLm[r.amka])+'</div>':NG[r.amka]?'<div style="color:#FF9F0A;white-space:normal;margin-top:2px">🌙 '+E5(NG[r.amka])+'</div>':''), on:'void 0', data:'data-ept="'+E5(r.amka)+'"'});
+      if(PF.length) h += iosGroup('⚠ Δεν τα κατάφερε · '+PF.length, PF.map(row), 'Η αιτία γράφεται κάτω από κάθε όνομα — πες μου τι να κάνω σε αυτή την περίπτωση.');
       if(PN.length) h += iosGroup('🌙 Για έλεγχο (από τη νύχτα) · '+PN.length, PN.map(row), 'Δεν οριστικοποιήθηκαν αυτόματα — συμπλήρωσε τα κενά και οριστικοποίησε.');
       h += PO.length ? iosGroup('Εκκρεμούν · '+PO.length, PO.map(row)) : (PN.length ? '' : '<div style="margin:16px;color:#8E8E93">Καμία εκκρεμότητα 🎉</div>');
       if(D.length) h += iosGroup('Ολοκληρωμένα · '+D.length, D.slice(0,30).map(r=>({t:E5(r.name), sub:E5(r.dc)+' · '+E5(r.sub)}))); }
@@ -19672,9 +19755,13 @@ window.pdxEpsineOpen = function(){
   const loadList = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','epsinelist').in('status',['done','dismissed']).not('payload->result','is',null).gt('payload->result->n', 0).order('id',{ascending:false}).limit(1);
       const j = (r.data||[])[0]; if(j && j.payload && j.payload.result && j.payload.result.enc){ await pdxCK.ready(); const d = await pdxCK.decrypt(j.payload.result.enc); st.rows = d.rows||[]; st.at = d.at; } }catch(e){ st.msg = '⚠ '+(e.message||e); }
     // 🌙 12/11: ό,τι άφησε η νυχτερινή ΕΨΙΝΕ «για έλεγχο» (κενό Χειρουργείο/Οδηγίες ή ίδια μέρα) τις τελευταίες 4 ημέρες
-    try{ const q = await sb6.from('oncall_jobs').select('payload,note').eq('kind','epsine').eq('status','done').gte('created_at', new Date(Date.now()-4*864e5).toISOString()).order('id',{ascending:false}).limit(200);
-      const NG = {}; (q.data||[]).forEach(x=>{ const R = (x.payload||{}).result||{}, a = R.amka || (x.payload||{}).amka; if(!a || NG[a] || !/^🌙 ΕΨΙΝΕ νύχτας — ΔΕΝ/.test(String(x.note||''))) return;
-        NG[a] = [].concat((R.miss||[]).map(m=>'κενό '+m), R.sameDay?['ίδια μέρα']:[]).join(', ') || 'για έλεγχο'; }); st.night = NG; }catch(e){}
+    // ⚠ 13/11 22:49 (χρήστης: «κράτα αυτά που δε μπορείς και ανέφερέ μου απευθείας ποιο είναι το πρόβλημα — αλλιώς ξανανοίγουμε τον καθένα»):
+    // και οι ΑΠΟΤΥΧΙΕΣ (failed) με την αιτία τους· μετράει μόνο η ΤΕΛΕΥΤΑΙΑ εργασία του ασθενή (μια νεότερη επιτυχία τις σβήνει)
+    try{ const q = await sb6.from('oncall_jobs').select('payload,note,status').eq('kind','epsine').in('status',['done','failed','approved','dismissed']).gte('created_at', new Date(Date.now()-4*864e5).toISOString()).order('id',{ascending:false}).limit(300);
+      const NG = {}, FL = {}, seen = new Set(); (q.data||[]).forEach(x=>{ const R = (x.payload||{}).result||{}, a = R.amka || (x.payload||{}).amka, nt = String(x.note||''); if(!a || seen.has(a)) return;
+        if(x.status==='failed'){ seen.add(a); FL[a] = nt.replace(/^📑\s*ΕΨΙΝΕ:\s*/,'').replace(/\s*·\s*⏱.*$/,'').slice(0,300) || 'απέτυχε'; return; }
+        if(x.status==='done' && /^🌙 ΕΨΙΝΕ νύχτας — ΔΕΝ/.test(nt)){ seen.add(a); NG[a] = [].concat((R.miss||[]).map(m=>'κενό '+m), R.sameDay?['ίδια μέρα (ίσως Ουρολογικό Ημέρας)']:[]).join(', ') || 'για έλεγχο'; return; }
+        if(/^(approved|dismissed)$/.test(x.status) || x.status==='done') seen.add(a); }); st.night = NG; st.fail = FL; }catch(e){}
     pg.redraw(); };
   const fetchList = async ()=>{ if(st.busy) return; st.busy = 'Το bot διαβάζει τη λίστα ΕΨΙΝΕ από το ΝΠΣ…'; st.msg=''; pg.redraw();
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_eps', name:'📑 ΕΨΙΝΕ', room:null, kind:'epsinelist', payload:{quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
@@ -22618,6 +22705,138 @@ window.histUploadOpen = function(){
 <style id="pdxNight2">
 /* 🌙 7/11: σκούρο θέμα — ενιαίο (εργαστηριακά + γενικοί κανόνες για παράθυρα με λευκό φόντο γραμμένο μέσα στη σελίδα) */
 html.pdx-night{--card:#1C1C1E;--bg2:#2C2C2E;--sep:#38383A;--t1:#F2F2F7;--t2:#AEAEB2;--t3:#8E8E93}
+/* 13/11 22:49 (χρήστης: «στο dark mode τα μπλε γράμματα δε φαίνονται παντού»): σκούρο μπλε κείμενο → ανοιχτό μπλε (κλάσεις: χωρίς !important, ώστε να μένουν οι ειδικοί κανόνες που ακολουθούν) */
+html.pdx-night .btn-secondary,
+html.pdx-night .report-bar .print,
+html.pdx-night .prev-value-badge,
+html.pdx-night #remindersViewBody .room-tag,
+html.pdx-night .hsa,
+html.pdx-night #mobView .mhi button,
+html.pdx-night #mobView .msec-t h3 em,
+html.pdx-night #mobView .mgedit,
+html.pdx-night #mobView .meb,
+html.pdx-night #mobView .mroom,
+html.pdx-night #mobView .mtag,
+html.pdx-night #mobView .dcard h4 em,
+html.pdx-night #mobView .dt.empty b,
+html.pdx-night #mobView .dres b,
+html.pdx-night #mobView .mqx,
+html.pdx-night #mobView .mqk button,
+html.pdx-night #mobView .mrb,
+html.pdx-night #mobView .mtp-who,
+html.pdx-night #mobView .mtp-cat button,
+html.pdx-night #mobView .mtp-new2 select,
+html.pdx-night #mobView .mtabs .on,
+html.pdx-night #mobView .mth,
+html.pdx-night #mobSheet .val,
+html.pdx-night #mobView .mbar button,
+html.pdx-night #mobView .mqf,
+html.pdx-night #mobView .mjob .ja button,
+html.pdx-night #mobView .js.run,
+html.pdx-night #mobView .mdvl .dvml.e,
+html.pdx-night #mobView .mhdr span,
+html.pdx-night #mobView .ptab-s button,
+html.pdx-night #mobView .ptab-a,
+html.pdx-night #mobView .mact button,
+html.pdx-night .pnav .pnb,
+html.pdx-night #chBar.pnav .pnb,
+html.pdx-night #chBar.pnav button.back,
+html.pdx-night #mobView .mtop.pnav .pna button,
+html.pdx-night #chBar.pnav .tools button,
+html.pdx-night .pnav .pna button,
+html.pdx-night .pnav .tools button,
+html.pdx-night .pnav .mtb button,
+html.pdx-night .pbt,
+html.pdx-night .pbg,
+html.pdx-night #ahfyLabs .al-chip,
+html.pdx-night #labsFull .lf-bar button,
+html.pdx-night #labInbox .li-foot .sec,
+html.pdx-night #mobView .nv-tb button.on,
+html.pdx-night #mobView .nv-st.p,
+html.pdx-night #mobView .nv-p.b,
+html.pdx-night #mobView .nvr .nv-bn,
+html.pdx-night #mobView .nv-acts button,
+html.pdx-night #mobView .ptgh button,
+html.pdx-night #mobView .ptr.pted:after,
+html.pdx-night #mobView .ptact button,
+html.pdx-night #qeOv .qc,
+html.pdx-night #qeOv .qtab.has,
+html.pdx-night .qgh em,
+html.pdx-night #labInbox .li-v b,
+html.pdx-night .pf-bar button,
+html.pdx-night .pf-cancel,
+html.pdx-night .pf-err button,
+html.pdx-night .pf-cr button,
+html.pdx-night .pf-chips button,
+html.pdx-night .pf-act .s,
+html.pdx-night .psf-tg,
+html.pdx-night .psf-clr,
+html.pdx-night .psf-pg button,
+html.pdx-night #pdxIsl,
+html.pdx-night #pdxApv .ab,
+html.pdx-night .rxs .h button,
+html.pdx-night .rxs .stp button,
+html.pdx-night .rxs .again,
+html.pdx-night .rxs .chs2 button,
+html.pdx-night .rxs .mf select,
+html.pdx-night .rxs .g select[data-rep],
+html.pdx-night .rxs .g select[data-every],
+html.pdx-night .rxs .mf input.v,
+html.pdx-night .rxs .pt,
+html.pdx-night .rxs .sgc button.on,
+html.pdx-night .rxs .dw .ds b.on,
+html.pdx-night .rxs .dwa,
+html.pdx-night .rxs .bxc button,
+html.pdx-night .pk-chip,
+html.pdx-night .pk-h button,
+html.pdx-night .pk-tag,
+html.pdx-night .pk-bdg.me,
+html.pdx-night .pkx .nav button,
+html.pdx-night .pkx .tg1,
+html.pdx-night .pkx .tg1 button,
+html.pdx-night .pkx .stp button,
+html.pdx-night .pkx .addrow,
+html.pdx-night .pkx .pv .chg,
+html.pdx-night .pkx .dstp button,
+html.pdx-night .pkx .note,
+html.pdx-night .pkx .acts .ab,
+html.pdx-night #ahfyLabs td.L,
+html.pdx-night #ahfyLabs .al-card .L,
+html.pdx-night #labsFull .lf-t tr.lf-g td,
+html.pdx-night #labsFull .lf-t td.dn,
+html.pdx-night #labsFull .lf-chip.dn,
+html.pdx-night #labsFull .lf-tile.dn .tv,
+html.pdx-night #labsFull .lf-gh,
+html.pdx-night #labsFull .lf-row.dn .vl b,
+html.pdx-night #lfSetOv .ls-tabs button,
+html.pdx-night #lfSetOv .ls-pre button,
+html.pdx-night #lfSetOv .ls-gh,
+html.pdx-night #lfSetOv .ls-t.on,
+html.pdx-night #labsFull .lm-x,
+html.pdx-night #labsFull .lm-ic,
+html.pdx-night #labsFull .lm-xbtn,
+html.pdx-night #lmCh .lm-sh button,
+html.pdx-night #labsFull .lf-mchip,
+html.pdx-night .ch-bar button.on,
+html.pdx-night .ch-card h3,
+html.pdx-night .ch-med .s,
+html.pdx-night .ch-sug-row .t,
+html.pdx-night .ch-add,
+html.pdx-night .ch-btn.s,
+html.pdx-night #mobView .mhist,
+html.pdx-night #mobView .maddc button,
+html.pdx-night .ch-room .rn,
+html.pdx-night .ch-bed,
+html.pdx-night .ch-pill,
+html.pdx-night .ptx-c,
+html.pdx-night .ptx-r .lk,
+html.pdx-night .ptx-pg button,
+html.pdx-night .ptx-act button,
+html.pdx-night .ptx-dca button,
+html.pdx-night #ptxSheet .hd button,
+html.pdx-night #app table.cls-A .cls-room-n,
+html.pdx-night #app table.cls-A .patient-row td.f-room{color:#64B5FF}
+html.pdx-night [style*="color:#1D4E80"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:#1B4B66"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:#1D4ED8"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:#1E40AF"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:var(--primary)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:var(--acc)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:var(--acc,#1D4E80)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]),html.pdx-night [style*="color:var(--mp)"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]):not([style*="background:var(--primary"]):not([style*="background:var(--acc"]):not([style*="background:#1D4E80"]):not([style*="background:#1B4B66"]){color:#64B5FF!important}
 html.pdx-night body{background:#000}
 html.pdx-night #loginOv{background:#000!important}
 html.pdx-night #loginOv h1,html.pdx-night #loginOv h2{color:#64B5FF}
@@ -23148,9 +23367,12 @@ window.CLS_MODE='A';
       if(st.mbusy) h += '<div class="ios-g"><div class="pdx-load"><span class="pdx-spin"></span><b>'+esc(st.mbusy)+'</b></div></div>';
       if(st.merr) h += iosGroup('', [{t:'<span style="color:#FF3B30">⚠ '+esc(st.merr)+'</span>'}]);
       if(st.m && st.m.none) h += iosGroup('', [{t:'Δεν βρέθηκε mail προγράμματος για '+esc(lbl(st.iso)), sub: (st.m.seen||[]).length ? 'Τελευταία: '+esc(st.m.seen.join(' · ')) : ''}]);
-      if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ h += '<div class="ios-f" style="margin-top:8px">'+(f.extra?'➕ ':'')+'<b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+'</div>'
+      if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ h += '<div class="ios-f" style="margin-top:8px">'+(f.extra?'➕ ':'')+'<b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
         + '<div class="ors-pdf" data-orpz="'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+(st.pz===i?'auto':'hidden')+';-webkit-overflow-scrolling:touch">'+(f.imgs||[]).map(u=>'<img src="'+u+'" style="display:block;'+(st.pz===i?'width:220%;max-width:none':'width:100%')+'">').join('')+'</div>'; });
       h += '<button class="ors-btn" data-or="mail"'+(st.mbusy?' disabled style="opacity:.5"':'')+'>📧 Ξανά από το mail</button>';
+      // 📧 13/11 22:49 (χρήστης: «αν το έχεις βρει από το Kerio, μην εμφανίζεις του φακέλου»)
+      const mailOk = !!(st.m && st.m.files && st.m.files.length);
+      if(mailOk && !st.showDir){ h += '<button class="ors-btn" data-or="dir" style="opacity:.75">📁 Δείξε και του φακέλου</button><div style="height:30px"></div>'; return h; }
       h += '<div class="ios-h" style="margin-top:18px">📁 Από τον φάκελο (Excel)</div>';
       if(st.err) h += iosGroup('', [{t:'<span style="color:#FF3B30">⚠ '+esc(st.err)+'</span>'}]);
       if(st.busy) h += '<div class="ios-g" style="margin-top:12px"><div class="pdx-load"><span class="pdx-spin"></span><b>'+esc(st.busy)+'</b></div></div>';
@@ -23168,15 +23390,33 @@ window.CLS_MODE='A';
       st.busy = ''; pg.redraw(); };
     // 📧 PDF από το mail: εντολή kmail {op:'orpdf'} στο bot που έχει τον λογαριασμό Kerio → κρυπτογραφημένο στο img-enc → σελίδες ως εικόνες (pdf.js)·
     // κρυπτογραφημένη μνήμη 10 ημερών στη συσκευή (pdxBxCache «or|ημερομηνία»)
+    // 🔄 13/11 22:49 (χρήστης: «αν είναι στραμμένο στο πλάι να το ισιώνεις»): οι γραμμές κειμένου ενός όρθιου εγγράφου δίνουν έντονες διακυμάνσεις
+    // στο άθροισμα σκούρων ανά ΓΡΑΜΜΗ· όταν οι διακυμάνσεις είναι ανά ΣΤΗΛΗ, η σελίδα είναι γυρισμένη 90° → ίσιωμα. Κατεύθυνση: το κείμενο
+    // ξεκινά αριστερά → η «βαριά» πλευρά (αρχές γραμμών) βρίσκεται πάνω ή κάτω· ↻ στη σελίδα για χειροκίνητη διόρθωση (μένει στη συσκευή).
+    const orRotGuess = (c)=>{ try{ const W = 240, H = Math.max(1, Math.round(c.height * W / c.width)), t = document.createElement('canvas'); t.width = W; t.height = H; const x = t.getContext('2d'); x.drawImage(c, 0, 0, W, H);
+        const d = x.getImageData(0, 0, W, H).data, R = new Float64Array(H), C = new Float64Array(W); let tot = 0;
+        for(let y=0;y<H;y++) for(let i=0;i<W;i++){ const k = (y*W+i)*4, dk = (d[k]+d[k+1]+d[k+2]) < 380 ? 1 : 0; R[y] += dk; C[i] += dk; tot += dk; }
+        if(tot < 50) return 0;
+        // διακύμανση γειτονικών (υψηλή συχνότητα = γραμμές κειμένου), κανονικοποιημένη στο μέσο
+        const hf = A=>{ let m = 0; for(const v of A) m += v; m /= A.length || 1; let s = 0; for(let i=1;i<A.length;i++) s += Math.abs(A[i]-A[i-1]); return s / (A.length * (m || 1)); };
+        const r = hf(R), cc = hf(C); if(!(cc > r * 1.35)) return 0;
+        // γυρισμένο: οι αρχές των γραμμών (πυκνότερο μελάνι) είναι πάνω → γύρισμα δεξιόστροφα (90)· κάτω → αριστερόστροφα (270)
+        let top = 0, bot = 0; for(let y=0;y<H;y++){ if(y < H*0.3) top += R[y]; else if(y > H*0.7) bot += R[y]; }
+        return top >= bot ? 90 : 270; }catch(e){ return 0; } };
+    const orRotate = (c, deg)=>{ const o = document.createElement('canvas'), q = ((deg % 360) + 360) % 360; if(!q) return c; const sw = q % 180 !== 0; o.width = sw ? c.height : c.width; o.height = sw ? c.width : c.height;
+      const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(q * Math.PI / 180); x.drawImage(c, -c.width/2, -c.height/2); return o; };
+    window.pdxOrRotGuess = orRotGuess;
     const pdfImgs = async (bytes)=>{ await new Promise((ok,no)=>{ if(window.pdfjsLib) return ok(); const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload=ok; sc.onerror=()=>no(new Error('δεν φορτώθηκε ο προβολέας PDF')); document.head.appendChild(sc); });
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const doc = await pdfjsLib.getDocument({data: bytes}).promise, out = [];
       for(let i=1;i<=Math.min(doc.numPages, 8);i++){ const pgx = await doc.getPage(i), v0 = pgx.getViewport({scale:1}), sc = Math.min(3, 2000/Math.max(v0.width, v0.height)), v = pgx.getViewport({scale:sc});
-        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; out.push(c.toDataURL('image/jpeg', .85)); }
+        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; const deg = orRotGuess(c); out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85)); }
       return out; };
     const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
-      for(const f of (ix.files||[])) files.push(Object.assign({}, f, {imgs: await pdfImgs(bytes.slice(f.o, f.o+f.l))}));
+      for(const f of (ix.files||[])){ let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); const extra = rotGet(f); if(extra) imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); files.push(Object.assign({}, f, {imgs})); }
       st.m = {files}; };
+    const rotK = f=>'pdx_or_rot|'+st.iso+'|'+(f.n||f.subj||''), rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
+    const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
     const loadMail = async (fresh)=>{ st.merr = ''; if(typeof sb6==='undefined') return; const ck = 'or|'+st.iso;
       try{ if(!fresh){ const c = await pdxBxCache.get(ck); if(c && c.idx && c.bin){ st.mbusy = 'Άνοιγμα…'; pg.redraw(); await showMail(c.idx, c.bin); st.mbusy=''; pg.redraw(); return; } }
         st.m = null; st.mbusy = 'Το bot διαβάζει τα απεσταλμένα του Kerio…'; pg.redraw();
@@ -23199,8 +23439,11 @@ window.CLS_MODE='A';
       const k = Math.min(1, pv.clientWidth / pa.offsetWidth); pa.style.transform = 'scale('+k+')'; pv.style.height = Math.ceil(pa.offsetHeight * k)+'px'; };
     const rd0 = pg.redraw; pg.redraw = ()=>{ rd0(); requestAnimationFrame(fit); }; window.addEventListener('resize', ()=>{ if(pg.el.isConnected) fit(); });
     pg.el.addEventListener('click', e=>{ if(e.target.closest('[data-orszoom]')){ st.zoom = !st.zoom; pg.redraw(); return; }
+      const rr = e.target.closest('[data-orrot]'); if(rr){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+rr.dataset.orrot]; if(!f) return;
+        try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){} Promise.all(f.imgs.map(u=>rotUrl(u, 90))).then(L=>{ f.imgs = L; pg.redraw(); }); return; }
       const z = e.target.closest('[data-orpz]'); if(z){ const i = +z.dataset.orpz; st.pz = st.pz===i ? null : i; pg.redraw(); return; } });
     pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
+      if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
       if(b.dataset.or==='fresh') return load(true);
       if(b.dataset.or==='mail') return st.mbusy ? null : loadMail(true);
       const k = +b.dataset.od; if(k===0) st.iso = orIso(pdxOrTarget()); else { const x = new Date(st.iso+'T12:00:00'); do{ x.setDate(x.getDate()+k); }while([1,3,5].indexOf(x.getDay())<0); st.iso = orIso(x); }
