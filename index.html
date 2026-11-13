@@ -2383,7 +2383,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13n-v378';
+const APP_VER = '2026-11-13o-v379';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8987,6 +8987,9 @@ document.head.appendChild(st);
   html.pdx-night #mobView .nvr+.nvr:before{border-top-color:#38383A}
   /* 🖥 υπολογιστής: 3 στήλες (πλαϊνή μπάρα · λίστα · πάνελ) — ΟΛΑ ανοίγουν στο δεξί πάνελ */
   #mobView.desk.nv3{grid-template-columns:220px minmax(520px,46%) minmax(440px,1fr)!important;transition:grid-template-columns .22s ease}
+  #mobView.desk.dkfull{grid-template-columns:1fr 0!important}#mobView.desk.nv3.dkfull{grid-template-columns:220px 1fr 0!important}#mobView.desk.dkfull .dk-r{display:none!important}#mobView.desk.dkfull .dk-l{border-right:0!important}
+  html.nv3.nvfull #iosPg,html.nv3.nvfull .iosPgU,html.nv3.nvfull #mobSubPop{left:var(--nvS,220px)!important}
+  html.pdx-mac #mobView.desk.dkfull .dk-l>*{max-width:1100px}
   #mobView.desk.nv3.sidec{grid-template-columns:0 minmax(560px,48%) minmax(440px,1fr)!important}
   #mobView.desk.nv3.sidec .dk-s{padding:0!important;overflow:hidden;border:0!important}
   #mobView.desk.nv3 .nv-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -10007,8 +10010,11 @@ document.head.appendChild(st);
       const Lp = view.querySelector('.dk-l'), Rp = view.querySelector('.dk-r'), ly = Lp ? Lp.scrollTop : 0, ry = Rp ? Rp.scrollTop : 0;
       const sig = String(openKey)+'|'+(!!window.__tp), same = view.__dkSig === sig;
       const left = tab==='todo' ? todoTab() : tab==='today' && NUI() ? todayTab() : tab==='me' && NUI() ? meTab() : tab==='tools' ? (NUI() ? toolsTab2() : toolsTab()) : tab==='bot' ? botTab() : list();
-      const right = openKey ? detail(openKey) : '<div class="dk-empty"><div>👈 Διάλεξε ασθενή από τη λίστα<br><small>Ο κλασικός πίνακας και η εκτύπωση μένουν ίδια: κουμπί «⬅ Κλασικός πίνακας» πάνω αριστερά.</small></div></div>';
+      const right = openKey ? detail(openKey) : /^(tools|me|today|bot)$/.test(tab) ? '' : '<div class="dk-empty"><div>👈 Διάλεξε ασθενή από τη λίστα<br><small>Ο κλασικός πίνακας και η εκτύπωση μένουν ίδια: κουμπί «⬅ Κλασικός πίνακας» πάνω αριστερά.</small></div></div>';
       const nv3 = VM()!=='classic'; view.classList.toggle('nv3', nv3); document.documentElement.classList.toggle('nv3', nv3);
+      // 🖥 13/11 23:27 (χρήστης: «το "Διάλεξε ασθενή από τη λίστα" δεν ισχύει αφού δεν είμαστε σε λίστα ασθενών»): Εργαλεία/Ρυθμίσεις/Σήμερα χωρίς ανοιχτό ασθενή
+      // → ΟΛΟ το πλάτος (χωρίς κενό δεξί μέρος)· οι σελίδες τους ανοίγουν από την πλαϊνή στήλη και μετά (όχι στο κενό μισό)
+      const full = !openKey && /^(tools|me|today|bot)$/.test(tab); view.classList.toggle('dkfull', full); document.documentElement.classList.toggle('nvfull', full);
       try{ view.classList.toggle('sidec', nv3 && localStorage.getItem('pdx_side_c')==='1'); }catch(e){}
       if(nv3) setTimeout(()=>{ try{ nvMeasure(); }catch(e){} }, 0);
       view.innerHTML = (nv3 ? '<div class="dk-s">'+nvSide()+'</div>' : '')+'<div class="dk-l">'+left+'</div><div class="dk-r">'+right+'</div>';
