@@ -976,7 +976,16 @@ const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
     ch.send({type:'broadcast', event:'job', payload:{at:Date.now()}}).catch(()=>{}); }catch(e){} };
   // 13/11 (Α2): ~3% των σημάτων χάνονται (ξύπνημα 50–130″ χωρίς άλλη εργασία σε εξέλιξη) → το ίδιο σήμα ξαναστέλνεται στα 3″ και 8″ (το bot απλώς ξανακοιτά την ουρά)
   window.pdxJobPing = function(){ clearTimeout(t); clearTimeout(t2); clearTimeout(t3); t = setTimeout(send, 60); t2 = setTimeout(send, 3000); t3 = setTimeout(send, 8000); };
-  window.fetch = function(u, o){ const p = F.apply(this, arguments); try{ const url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
+  // 🖥 13/11 (χρήστης): από υπολογιστή με bot → συνταγή/παραπεμπτικό/εκτύπωση τρέχουν στο bot ΤΟΥ ΙΔΙΟΥ υπολογιστή (εκτύπωση στον δικό του A4).
+  // Το bot γράφει window.__efbotSelf σε αυτή την καρτέλα (ανά ~25″)· χωρίς φρέσκια σήμανση (κινητό/άλλος υπολογιστής) τίποτα δεν αλλάζει.
+  const HERE = /^(rx|ref|epprint|eprxcancel|epvisitclose)$/;
+  const here = (o)=>{ try{ const me = window.__efbotSelf; if(!me || !me.id || Date.now()-(+me.at||0) > 90000 || localStorage.getItem('pdx_here_off')==='1') return o;
+    if(!o || typeof o.body !== 'string' || !/"kind":"(rx|ref|epprint|eprxcancel|epvisitclose)"/.test(o.body)) return o;
+    const j = JSON.parse(o.body), L = Array.isArray(j) ? j : [j]; let ch = false;
+    L.forEach(r=>{ if(r && HERE.test(r.kind||'') && r.payload && typeof r.payload==='object' && !r.payload.only && !r.payload.assign){ r.payload.only = me.id; r.payload.here = 1; ch = true; } });
+    return ch ? Object.assign({}, o, {body: JSON.stringify(j)}) : o; }catch(e){ return o; } };
+  window.fetch = function(u, o){ try{ if(o && String(o.method||'').toUpperCase()==='POST' && /\/rest\/v1\/oncall_jobs(\?|$)/.test(String((u && u.url) || u || ''))) o = here(o); }catch(e){}
+    const p = F.call(this, u, o); try{ const url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
     // 9/11: και ΑΛΛΑΓΕΣ εντολών (έγκριση/ακύρωση από το κινητό: PATCH) → άμεσο σήμα (όχι αναμονή της ειδοποίησης της βάσης)
     if((m === 'POST' || m === 'PATCH') && /\/rest\/v1\/oncall_jobs(\?|$)/.test(url)) p.then(r=>{ if(r && r.ok) window.pdxJobPing(); }, ()=>{}); }catch(e){} return p; };
 }catch(e){} })();
@@ -2302,7 +2311,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13i-v373';
+const APP_VER = '2026-11-13j-v374';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
