@@ -1061,6 +1061,9 @@ const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
   window.pdxContrastScan = ()=>{ undo(); MB = new Map(); if(on) scan(document.body); };
   const go = ()=>{ new MutationObserver(upd).observe(R, {attributes:true, attributeFilter:['class']}); upd(); };
   if(document.body) go(); else document.addEventListener('DOMContentLoaded', go); })();
+// ☑ 13/11 23:32 (χρήστης: «πατάω "όλα" και αν το ξαναπατήσω δεν ξεεπιλέγει — αυτό το είχαμε και αλλού»): ΚΟΙΝΟΣ κανόνας για κάθε «επιλογή όλων/ομάδας»:
+// αν είναι ήδη ΟΛΑ επιλεγμένα → ξεεπιλέγονται· αλλιώς επιλέγονται. Επιστρέφει true αν τώρα είναι επιλεγμένα. (docs/ΚΑΝΟΝΕΣ_UI.md κανόνας 1)
+window.pdxTgAll = function(set, keys){ keys = [...keys]; const all = keys.length && keys.every(k=>set.has(k)); keys.forEach(k=>all ? set.delete(k) : set.add(k)); return !all; };
 const sb6 = window.supabase.createClient(SB6_URL, SB6_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});
 // Παλιά σημεία της εφαρμογής μιλούν στη βάση με το δημόσιο κλειδί (ανώνυμα): αρχείο, εισερχόμενα ιστορικά/εργαστηριακά,
 // λεξικό, ρυθμίσεις. Η βάση πλέον δίνει αυτά τα δεδομένα μόνο σε συνδεδεμένους, οπότε απαντούσε κενό ή «permission denied».
@@ -2383,7 +2386,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13o-v379';
+const APP_VER = '2026-11-13p-v380';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10568,7 +10571,7 @@ document.head.appendChild(st);
     ov.addEventListener('click', e=>{
       if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
       const q = e.target.closest('[data-q]'); if(q){ txt = q.dataset.q; return draw(); }
-      const pp = e.target.closest('[data-p]'); if(pp){ const v = pp.dataset.p; sel.clear(); if(v==='all') all.forEach(x=>sel.add(String(x.k))); if(v==='post') all.filter(x=>/^\d+$/.test(String(x.d.pod||'').trim()) && +x.d.pod<=1).forEach(x=>sel.add(String(x.k))); return draw(); }
+      const pp = e.target.closest('[data-p]'); if(pp){ const v = pp.dataset.p, K = v==='all' ? all.map(x=>String(x.k)) : v==='post' ? all.filter(x=>/^\d+$/.test(String(x.d.pod||'').trim()) && +x.d.pod<=1).map(x=>String(x.k)) : []; const was = K.length && K.length===sel.size && K.every(k=>sel.has(k)); sel.clear(); if(!was) K.forEach(k=>sel.add(k)); return draw(); }
       const kb = e.target.closest('[data-k]'); if(kb){ const v = kb.dataset.k; if(sel.has(v)) sel.delete(v); else sel.add(v); return draw(); }
       const w = e.target.closest('[data-w]'); if(w){ when = w.dataset.w; return draw(); }
       if(e.target.closest('[data-bot]')){ bot = !bot; return draw(); }
@@ -18858,7 +18861,7 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
       const pn = t.closest('[data-pin]'); if(pn){ const k=pn.dataset.pin, i=st.pins.indexOf(k); if(i>=0) st.pins.splice(i,1); else st.pins.push(k); return draw(); }
       const bl = t.closest('[data-bell]'); if(bl && canEdit){ const k=bl.dataset.bell; st.notify[k] = !nOn(k); return draw(); }
       const pr = t.closest('[data-pre]'); if(pr){ const v = pr.dataset.pre;
-        if(v==='seeall') st.hide = new Set(); if(v==='hidered') RED.forEach(k=>st.hide.add(k)); if(v==='hidediff') DIFF.forEach(k=>st.hide.add(k)); if(v==='pindef') st.pins = PIN_DEFAULT.slice();
+        if(v==='seeall') st.hide = new Set(); if(v==='hidered') pdxTgAll(st.hide, RED); if(v==='hidediff') pdxTgAll(st.hide, DIFF); if(v==='pindef') st.pins = PIN_DEFAULT.slice();
         if(canEdit){ if(v==='bdef') st.notify = {}; if(v==='bbasic'){ st.notify = {}; all.forEach(x=>{ st.notify[x.k] = BASIC.indexOf(x.k)>=0; }); } if(v==='ball'){ st.notify = {}; all.forEach(x=>{ st.notify[x.k] = true; }); } }
         return draw(); }
       if(t.closest('[data-save]')){
@@ -19811,7 +19814,7 @@ window.pdxEpsineOpen = function(){
           sub:E5(r.adm)+' → '+E5(r.dc)+' · '+E5(r.st)+(FLm[r.amka]?'<div style="color:#FF453A;white-space:normal;margin-top:2px">⚠ '+E5(FLm[r.amka])+'</div>':NG[r.amka]?'<div style="color:#FF9F0A;white-space:normal;margin-top:2px">🌙 '+E5(NG[r.amka])+'</div>':'')
             +(ru?'<div style="color:#0A84FF;white-space:normal;margin-top:2px">📌 '+E5(RA[ru.act]||ru.act)+(ru.note?': «'+E5(ru.note)+'»':'')+'</div>':''), on:'void 0', data:'data-ept="'+E5(r.amka)+'"'}; };
       h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 16px 8px">'+(st.selOn
-          ? '<button data-esel="off" class="eps-b">Τέλος επιλογής</button>'+(PF.length?'<button data-esel="fail" class="eps-b">☑ όλα τα ⚠ ('+PF.length+')</button>':'')+(PN.length?'<button data-esel="night" class="eps-b">☑ όλα τα 🌙 ('+PN.length+')</button>':'')+'<button data-esel="none" class="eps-b">Καμία</button>'
+          ? '<button data-esel="off" class="eps-b">Τέλος επιλογής</button>'+(PF.length?'<button data-esel="fail" class="eps-b">'+(PF.every(r=>st.sel.has(r.amka))?'☑':'☐')+' όλα τα ⚠ ('+PF.length+')</button>':'')+(PN.length?'<button data-esel="night" class="eps-b">'+(PN.every(r=>st.sel.has(r.amka))?'☑':'☐')+' όλα τα 🌙 ('+PN.length+')</button>':'')+'<button data-esel="none" class="eps-b">Καμία</button>'
           : '<button data-esel="on" class="eps-b">📌 Οδηγίες σε πολλούς…</button>')+'</div>';
       if(PF.length) h += iosGroup('⚠ Δεν τα κατάφερε · '+PF.length, PF.map(row), 'Η αιτία γράφεται κάτω από κάθε όνομα — πες μου τι να κάνω σε αυτή την περίπτωση.');
       if(PN.length) h += iosGroup('🌙 Για έλεγχο (από τη νύχτα) · '+PN.length, PN.map(row), 'Δεν οριστικοποιήθηκαν αυτόματα — συμπλήρωσε τα κενά και οριστικοποίησε.');
@@ -19877,7 +19880,7 @@ window.pdxEpsineOpen = function(){
     if(e.target.closest('[data-ex]')) return toList();
     const es = e.target.closest('[data-esel]'); if(es){ const v = es.dataset.esel, P = (st.rows||[]).filter(pend);
       if(v==='on') st.selOn = true; else if(v==='off'){ st.selOn = false; st.sel.clear(); } else if(v==='none') st.sel.clear();
-      else if(v==='fail') P.filter(r=>(st.fail||{})[r.amka]).forEach(r=>st.sel.add(r.amka)); else if(v==='night') P.filter(r=>!(st.fail||{})[r.amka] && (st.night||{})[r.amka]).forEach(r=>st.sel.add(r.amka));
+      else if(v==='fail') pdxTgAll(st.sel, P.filter(r=>(st.fail||{})[r.amka]).map(r=>r.amka)); else if(v==='night') pdxTgAll(st.sel, P.filter(r=>!(st.fail||{})[r.amka] && (st.night||{})[r.amka]).map(r=>r.amka));
       return pg.redraw(); }
     const er = e.target.closest('[data-erule]'); if(er){ const act = er.dataset.erule; let note = '';
       if(act==='note'){ note = prompt('Οδηγία για '+st.sel.size+' ασθενείς (τη βλέπω και τη διαβάζω — μέχρι τότε το bot τους αφήνει):', '') || ''; if(!note.trim()) return; }
