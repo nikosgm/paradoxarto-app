@@ -2386,7 +2386,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13p-v380';
+const APP_VER = '2026-11-13r-v382';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10013,11 +10013,13 @@ document.head.appendChild(st);
       const Lp = view.querySelector('.dk-l'), Rp = view.querySelector('.dk-r'), ly = Lp ? Lp.scrollTop : 0, ry = Rp ? Rp.scrollTop : 0;
       const sig = String(openKey)+'|'+(!!window.__tp), same = view.__dkSig === sig;
       const left = tab==='todo' ? todoTab() : tab==='today' && NUI() ? todayTab() : tab==='me' && NUI() ? meTab() : tab==='tools' ? (NUI() ? toolsTab2() : toolsTab()) : tab==='bot' ? botTab() : list();
-      const right = openKey ? detail(openKey) : /^(tools|me|today|bot)$/.test(tab) ? '' : '<div class="dk-empty"><div>👈 Διάλεξε ασθενή από τη λίστα<br><small>Ο κλασικός πίνακας και η εκτύπωση μένουν ίδια: κουμπί «⬅ Κλασικός πίνακας» πάνω αριστερά.</small></div></div>';
+      const right = openKey ? detail(openKey) : /^(tools|me|today|bot)$/.test(tab) ? '<div class="dk-empty"><div style="color:#8E8E93;font-weight:500">'+({tools:'Διάλεξε εργαλείο', me:'Διάλεξε ρύθμιση', today:'Διάλεξε κάτι από τη λίστα', bot:'Διάλεξε ενέργεια'})[tab]+'</div></div>' : '<div class="dk-empty"><div>👈 Διάλεξε ασθενή από τη λίστα<br><small>Ο κλασικός πίνακας και η εκτύπωση μένουν ίδια: κουμπί «⬅ Κλασικός πίνακας» πάνω αριστερά.</small></div></div>';
       const nv3 = VM()!=='classic'; view.classList.toggle('nv3', nv3); document.documentElement.classList.toggle('nv3', nv3);
       // 🖥 13/11 23:27 (χρήστης: «το "Διάλεξε ασθενή από τη λίστα" δεν ισχύει αφού δεν είμαστε σε λίστα ασθενών»): Εργαλεία/Ρυθμίσεις/Σήμερα χωρίς ανοιχτό ασθενή
       // → ΟΛΟ το πλάτος (χωρίς κενό δεξί μέρος)· οι σελίδες τους ανοίγουν από την πλαϊνή στήλη και μετά (όχι στο κενό μισό)
-      const full = !openKey && /^(tools|me|today|bot)$/.test(tab); view.classList.toggle('dkfull', full); document.documentElement.classList.toggle('nvfull', full);
+      // 13/11 23:46 (χρήστης: «εδώ οι επιλογές μπορούν να ανοίγουν στο διπλανό παράθυρο αφού έχει χώρο»): φαρδιά οθόνη → λίστα αριστερά + η επιλογή ανοίγει ΔΙΠΛΑ
+      // (όπως οι Ρυθμίσεις του macOS)· στενή οθόνη (< 1280) → όλο το πλάτος
+      const full = !openKey && /^(tools|me|today|bot)$/.test(tab) && window.innerWidth < 1280; view.classList.toggle('dkfull', full); document.documentElement.classList.toggle('nvfull', full);
       try{ view.classList.toggle('sidec', nv3 && localStorage.getItem('pdx_side_c')==='1'); }catch(e){}
       if(nv3) setTimeout(()=>{ try{ nvMeasure(); }catch(e){} }, 0);
       view.innerHTML = (nv3 ? '<div class="dk-s">'+nvSide()+'</div>' : '')+'<div class="dk-l">'+left+'</div><div class="dk-r">'+right+'</div>';
@@ -20018,11 +20020,17 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
   // → και ISO (stay.adm = μέρα που μπήκε στο Παραδόχαρτο) και η ημ. εισαγωγής από τα στοιχεία ΝΠΣ (npsenrich adm.from)
   const enr = {};
   const dayOf = v=>{ const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v||'')); if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]); const m = /(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?/.exec(String(v||'')); if(!m) return null; const y = m[3] ? (m[3].length===2 ? 2000 + +m[3] : +m[3]) : new Date().getFullYear(); return new Date(y, +m[2]-1, +m[1]); };
-  const st = {pts:[], busy:true, sent:{}};
+  const st = {pts:[], busy:true, sent:{}, nps:[], first:{}};
   const pts = ()=>{ const L = [], t0 = new Date(); t0.setHours(0,0,0,0); const y0 = new Date(t0.getTime()-864e5);
     try{ const D = typeof data!=='undefined' ? data : {}, X = typeof extraPatients!=='undefined' ? extraPatients : {};
       [...Object.entries(D).map(e=>[e[0], e[1], false]), ...Object.entries(X).map(e=>[e[0], e[1], true])].forEach(([k, d, x])=>{ if(!d || !String(d.name||'').trim()) return; const x0 = enr[nz(d.name)] || {}; const ad = dayOf(d.admitDate) || dayOf(x0.adm && x0.adm.from) || dayOf(d.stay && d.stay.adm); if(!ad || ad < y0) return;
-        L.push({k, x, d, name:String(d.name).trim(), today: ad >= t0}); }); }catch(e){}
+        L.push({k, x, d, name:String(d.name).trim(), today: ad >= t0}); });
+      // 🏥 13/11 23:47 (χρήστης: «λέει καμία εισαγωγή ενώ έγιναν»): οι νέοι ασθενείς είναι συχνά ΜΟΝΟ στη λίστα του ΝΠΣ (όχι ακόμα στο Παραδόχαρτο) και
+      // η λίστα δεν δίνει ημ. εισαγωγής → ημ. = στοιχεία ΝΠΣ (npsenrich) ή η ΠΡΩΤΗ φορά που φάνηκε στη λίστα της κλινικής (λίστες 4 ημερών)
+      const have = new Set(L.map(p=>nz(p.name)));
+      (st.nps || []).forEach(r=>{ const nm = String(r.name||'').trim(); if(!nm || have.has(nz(nm))) return; const x0 = enr[nz(nm)] || {};
+        const ad = dayOf(x0.adm && x0.adm.from) || (st.first[nz(nm)] ? new Date(st.first[nz(nm)]) : null); if(!ad) return; const a0 = new Date(ad); a0.setHours(0,0,0,0); if(a0 < y0) return;
+        have.add(nz(nm)); L.push({k:'nps', x:true, nps:true, d:{name:nm, amka:r.amka||'', am:r.am||''}, name:nm, today: a0 >= t0}); }); }catch(e){}
     return L.sort((a,b)=>(b.today - a.today) || a.name.localeCompare(b.name, 'el')); };
   const chip = (ok, t)=>'<span style="display:inline-block;margin:3px 4px 0 0;padding:3px 9px;border-radius:12px;font-size:12.5px;font-weight:600;background:'+(ok===true?'#E8F5EC;color:#1A7F37':ok===false?'#FDECEC;color:#B42318':'#F2F2F7;color:#6B7280')+'">'+t+'</span>';
   const draw = ()=>{ let h = '<div style="margin:0 16px 8px;font-size:13.5px;color:#6B7280">Αυτόματα κάθε βράδυ: 📂 φάκελος ΝΠΣ 23:00 · 🩺 ΑΗΦΥ 00:00–03:00 · 🧪 εργαστηριακά συνεχώς.</div>';
@@ -20042,6 +20050,12 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
   const load = async ()=>{
     try{ if(typeof sb6!=='undefined'){ const e = await sb6.from('oncall_jobs').select('payload').eq('kind','npsenrich').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-3*864e5).toISOString()).order('id',{ascending:true}).limit(20);
       (e.data||[]).forEach(x=>{ const P = x.payload && x.payload.result && x.payload.result.pts || {}; Object.keys(P).forEach(n=>{ enr[nz(n)] = P[n]; }); }); } }catch(e){}
+    try{ if(typeof sb6!=='undefined'){ const q = await sb6.from('oncall_jobs').select('payload,created_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-4*864e5).toISOString()).order('id',{ascending:true}).limit(40);
+        const Ls = (q.data||[]).filter(x=>{ const r = x.payload && x.payload.result; return r && Array.isArray(r.rows) && (r.dpt||'3449')==='3449'; });
+        if(Ls.length){ const oldest = Ls[0]; const old = Date.now() - Date.parse(oldest.created_at) > 2.5*864e5;
+          Ls.forEach((x, i)=>x.payload.result.rows.forEach(r=>{ const k = nz(r.name); if(!k || st.first[k]!=null) return; st.first[k] = (i===0 && old) ? 0 : Date.parse(x.created_at); }));
+          Object.keys(st.first).forEach(k=>{ if(!st.first[k] || !old) delete st.first[k]; });   // χωρίς λίστα ≥2,5 ημερών δεν ξέρουμε ποιοι είναι «νέοι»
+          st.nps = Ls[Ls.length-1].payload.result.rows || []; } } }catch(e){}
     st.pts = pts();
     try{ const names = st.pts.map(p=>p.name);
       if(names.length && typeof sb6!=='undefined'){
