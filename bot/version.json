@@ -1,1 +1,1 @@
-{"version": "0.21.338", "zip": "ef-bot-0.21.338.zip", "sha256": "cd849d1bcf5f7d38bb7c511dd5a56ce577e98ee7db6c5deddbd0b3894c7ddc93", "notes": "⚡ NPSX_TABLE: γραμμές/σελίδα από την επιλογή του πίνακα, διάγνωση ασυμφωνίας · npsmedsall δεν σταματά σε ασυμφωνία λίστας"}
+{"version": "0.21.339", "zip": "ef-bot-0.21.339.zip", "sha256": "c90a9ee8cee111f196befd42831af64f3606857b25c8f2abdbb7413e96c86e7b", "notes": "βιοψίες: έλεγχος με ≥30% αποτυχίες Medilabi δεν κρατιέται — σε άλλο bot/failed"}
