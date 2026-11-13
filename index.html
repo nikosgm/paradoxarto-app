@@ -2302,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13e-v369';
+const APP_VER = '2026-11-13f-v370';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12574,7 +12574,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       (scans||[]).filter(x=>x && +x.id > +S.last).sort((a,b)=>a.id-b.id).forEach(x=>{ addScan(S, x.res, x.t); S.last = Math.max(S.last, +x.id); });
       prune(S, now);
       if(JSON.stringify(S) !== before){ try{ const S2 = await read(); S = prune(union(S2, S), now); }catch(e){} await write(S); }
-      return {res: toRes(S), last: S.last};
+      return {res: toRes(S), last: S.last, S};
     }
     return {sync, union, addScan, prune, toRes, ik, KEEP, empty};
   })();
@@ -12596,8 +12596,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // 🗄 13/11: όλοι οι έλεγχοι → μόνιμη λίστα (pdxBxStore)· η σελίδα δείχνει τη λίστα, όχι μόνο τον τελευταίο έλεγχο
         const dec = async x=>{ try{ const d = await pdxCK.decrypt(x.payload.result.enc); return {id:x.id, t:d.at || Date.parse(x.updated_at), res:d.res || []}; }catch(e){ return null; } };
         if(rows.length) st.at = Date.parse(rows[0].updated_at);
-        try{ const S = await pdxBxStore.sync(async last=>{ const out = []; for(const x of rows) if(x.id > last){ const y = await dec(x); if(y) out.push(y); } return out; }); st.data = S.res; }
-        catch(e){ const top = rows[0] && await dec(rows[0]); if(top) st.data = top.res; st.err = 'Μόνιμη λίστα βιοψιών: '+(e.message||e); } }
+        try{ await pdxCK.ready(); }catch(e){}
+        // 13/11 15:25 (χρήστης: «βιοψίες τώρα δε βλέπω τίποτα»): η οθόνη ΔΕΝ εξαρτάται πια από την αποθήκευση — ένωση ΟΛΩΝ των ελέγχων εδώ (μνήμη),
+        // + η μόνιμη λίστα από πάνω αν διαβαστεί. Αποτυχία αποθήκευσης = μόνο ένα μικρό μήνυμα, ποτέ άδεια λίστα.
+        const scans = []; for(const x of rows){ const y = await dec(x); if(y) scans.push(y); }
+        const B = pdxBxStore, mem = B.empty(); scans.slice().sort((a,b)=>a.id-b.id).forEach(x=>B.addScan(mem, x.res, x.t)); B.prune(mem, Date.now());
+        st.data = B.toRes(mem);
+        if(rows.length && !scans.length) st.err = 'Οι έλεγχοι δεν ανοίγουν σε αυτή τη συσκευή ('+((window.pdxCK && pdxCK.why && pdxCK.why()) || 'κλειδί κλινικής')+')';
+        try{ const S = await B.sync(scans); if(S && S.S){ const all = B.prune(B.union(S.S, mem), Date.now()); st.data = B.toRes(all); } }
+        catch(e){ console.warn('bx store', e); st.bxStoreErr = String(e.message||e).slice(0,120); } }
       catch(e){ st.err = 'Αποκρυπτογράφηση: '+(e.message||e); }
       try{ await archLoad(); }catch(e){}
       pg.redraw();
