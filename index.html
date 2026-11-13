@@ -2302,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13c-v367';
+const APP_VER = '2026-11-13d-v368';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15107,7 +15107,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     function drawJobs(){
       const box = root.querySelector('[data-jobs]'); if(!box) return; box.style.display = S.jobs.length ? '' : 'none';
       const T = {new:['Στάλθηκε · περιμένει υπολογιστή',''], seen:['Τη βρήκε υπολογιστής',''], running:['Ετοιμάζεται στο e-prescription…','run'], done:['Έτοιμη — έλεγξε και πάτα «Καταχώριση» στον υπολογιστή','ok'], review:['Έτοιμη για έλεγχο','ok'], approve:['Εγκρίθηκε — καταχωρίζεται…','run'], approved:['✅ Καταχωρίστηκε','ok'], dismissed:['Έκλεισε',''], failed:['Δεν ολοκληρώθηκε','bad'], cancelled:['Ακυρώθηκε','']};
-      box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = T[x.st]||[x.st,'']; return '<div class="med"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(String(x.note).slice(0,200))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again" data-rev="'+x.id+'" style="background:#1D4E80;color:#fff">👀 Έλεγχος</button>':'')+(x.st==='approved' && x.amka ? '<button class="again" data-vclose="'+E(x.amka)+'" style="background:#1F6F43;color:#fff;flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
+      box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = T[x.st]||[x.st,'']; return '<div class="med"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(String(x.note).slice(0,200))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again" data-rev="'+x.id+'" style="background:#1D4E80;color:#fff">👀 Έλεγχος</button>':'')+((x.st==='approved' || x.vc) && x.amka ? '<button class="again" data-vclose="'+E(x.amka)+'" style="background:#1F6F43;color:#fff;flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
     }
     async function loadHist(){
       try{ const since = new Date(Date.now()-60*864e5).toISOString();
@@ -15169,9 +15169,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const rdl = t.closest('[data-rdel]'); if(rdl){ rHide([rdl.dataset.rdel]); drawRecent(); return; }
       if(t.closest('[data-rclr]')){ if(!confirm('Καθαρισμός της λίστας «Πρόσφατοι»; (μόνο για εσένα — οι συνταγές δεν σβήνονται)')) return; rHide(recentAmka().map(x=>x.amka)); drawRecent(); return; }
       if(t.closest('[data-tg0]')){ S.f.part = S.f.part==='0%' ? '25%' : '0%'; syncForm(); return; }
-      const vcb = t.closest('[data-vclose]'); if(vcb){ const am = vcb.dataset.vclose, x = S.jobs.find(z=>z.amka===am && z.st==='approved'); if(x){ x.vc = '⏳ Κλείνει…'; drawJobs(); }
-        (async ()=>{ try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_epvisitclose', name:'Α.Μ.Κ.Α. ··'+am.slice(-2), room:null, kind:'epvisitclose', payload:{amka:am, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
-          const j = await jobWait(ins.data.id, 120000); if(x){ x.vc = j ? (j.status==='done' ? '✅ Ολοκληρώθηκε' : '⚠ '+String(j.note||'απέτυχε').slice(0,60)) : '⚠ δεν απάντησε'; drawJobs(); } }catch(err){ if(x){ x.vc = '⚠ '+(err.message||err); drawJobs(); } } })(); return; }
+      // 13/11 14:42 (χρήστης: «από τη λίστα μετά τη συνταγή δεν δουλεύει»): η εργασία έτρεχε (✅ ··17 ×3) αλλά δεν φαινόταν τίποτα — η γραμμή είχε
+      // αλλάξει κατάσταση (approved → done) οπότε δεν βρισκόταν· τώρα: όλες οι γραμμές του ΑΜΚΑ + μήνυμα + μία φορά (όχι διπλά πατήματα)
+      const vcb = t.closest('[data-vclose]'); if(vcb){ const am = vcb.dataset.vclose; if(S.vcBusy && S.vcBusy[am]) return; (S.vcBusy = S.vcBusy || {})[am] = 1;
+        const setVc = v=>{ S.jobs.forEach(z=>{ if(z.amka===am) z.vc = v; }); drawJobs(); }; setVc('⏳ Κλείνει…'); toast('⏳ Κλείσιμο επίσκεψης ··'+am.slice(-2)+'…');
+        (async ()=>{ let v; try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_epvisitclose', name:'Α.Μ.Κ.Α. ··'+am.slice(-2), room:null, kind:'epvisitclose', payload:{amka:am, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+          const j = await jobWait(ins.data.id, 120000); v = j ? (j.status==='done' ? '✅ Ολοκληρώθηκε' : '⚠ '+String(j.note||'απέτυχε').slice(0,60)) : '⚠ δεν απάντησε'; }catch(err){ v = '⚠ '+(err.message||err); }
+          delete S.vcBusy[am]; setVc(v); toast(v.indexOf('✅')===0 ? '✅ Η επίσκεψη ολοκληρώθηκε' : v); })(); return; }
       const edb = t.closest('[data-ed]'); if(edb){ const [k,f,v] = edb.dataset.ed.split('|'); edSet(k, f, v); return; }
       const mop = t.closest('[data-mopen]'); if(mop){ const i = +mop.dataset.mopen; S.open = S.open===i ? -1 : i; drawMeds(); return; }
       const csb = t.closest('[data-csk]'); if(csb){ const sl = root.querySelector('[data-mf="'+csb.dataset.csk+'"]'); if(sl){ sl.value = csb.dataset.csv; sl.dispatchEvent(new Event('change', {bubbles:true})); } return; }
