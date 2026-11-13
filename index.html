@@ -2311,7 +2311,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13j-v374';
+const APP_VER = '2026-11-13k-v375';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13975,6 +13975,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     ch.subscribe(async st=>{ if(st!=='SUBSCRIBED') return; try{ await ch.send({type:'broadcast', event:'ping', payload:{n}}); }catch(e){} setTimeout(()=>{ const u = {}; got.forEach(x=>{ if(x && x.bot) u[x.bot] = x; }); done(Object.values(u)); }, ms); });
     setTimeout(()=>done([]), ms+4000);
   }catch(e){ res([]); } }); };
+  // ⚡ 13/11 Φάση 3: συνταγή με ΑΠΕΥΘΕΙΑΣ ΑΙΤΗΜΑ (χωρίς τον οδηγό του e-prescription· ό,τι δεν ταιριάζει σίγουρα → αυτόματα κλικ). Κλείσιμο: localStorage pdx_rx_direct=0
+  window.pdxRxDirect = ()=>{ try{ return localStorage.getItem('pdx_rx_direct')==='0' ? {} : {direct:true}; }catch(e){ return {direct:true}; } };
   window.pdxPrintAt = ()=>{ try{ return localStorage.getItem('pdx_print_at')||''; }catch(e){ return ''; } };
   // ⚙️ (διαχειριστής) ονόματα υπολογιστών: ποιος είναι ο Γωνιακός / Μεσαίος / Πόρτα
   // 🏥 6/11: Ασθενείς ΝΠΣ — η λίστα νοσηλευομένων όπως τη βλέπει ο ΝΠΣ (μόνο όταν πατηθεί «Φέρε τώρα») και σύγκριση με το Παραδόχαρτο
@@ -15393,12 +15395,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       try{
         if(S.k){ const d = recOf(S.k); label = d.name;
           const th = ((typeof DISCHARGE_CFG!=='undefined'&&DISCHARGE_CFG.therapists)||{})[d.therapist]||d.therapist||'';
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:S.k, kind:'rx', payload:Object.assign(epU?{epUser:epU}:{}, rep, {icd:S.icd, meds, mode:'review', therapist:th, quiet:true}), status:'new'}).select('id').single();
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:S.k, kind:'rx', payload:Object.assign(epU?{epUser:epU}:{}, rep, {icd:S.icd, meds, mode:'review', therapist:th, quiet:true}, pdxRxDirect()), status:'new'}).select('id').single();
           if(r.error) throw r.error; id = r.data.id;
         } else {
           const nm = S.who && S.who.name ? S.who.name : ('Α.Μ.Κ.Α. ··'+S.amka.slice(-2)); label = nm;
           if(S.pendRx){ sb6.from('oncall_jobs').update({status:'cancelled', note:'η συνταγή στάλθηκε πριν βρεθεί το όνομα'}).eq('id', S.pendRx).in('status',['new','seen','running']).then(()=>{}); S.pendRx = 0; }
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign({amka:S.amka, icd:S.icd, meds, mode:'review', general:true, quiet:true}, rep, epU?{epUser:epU}:{}), status:'new'}).select('id').single();
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign({amka:S.amka, icd:S.icd, meds, mode:'review', general:true, quiet:true}, pdxRxDirect(), rep, epU?{epUser:epU}:{}), status:'new'}).select('id').single();
           if(r.error) throw r.error; id = r.data.id;
         }
       }catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)); return; }
