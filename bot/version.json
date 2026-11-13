@@ -1,1 +1,1 @@
-{"version": "0.21.358", "zip": "ef-bot-0.21.358.zip", "sha256": "b6ddc65c802c0e65d45aa941ca8d82cdd122f0ec2b097b32a2eb72e37ca271c5", "notes": "μηνύματα e-prescription: συνδεδεμένη καρτέλα / αυτόματη σύνδεση πριν την ανάγνωση"}
+{"version": "0.21.359", "zip": "ef-bot-0.21.359.zip", "sha256": "ee01bf36db4c77accc0fb31fb07c95ac37cc0f131eccb6faebeb7763fb7fd318", "notes": "epprobe: αποσυνδεδεμένο = αποτυχία + ποια επίσκεψη είναι ανοιχτή · δοκιμές πίεσης Π12/Π13"}
