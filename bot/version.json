@@ -1,1 +1,1 @@
-{"version": "0.21.354", "zip": "ef-bot-0.21.354.zip", "sha256": "30f60bef9bddc266997704a5e79b2c21b14ed47b3b45bfbb82b30befa7e8710c", "notes": "Medilabi: σωστή σελίδα σύνδεσης από κάθε διεύθυνση (σάρωση/medmap «δεν έγινε σύνδεση»)"}
+{"version": "0.21.355", "zip": "ef-bot-0.21.355.zip", "sha256": "f623d5f2b662f9c27aa22b61e8cf69ba8bcb4783d9f7abe5e7f053446e3f6b94", "notes": "νέα εργασία sysmsgdump: όλα τα κείμενα μηνυμάτων e-prescription/ΑΗΦΥ/Medilabi (μόνο ανάγνωση)"}
