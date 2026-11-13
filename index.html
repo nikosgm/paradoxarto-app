@@ -2302,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13f-v370';
+const APP_VER = '2026-11-13g-v371';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7494,14 +7494,15 @@ document.head.appendChild(st);
     let h = nuiTop('Εργαλεία', 'ενέργειες χωρίς να ψάχνεις') + cmdBar;
     // 12/11 βράδυ (Εργαστήριο εμφάνισης, «Πλέγμα 3»): τα 6 πιο συχνά σε πλέγμα 3 στηλών πάνω-πάνω, τα υπόλοιπα σε λίστα από κάτω
     { const F = [bot && ['🧾','Παραγγελία σε πολλούς',"pdxOrderBulk()"], ['🧪','Εργαστηριακά όλων',"window.labsFullOpen && labsFullOpen('')"], bot && ['💊','Συνταγή',"pdxDo('rxout')"],
-        bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
+        bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['📧','Email',"pdxMail()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
       h += '<div class="mtp-h" style="margin:14px 16px 6px">Τα πιο συχνά</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px;max-width:620px">'
         + F.map(x=>'<div onclick="'+x[2]+'" style="background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)"><span style="font-size:26px">'+x[0]+'</span><b style="font-size:13px;line-height:1.2">'+x[1]+'</b></div>').join('') + '</div>'; }
     const clin = ['resident','attending','admin'].indexOf(window.authRole)>=0;
     if(clin) h += grp('Κλινική', [
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
-      ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
+      ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],
+      bot && ['📧','Email (Kerio)','εισερχόμενα · απεσταλμένα · αποστολή · συνημμένα', "pdxMail()"],   // 13/11 (χρήστης)   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
       bot && ['🩻','Αξονικές ειδικευομένων','ταυτοποίηση & μετακίνηση στο αρχείο απεικονίσεων', "pdxCtInbox()"],   // 11/11 (χρήστης)
       bot && ['🦓','Ετικέτα Zebra','μεγάλος αριθμός σε όλο το πλάτος', "pdxLabelPrint()"]   // 11/11 20:43 (χρήστης)
     ]);
@@ -8400,6 +8401,189 @@ document.head.appendChild(st);
     const order = CH.map(x=>x[1]).concat(['Άλλα','Χωρίς κωδικό']);
     return [...by.entries()].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).map(([cat, items])=>({cat, items:items.sort((x,y)=>x.code.localeCompare(y.code))}));
   };
+  // ===== 📧 13/11 (χρήστης: «κανονική ενότητα mail σαν να μπαίνω από τον υπολογιστή — εισερχόμενα, απεσταλμένα, να στέλνω, συνημμένα, τα πάντα») =====
+  // Όλα μέσω του bot του νοσοκομείου (Kerio της κλινικής, εντολή kmail op m*). Αποτελέσματα & συνημμένα ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΑ (κλειδί κλινικής)·
+  // σβήνονται από τη βάση μόλις διαβαστούν. Το μήνυμα προς αποστολή (παραλήπτες/θέμα/κείμενο) φεύγει κρυπτογραφημένο. Κινητό ΚΑΙ υπολογιστής.
+  window.pdxMail = function(){
+    if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
+    const E = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const st = window.__pdxMailSt = window.__pdxMailSt || {folders:null, fid:'', list:null, total:0, q:'', open:null, comp:null, busy:'', err:'', con:null, more:0};
+    st.open = null; st.comp = null; st.err = '';
+    const dOf = s=>{ const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})?([+-]\d{4})?/.exec(String(s||'')); if(!m) return null; const iso = m[1]+'-'+m[2]+'-'+m[3]+'T'+m[4]+':'+m[5]+':'+(m[6]||'00')+(m[7] ? m[7].slice(0,3)+':'+m[7].slice(3) : ''); const d = new Date(iso); return isNaN(d) ? null : d; };
+    const when = s=>{ const d = dOf(s); if(!d) return ''; const n = new Date(), same = d.toDateString()===n.toDateString(); return same ? d.toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('el-GR',{day:'numeric',month:'short'})+(d.getFullYear()!==n.getFullYear()?' '+d.getFullYear():''); };
+    const whenL = s=>{ const d = dOf(s); return d ? d.toLocaleString('el-GR',{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : ''; };
+    const who = a=>a ? (a.name || a.address || '') : '';
+    const kb = n=>n>=1e6 ? (n/1e6).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
+    const txtOfHtml = h=>{ try{ const d = new DOMParser().parseFromString(String(h||''), 'text/html'); d.querySelectorAll('script,style').forEach(x=>x.remove()); d.querySelectorAll('br').forEach(x=>x.replaceWith('\n')); d.querySelectorAll('p,div,tr,li,h1,h2,h3').forEach(x=>x.append('\n')); return (d.body.textContent||'').replace(/\n{3,}/g,'\n\n').trim(); }catch(e){ return ''; } };
+    const linkify = t=>E(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    async function job(op, pl, label){
+      await pdxCK.ready(); if(!pdxCK.has()) throw new Error('🔐 '+(pdxCK.why()||'χωρίς κλειδί κλινικής σε αυτή τη συσκευή'));
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_mail', name:label||'📧 Email', room:null, kind:'kmail', payload:Object.assign({op, quiet:true}, pl||{}), status:'new'}).select('id').single();
+      if(ins.error) throw new Error(ins.error.message); const id = ins.data.id, t0 = Date.now();
+      while(Date.now()-t0 < 120000){
+        await new Promise(r=>setTimeout(r, 700));
+        const x = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = x.data; if(!j) continue;
+        if(j.status==='done'){ const R = (j.payload||{}).result || {}; let out = R;
+          if(R.enc) out = await pdxCK.decrypt(R.enc);
+          sb6.from('oncall_jobs').update({payload:{op, wiped:true}}).eq('id', id).then(()=>{}, ()=>{});   // καμία ανάγνωση μένει στη βάση
+          return out; }
+        if(/^(failed|cancelled|dismissed)$/.test(j.status)) throw new Error(String(j.note||'απέτυχε').replace(/·\s*⏱.*$/,''));
+        if(j.status==='running' && op!=='mlist' && op!=='mcontacts') { st.busy = (j.note||'').replace(/·\s*⏱.*$/,'') || st.busy; pg && pg.redraw(); }
+      }
+      throw new Error('ο υπολογιστής του νοσοκομείου δεν απάντησε σε 2′');
+    }
+    const run = async (msg, fn)=>{ st.busy = msg; st.err = ''; pg.redraw(); try{ await fn(); }catch(e){ st.err = String(e.message||e); } st.busy = ''; pg.redraw(); };
+    const loadFolders = ()=>run('Φάκελοι…', async ()=>{ const r = await job('mfolders', {}, '📧 φάκελοι'); st.folders = r.folders||[]; if(!st.fid){ const ib = st.folders.find(f=>f.sub==='FSubInbox') || st.folders[0]; st.fid = ib ? ib.id : ''; } });
+    const loadList = (more)=>run(more ? 'Περισσότερα…' : 'Μηνύματα…', async ()=>{ const start = more ? (st.list||[]).length : 0;
+      const r = await job('mlist', {folder:st.fid, start, limit:40, q:st.q||undefined}, '📧 λίστα'); if(!st.fid) st.fid = r.folder;
+      st.list = more ? (st.list||[]).concat(r.list||[]) : (r.list||[]); st.total = r.total||st.list.length; st.at = Date.now(); });
+    const openMail = (id)=>run('Άνοιγμα…', async ()=>{ const r = await job('mread', {id}, '📧 μήνυμα'); st.open = r.mail; const x = (st.list||[]).find(m=>m.id===id); if(x && !x.seen){ x.seen = true; const f = (st.folders||[]).find(f=>f.id===st.fid); if(f && f.unread) f.unread--; } });
+    const getAtt = (i)=>run('Λήψη συνημμένου…', async ()=>{ const m = st.open, a = m && m.atts[i]; if(!a) return;
+      const r = await job('matt', {id:m.id, att:a.id, url:a.url, name:a.name, type:a.type}, '📧 συνημμένο');
+      const dl = await sb6.storage.from('img-enc').download(r.id+'/0.bin'); if(dl.error) throw new Error(dl.error.message);
+      const u = await pdxCK.openBytes(new Uint8Array(await dl.data.arrayBuffer())); sb6.storage.from('img-enc').remove([r.id+'/0.bin']).then(()=>{}, ()=>{});
+      const f = new File([u], a.name || 'συνημμένο', {type: a.type || 'application/octet-stream'});
+      if(navigator.canShare && navigator.canShare({files:[f]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)){ try{ await navigator.share({files:[f], title:a.name}); return; }catch(e){ if(e && e.name==='AbortError') return; } }
+      const url = URL.createObjectURL(f); const w = window.open(url, '_blank'); if(!w){ const l = document.createElement('a'); l.href = url; l.download = a.name || 'file'; document.body.appendChild(l); l.click(); l.remove(); } setTimeout(()=>URL.revokeObjectURL(url), 120000); });
+    // οι επαφές φορτώνουν στο παρασκήνιο· ΧΩΡΙΣ ξαναζωγράφισμα της σύνταξης (θα έσβηνε ό,τι γράφεται εκείνη τη στιγμή) — μόνο η ένδειξη + προτάσεις στο ενεργό πεδίο
+    const loadCon = async ()=>{ if(st.con || st.conBusy) return; st.conBusy = true;
+      try{ st.con = await pdxMailJobQuiet('mcontacts'); }catch(e){ st.con = {people:[], groups:[], err:String(e.message||e)}; } st.conBusy = false;
+      const hint = pg.el.querySelector('[data-conhint]'); if(hint) hint.outerHTML = st.con.err ? '<div class="bz">Οι επαφές δεν φορτώθηκαν ('+E(st.con.err)+') — γράψε διεύθυνση email.</div>' : '';
+      const a = document.activeElement; if(a && a.matches && a.matches('[data-rc]') && pg.el.contains(a)) sugg(a); };
+    const pdxMailJobQuiet = async op=>{ const b0 = st.busy; const r = await job(op, {}, '📧 επαφές'); st.busy = b0; return r; };
+    // ---- σύνταξη ----
+    const R0 = a=>({name:a.name||'', address:a.address||''});
+    function compose(kind){
+      const m = st.open, me = String(window.authName||'').replace(/@paradoxarto\.app$/,'');
+      const quote = m ? '\n\n— '+whenL(m.date)+', '+who(m.from)+' έγραψε:\n'+String(m.text || txtOfHtml(m.html)).split('\n').map(l=>'> '+l).join('\n') : '';
+      const re = s=>/^(re|απ|σχ):/i.test(s||'') ? s : 'Re: '+(s||''), fw = s=>/^(fw|fwd|πρ):/i.test(s||'') ? s : 'Fwd: '+(s||'');
+      st.comp = {kind:kind||'new', to:[], cc:[], subject:'', text:'', files:[], fwd:null, sending:false};
+      if(m && kind==='reply'){ st.comp.to = [R0((m.replyTo&&m.replyTo[0]) || m.from)]; st.comp.subject = re(m.subject); st.comp.text = quote; }
+      if(m && kind==='all'){ st.comp.to = [R0((m.replyTo&&m.replyTo[0]) || m.from)].concat((m.to||[]).map(R0)); st.comp.cc = (m.cc||[]).map(R0); st.comp.subject = re(m.subject); st.comp.text = quote; }
+      if(m && kind==='fwd'){ st.comp.subject = fw(m.subject); st.comp.text = '\n\n---------- Προωθημένο μήνυμα ----------\nΑπό: '+who(m.from)+' <'+((m.from||{}).address||'')+'>\nΗμ/νία: '+whenL(m.date)+'\nΘέμα: '+(m.subject||'')+'\n\n'+String(m.text || txtOfHtml(m.html)); st.comp.fwd = m.atts.length ? {id:m.id, n:m.atts.length} : null; }
+      loadCon(); pg.redraw();
+    }
+    const addrOk = s=>/^[^\s@<>,;]+@[^\s@<>,;]+\.[a-z]{2,}$/i.test(String(s||'').trim());
+    function addRcpt(field, v){ const C = st.comp; if(!C) return; v = String(v||'').trim(); if(!v) return;
+      const g = (st.con && st.con.groups || []).find(x=>x.name===v.replace(/^👥\s*/,''));
+      if(g){ if(!C[field].some(x=>x.group===g.name)) C[field].push({group:g.name, name:'👥 '+g.name}); return; }
+      const m = /<([^>]+)>/.exec(v), a = m ? m[1] : v; if(!addrOk(a)){ st.err = 'Μη έγκυρη διεύθυνση: '+v; return; }
+      const p = (st.con && st.con.people || []).find(x=>x.address.toLowerCase()===a.toLowerCase());
+      if(!C[field].some(x=>(x.address||'').toLowerCase()===a.toLowerCase())) C[field].push({name:p ? p.name : '', address:a}); st.err = ''; }
+    async function send(){
+      const C = st.comp; if(!C || C.sending) return; const n = C.to.length + C.cc.length;
+      if(!n) { st.err = 'Πρόσθεσε τουλάχιστον έναν παραλήπτη'; return pg.redraw(); }
+      if(!C.subject.trim() && !confirm('Χωρίς θέμα — αποστολή;')) return;
+      if(!confirm('Αποστολή σε '+C.to.concat(C.cc).map(x=>x.group ? x.name : (x.name || x.address)).join(', ')+(C.files.length ? ' · '+C.files.length+' συνημμένα' : '')+(C.fwd ? ' · +'+C.fwd.n+' αρχικά συνημμένα' : '')+';')) return;
+      C.sending = true;
+      await run('Αποστολή…', async ()=>{
+        await pdxCK.ready(); const atts = [];
+        for(const f of C.files){ if(f.size > 20e6) throw new Error('«'+f.name+'» πάνω από 20 MB');
+          const sealed = await pdxCK.sealBytes(new Uint8Array(await f.arrayBuffer())), path = 'mail/'+(crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2))+'.bin';
+          const up = await sb6.storage.from('img-enc').upload(path, new Blob([sealed], {type:'application/octet-stream'}), {upsert:true, contentType:'application/octet-stream'}); if(up.error) throw new Error('ανέβασμα: '+up.error.message);
+          atts.push({path, name:f.name, type:f.type || 'application/octet-stream'}); }
+        const strip = L=>L.map(x=>x.group ? {group:x.group} : {name:x.name||'', address:x.address});
+        const enc = await pdxCK.encrypt({to:strip(C.to), cc:strip(C.cc), subject:C.subject, text:C.text});
+        const r = await job('msend', {enc, atts, fwd:C.fwd ? {id:C.fwd.id} : undefined}, '📧 αποστολή');
+        st.comp = null; (window.toast||window.showToast||alert)('✅ Στάλθηκε'+(r && r.n ? ' σε '+r.n : ''));
+      });
+      if(st.comp) st.comp.sending = false;
+    }
+    // ---- σχεδίαση ----
+    const CSS = '<style>#pdxMail .ml{display:flex;gap:10px;padding:11px 14px;border-bottom:.5px solid rgba(60,60,67,.18);background:var(--ios-card,#fff);cursor:pointer;align-items:flex-start}'
+      + '#pdxMail .ml.u b.s{font-weight:800}#pdxMail .ml .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}#pdxMail .ml.u .dot{background:#0A84FF}'
+      + '#pdxMail .ml .c{flex:1;min-width:0}#pdxMail .ml .r1{display:flex;gap:8px}#pdxMail .ml .r1 b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pdxMail .ml .r1 small{color:#8E8E93;flex:none}'
+      + '#pdxMail .ml .s{display:block;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}#pdxMail .fl{display:flex;gap:7px;overflow-x:auto;padding:10px 14px 4px;scrollbar-width:none}'
+      + '#pdxMail .fl button{flex:none;border:0;border-radius:18px;padding:8px 13px;font:600 14.5px -apple-system,system-ui,sans-serif;background:rgba(118,118,128,.14);color:inherit;min-height:38px}#pdxMail .fl button.on{background:#1D4E80;color:#fff}'
+      + '#pdxMail .bar{display:flex;gap:8px;padding:8px 14px}#pdxMail .bar input{flex:1;min-width:0;font:16px -apple-system,system-ui,sans-serif;padding:10px 12px;border-radius:11px;border:0;background:rgba(118,118,128,.14);color:inherit}'
+      + '#pdxMail .btn{border:0;border-radius:11px;padding:10px 14px;font:600 15px -apple-system,system-ui,sans-serif;background:#1D4E80;color:#fff;min-height:44px;cursor:pointer}#pdxMail .btn.g{background:rgba(118,118,128,.16);color:inherit}'
+      + '#pdxMail .rd{background:var(--ios-card,#fff);margin:10px 12px;border-radius:14px;padding:14px 16px}#pdxMail .rd h2{font-size:19px;margin:0 0 8px}#pdxMail .rd .meta{font-size:13.5px;color:#6B6B70;line-height:1.5}'
+      + '#pdxMail .rd .body{white-space:pre-wrap;word-wrap:break-word;font-size:15.5px;line-height:1.5;margin-top:12px;user-select:text;-webkit-user-select:text}#pdxMail .att{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:11px;background:rgba(118,118,128,.1);margin-top:8px;cursor:pointer}'
+      + '#pdxMail .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 12px}#pdxMail .cp{background:var(--ios-card,#fff);margin:10px 12px;border-radius:14px;padding:6px 14px}'
+      + '#pdxMail .cp .f{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:.5px solid rgba(60,60,67,.18)}#pdxMail .cp .f>span{color:#8E8E93;font-size:14px;min-width:42px}'
+      + '#pdxMail .chip{display:inline-flex;align-items:center;gap:4px;background:rgba(10,132,255,.13);color:#0A64C8;border-radius:14px;padding:4px 6px 4px 10px;font-size:14px}#pdxMail .chip button{border:0;background:none;color:inherit;font-size:15px;padding:0 4px;min-height:28px;cursor:pointer}'
+      + '#pdxMail .cp input,#pdxMail .cp textarea{flex:1;min-width:120px;border:0;background:none;font:16px -apple-system,system-ui,sans-serif;color:inherit;outline:none;padding:6px 0}#pdxMail .cp textarea{width:100%;min-height:220px;resize:vertical;line-height:1.45}'
+      + '#pdxMail .sg{background:var(--ios-card,#fff);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);margin:0 12px;max-height:260px;overflow:auto}#pdxMail .sg div{padding:10px 14px;border-bottom:.5px solid rgba(60,60,67,.12);cursor:pointer;font-size:15px}#pdxMail .sg small{color:#8E8E93;margin-left:6px}'
+      + '#pdxMail .er{margin:10px 14px;color:#B42318;font-weight:600}#pdxMail .bz{margin:10px 14px;color:#6B6B70}</style>';
+    function draw(){
+      let h = CSS + '<div id="pdxMail">';
+      if(st.err) h += '<div class="er">⚠ '+E(st.err)+'</div>';
+      if(st.busy) h += '<div class="bz">⏳ '+E(st.busy)+'</div>';
+      const C = st.comp;
+      if(C){
+        const chips = f=>C[f].map((x,i)=>'<span class="chip">'+E(x.group ? x.name : (x.name ? x.name : x.address))+'<button data-rm="'+f+'|'+i+'" aria-label="Αφαίρεση">✕</button></span>').join('');
+        h += '<div class="bar"><button class="btn g" data-cx>Άκυρο</button><div style="flex:1"></div><button class="btn" data-send'+(C.sending?' disabled':'')+'>📤 Αποστολή</button></div>'
+          + '<div class="cp"><div class="f"><span>Προς:</span>'+chips('to')+'<input data-rc="to" placeholder="όνομα, ομάδα ή email" autocomplete="off" autocapitalize="none" inputmode="email"></div>'
+          + '<div class="f"><span>Κοιν.:</span>'+chips('cc')+'<input data-rc="cc" placeholder="" autocomplete="off" autocapitalize="none" inputmode="email"></div>'
+          + '<div class="sg" data-sg style="display:none"></div>'
+          + '<div class="f"><span>Θέμα:</span><input data-subj value="'+E(C.subject)+'"></div>'
+          + '<div class="f" style="border:0">'+C.files.map((f,i)=>'<span class="chip">📎 '+E(f.name)+' · '+kb(f.size)+'<button data-rf="'+i+'">✕</button></span>').join('')
+          + (C.fwd ? '<span class="chip">📎 '+C.fwd.n+' αρχικά συνημμένα<button data-rfw>✕</button></span>' : '')
+          + '<label class="btn g" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">📎 Συνημμένο<input type="file" multiple data-file style="display:none"></label></div>'
+          + '<textarea data-text placeholder="Κείμενο…">'+E(C.text)+'</textarea></div>'
+          + (st.con && st.con.err ? '<div class="bz">Οι επαφές δεν φορτώθηκαν ('+E(st.con.err)+') — γράψε διεύθυνση email.</div>' : !st.con ? '<div class="bz" data-conhint>Φόρτωση επαφών Kerio…</div>' : '');
+        return h + '</div>';
+      }
+      const m = st.open;
+      if(m){
+        const body = m.text ? linkify(m.text) : m.html ? linkify(txtOfHtml(m.html)) : '<i style="color:#8E8E93">(χωρίς κείμενο)</i>';
+        h += '<div class="bar"><button class="btn g" data-back>‹ '+E(((st.folders||[]).find(f=>f.id===st.fid)||{}).name || 'Λίστα')+'</button></div>'
+          + '<div class="rd"><h2>'+E(m.subject || '(χωρίς θέμα)')+'</h2><div class="meta"><b style="color:inherit">'+E(who(m.from))+'</b> &lt;'+E((m.from||{}).address||'')+'&gt;<br>'
+          + 'Προς: '+E((m.to||[]).map(who).join(', '))+((m.cc||[]).length ? '<br>Κοιν.: '+E(m.cc.map(who).join(', ')) : '')+'<br>'+E(whenL(m.date))+'</div>'
+          + m.atts.map((a,i)=>'<div class="att" data-att="'+i+'"><span style="font-size:22px">📎</span><div style="flex:1;min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+E(a.name)+'</b><small style="color:#8E8E93">'+E(kb(a.size||0))+'</small></div><span style="color:#0A84FF;font-weight:600">Άνοιγμα</span></div>').join('')
+          + '<div class="body">'+body+'</div></div>'
+          + '<div class="acts"><button class="btn" data-cmp="reply">↩︎ Απάντηση</button><button class="btn g" data-cmp="all">↩︎ Σε όλους</button><button class="btn g" data-cmp="fwd">↪︎ Προώθηση</button></div>';
+        return h + '</div>';
+      }
+      h += '<div class="fl">'+(st.folders||[]).filter(f=>!f.parent || (st.folders||[]).every(x=>x.id!==f.parent) || f.sub).map(f=>'<button data-fd="'+E(f.id)+'"'+(f.id===st.fid?' class="on"':'')+'>'+E(f.name)+(f.unread?' <b>'+f.unread+'</b>':'')+'</button>').join('')+'</div>'
+        + '<div class="bar"><input data-q type="search" placeholder="Αναζήτηση (θέμα, αποστολέας)" value="'+E(st.q)+'" enterkeyhint="search"><button class="btn" data-new>✏️ Νέο</button></div>';
+      if(st.list){
+        const sentLike = /Sent|Drafts|Outbox/.test(((st.folders||[]).find(f=>f.id===st.fid)||{}).sub||'');
+        h += st.list.length ? st.list.map(x=>'<div class="ml'+(x.seen?'':' u')+'" data-m="'+E(x.id)+'"><span class="dot"></span><div class="c"><div class="r1"><b>'+E(sentLike ? 'Προς: '+(x.to||[]).map(who).join(', ') : who(x.from))+'</b><small>'+(x.att?'📎 ':'')+E(when(x.date))+'</small></div><b class="s">'+E(x.subject||'(χωρίς θέμα)')+'</b></div></div>').join('')
+          : '<div class="bz" style="text-align:center;padding:30px">Κανένα μήνυμα'+(st.q?' για «'+E(st.q)+'»':'')+'</div>';
+        if(st.list.length < st.total) h += '<div class="bar"><button class="btn g" style="flex:1" data-more>Περισσότερα ('+st.list.length+' από '+st.total+')</button></div>';
+        h += '<div class="bz" style="font-size:12.5px;text-align:center">Kerio κλινικής μέσω του υπολογιστή του νοσοκομείου'+(st.at?' · '+new Date(st.at).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}):'')+' · <a href="#" data-ref>↻ Ανανέωση</a></div>';
+      }
+      return h + '</div>';
+    }
+    const pg = iosPage('Email', 'Εργαλεία', draw);
+    // ---- πατήματα ----
+    let sgT = 0;
+    const sugg = (inp)=>{ const box = pg.el.querySelector('[data-sg]'); if(!box) return; const q = String(inp.value||'').trim().toLowerCase();
+      if(!q || !st.con){ box.style.display = 'none'; return; }
+      const nz = s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(), Q = nz(q);
+      const G = (st.con.groups||[]).filter(g=>nz(g.name).includes(Q)).slice(0,6).map(g=>'<div data-pick="👥 '+E(g.name)+'" data-f="'+inp.dataset.rc+'">👥 '+E(g.name)+'<small>ομάδα · '+g.n+'</small></div>');
+      const P = (st.con.people||[]).filter(p=>nz(p.name).includes(Q) || p.address.toLowerCase().includes(q)).slice(0,10).map(p=>'<div data-pick="'+E(p.address)+'" data-f="'+inp.dataset.rc+'">'+E(p.name||p.address)+'<small>'+E(p.address)+'</small></div>');
+      box.innerHTML = G.concat(P).join('') || (addrOk(q) ? '<div data-pick="'+E(q)+'" data-f="'+inp.dataset.rc+'">➕ '+E(q)+'</div>' : ''); box.style.display = box.innerHTML ? '' : 'none'; };
+    pg.el.addEventListener('click', e=>{
+      const t = e.target, Cq = s=>t.closest(s);
+      if(Cq('[data-fd]')){ st.fid = Cq('[data-fd]').dataset.fd; st.list = null; st.q = ''; loadList(); return; }
+      if(Cq('[data-m]')){ openMail(Cq('[data-m]').dataset.m); return; }
+      if(Cq('[data-back]')){ st.open = null; pg.redraw(); return; }
+      if(Cq('[data-att]')){ getAtt(+Cq('[data-att]').dataset.att); return; }
+      if(Cq('[data-new]')){ st.open = null; compose('new'); return; }
+      if(Cq('[data-cmp]')){ compose(Cq('[data-cmp]').dataset.cmp); return; }
+      if(Cq('[data-cx]')){ if(st.comp && (st.comp.text.trim() || st.comp.files.length) && !confirm('Απόρριψη του μηνύματος;')) return; st.comp = null; pg.redraw(); return; }
+      if(Cq('[data-send]')){ send(); return; }
+      if(Cq('[data-more]')){ loadList(true); return; }
+      if(Cq('[data-ref]')){ e.preventDefault(); loadFolders().then(()=>loadList()); return; }
+      if(Cq('[data-rm]')){ const [f,i] = Cq('[data-rm]').dataset.rm.split('|'); st.comp[f].splice(+i,1); pg.redraw(); return; }
+      if(Cq('[data-rf]')){ st.comp.files.splice(+Cq('[data-rf]').dataset.rf,1); pg.redraw(); return; }
+      if(Cq('[data-rfw]')){ st.comp.fwd = null; pg.redraw(); return; }
+      if(Cq('[data-pick]')){ const p = Cq('[data-pick]'); addRcpt(p.dataset.f, p.dataset.pick); pg.redraw(); const i = pg.el.querySelector('[data-rc="'+p.dataset.f+'"]'); if(i) i.focus(); return; }
+    });
+    pg.el.addEventListener('input', e=>{ const t = e.target, C = st.comp;
+      if(t.matches('[data-subj]') && C) C.subject = t.value;
+      else if(t.matches('[data-text]') && C) C.text = t.value;
+      else if(t.matches('[data-rc]')){ clearTimeout(sgT); sgT = setTimeout(()=>sugg(t), 120); } });
+    pg.el.addEventListener('keydown', e=>{ const t = e.target;
+      if(t.matches('[data-rc]') && (e.key==='Enter' || e.key===',' || e.key===';') && t.value.trim()){ e.preventDefault(); addRcpt(t.dataset.rc, t.value); pg.redraw(); const i = pg.el.querySelector('[data-rc="'+t.dataset.rc+'"]'); if(i) i.focus(); }
+      if(t.matches('[data-q]') && e.key==='Enter'){ e.preventDefault(); st.q = t.value.trim(); loadList(); } });
+    pg.el.addEventListener('focusout', e=>{ const t = e.target; if(t.matches && t.matches('[data-rc]') && addrOk(t.value)){ setTimeout(()=>{ if(!st.comp || !document.body.contains(t)) return; if(addrOk(t.value)){ addRcpt(t.dataset.rc, t.value); pg.redraw(); } }, 250); } });
+    pg.el.addEventListener('change', e=>{ const t = e.target; if(t.matches('[data-file]') && st.comp){ for(const f of t.files) st.comp.files.push(f); pg.redraw(); } });
+    (async ()=>{ if(!st.folders) await loadFolders(); if(st.folders) await loadList(); })();
+    return pg;
+  };
   window.pdxScanHub = function(){
     const adm = window.authRole==='admin';
     const pg = iosPage('Σάρωση', 'Ρυθμίσεις', ()=>{
@@ -8432,6 +8616,7 @@ document.head.appendChild(st);
       ['🧾','Παραγγελία εξετάσεων','παραγγελια εξετασεις γενικη αιματος order', bot?(k=>pdxBot(k,'order')):null, true],
       ['🧪','Εργαστηριακά','εργαστηριακα labs αποτελεσματα', k=>mobAct(k,'labs'), true],
       ['📁','Αρχεία κλινικής','αρχεια φακελος ουρολογικης pronas αξονικη μαγνητικη απεικονιση dicom pdf', k=>pdxFiles(), false],
+      ['📧','Email (Kerio)','email mail μειλ ταχυδρομειο kerio εισερχομενα απεσταλμενα αποστολη συνημμενο', bot?(k=>pdxMail()):null, false],
       ['💻','Αξονικές: εφαρμογή υπολογιστή (3D)','αξονικες viewer ct dicom 3d radiant εγκατασταση εφαρμογη υπολογιστη cd', k=>{ location.href='ct?install=1'; }, false],
       ['🔬','Βιοψίες','βιοψιες βιοψια παθολογοανατομικο ιστολογικη αποτελεσμα gleason', bot?(k=>pdxBiopsies()):null, false],
       ['🩻','Αξονικές ειδικευομένων','αξονικες ειδικευομενων φακελος ct μετακινηση αρχειο απεικονισεων cd', bot?(k=>pdxCtInbox()):null, false],
