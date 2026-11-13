@@ -2302,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13g-v371';
+const APP_VER = '2026-11-13h-v372';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7502,7 +7502,8 @@ document.head.appendChild(st);
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],
-      bot && ['📧','Email (Kerio)','εισερχόμενα · απεσταλμένα · αποστολή · συνημμένα', "pdxMail()"],   // 13/11 (χρήστης)   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
+      bot && ['📧','Email (Kerio)','εισερχόμενα · απεσταλμένα · αποστολή · συνημμένα', "pdxMail()"],   // 13/11 (χρήστης)
+      bot && ['📺','Τηλεόραση κλινικής','δείξε ό,τι θέλεις · αντικατοπτρισμός / επέκταση', "pdxTv()"],   // 13/11 (χρήστης)   // 10/11 22:38 (χρήστης): πάνω, στην «Κλινική»
       bot && ['🩻','Αξονικές ειδικευομένων','ταυτοποίηση & μετακίνηση στο αρχείο απεικονίσεων', "pdxCtInbox()"],   // 11/11 (χρήστης)
       bot && ['🦓','Ετικέτα Zebra','μεγάλος αριθμός σε όλο το πλάτος', "pdxLabelPrint()"]   // 11/11 20:43 (χρήστης)
     ]);
@@ -8584,6 +8585,55 @@ document.head.appendChild(st);
     (async ()=>{ if(!st.folders) await loadFolders(); if(st.folders) await loadList(); })();
     return pg;
   };
+  // ===== 📺 13/11 15:39 (χρήστης: «από HDMI να δείχνω μέσω του bot ό,τι θέλω στην οθόνη και να αλλάζω mirror/extend») =====
+  // Η τηλεόραση της κλινικής = 2η οθόνη (HDMI) του Μεσαίου. Εντολή tvshow μόνο σε εκείνον τον υπολογιστή.
+  window.pdxTv = function(){
+    if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
+    const TV_BOT = 'bmw51nismmo82h', E = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const st = window.__pdxTvSt = window.__pdxTvSt || {busy:'', msg:'', err:'', url:'', scr:null};
+    const P = [['🏥','Παραδόχαρτο (πίνακας κλινικής)', location.origin + '/'], ['🕐','Ρολόι', 'https://time.is/Athens']];
+    async function job(pl, label){
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_tv', name:label||'📺 Τηλεόραση', room:null, kind:'tvshow', payload:Object.assign({only:TV_BOT, assign:TV_BOT, quiet:true}, pl), status:'new'}).select('id').single();
+      if(ins.error) throw new Error(ins.error.message); const id = ins.data.id, t0 = Date.now();
+      while(Date.now()-t0 < 60000){ await new Promise(r=>setTimeout(r, 700));
+        const x = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = x.data; if(!j) continue;
+        if(j.status==='done') return {note:String(j.note||'').replace(/·\s*⏱.*$/,''), r:(j.payload||{}).result||{}};
+        if(/^(failed|cancelled|dismissed)$/.test(j.status)) throw new Error(String(j.note||'απέτυχε').replace(/·\s*⏱.*$/,'')); }
+      throw new Error('ο Μεσαίος δεν απάντησε σε 1′ (είναι ανοιχτός;)');
+    }
+    const go = async (pl, msg, label)=>{ st.busy = msg; st.err = ''; st.msg = ''; pg.redraw();
+      try{ const r = await job(pl, label); st.msg = r.note; if(r.r && r.r.screens) st.scr = r.r.screens; }catch(e){ st.err = String(e.message||e); } st.busy = ''; pg.redraw(); };
+    const B = 'border:0;border-radius:12px;padding:12px 10px;font:600 15px -apple-system,system-ui,sans-serif;min-height:48px;cursor:pointer;';
+    function draw(){
+      let h = '';
+      if(st.err) h += '<div style="margin:12px 16px;color:#B42318;font-weight:600">⚠ '+E(st.err)+'</div>';
+      if(st.busy) h += '<div style="margin:12px 16px;color:#6B6B70">⏳ '+E(st.busy)+'</div>';
+      if(st.msg) h += '<div style="margin:12px 16px;color:#1F6F43;font-weight:600">✓ '+E(st.msg)+'</div>';
+      h += '<div class="ios-h">Οθόνες του Μεσαίου</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 16px">'
+        + [['clone','🪞 Αντικατοπτρισμός','ίδια εικόνα παντού'],['extend','↔️ Επέκταση','η TV = 2η οθόνη'],['internal','🖥 Μόνο υπολογιστής','TV χωρίς εικόνα'],['external','📺 Μόνο τηλεόραση','οθόνη υπολογιστή σβηστή']]
+          .map(m=>'<button data-mode="'+m[0]+'" style="'+B+'background:var(--ios-card,#fff);color:inherit;text-align:left"><div>'+m[1]+'</div><small style="font-weight:400;color:#8E8E93">'+m[2]+'</small></button>').join('') + '</div>';
+      if(st.scr) h += '<div class="ios-f">Τώρα: '+E(st.scr.map(x=>(x.primary?'κύρια ':'2η ')+x.w+'×'+x.h).join(' · '))+'</div>';
+      h += '<div class="ios-h">Δείξε στην τηλεόραση</div><div style="margin:0 16px;display:flex;flex-direction:column;gap:8px">'
+        + P.map((x,i)=>'<button data-pre="'+i+'" style="'+B+'background:var(--ios-card,#fff);color:inherit;text-align:left">'+x[0]+' '+E(x[1])+'</button>').join('')
+        + '<div style="display:flex;gap:8px"><input data-url type="url" inputmode="url" autocapitalize="none" placeholder="https://… (οποιαδήποτε σελίδα)" value="'+E(st.url)+'" style="flex:1;min-width:0;font:16px -apple-system,system-ui,sans-serif;padding:11px 12px;border-radius:12px;border:0;background:rgba(118,118,128,.14);color:inherit">'
+        + '<button data-show style="'+B+'background:#1D4E80;color:#fff;flex:none">Δείξε</button></div>'
+        + '<button data-close style="'+B+'background:rgba(255,59,48,.12);color:#B42318">✕ Κλείσε ό,τι δείχνει</button></div>'
+        + '<div class="ios-f">Η σελίδα ανοίγει σε πλήρη οθόνη στην τηλεόραση (2η οθόνη) — με «Αντικατοπτρισμό» φαίνεται και στον υπολογιστή. ⚠ Η τηλεόραση μπορεί να φαίνεται από ασθενείς/επισκέπτες: μην αφήνεις ονόματα/διαγνώσεις ανοιχτά.</div>'
+        + '<div class="ios-h">Λειτουργία</div><div style="margin:0 16px"><button data-scr style="'+B+'background:rgba(118,118,128,.14);color:inherit;width:100%">↻ Έλεγχος οθονών</button></div><div style="height:40px"></div>';
+      return h;
+    }
+    const pg = iosPage('Τηλεόραση', 'Εργαλεία', draw);
+    const MODEL = {clone:'Αντικατοπτρισμός…', extend:'Επέκταση…', internal:'Μόνο υπολογιστής…', external:'Μόνο τηλεόραση…'};
+    pg.el.addEventListener('click', e=>{ const t = e.target, C = s=>t.closest(s); if(st.busy) return;
+      if(C('[data-mode]')){ const m = C('[data-mode]').dataset.mode; return go({action:'mode', mode:m}, MODEL[m], '📺 '+MODEL[m].replace('…','')); }
+      if(C('[data-pre]')){ const x = P[+C('[data-pre]').dataset.pre]; return go({action:'show', url:x[2]}, 'Άνοιγμα στην τηλεόραση…', '📺 '+x[1]); }
+      if(C('[data-show]')){ let u = String((pg.el.querySelector('[data-url]')||{}).value||'').trim(); if(!u) return; if(!/^https?:\/\//i.test(u)) u = 'https://'+u; st.url = u; return go({action:'show', url:u}, 'Άνοιγμα στην τηλεόραση…', '📺 σελίδα'); }
+      if(C('[data-close]')) return go({action:'close'}, 'Κλείσιμο…', '📺 κλείσιμο');
+      if(C('[data-scr]')) return go({action:'screens'}, 'Έλεγχος οθονών…', '📺 οθόνες'); });
+    pg.el.addEventListener('keydown', e=>{ if(e.target.matches('[data-url]') && e.key==='Enter'){ e.preventDefault(); const b = pg.el.querySelector('[data-show]'); b && b.click(); } });
+    if(!st.scr) go({action:'screens'}, 'Έλεγχος οθονών…', '📺 οθόνες');
+    return pg;
+  };
   window.pdxScanHub = function(){
     const adm = window.authRole==='admin';
     const pg = iosPage('Σάρωση', 'Ρυθμίσεις', ()=>{
@@ -8617,6 +8667,7 @@ document.head.appendChild(st);
       ['🧪','Εργαστηριακά','εργαστηριακα labs αποτελεσματα', k=>mobAct(k,'labs'), true],
       ['📁','Αρχεία κλινικής','αρχεια φακελος ουρολογικης pronas αξονικη μαγνητικη απεικονιση dicom pdf', k=>pdxFiles(), false],
       ['📧','Email (Kerio)','email mail μειλ ταχυδρομειο kerio εισερχομενα απεσταλμενα αποστολη συνημμενο', bot?(k=>pdxMail()):null, false],
+      ['📺','Τηλεόραση κλινικής','τηλεοραση tv hdmi οθονη mirror extend αντικατοπτρισμος επεκταση προβολη', bot?(k=>pdxTv()):null, false],
       ['💻','Αξονικές: εφαρμογή υπολογιστή (3D)','αξονικες viewer ct dicom 3d radiant εγκατασταση εφαρμογη υπολογιστη cd', k=>{ location.href='ct?install=1'; }, false],
       ['🔬','Βιοψίες','βιοψιες βιοψια παθολογοανατομικο ιστολογικη αποτελεσμα gleason', bot?(k=>pdxBiopsies()):null, false],
       ['🩻','Αξονικές ειδικευομένων','αξονικες ειδικευομενων φακελος ct μετακινηση αρχειο απεικονισεων cd', bot?(k=>pdxCtInbox()):null, false],
