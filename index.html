@@ -1019,8 +1019,48 @@ const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
     'html.pdx-mac .ios-r{min-height:32px!important;font-size:13.5px!important;gap:9px!important;padding:0 12px!important}html.pdx-mac .ios-t{padding:6px 0!important}',
     'html.pdx-mac .ios-t small{font-size:11.5px!important}html.pdx-mac .ios-i{width:22px!important;height:22px!important;font-size:13px!important;border-radius:5px!important}',
     'html.pdx-mac .ios-r:hover{background:#F2F5F9}html.pdx-night.pdx-mac .ios-r:hover{background:#2C2C2E}html.pdx-mac .ios-r+.ios-r:before{left:43px!important}',
-    'html.pdx-mac .ios-v,html.pdx-mac .ios-r select{font-size:13.5px!important}html.pdx-mac .ios-f{margin:5px 24px 0!important;font-size:11.5px!important}'
+    'html.pdx-mac .ios-v,html.pdx-mac .ios-r select{font-size:13.5px!important}html.pdx-mac .ios-f{margin:5px 24px 0!important;font-size:11.5px!important}',
+    // 13/11 23:18 (χρήστης: «η καρτέλα ασθενή δεν έχει σωστό UI υπολογιστή»): πλέγμα εικονιδίων iPhone → κουμπιά macOS (εικονίδιο + κείμενο σε σειρά, γεμίζουν το πλάτος)
+    'html.pdx-mac #mobView .pacts{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))!important;gap:8px!important;max-width:none!important;margin:12px 12px 6px!important}',
+    'html.pdx-mac #mobView .ptg-b{flex-direction:row!important;justify-content:flex-start;gap:9px!important;padding:7px 10px!important;border-radius:8px!important;background:var(--card,#fff)!important;border:1px solid rgba(0,0,0,.08)!important;min-height:40px;text-align:left}',
+    'html.pdx-mac #mobView .ptg-b:hover{background:#F2F5F9!important}html.pdx-night.pdx-mac #mobView .ptg-b{background:#1C1C1E!important;border-color:rgba(255,255,255,.1)!important}html.pdx-night.pdx-mac #mobView .ptg-b:hover{background:#2C2C2E!important}',
+    'html.pdx-mac #mobView .ptg-i{width:26px!important;height:26px!important;font-size:17px!important;border-radius:6px!important;box-shadow:none!important;background:transparent!important;flex:none}',
+    'html.pdx-mac #mobView .ptg-t{font-size:13px!important;font-weight:500!important;text-align:left!important;white-space:nowrap}',
+    'html.pdx-mac #mobView .ptg-d{top:-3px!important;right:-3px!important;width:9px!important;height:9px!important}',
+    'html.pdx-mac #mobView .mact{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important}'
   ].join('\n'); (document.head || R).appendChild(st); })();
+// 🌙 13/11 23:18 (χρήστης: «στο dark mode δε βλέπω τίποτα — ψάξε ΟΛΑ τα παρόμοια»): ΦΥΛΑΚΑΣ ΑΝΤΙΘΕΣΗΣ για όλη την εφαρμογή.
+// Αντί να κυνηγάμε ένα-ένα τα χρώματα (inline, κλάσεις, μεταβλητές): σε σκοτεινό θέμα κάθε στοιχείο με κείμενο ελέγχεται με τον κανόνα WCAG
+// (λόγος αντίθεσης κειμένου/πραγματικού φόντου ≥ 3:1)· αν δεν φαίνεται → το ίδιο χρώμα στην «σκοτεινή» εκδοχή της Apple (iOS/macOS Dark):
+// μπλε #64B5FF (σύνδεσμοι/τόνος), κόκκινο #FF6961, πορτοκαλί #FFB340, κίτρινο #FFD60A, πράσινο #30D158, μωβ #BF5AF2, γκρι δευτερεύον #AEAEB2, κύριο #F2F2F7.
+// Φωτεινό κείμενο σε φωτεινό φόντο (κάρτα που έμεινε άσπρη) → #1C1C1E. Μόνο όσο είναι ενεργό το σκοτεινό θέμα· με το φωτεινό όλα επανέρχονται.
+(function(){ const R = document.documentElement; let on = false, q = new Set(), tm = 0, mo = null;
+  const P = c=>{ const m = /rgba?\(([^)]+)\)/.exec(c||''); if(!m) return null; const v = m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat); return {r:v[0], g:v[1], b:v[2], a:v.length>3 ? v[3] : 1}; };
+  const L = c=>{ const f = x=>{ x /= 255; return x <= .03928 ? x/12.92 : Math.pow((x+.055)/1.055, 2.4); }; return .2126*f(c.r) + .7152*f(c.g) + .0722*f(c.b); };
+  const HS = c=>{ const r = c.r/255, g = c.g/255, b = c.b/255, mx = Math.max(r,g,b), mn = Math.min(r,g,b), d = mx-mn, l = (mx+mn)/2; let h = 0;
+    if(d){ h = mx===r ? ((g-b)/d) % 6 : mx===g ? (b-r)/d + 2 : (r-g)/d + 4; h *= 60; if(h < 0) h += 360; } return {h, s: d ? d/(1-Math.abs(2*l-1)) : 0, l}; };
+  let MB = new Map();   // μνήμη φόντου ανά πέρασμα
+  const BG = el=>{ const seen = []; let res = {r:0, g:0, b:0, a:1}; for(let e = el; e && e.nodeType===1; e = e.parentElement){ if(MB.has(e)){ res = MB.get(e); break; } seen.push(e); const cs = getComputedStyle(e), c = P(cs.backgroundColor); if(c && c.a > .5){ res = c; break; } if(cs.backgroundImage && cs.backgroundImage!=='none' && !/url\(/.test(cs.backgroundImage)){ res = null; break; } } seen.forEach(e=>MB.set(e, res)); return res; };
+  const DK = c=>{ const {h, s, l} = HS(c); if(s < .2) return l > .55 ? '#F2F2F7' : '#AEAEB2';
+    return h < 15 || h >= 345 ? '#FF6961' : h < 42 ? '#FFB340' : h < 68 ? '#FFD60A' : h < 165 ? '#30D158' : h < 195 ? '#64D2FF' : h < 255 ? '#64B5FF' : h < 300 ? '#BF5AF2' : '#FF6FA8'; };
+  const txt = el=>{ for(const n of el.childNodes) if(n.nodeType===3 && n.nodeValue.trim()) return true; return /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName); };
+  const fix = el=>{ if(!el.isConnected || el.dataset.pdxCf || !txt(el)) return; const cs = getComputedStyle(el); if(cs.visibility==='hidden' || cs.display==='none') return;
+    const c = P(cs.color); if(!c || c.a < .3) return; const bg = BG(el); if(!bg) return;
+    const a = L(c), b = L(bg), ratio = (Math.max(a,b)+.05)/(Math.min(a,b)+.05); if(ratio >= 3) return;
+    const nc = b < .25 ? DK(c) : '#1C1C1E'; el.style.setProperty('color', nc, 'important'); if(/^(INPUT|TEXTAREA)$/.test(el.tagName)) el.style.setProperty('-webkit-text-fill-color', nc, 'important'); el.dataset.pdxCf = '1'; };
+  const scan = root=>{ if(!root || root.nodeType!==1) return; const W = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT); let n = 0, e = root;
+    do{ if(!/^(SCRIPT|STYLE|SVG|svg|path|IMG|CANVAS|VIDEO)$/.test(e.tagName)) fix(e); if(++n > 6000) break; }while((e = W.nextNode())); };
+  const flush = ()=>{ tm = 0; if(!on) { q.clear(); return; } const L2 = [...q]; q.clear(); MB = new Map(); L2.forEach(scan); MB = new Map(); };
+  const sched = n=>{ q.add(n); if(!tm) tm = setTimeout(flush, 120); };
+  const undo = ()=>{ document.querySelectorAll('[data-pdx-cf]').forEach(e=>{ e.style.removeProperty('color'); e.style.removeProperty('-webkit-text-fill-color'); delete e.dataset.pdxCf; }); };
+  const upd = ()=>{ const n = R.classList.contains('pdx-night'); if(n===on) return; on = n;
+    if(on){ undo(); sched(document.body); if(!mo){ mo = new MutationObserver(ms=>{ if(!on) return; for(const m of ms){ if(m.type==='childList') m.addedNodes.forEach(x=>{ if(x.nodeType===1) sched(x); else if(x.parentElement) sched(x.parentElement); });
+          else if(m.target.nodeType===1){ m.target.querySelectorAll && m.target.querySelectorAll('[data-pdx-cf]').forEach(e=>{ e.style.removeProperty('color'); delete e.dataset.pdxCf; }); sched(m.target); } } });
+        mo.observe(document.body, {childList:true, subtree:true, characterData:false, attributes:true, attributeFilter:['class']}); } }
+    else undo(); };
+  window.pdxContrastScan = ()=>{ undo(); MB = new Map(); if(on) scan(document.body); };
+  const go = ()=>{ new MutationObserver(upd).observe(R, {attributes:true, attributeFilter:['class']}); upd(); };
+  if(document.body) go(); else document.addEventListener('DOMContentLoaded', go); })();
 const sb6 = window.supabase.createClient(SB6_URL, SB6_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});
 // Παλιά σημεία της εφαρμογής μιλούν στη βάση με το δημόσιο κλειδί (ανώνυμα): αρχείο, εισερχόμενα ιστορικά/εργαστηριακά,
 // λεξικό, ρυθμίσεις. Η βάση πλέον δίνει αυτά τα δεδομένα μόνο σε συνδεδεμένους, οπότε απαντούσε κενό ή «permission denied».
@@ -2343,7 +2383,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13m-v377';
+const APP_VER = '2026-11-13n-v378';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
