@@ -2386,7 +2386,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13r-v382';
+const APP_VER = '2026-11-13s-v383';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8992,6 +8992,10 @@ document.head.appendChild(st);
   #mobView.desk.nv3{grid-template-columns:220px minmax(520px,46%) minmax(440px,1fr)!important;transition:grid-template-columns .22s ease}
   #mobView.desk.dkfull{grid-template-columns:1fr 0!important}#mobView.desk.nv3.dkfull{grid-template-columns:220px 1fr 0!important}#mobView.desk.dkfull .dk-r{display:none!important}#mobView.desk.dkfull .dk-l{border-right:0!important}
   html.nv3.nvfull #iosPg,html.nv3.nvfull .iosPgU,html.nv3.nvfull #mobSubPop{left:var(--nvS,220px)!important}
+  /* 13/11 23:51 (χρήστης: «ενώ είναι στις Ρυθμίσεις ανοίγει όλο το πλάτος και όχι δεξιά»): οι παλιές οθόνες ρυθμίσεων (φύλλα → .iosx: Εκκρεμότητες επιλογές,
+     Λογαριασμός, Θάλαμοί μου, Όρια, Κωδικοί, Χρήστες…) ανοίγουν κι αυτές ΔΕΞΙΑ, όπως οι σελίδες (#iosPg) */
+  html.nv3 .iosx,html.nv3 .iosx .iosx-nav{left:var(--nvR,600px)!important}html.nv3 .iosx{border-left:.5px solid #D1D1D6}html.pdx-night.nv3 .iosx{border-left-color:#38383A}
+  html.nv3.nvwide .iosx,html.nv3.nvwide .iosx .iosx-nav,html.nv3.nvfull .iosx,html.nv3.nvfull .iosx .iosx-nav{left:var(--nvS,220px)!important}
   html.pdx-mac #mobView.desk.dkfull .dk-l>*{max-width:1100px}
   #mobView.desk.nv3.sidec{grid-template-columns:0 minmax(560px,48%) minmax(440px,1fr)!important}
   #mobView.desk.nv3.sidec .dk-s{padding:0!important;overflow:hidden;border:0!important}
@@ -20027,6 +20031,8 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
         L.push({k, x, d, name:String(d.name).trim(), today: ad >= t0}); });
       // 🏥 13/11 23:47 (χρήστης: «λέει καμία εισαγωγή ενώ έγιναν»): οι νέοι ασθενείς είναι συχνά ΜΟΝΟ στη λίστα του ΝΠΣ (όχι ακόμα στο Παραδόχαρτο) και
       // η λίστα δεν δίνει ημ. εισαγωγής → ημ. = στοιχεία ΝΠΣ (npsenrich) ή η ΠΡΩΤΗ φορά που φάνηκε στη λίστα της κλινικής (λίστες 4 ημερών)
+      // 13/11 23:50 (χρήστης: «πλέον ΒΑΣΙΚΗ λίστα είναι το ΝΠΣ»): όταν υπάρχει λίστα ΝΠΣ, μετράει ΑΥΤΗ — ασθενής του Παραδόχαρτου που δεν είναι στο ΝΠΣ δεν είναι «εισαγωγή»
+      if((st.nps||[]).length){ const inN = new Set(st.nps.map(r=>nz(r.name))); for(let j = L.length-1; j >= 0; j--) if(!inN.has(nz(L[j].name))) L.splice(j, 1); }
       const have = new Set(L.map(p=>nz(p.name)));
       (st.nps || []).forEach(r=>{ const nm = String(r.name||'').trim(); if(!nm || have.has(nz(nm))) return; const x0 = enr[nz(nm)] || {};
         const ad = dayOf(x0.adm && x0.adm.from) || (st.first[nz(nm)] ? new Date(st.first[nz(nm)]) : null); if(!ad) return; const a0 = new Date(ad); a0.setHours(0,0,0,0); if(a0 < y0) return;
