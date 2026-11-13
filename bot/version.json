@@ -1,1 +1,1 @@
-{"version": "0.21.355", "zip": "ef-bot-0.21.355.zip", "sha256": "f623d5f2b662f9c27aa22b61e8cf69ba8bcb4783d9f7abe5e7f053446e3f6b94", "notes": "νέα εργασία sysmsgdump: όλα τα κείμενα μηνυμάτων e-prescription/ΑΗΦΥ/Medilabi (μόνο ανάγνωση)"}
+{"version": "0.21.356", "zip": "ef-bot-0.21.356.zip", "sha256": "fab23243d510612e70f53267f1b1210be78036934580bd21440edb67fd533143", "notes": "μηνύματα: e-prescription JSON/Next.js · ΑΗΦΥ \\u-κείμενα · Medilabi UTF-8 · σάρωση: κουμπιά-εικονίδια μόνο ημερολόγιο"}
