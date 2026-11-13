@@ -2300,7 +2300,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-12m-v364';
+const APP_VER = '2026-11-13a-v365';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8351,7 +8351,8 @@ document.head.appendChild(st);
       {ic:'🩺', t:'Κατάσταση συστημάτων', on:"pdxHealth()"},
       (adm || bot) && {ic:'🔐', t:'Κωδικοί', sub: adm ? 'νέος κωδικός (ΝΠΣ · e-prescription · Medilabi · Kerio…) · έλεγχος' : 'έλεγχος', on: adm ? "pdxCredHub()" : "pdxCredCheck()"},
       adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:"pdxAutoApprove()"},
-      adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"}
+      adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
+      adm && {ic:'🗺', t:'Χάρτες & σφάλματα συστημάτων', sub:'αυτόματα αρχεία ανά σύστημα · νυχτερινή σάρωση', on:"pdxSysDocs()"}
     ]);
     h += iosGroup('Εμφάνιση & ασφάλεια', [
       {ic:'✨', t:'Εμφάνιση λίστας', v:esc(VMS[VM()]), on:"pdxViewPick()"},
@@ -13986,6 +13987,83 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         extraPatients[key] = rec; try{ if(window.iosPageCloseAll) iosPageCloseAll(); }catch(x){} if(window.mobOpen) mobOpen(key); }
     });
     await loadLast(); pg.redraw();
+  };
+  // 🗺📕 12/11 23:40 (χρήστης: «χαρτογράφηση των συστημάτων ξεχωριστά — κάθε κλικ, κάθε σφάλμα — και αρχεία σφαλμάτων»):
+  // τα αρχεία τα γράφει ΜΟΝΟ ΤΟΥ το bot (oncall_labs «sysmap|<σύστημα>|md» μετά από κάθε σάρωση, «syserr|<σύστημα>|md» κάθε πρωί 06:30).
+  // Εδώ: ανάγνωση + κατέβασμα .md + πότε είναι η επόμενη νυχτερινή σάρωση + ορισμός ασθενή δοκιμών για την «καρτέλα ασθενή» του ΝΠΣ.
+  window.pdxMdHtml = function(md){
+    const E = x=>esc(String(x==null?'':x)), inl = x=>E(x).replace(/`([^`]+)`/g,'<code style="background:rgba(120,120,128,.14);border-radius:4px;padding:0 3px;font-size:.92em;word-break:break-all">$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+    const L = String(md||'').split('\n'); let h = '', i = 0;
+    while(i < L.length){ const raw = L[i], t = raw.trim();
+      if(/^\|/.test(t)){ const rows = []; while(i < L.length && /^\|/.test(L[i].trim())){ rows.push(L[i].trim()); i++; }
+        const cells = r=>r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim()), body = rows.filter(r=>!/^\|[\s:|-]+\|?$/.test(r));
+        h += '<div style="overflow-x:auto;margin:6px 0"><table style="border-collapse:collapse;font-size:12.5px;min-width:100%">'+body.map((r,k)=>'<tr>'+cells(r).map(c=>'<'+(k?'td':'th')+' style="border:1px solid rgba(120,120,128,.3);padding:5px 7px;text-align:left;vertical-align:top;'+(k?'':'background:rgba(120,120,128,.12);white-space:nowrap')+'">'+inl(c)+'</'+(k?'td':'th')+'>').join('')+'</tr>').join('')+'</table></div>'; continue; }
+      if(/^# /.test(t)) h += '<div style="font-size:19px;font-weight:700;margin:4px 0 8px">'+inl(t.slice(2))+'</div>';
+      else if(/^## /.test(t)) h += '<div style="font-size:15.5px;font-weight:700;margin:18px 0 6px;padding-top:10px;border-top:1px solid rgba(120,120,128,.25)">'+inl(t.slice(3))+'</div>';
+      else if(/^> /.test(t)) h += '<div style="font-size:12.5px;color:#8E8E93;border-left:3px solid rgba(120,120,128,.35);padding-left:8px;margin:2px 0">'+inl(t.slice(2))+'</div>';
+      else if(/^- /.test(t)) h += '<div style="font-size:13.5px;margin:3px 0;padding-left:'+(12+Math.min(3,Math.floor((raw.length-raw.trimStart().length)/2))*14)+'px;text-indent:-10px">• '+inl(t.slice(2))+'</div>';
+      else if(t) h += '<div style="font-size:13.5px;margin:4px 0">'+inl(t)+'</div>';
+      i++; }
+    return h;
+  };
+  window.pdxSysDocs = async function(){
+    const E2 = x=>esc(String(x==null?'':x));
+    const SYS = [['nps','ΝΠΣ'],['npspt','ΝΠΣ — καρτέλα ασθενή'],['medilabi','Medilabi'],['epres','e-prescription'],['ahfy','ΑΗΦΥ'],['evorad','Evorad'],['bot','Bot / υπολογιστές']];
+    const S = { st:'load', rows:{}, cfg:{}, msg:'' };
+    const DEF = { anchor:'2026-11-12', every:4 };
+    const oncall = (d)=>{ const c = Object.assign({}, DEF, S.cfg), a = new Date((c.anchor||DEF.anchor)+'T12:00:00'), x = new Date(d); x.setHours(12,0,0,0); const n = Math.round((x-a)/864e5), ev = +c.every||4; return ((n%ev)+ev)%ev===0; };
+    const nextNight = ()=>{ const now = new Date(), base = new Date(now); if(now.getHours() < 7) base.setDate(base.getDate()-1);   // η «νύχτα» της ημέρας Χ = 00:00–07:00 της Χ+1
+      for(let k=0;k<6;k++){ const d = new Date(base); d.setDate(d.getDate()+k); if(!oncall(d)){ const n = new Date(d); n.setDate(n.getDate()+1); return { day:d, night:n, tonight:k===0 }; } } return null; };
+    const fmt = t=>{ if(!t) return '—'; const d = new Date(t); return d.toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}); };
+    const pg = iosPage('Χάρτες & σφάλματα', 'Ρυθμίσεις', ()=>{
+      if(S.st==='load') return '<div style="padding:30px;text-align:center;color:#8E8E93">⏳</div>';
+      if(S.st==='err') return '<div style="padding:24px;color:#B42318">⚠ '+E2(S.err)+'</div>';
+      const nn = nextNight(), c = S.cfg||{};
+      let h = '<div class="ios-h">Νυχτερινή σάρωση (00:00–07:00, μόνο ανάγνωση)</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:12px 14px;font-size:14px;line-height:1.45">'
+        + (c.off ? '⏸ <b>Κλειστή</b>' : nn ? (nn.tonight ? '🌙 <b>Απόψε</b>' : '🌙 Επόμενη: <b>'+nn.night.toLocaleDateString('el-GR',{weekday:'long',day:'2-digit',month:'2-digit'})+'</b>')+' μετά τις 00:00' : '—')
+        + '<div style="font-size:12.5px;color:#8E8E93;margin-top:4px">'+(oncall(new Date(Date.now()-(new Date().getHours()<7?864e5:0))) ? 'Σήμερα γενική εφημερία → απόψε ΔΕΝ γίνεται σάρωση (τα bots μένουν για τις εντολές). ' : '')+'Εφημερία κάθε '+E2(c.every||DEF.every)+' ημέρες από '+E2((c.anchor||DEF.anchor).split('-').reverse().join('/'))+'. Το bot δεν πατά ποτέ καταχώριση, αποθήκευση, ακύρωση, διάγνωση ή πράξη.</div>'
+        + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button data-sd="off" style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px;font-size:13.5px;font-weight:600;min-height:40px">'+(c.off?'▶ Άνοιγμα σάρωσης':'⏸ Παύση σάρωσης')+'</button><button data-sd="anchor" style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 12px;font-size:13.5px;font-weight:600;min-height:40px">📅 Σήμερα έχουμε εφημερία</button></div></div>';
+      h += '<div class="ios-h">ΝΠΣ: καρτέλα ασθενή δοκιμών</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:12px 14px"><div style="font-size:12.5px;color:#8E8E93;margin-bottom:8px">Για να χαρτογραφηθεί το μενού ΜΕΣΑ στην καρτέλα ασθενή, γράψε το ονοματεπώνυμο ενός νοσηλευόμενου που ορίζεις εσύ. Ανοίγονται μόνο οι σελίδες του μενού (όχι Διοικητικές/Χημειοθεραπεία/Έγγραφα), χωρίς καμία εγγραφή· το όνομα δεν γράφεται πουθενά στον χάρτη. Κενό = δεν γίνεται.</div>'
+        + '<div style="display:flex;gap:8px"><input id="sdPt" value="'+E2(c.pt||'')+'" placeholder="ΕΠΩΝΥΜΟ ΟΝΟΜΑ" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:0;border:1px solid rgba(120,120,128,.35);border-radius:10px;padding:9px 10px;font-size:15px;background:transparent;color:inherit"><button data-sd="pt" style="border:0;background:#0A84FF;color:#fff;border-radius:10px;padding:8px 14px;font-size:14px;font-weight:600;min-height:40px">Αποθήκευση</button></div></div>';
+      if(S.msg) h += '<div style="margin:10px 16px;font-size:13.5px;color:#1B7F3B">'+E2(S.msg)+'</div>';
+      h += '<div class="ios-h">Αρχεία ανά σύστημα (ενημερώνονται μόνα τους)</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;overflow:hidden">';
+      SYS.forEach(([k,n],i)=>{ const m = S.rows['sysmap|'+k+'|md'], e = S.rows['syserr|'+(k==='npspt'?'nps':k)+'|md'];
+        h += '<div style="padding:11px 14px;'+(i?'border-top:1px solid rgba(120,120,128,.2)':'')+'"><div style="font-weight:600;font-size:15px;margin-bottom:6px">'+E2(n)+'</div><div style="display:flex;gap:8px;flex-wrap:wrap">'
+          + (k==='bot'||k==='evorad' ? '' : '<button data-doc="sysmap|'+k+'|md" '+(m?'':'disabled ')+'style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 11px;font-size:13.5px;min-height:40px;'+(m?'font-weight:600':'opacity:.5')+'">🗺 Χάρτης'+(m?' · '+fmt(m.updated_at):' · όχι ακόμα')+'</button>')
+          + (k==='npspt' ? '' : '<button data-doc="syserr|'+k+'|md" '+(e?'':'disabled ')+'style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 11px;font-size:13.5px;min-height:40px;'+(e?'font-weight:600':'opacity:.5')+'">📕 Σφάλματα'+(e?' · '+fmt(e.updated_at):' · όχι ακόμα')+'</button>')
+          + '</div></div>'; });
+      h += '</div><div style="margin:10px 16px 30px;font-size:12.5px;color:#8E8E93">Χάρτης: κάθε σελίδα, πεδίο, κουμπί, αίτημα και μήνυμα — και τι άλλαξε από την προηγούμενη σάρωση. Σφάλματα: κάθε σφάλμα με το κείμενό του, πότε βγαίνει, πόσες φορές και πώς το χειρίζεται το bot (☐ = δεν το χειρίζεται ακόμα). Χωρίς ονόματα ασθενών.</div>';
+      return h; });
+    const load = async ()=>{ try{
+        const [a,b,c] = await Promise.all([ sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','sysmap|%|md'), sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','syserr|%|md'), sb6.from('oncall_labs').select('data').eq('name_key','efbot|nightmap').maybeSingle() ]);
+        if(a.error || b.error) throw new Error((a.error||b.error).message);
+        S.rows = {}; [].concat(a.data||[], b.data||[]).forEach(r=>{ S.rows[r.name_key] = r; }); S.cfg = (c.data && c.data.data) || {}; S.st = 'ok';
+      }catch(e){ S.st='err'; S.err = e.message; } if(pg.el.isConnected) pg.redraw(); };
+    const saveCfg = async (patch, msg)=>{ const cur = await sb6.from('oncall_labs').select('data').eq('name_key','efbot|nightmap').maybeSingle(); if(cur.error){ S.msg = '⚠ '+cur.error.message; return pg.redraw(); }
+      const d = Object.assign({}, (cur.data && cur.data.data) || {}, patch); Object.keys(d).forEach(k=>{ if(d[k]===null) delete d[k]; });
+      const r = await sb6.from('oncall_labs').upsert({ name_key:'efbot|nightmap', name:'ρύθμιση νυχτερινής σάρωσης', pid:null, data:d, updated_at:new Date().toISOString() }, { onConflict:'name_key' });
+      S.cfg = d; S.msg = r.error ? '⚠ '+r.error.message : msg; pg.redraw(); };
+    pg.el.addEventListener('click', async e=>{ const t = e.target;
+      const sd = t.closest('[data-sd]'); if(sd){ const k = sd.dataset.sd;
+        if(k==='off') return saveCfg({ off: S.cfg.off ? null : true }, S.cfg.off ? '✓ Η νυχτερινή σάρωση άνοιξε.' : '✓ Η νυχτερινή σάρωση σταμάτησε.');
+        if(k==='anchor'){ const d = new Date(); if(d.getHours() < 7) d.setDate(d.getDate()-1);   // μετά τα μεσάνυχτα η εφημερία είναι της ΠΡΟΗΓΟΥΜΕΝΗΣ ημέρας
+          const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); return saveCfg({ anchor: iso }, '✓ Σήμερα = γενική εφημερία· οι επόμενες μετρούν από σήμερα.'); }
+        if(k==='pt'){ const v = String((pg.el.querySelector('#sdPt')||{}).value||'').replace(/\s+/g,' ').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); return saveCfg({ pt: v || null }, v ? '✓ Ασθενής δοκιμών ορίστηκε — η καρτέλα ασθενή θα χαρτογραφηθεί στην επόμενη νυχτερινή σάρωση.' : '✓ Χωρίς ασθενή δοκιμών.'); }
+        return; }
+      const dc = t.closest('[data-doc]'); if(dc && !dc.disabled){ window.__pdxTapPg = pg.el; pdxSysDoc(dc.dataset.doc); } });
+    load();
+  };
+  window.pdxSysDoc = async function(key){
+    const St = { md:null, err:'' }, nm = (/^sysmap/.test(key) ? 'ΧΑΡΤΗΣ_' : 'ΣΦΑΛΜΑΤΑ_') + ({nps:'ΝΠΣ',npspt:'ΝΠΣ_ΑΣΘΕΝΗΣ',medilabi:'MEDILABI',epres:'EPRES',ahfy:'ΑΗΦΥ',evorad:'EVORAD',bot:'ΛΟΙΠΑ'}[key.split('|')[1]] || key.split('|')[1]) + (/^sysmap/.test(key) ? '_ΣΕΛΙΔΕΣ' : '') + '.md';
+    const pg = iosPage(/^sysmap/.test(key) ? 'Χάρτης' : 'Σφάλματα', 'Χάρτες & σφάλματα', ()=> St.err ? '<div style="padding:24px;color:#B42318">⚠ '+esc(St.err)+'</div>' : St.md==null ? '<div style="padding:30px;text-align:center;color:#8E8E93">⏳</div>'
+      : '<div style="margin:0 16px 10px;display:flex;gap:8px"><button data-dl style="border:0;background:#0A84FF;color:#fff;border-radius:10px;padding:8px 14px;font-size:14px;font-weight:600;min-height:40px">⬇ '+esc(nm)+'</button><button data-cp style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 14px;font-size:14px;font-weight:600;min-height:40px">Αντιγραφή</button></div><div style="background:var(--card,#fff);border-radius:12px;margin:0 12px 30px;padding:12px 12px;overflow:hidden">'+pdxMdHtml(St.md)+'</div>');
+    pg.el.addEventListener('click', async e=>{ if(St.md==null) return;
+      if(e.target.closest('[data-dl]')){ const b = new Blob([St.md], {type:'text/markdown;charset=utf-8'}), f = (()=>{ try{ return new File([b], nm, {type:'text/markdown'}); }catch(x){ return null; } })();
+        if(f && navigator.canShare && navigator.canShare({files:[f]})){ try{ await navigator.share({files:[f], title:nm}); return; }catch(x){ if(x && x.name==='AbortError') return; } }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nm; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+      else if(e.target.closest('[data-cp]')){ try{ await navigator.clipboard.writeText(St.md); e.target.closest('[data-cp]').textContent = '✓ Αντιγράφηκε'; }catch(x){} } });
+    try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key', key).maybeSingle(); if(r.error) throw new Error(r.error.message); St.md = String((r.data && r.data.data && r.data.data.md) || 'Δεν υπάρχει ακόμα.'); }catch(e){ St.err = e.message; }
+    if(pg.el.isConnected) pg.redraw();
   };
   window.pdxBotsPage = async function(){
     // 🎛 6/11: Κέντρο ελέγχου bot — υγεία κάθε υπολογιστή (σήμα ζωής efbot|hb|<id>), επικοινωνία, ενέργειες, ρυθμίσεις
