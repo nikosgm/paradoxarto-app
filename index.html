@@ -971,9 +971,11 @@ const SB6_KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
 // ⚡ 9/11 (χρήστης: «άμεσο σήμα αντί να κοιτάνε κάθε τόσο»): κάθε νέα εντολή (insert στο oncall_jobs) → ΑΜΕΣΟ σήμα broadcast «job»
 // στο κανάλι των bots (efbot-ping). Η ειδοποίηση της βάσης (postgres_changes) μετρήθηκε να αργεί 8–18″· το broadcast φτάνει σε <1″.
 // Πρέπει να μπει ΠΡΙΝ το createClient (το supabase-js κρατά το fetch της στιγμής της δημιουργίας).
-(function(){ try{ const F = window.fetch; let t = 0;
-  window.pdxJobPing = function(){ clearTimeout(t); t = setTimeout(()=>{ try{ const ch = (window.__efbotPingCh && window.__efbotPingCh.state === 'joined') ? window.__efbotPingCh : (window.__pdxJobPingCh || (window.__pdxJobPingCh = sb6.channel('efbot-ping')));
-    ch.send({type:'broadcast', event:'job', payload:{at:Date.now()}}).catch(()=>{}); }catch(e){} }, 60); };
+(function(){ try{ const F = window.fetch; let t = 0, t2 = 0, t3 = 0;
+  const send = ()=>{ try{ const ch = (window.__efbotPingCh && window.__efbotPingCh.state === 'joined') ? window.__efbotPingCh : (window.__pdxJobPingCh || (window.__pdxJobPingCh = sb6.channel('efbot-ping')));
+    ch.send({type:'broadcast', event:'job', payload:{at:Date.now()}}).catch(()=>{}); }catch(e){} };
+  // 13/11 (Α2): ~3% των σημάτων χάνονται (ξύπνημα 50–130″ χωρίς άλλη εργασία σε εξέλιξη) → το ίδιο σήμα ξαναστέλνεται στα 3″ και 8″ (το bot απλώς ξανακοιτά την ουρά)
+  window.pdxJobPing = function(){ clearTimeout(t); clearTimeout(t2); clearTimeout(t3); t = setTimeout(send, 60); t2 = setTimeout(send, 3000); t3 = setTimeout(send, 8000); };
   window.fetch = function(u, o){ const p = F.apply(this, arguments); try{ const url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
     // 9/11: και ΑΛΛΑΓΕΣ εντολών (έγκριση/ακύρωση από το κινητό: PATCH) → άμεσο σήμα (όχι αναμονή της ειδοποίησης της βάσης)
     if((m === 'POST' || m === 'PATCH') && /\/rest\/v1\/oncall_jobs(\?|$)/.test(url)) p.then(r=>{ if(r && r.ok) window.pdxJobPing(); }, ()=>{}); }catch(e){} return p; };
@@ -2300,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13a-v365';
+const APP_VER = '2026-11-13b-v366';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
