@@ -1289,7 +1289,7 @@ async function doLogout(){
     const d = (x && x.data && x.data.data) || {}; d.out = {at: Date.now(), by: String(window.authName||'').replace(/@paradoxarto\.app$/,'').slice(0,60)};
     await sb6.from('oncall_labs').update({data: d, updated_at: new Date().toISOString()}).eq('name_key','efbot|alive');
   } }catch(e){}
-  fbReady = false; try{ if(window.__rt) sb6.removeChannel(window.__rt); }catch(e){} await sb6.auth.signOut(); location.reload(); }
+  fbReady = false; try{ if(window.__rt) sb6.removeChannel(window.__rt); }catch(e){} await sb6.auth.signOut({scope:'local'}); location.reload(); }   // 13/11: ΜΟΝΟ αυτή η συσκευή — η προεπιλογή (global) έκοβε και τη σύνδεση του Claude (connector) και τις άλλες συσκευές
 window.doLogin = doLogin; window.doLogout = doLogout;
 // ⏎ / «Μετάβαση» στο πληκτρολόγιο = Είσοδος
 document.addEventListener('keydown', e=>{ if(e.key!=='Enter') return; const lf = document.getElementById('loginForm'); if(lf && lf.offsetParent && lf.contains(e.target) && e.target.tagName==='INPUT'){ e.preventDefault(); doLogin(false); } });
@@ -2302,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13d-v368';
+const APP_VER = '2026-11-13e-v369';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };

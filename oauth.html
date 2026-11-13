@@ -24,13 +24,18 @@ button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:13px;cur
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const SB = 'https://evspmufooxgqxhbhydgc.supabase.co', KEY = 'sb_publishable_BOFN2Mb4jDGWcAqaIbNy_Q_FYvsz7y2';
-const sb = window.supabase.createClient(SB, KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false}});   // ίδια συνεδρία με την εφαρμογή (ίδιο origin)
+// 13/11 (christos: «κάνει loading»): η σελίδα έμενε στο «Μια στιγμή…» — το getSession περίμενε το κλείδωμα της συνεδρίας που κρατούσε
+// η εφαρμογή ανοιχτή σε άλλη καρτέλα (ίδιο origin). Τώρα: χωρίς κλείδωμα μεταξύ καρτελών + όριο 5″ σε κάθε βήμα → φόρμα σύνδεσης/μήνυμα, ποτέ ατέλειωτη αναμονή.
+if(!window.supabase){ document.getElementById('box').innerHTML = '<div class="err">⚠ Δεν φόρτωσε η σελίδα (δίκτυο).</div><button class="pri" onclick="location.reload()">Ξαναδοκίμασε</button>'; throw new Error('supabase-js'); }
+const sb = window.supabase.createClient(SB, KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:false, lock: async (_n, _t, fn)=>await fn()}});   // ίδια συνεδρία με την εφαρμογή (ίδιο origin)
+const T = (p, ms, what)=>Promise.race([p, new Promise((_, no)=>setTimeout(()=>no(new Error((what||'καθυστέρηση')+' — δεν απάντησε σε '+Math.round(ms/1000)+'″')), ms))]);
+const sess = async ()=>{ try{ const r = await T(sb.auth.getSession(), 5000, 'συνεδρία'); return (r && r.data && r.data.session) || null; }catch(e){ return null; } };
 const AID = new URLSearchParams(location.search).get('authorization_id') || '';
 const box = document.getElementById('box'), E = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fail = m=>{ box.innerHTML = '<div class="err">⚠ '+E(m)+'</div><div class="mut">Κλείσε αυτό το παράθυρο και ξαναπάτα «Connect» στο Claude.</div>'; };
 async function api(method, path, body){
-  const { data: { session } } = await sb.auth.getSession(); if(!session) throw new Error('χωρίς σύνδεση');
-  const r = await fetch(SB + '/auth/v1' + path, { method, headers: { apikey: KEY, authorization: 'Bearer ' + session.access_token, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const session = await sess(); if(!session) throw new Error('χωρίς σύνδεση');
+  const r = await T(fetch(SB + '/auth/v1' + path, { method, headers: { apikey: KEY, authorization: 'Bearer ' + session.access_token, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }), 15000, 'ο server');
   const j = await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.msg || j.message || j.error_description || j.error || ('HTTP ' + r.status)); return j;
 }
 function login(msg){
@@ -40,14 +45,14 @@ function login(msg){
   const go = async ()=>{ let e = document.getElementById('u').value.trim(); const pw = document.getElementById('p').value; if(!e || !pw) return;
     if(e.indexOf('@') < 0) e = e.toLowerCase() + '@paradoxarto.app';
     document.getElementById('m').textContent = 'Μια στιγμή…';
-    const r = await sb.auth.signInWithPassword({ email: e, password: pw });
+    let r; try{ r = await T(sb.auth.signInWithPassword({ email: e, password: pw }), 15000, 'η σύνδεση'); }catch(x){ return login(x.message); }
     if(r.error) return login(/invalid login/i.test(r.error.message) ? 'Λάθος όνομα χρήστη ή κωδικός.' : r.error.message);
     consent(); };
   document.getElementById('go').onclick = go; document.getElementById('p').onkeydown = ev=>{ if(ev.key === 'Enter') go(); };
 }
 async function consent(){
   if(!/^[\w-]{8,}$/.test(AID)) return fail('Λείπει το αίτημα σύνδεσης (authorization_id).');
-  const { data: { session } } = await sb.auth.getSession(); if(!session) return login();
+  const session = await sess(); if(!session) return login();
   let d; try{ d = await api('GET', '/oauth/authorizations/' + encodeURIComponent(AID)); }catch(e){ return /session|jwt|χωρίς/i.test(e.message) ? login() : fail(e.message); }
   if(d && d.redirect_url && !d.authorization_id){ location.replace(d.redirect_url); return; }   // έχει ήδη εγκριθεί
   const who = String(session.user.email || '').replace(/@paradoxarto\.app$/, ''), cl = (d.client && (d.client.name || d.client.client_name)) || 'Claude';
@@ -60,8 +65,9 @@ async function consent(){
   const dec = async (action)=>{ box.querySelectorAll('button').forEach(b=>b.disabled = true);
     try{ const r = await api('POST', '/oauth/authorizations/' + encodeURIComponent(AID) + '/consent', { action }); if(r.redirect_url) location.replace(r.redirect_url); else fail('Χωρίς απάντηση επιστροφής.'); }catch(e){ fail(e.message); } };
   document.getElementById('ok').onclick = ()=>dec('approve'); document.getElementById('no').onclick = ()=>dec('deny');
-  document.getElementById('out').onclick = async ev=>{ ev.preventDefault(); await sb.auth.signOut(); login(); };
+  document.getElementById('out').onclick = async ev=>{ ev.preventDefault(); try{ await T(sb.auth.signOut({scope:'local'}), 5000); }catch(x){} login(); };   // ΜΟΝΟ εδώ — όχι οι άλλες συνδέσεις (Claude, κινητό)
 }
-consent();
+consent().catch(e=>fail(e.message||e));
+setTimeout(()=>{ if(/Μια στιγμή/.test(box.textContent) && !document.getElementById('u')) login('Άργησε — συνδέσου ξανά εδώ.'); }, 9000);
 </script>
 </body></html>
