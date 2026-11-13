@@ -2302,7 +2302,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-13h-v372';
+const APP_VER = '2026-11-13i-v373';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14940,6 +14940,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       else EPC.at = Date.now(); }catch(e){} finally{ EPC.busy = null; } return EPC.items; })();
     return EPC.busy;
   };
+  // 13/11 19:11 (χρήστης: «στη συνταγογράφηση θέλω μόνο τα φάρμακα που υπάρχουν στο e-prescription»): υπάρχει «Όνομα περιεκτικότητα» στον κατάλογο;
+  // null = ο κατάλογος δεν έχει φορτωθεί (δεν μπλοκάρουμε) · true/false. Περιεκτικότητα: «0.5mg» ↔ «0,5MG», «875/125mg» ↔ «(875+125)MG».
+  window.pdxEpCatHas = function(name, str){
+    if(!EPC.items || !EPC.items.length) return null; const nm = EPN(name).replace(/[^a-z0-9]/g,''); if(nm.length < 2) return false;
+    const nums = String(str||'').replace(/,/g,'.').match(/\d+(?:\.\d+)?/g) || [];
+    // false ΜΟΝΟ όταν δεν υπάρχει καθόλου το όνομα· αν υπάρχει το όνομα αλλά όχι η περιεκτικότητα → 'str' (δεν μπλοκάρει: π.χ. Clexane 40mg = «4000 IU/0,4ml»)
+    const named = EPC.items.filter(x=>EPN(x[0]).replace(/[^a-z0-9]/g,'').indexOf(nm)===0); if(!named.length) return false;
+    if(!nums.length) return true;
+    return named.some(x=>{ const have = EPN(x[0]).replace(/,/g,'.').match(/\d+(?:\.\d+)?/g) || []; return nums.every(n=>have.indexOf(n)>=0); }) ? true : 'str';
+  };
   // κάθε λέξη της αναζήτησης = αρχή κάποιας λέξης του ονόματος (BOOS → BOOSTRIX, «alg 600» → ALGOFREN 600MG)
   window.pdxEpCatFind = function(q, n){
     if(!EPC.items) return null; const W = EPN(q).split(/[^a-z0-9.]+/).map(w=>w.replace(/\.+$/,'')).filter(Boolean); if(!W.length || W[0].length < 2) return [];
@@ -15078,7 +15088,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const medTxt = m=>(m.dose==='1'?'1':fmtD(m.dose))+' '+(m.unit||'δισκίο')+' × '+m.freq+'/ημέρα · '+m.days+' ημέρες';
     const medLine = m=>m.name+' '+m.strength+' '+(m.dose==='1'?'1':fmtD(m.dose))+'x'+m.freq+' για '+m.days+' ημέρες';
     const mLineH = m=>String(m.line||[m.name,m.strength,(m.dose&&m.freq)?m.dose+'x'+m.freq:'',m.days?'για '+m.days+' ημέρες':''].filter(Boolean).join(' ')).trim();
-    const addLine = l=>{ const r = window.pdxRxSmart(l); if(!r || r.bad || r.missing.length) return r || {bad:true}; const k0 = (r.name+'|'+r.strength).toUpperCase(); if(S.meds.some(m=>(m.name+'|'+m.strength).toUpperCase()===k0)) return {dup:true}; S.meds.push({name:r.name, strength:r.strength, dose:r.dose, freq:r.freq, days:r.days, unit:r.unit, perBox:0, boxes:0, bxMan:false, part:'25%'}); return {ok:true, r}; };
+    const addLine = l=>{ const r = window.pdxRxSmart(l); if(!r || r.bad || r.missing.length) return r || {bad:true}; if(window.pdxEpCatHas && pdxEpCatHas(r.name, r.strength)===false) return {bad:true, notEp:true}; const k0 = (r.name+'|'+r.strength).toUpperCase(); if(S.meds.some(m=>(m.name+'|'+m.strength).toUpperCase()===k0)) return {dup:true}; S.meds.push({name:r.name, strength:r.strength, dose:r.dose, freq:r.freq, days:r.days, unit:r.unit, perBox:0, boxes:0, bxMan:false, part:'25%'}); return {ok:true, r}; };
     // από εξιτήριο / ασθενή κλινικής
     let preIcd = ['N39'];
     if(S.k){ const d = recOf(S.k); if(d){ const src = opt.text!=null ? String(opt.text) : (window.pdxRxFromDischarge ? pdxRxFromDischarge(S.k) : ''); (window.pdxRxParse(src).meds||[]).forEach(m=>addLine(m.line||medLine(m))); try{ const ic = rxSurgIcd(d); if(ic && ic!=='N39') preIcd = ['N39']; S.icdSurg = ic; }catch(e){} } }
@@ -15218,7 +15228,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const box = root.querySelector('[data-favs]'); if(!box) return;
       const cnt = {};
       S.hist.forEach(j=>((j.payload||{}).meds||[]).forEach(m=>{ const l = mLineH(m); if(!l) return; const k = l.toUpperCase(); cnt[k] = cnt[k] || {l, n:0}; cnt[k].n++; }));
-      const top = Object.keys(cnt).sort((a,b)=>cnt[b].n-cnt[a].n).slice(0,12);
+      const epOk = l=>{ const r = window.pdxRxSmart ? pdxRxSmart(l) : null; return !(r && r.name && window.pdxEpCatHas && pdxEpCatHas(r.name, r.strength)===false); };
+      const top = Object.keys(cnt).filter(k=>epOk(cnt[k].l)).sort((a,b)=>cnt[b].n-cnt[a].n).slice(0,12);
+      if(window.pdxEpCatLoad && !box._epl){ box._epl = 1; pdxEpCatLoad().then(()=>{ try{ drawFavs(); }catch(e){} }); }
       box.innerHTML = top.length ? top.map(k=>'<button class="ch" data-fav="'+E(cnt[k].l)+'">⭐ '+E(cnt[k].l.replace(/\s+για\s+(\d+)\s+ημέρες/,' · $1ημ.'))+'</button>').join('') : '';
     }
     function drawHist(){
@@ -15286,8 +15298,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 8/11: ελληνικά → λατινικά («αλγ» → «alg») + μνήμη ονομάτων από προηγούμενες αναζητήσεις e-prescription (αμέσως, από 2 γράμματα)
       const GL = {α:'a',β:'v',γ:'g',δ:'d',ε:'e',ζ:'z',η:'i',θ:'th',ι:'i',κ:'k',λ:'l',μ:'m',ν:'n',ξ:'x',ο:'o',π:'p',ρ:'r',σ:'s',τ:'t',υ:'y',φ:'f',χ:'ch',ψ:'ps',ω:'o'};
       const w00 = RXN(v.split(/\s+/)[0]||''), w0 = /[α-ω]/.test(w00) ? w00.replace(/ου/g,'ou').replace(/[α-ω]/g, c=>GL[c]||'') : w00, my = ++mSeq;
-      const loc = (window.pdxRxDrugs ? pdxRxDrugs() : []).filter(d=>w0.length>=2 && RXN(d.name).indexOf(w0)===0).slice(0,4);
-      const mem = w0.length>=2 ? (window.pdxEpMedNames ? pdxEpMedNames() : []).filter(n=>RXN(n).indexOf(w0)===0 && !loc.some(d=>RXN(n).indexOf(RXN(d.name))===0)).slice(0,6) : [];
+      // 13/11 19:11 (χρήστης): στις επιλογές ΜΟΝΟ ό,τι υπάρχει στο e-prescription — όχι «Κατάλογος κλινικής» / «Προηγούμενες αναζητήσεις»
+      const loc = [], mem = [];
       const item = (attr, a, b)=>'<button type="button" class="exl-it" '+attr+'><span>'+a+'</span><small>'+b+'</small></button>';
       const paint = st=>{ let h = loc.length ? '<div class="exl-h">Κατάλογος κλινικής</div>'+loc.map(d=>item('data-dloc="'+E(d.name)+'"', '<b>'+E(d.name)+'</b> '+E(d.s), '1×'+d.f+' · '+d.d+' ημ.')).join('') : '';
         if(mem.length && !(st && (st.items||[]).length)) h += '<div class="exl-h">Από προηγούμενες αναζητήσεις</div>'+mem.map(n=>item('data-dmem="'+E(n)+'"', E(n), '')).join('');
@@ -15309,6 +15321,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const say = t=>{ pv.className = 'pv bad'; pv.textContent = t; };
       if(!f.name) return say('Διάλεξε ή γράψε φάρμακο');
       if(!/^[A-Za-z][A-Za-z0-9\- ]{1,40}$/.test(f.name)) return say('Γράψε το εμπορικό όνομα με λατινικά (π.χ. Ciproxin)');
+      if(window.pdxEpCatHas && pdxEpCatHas(f.name, f.strength)===false) return say('«'+f.name+(f.strength?' '+f.strength:'')+'» δεν υπάρχει στο e-prescription — διάλεξε από τη λίστα «e-prescription»');
       if(!(f.freq>=1 && f.freq<=4)) return say('Διάλεξε φορές / ημέρα');
       if(!(f.days>=1 && f.days<=30)) return say('Διάλεξε ημέρες (έως 30)');
       const k0 = (f.name+'|'+f.strength).toUpperCase(); if(S.meds.some(m=>(m.name+'|'+m.strength).toUpperCase()===k0)) return say('Υπάρχει ήδη στη λίστα');
