@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v436';
+const APP_VER = '2026-11-15-v437';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8756,6 +8756,7 @@ document.head.appendChild(st);
       bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:"pdxDo('bot')"} : {ic:'🤖', t:'Ενέργειες bot', on:"pdxDo('botlog')"},
       {ic:'🩺', t:'Κατάσταση συστημάτων', on:"pdxHealth()"},
       (adm || bot) && {ic:'🔐', t:'Κωδικοί', sub: adm ? 'νέος κωδικός (ΝΠΣ · e-prescription · Medilabi · Kerio…) · έλεγχος' : 'έλεγχος', on: adm ? "pdxCredHub()" : "pdxCredCheck()"},
+      bot && {ic:'⏰', t:'Παραγγελία «Αύριο πρωί»', v:esc((window.__ordAm && window.__ordAm.time) || '06:30'), on:"pdxOrderAmPage()"},
       adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:"pdxAutoApprove()"},
       adm && {ic:'🤖', t:'Λειτουργίες AI', v:(window.pdxAiOn && window.pdxAiOn() ? 'Ανοιχτές' : 'Κλειστές'), on:"pdxAiPage()"},
       adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
@@ -12037,10 +12038,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(!(window.pdxIsBotUser&&window.pdxIsBotUser())){ toast('🤖 Το bot είναι διαθέσιμο μόνο σε ενεργούς γιατρούς'); return Promise.resolve(false); }
     const d = recOf(k); if(!d) return Promise.resolve(false);
     if(typeof sb6==='undefined'){ toast('Χωρίς σύνδεση με τη βάση'); return Promise.resolve(false); }
-    return sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind, payload}).then(r=>{
+    const amP = (kind==='order' && payload && payload.when==='Αύριο πρωί' && !payload.notBefore) ? (window.pdxOrderAmLoad ? pdxOrderAmLoad() : Promise.resolve(null)) : Promise.resolve(null);
+    return amP.then(am=>{ if(am){ payload = Object.assign({}, payload, {notBefore: pdxOrderAmAt(am.time), amTime: am.time}); }   // ⏰ 15/11
+    return sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind, payload}); }).then(r=>{
       if(r.error){ toast(/oncall_jobs|relation|schema cache/i.test(r.error.message) ? 'Δεν έχει ενεργοποιηθεί ακόμα η ουρά εργασιών στη βάση.' : 'Σφάλμα: '+r.error.message); return false; }
       if(payload && payload.quiet) return true;
-      toast('🤖 Στάλθηκε στο bot: '+(KIND[kind]||kind));
+      toast(payload && payload.notBefore && kind==='order' ? '⏰ Θα γίνει '+pdxOrderAmTxt(payload.notBefore)+' από το bot' : '🤖 Στάλθηκε στο bot: '+(KIND[kind]||kind));
       window.pdxBotAlive().then(a=>{ if(a.ok===false) toast('⏸ '+pdxBotDownTxt(a)+'. Η εντολή περιμένει και θα γίνει μόλις ξανασυνδεθεί.'); });
       return true;
     });
@@ -15330,6 +15333,25 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return {all: a.filter((t,i)=>t && a.indexOf(t)===i), imgs: IMGS, fav, medilabi: cat.length>0, isImg: t=>isImgAny(t) || IMGS.indexOf(t)>=0, cat: t=>(isImgAny(t) || IMGS.indexOf(t)>=0) ? 'img' : ocatOf(t)};
   };
   // 🖨 15/11 00:53 (χρήστης: «οι επιλογές εκτυπωτή να πιάνουν μία γραμμή — πιο μικρές, κόψε γράμματα: Γωνιακός → Γων.»)
+  // ⏰ 15/11 01:05 (χρήστης: «το αύριο πρωί να είναι προκαθορισμένη ώρα που ρυθμίζω από τις Ρυθμίσεις, π.χ. 06:30 — το bot τρέχει και τυπώνει τότε»)
+  // oncall_config «order_am» = {time:"HH:MM"} για όλη την κλινική· η εργασία στέλνεται ΤΩΡΑ με payload.notBefore = επόμενη φορά που έρχεται αυτή η ώρα
+  // (στις 01:00 → σήμερα 06:30 · στις 22:00 → αύριο 06:30). Ο φύλακας server μετρά από το notBefore (migration watchdog_respect_notbefore).
+  window.__ordAm = window.__ordAm || null;
+  window.pdxOrderAmLoad = async function(force){ if(window.__ordAm && !force) return window.__ordAm;
+    try{ const r = await sb6.from('oncall_config').select('value').eq('key','order_am').maybeSingle(); const v = r && r.data && r.data.value; window.__ordAm = (v && /^\d{2}:\d{2}$/.test(v.time||'')) ? v : {time:'06:30'}; }catch(e){ window.__ordAm = {time:'06:30'}; }
+    return window.__ordAm; };
+  window.pdxOrderAmAt = function(time, now){ const [h, m] = String(time || (window.__ordAm && window.__ordAm.time) || '06:30').split(':').map(Number); const n = now ? new Date(now) : new Date();
+    const d = new Date(n); d.setHours(h||0, m||0, 0, 0); if(d.getTime() <= n.getTime() + 10*60000) d.setDate(d.getDate()+1); return d.getTime(); };
+  window.pdxOrderAmTxt = function(ts){ const d = new Date(ts), t = new Date(), tm = new Date(t); tm.setDate(t.getDate()+1);
+    const day = d.toDateString()===t.toDateString() ? 'σήμερα' : d.toDateString()===tm.toDateString() ? 'αύριο' : d.toLocaleDateString('el-GR',{weekday:'short', day:'numeric', month:'numeric'});
+    return day+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  window.pdxOrderAmPage = async function(){ const v = await pdxOrderAmLoad(true);
+    const pg = iosPage('Παραγγελία «Αύριο πρωί»', 'Ρυθμίσεις', ()=>'<div class="ios-h">Ώρα που τρέχει το bot</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:10px;align-items:center"><input data-amt type="time" value="'+esc(v.time)+'" style="font-size:17px;padding:8px 10px;border:1px solid #CBD5E1;border-radius:10px;background:var(--card,#fff);color:inherit"><button class="pb pb-pri" data-amsave>Αποθήκευση</button></div>'
+      +'<div style="margin:6px 20px;font-size:13.5px;color:#64748B">Όταν διαλέγεις «Αύριο πρωί» στην παραγγελία, το bot κάνει την παραγγελία στο Medilabi και τυπώνει το barcode σε αυτή την ώρα. Ισχύει για όλη την κλινική.</div>');
+    pg.addEventListener('click', async ev=>{ if(!ev.target.closest('[data-amsave]')) return; const t = (pg.querySelector('[data-amt]')||{}).value||'';
+      if(!/^\d{2}:\d{2}$/.test(t)){ toast('Διάλεξε ώρα'); return; }
+      const r = await sb6.from('oncall_config').upsert({key:'order_am', value:{time:t}, updated_at:new Date().toISOString()}, {onConflict:'key'});
+      if(r.error){ toast('Δεν αποθηκεύτηκε: '+r.error.message); return; } window.__ordAm = {time:t}; toast('⏰ «Αύριο πρωί» = '+t); }); };
   window.pdxPcShort = nm=>({'Γωνιακός':'Γων.','Μεσαίος':'Μεσ.','Παράθυρο':'Παράθ.','Εξωτερικά':'Εξωτ.','Πόρτα':'Πόρτα'})[String(nm||'').trim()] || (String(nm||'').length > 6 ? String(nm).slice(0,5)+'.' : String(nm||''));
   window.pdxOrderSheet = async function(k, pre){
     const d = recOf(k); if(!d) return;
@@ -15354,6 +15376,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const addPre = x=>{ const add = {t:[], p:[]}; if(!x) return add; (x.tests||[]).forEach(t0=>{ const t = (cat.length && String(t0).indexOf('@@')<0) ? (window.pdxToCat(t0, cat) || '') : t0; if(t && st.sel.indexOf(t)<0){ st.sel.push(t); add.t.push(t); } });   /* 🧪 15/11: παλιά ονόματα πακέτων → κατάλογος */
       (x.profs||[]).forEach(n=>{ let i = P.packs.findIndex(q=>q && q.medilabi===n); if(i<0){ P.packs.push({name:n, medilabi:n, tests:[]}); i = P.packs.length-1; } if(st.pks.indexOf(i)<0){ st.pks.push(i); add.p.push(i); } }); return add; };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
     addPre(pre);
+    try{ await pdxOrderAmLoad(); }catch(e){}
     const BN = Object.assign({}, await pdxBotNames());
     try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]){ (window.__ordOff = window.__ordOff || {})[id] = BN[id]; delete BN[id]; } }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
     const PR = Object.entries(BN).sort((a,b)=>['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(b[1]));
@@ -15400,25 +15423,27 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const draw = ()=>{
       const sc = ov.querySelector('[data-scroll]'), top = sc ? sc.scrollTop : 0;
       let h = '<div style="background:#fff;color:#1F2933;width:100%;max-width:640px;border-radius:22px 22px 0 0;display:flex;flex-direction:column;max-height:92vh">'
-        + '<div style="padding:14px 16px 8px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🧾 Παραγγελία</b>'+'<button class="pb pb-lg" data-x aria-label="Κλείσιμο" style="min-width:44px">✕</button></div>'
-        + '<div class="pdx-ordpt" style="font-size:14.5px;color:#475569;margin-top:2px;line-height:1.3">'+ordPt()+'</div>'
+        + '<div style="padding:14px 16px 8px"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:18px;flex:none">🧾 Παραγγελία</b><div class="pdx-ordpt" style="flex:1;min-width:0;font-size:15px;color:#475569;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ordPt()+'</div>'+'<button class="pb pb-lg" data-x aria-label="Κλείσιμο" style="min-width:44px">✕</button></div>'   // 🧾 15/11 01:12 (χρήστης: «το όνομα δίπλα στην παραγγελία — να κερδίσουμε χώρο»)
         + (OPK.length && !st.q ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;max-height:96px;overflow:auto">'+OPK.map((p,i)=>'<button data-opk="'+i+'" style="border:1.5px solid #B7791F;border-radius:999px;padding:7px 12px;font-size:14.5px;font-weight:700;background:'+(st.opk&&st.opk[i]?'#B7791F;color:#fff':'#FFF8EB;color:#7A4B06')+'">📦 '+E(p.name)+'</button>').join('')+'</div>' : '')
         + '<input data-q type="search" autocomplete="off" placeholder="🔎 Αναζήτηση σε όλο το Medilabi (π.χ. θωρ, CRP, ΝΟΚ)…" value="'+E(st.q)+'" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:16px;padding:10px 12px;border:1.5px solid #CBD5E1;border-radius:12px">'
         + (st.q?'':'<div style="display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px">'+(CATS.length ? [['fav','⭐ Αγαπημένα']].concat(rec.length?[['rec','🕘 Πρόσφατα']]:[], CATS.map((c,i)=>['L'+i, (IMG_LAB.test(nrm(c.lab).toUpperCase())?'🩻 ':'')+c.lab+' ('+c.keys.length+')']), [['all','📋 Όλα']]) : OCAT.filter(c=>c[0]!=='rec'||rec.length).filter(c=>['fav','rec','all','img'].indexOf(c[0])>=0||cat.some(t=>ocatOf(t)===c[0]))).map(c=>'<button data-tab="'+c[0]+'" style="flex:none;'+C+(st.tab===c[0]?CON:'')+'">'+E(c[1])+'</button>').join('')+'</div>')
         + '</div><div data-scroll style="flex:1;overflow:auto;padding:0 16px">';
       {
         const L = list();
-        if(st.tab==='fav' && !st.q && favEdit) h += '<div style="font-size:12.5px;color:#64748B;padding:8px 0 2px">Πάτα το ⭐ μιας εξέτασης για να μπει/βγει από τα αγαπημένα (για όλη την κλινική).</div>';
+        // 15/11 01:13 (χρήστης): χωρίς εξήγηση για το ⭐ — «το ξέρουμε, να μην υπάρχει καθόλου»
         if(!cat.length && ['xr','ct','us','mri','all','lab','ur'].indexOf(st.tab)>=0 && !st.q) h += '<div style="color:#64748B;font-size:13.5px;padding:8px 0">Ο κατάλογος του Medilabi δεν έχει έρθει ακόμα από το bot.</div>';
         h += L.map(t=>{ const on = st.sel.indexOf(t)>=0, isFav = fav.indexOf(t)>=0;
           return '<div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF1F4"><button class="pb pb-lnk" data-t="'+E(t)+'" style="flex:1;min-width:0;text-align:left;justify-content:flex-start"><span style="display:inline-block;width:22px;height:22px;border-radius:7px;vertical-align:-5px;margin-right:9px;border:2px solid var(--mp,#1D4E80);background:'+(on?'var(--mp,#1D4E80)':'#fff')+';color:#fff;text-align:center;line-height:19px;font-size:15px">'+(on?'✓':'')+'</span>'+E(tLbl(t))+'</button>'+(favEdit ? '<button data-fav="'+E(t)+'" aria-label="'+(isFav?'Αφαίρεση από':'Προσθήκη στα')+' αγαπημένα" style="flex:none;border:0;background:none;min-width:44px;min-height:44px;font-size:17px;opacity:'+(isFav?1:.25)+'">⭐</button>' : '<span style="font-size:15px;opacity:'+(isFav?1:.18)+'">⭐</span>')+'</div>'; }).join('') || '<div style="color:#64748B;padding:10px 0">Καμία εξέταση'+(st.q?' για «'+E(st.q)+'»':'')+'.</div>';
       }
       h += '</div><div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid #EEF1F4;background:#FAFBFC;border-radius:0 0 0 0">'
-        + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
-        + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+(st.when==='Αύριο πρωί'?'<span style="font-size:13px;color:#64748B">ώρα παραγγελίας 08:00</span>':'')+'</div>'
+        + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '')   // 15/11 01:13 (χρήστης): χωρίς «Διάλεξε εξετάσεις ή πακέτο»
+        // ➕ 15/11 01:12 (χρήστης: «το στην τελευταία παραγγελία να πάει δίπλα στο τώρα / αύριο πρωί — να κερδίσουμε χώρο»)
+        + '<div class="when-row" style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+';white-space:nowrap;flex:none'+(st.when===w?CON:'')+'">'+w+'</button>').join('')
+          +(MULTI ? '' : '<button data-addto title="Στην τελευταία παραγγελία (ξεχάστηκε) — ίδιο σωληνάριο/barcode" style="'+C+';white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis'+(st.addTo?CON:'')+'">➕ Στην τελευταία</button>')+'</div>'
+        +(st.when==='Αύριο πρωί'?'<div style="font-size:13px;color:#64748B;margin-top:4px">⏰ Το bot θα την κάνει και θα τυπώσει '+E(pdxOrderAmTxt(pdxOrderAmAt()))+' · αλλάζει από Ρυθμίσεις → Bot</div>':'')
+        +(st.addTo && !MULTI?'<div style="font-size:12.5px;color:#475569;margin-top:4px">Μπαίνουν στο ίδιο σωληνάριο/barcode — μόνο μεμονωμένες εξετάσεις, όχι πακέτα.</div>':'')
         + (PR.length ? '<div class="pat-row" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;margin-top:8px"><span style="font-size:13px;color:#475569;flex:none">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" title="'+E(nm)+' · '+(st.busy[id]?'Απασχολημένος: '+E(st.busy[id])+' — η παραγγελία θα περιμένει':'Ελεύθερος τώρα')+'" style="'+CP+(st.pat===id?CON:'')+'">'+(st.busy[id]?'⏳':'<span style="color:#30A46C;font-size:9px;vertical-align:1px">●</span>')+' '+E(window.pdxPcShort(nm))+'</button>').join('')+'<button data-pat="" title="Τυχαία — όποιος είναι ελεύθερος" style="'+CP+';flex:0 0 34px'+(!st.pat?CON:'')+'">⚡</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="'+E(window.__ordOff[id])+' — δεν απαντά τώρα" style="'+CP+';opacity:.45;border-style:dashed">'+E(window.pdxPcShort(window.__ordOff[id]))+'</button>').join('')+'</div>' : '')
         // ➕ 11/11 (χρήστης): «για να προσθέτουμε εξετάσεις που ξεχάσαμε σε ήδη παραγγελθείσες» → πράσινο «+» της τελευταίας παραγγελίας στο Medilabi
-        + (MULTI ? '' : '<div style="margin-top:8px"><button data-addto style="'+C+(st.addTo?CON:'')+'">➕ Στην τελευταία παραγγελία (ξεχάστηκε)</button>'+(st.addTo?'<div style="font-size:12.5px;color:#475569;margin-top:4px">Μπαίνουν στο ίδιο σωληνάριο/barcode — μόνο μεμονωμένες εξετάσεις, όχι πακέτα.</div>':'')+'</div>')
         // 🩻 11/11 (χρήστης): απεικονιστικές → «Πρόσθετες Πληροφορίες» στο Medilabi με Κλινικές Πληροφορίες (ιστορικό + τι ζητάμε) από ΠΡΟΤΥΠΟ — επεξεργάσιμο
         + (!MULTI && st.sel.some(isImgAny) ? (()=>{ if(st.clin==null) st.clin = clinFill(); return '<div style="margin-top:10px;border:1.5px solid #CBD5E1;border-radius:12px;padding:8px 10px;background:#fff">'
             + '<div style="display:flex;align-items:center;gap:6px"><b style="font-size:14px;flex:1">🩻 Κλινικές πληροφορίες (Medilabi)</b><button data-clinre style="'+C+'">↺ από πρότυπο</button><button data-tpled style="'+C+(st.tplEd?CON:'')+'">✎ πρότυπο</button></div>'
