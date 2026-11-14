@@ -375,7 +375,7 @@ async function aiScan(id, khex){
   try{
     const h = await (await fetch(F, { method:'POST', headers:H, body: JSON.stringify({ haskey: 1 }) })).json();
     if(!h || !h.on) return null;
-    msg('<div class="spin"></div><div>🤖 Διαβάζει το ιστορικό…</div><div style="opacity:.7;font-size:14px">~20–40″ · μπαίνει μόνο του στον ασθενή</div>');
+    msg('<div class="spin"></div>');   // 14/11 23:01 (χρήστης: «ας μην γράφει τίποτα»)
     const ac = new AbortController(), to = setTimeout(()=>ac.abort(), 150000);
     const r = await fetch(F, { method:'POST', headers:H, signal: ac.signal, body: JSON.stringify({ scan: { id, k: khex, token: tok.get() } }) }); clearTimeout(to);
     const j = await r.json().catch(()=>null);
@@ -439,7 +439,8 @@ async function send(srcs, w0, h0){
         const what = ({report:'📋 Πόρισμα', rx:'💊 Συνταγή', ref:'🧾 Παραπεμπτικό', opnote:'📝 Πρακτικό'})[ar.doc_type] || '🩺 Ιστορικό';
         msg('<div style="font-size:54px">✅</div><b style="font-size:20px">' + what + (ar.name ? ' ' + E(ar.name) : '') + '</b>'
           + '<div style="max-width:320px;text-align:center">' + (ar.doc_type === 'opnote' ? 'Άνοιξε το <b>Παραδόχαρτο</b>: «📷 Από σάρωση» → φόρμα πρακτικού συμπληρωμένη για έλεγχο.' : ar.doc_type === 'rx' || ar.doc_type === 'ref' ? 'ΑΜΚΑ ' + E(ar.amka || '—') + ' — άνοιξε το <b>Παραδόχαρτο</b>: εμφανίζεται «📷 Από σάρωση» για έλεγχο και αποστολή.' : ar.doc_type === 'report' ? 'Στα «Πορίσματα» του Παραδόχαρτου.' : 'Μπαίνει μόνο του στον ασθενή ως <b>πρόχειρο «προς διόρθωση»</b>' + (ar.sure ? '' : ' (το όνομα δεν διαβάστηκε σίγουρα — δες «Νέα ιστορικά»)') + '.') + '</div>'
-          + '<button class="btn" id="nx">Νέα σάρωση</button>');
+          + (/^(rx|ref|opnote)$/.test(ar.doc_type) ? '<a class="btn" id="goap" href="/?scanrx=' + encodeURIComponent(ar.rxid || '1') + '" style="text-decoration:none;text-align:center;display:block">✅ Άνοιγμα για έγκριση</a>' : '')   // 14/11 23:01 (χρήστης): κατευθείαν στην έγκριση
+          + '<button class="btn' + (/^(rx|ref|opnote)$/.test(ar.doc_type) ? ' sec' : '') + '" id="nx">Νέα σάρωση</button>');
         $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
         busy = false; return;
       }
