@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v404';
+const APP_VER = '2026-11-14-v405';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15057,7 +15057,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // ⚡ 9/11 (χρήστης: «μέχρι να πατήσω τις εξετάσεις να ανοίγει την παραγγελία»): ΠΡΟΕΤΟΙΜΑΣΙΑ από ΚΑΘΕ είσοδο της παραγγελίας
     // (μενού ενεργειών, κουμπί 🧾 του ασθενή, καρτέλα, ιστορικό) — το bot ανοίγει ήδη ασθενή + φόρμα Medilabi όσο διαλέγεις (1 φορά / 4′ ανά ασθενή)
     if(!(pre && pre.multi)) try{ if(typeof sb6!=='undefined' && window.pdxIsBotUser && pdxIsBotUser()){ const K='pdx_oprep_'+nrm(d.name), last=+(sessionStorage.getItem(K)||0);
-      if(Date.now()-last > 240000){ sessionStorage.setItem(K, String(Date.now())); sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload: window.pdxPrintAt && window.pdxPrintAt() ? {printAt: window.pdxPrintAt()} : {}}).then(()=>{}, ()=>{}); } } }catch(e){}
+      if(Date.now()-last > 240000){ sessionStorage.setItem(K, String(Date.now())); const pa0 = window.pdxPrintAt && window.pdxPrintAt() || ''; try{ if(pa0) sessionStorage.setItem('pdx_oprep_at_'+nrm(d.name), JSON.stringify({pat:pa0, t:Date.now()})); }catch(x){}
+        sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload: pa0 ? {printAt: pa0} : {}}).then(()=>{}, ()=>{}); } } }catch(e){}
     const P = await pdxOrderPacks(), cat = await pdxMedCatalog();
     const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
     let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t=>{ if(rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
@@ -15178,13 +15179,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // ⚡ 8/11: άλλαξε ο υπολογιστής εκτύπωσης → η φόρμα ετοιμάζεται ΕΚΕΙ (αλλιώς η παραγγελία ξεκινούσε από την αρχή: +10–20″)
         // ⚡ 8/11: ΜΙΑ προετοιμασία μετά από 1,5″ χωρίς νέα αλλαγή (πριν: 1 ανά πάτημα → 5 εργασίες σε 15″ έπιαναν τα bots)· οι προηγούμενες που δεν ξεκίνησαν ακυρώνονται
         if(st.pat && st.pat!==prev && !MULTI){ clearTimeout(window.__pdxOprepT); const nk = nrm(d.name), pat = st.pat;
-          window.__pdxOprepT = setTimeout(async ()=>{ try{ if(st.pat!==pat) return;
+          window.__pdxOprepT = setTimeout(async ()=>{ try{ if(st.pat!==pat || st.goAt) return;
+            // ⚡ 14/11 20:11 (ΡΑΠΤΗΣ +20″): ΟΧΙ νέα προετοιμασία αν η τελευταία ήταν για τον ΙΔΙΟ υπολογιστή (<4′)
+            try{ const lp = JSON.parse(sessionStorage.getItem('pdx_oprep_at_'+nk)||'null'); if(lp && lp.pat===pat && Date.now()-lp.t < 240000) return; }catch(x){}
             await sb6.from('oncall_jobs').update({status:'cancelled', note:'νέα επιλογή υπολογιστή εκτύπωσης'}).eq('kind','orderprep').eq('name_key', nk).eq('status','new');
-            await sb6.from('oncall_jobs').insert({name_key:nk, name:d.name, room:k, kind:'orderprep', payload:{printAt:pat}}); try{ sessionStorage.setItem('pdx_oprep_'+nk, String(Date.now())); }catch(x){} }catch(x){} }, 1500); }
+            await sb6.from('oncall_jobs').insert({name_key:nk, name:d.name, room:k, kind:'orderprep', payload:{printAt:pat}}); try{ sessionStorage.setItem('pdx_oprep_'+nk, String(Date.now())); sessionStorage.setItem('pdx_oprep_at_'+nk, JSON.stringify({pat, t:Date.now()})); }catch(x){} }catch(x){} }, 1500); }
         return draw(); }
       if(t.closest('[data-go]')){
         // 🛡 14/11 (17:00: η ίδια παραγγελία στάλθηκε 10 φορές σε 1″ — πολλά πατήματα όσο γινόταν ο έλεγχος διπλών): ένα πάτημα ανά 5″
         if(Date.now() - (st.goAt||0) < 5000) return; st.goAt = Date.now();
+        clearTimeout(window.__pdxOprepT);   // ⚡ 14/11: η αποστολή ακυρώνει προετοιμασία που περιμένει (ΡΑΠΤΗΣ: μπήκε ΠΡΙΝ την παραγγελία, +10″)
         if(!st.sel.length && !st.pks.length){ st.goAt = 0; st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
         if(st.addTo && st.pks.length){ st.goAt = 0; st.msg = '➕ Στην τελευταία παραγγελία μπαίνουν μόνο μεμονωμένες εξετάσεις — βγάλε τα πακέτα.'; return draw(); }
         const pks = st.pks.map(i=>P.packs[i]).filter(Boolean);
