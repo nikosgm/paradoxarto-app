@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v400';
+const APP_VER = '2026-11-14-v401';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7634,11 +7634,13 @@ document.head.appendChild(st);
     // 12/11 βράδυ (Εργαστήριο εμφάνισης, «Πλέγμα 3»): τα 6 πιο συχνά σε πλέγμα 3 στηλών πάνω-πάνω, τα υπόλοιπα σε λίστα από κάτω
     { const F = [bot && ['🧾','Παραγγελία σε πολλούς',"pdxOrderBulk()"], ['🧪','Εργαστηριακά όλων',"window.labsFullOpen && labsFullOpen('')"], bot && ['💊','Συνταγή',"pdxDo('rxout')"],
         bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['📧','Email',"pdxMail()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
-      h += '<div class="mtp-h" style="margin:14px 16px 6px">Τα πιο συχνά</div><div class="mtp-freq" style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px;max-width:620px">'
-        + F.map(x=>'<div onclick="'+x[2]+'" style="background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)"><span style="font-size:26px">'+x[0]+'</span><b style="font-size:13px;line-height:1.2">'+x[1]+'</b></div>').join('') + '</div>'; }
+      // ⭐ 14/11 (χρήστης: «πέρα από τα συχνά στις ρυθμίσεις, θέλω και τα συχνά στα εργαλεία»): τα «Τα πιο συχνά» διαλέγονται από 🎨 Εμφάνιση (επιλογή + σειρά)
+      window.__pdxToolF = F; h += '<!--TFAV-->'; }
+    const F0 = window.__pdxToolF || [], TI = [];
+    const grp0 = grp, grpR = (title, rows)=>{ (rows||[]).filter(Boolean).forEach(r=>TI.push({ic:r[0], t:r[1], on:r[3], g:title})); return grp0(title, rows); };
     const clin = ['resident','attending','admin'].indexOf(window.authRole)>=0;
     h += '<div class="mtp-cols">';
-    if(clin) h += grp('Κλινική', [
+    if(clin) h += grpR('Κλινική', [
       ['🗓','Πρόγραμμα χειρουργείου','αίθουσες · σειρά · πρόχειρο · υποβολή', "pdxOrProgOpen()"],
       ['🎗','Ογκολογικό συμβούλιο','Τρίτη & Πέμπτη', "pdxMdtOpen()"],
       ['📁','Αρχεία κλινικής','φάκελοι & αναζήτηση, όπως στον υπολογιστή', "pdxFiles()"],
@@ -7648,7 +7650,7 @@ document.head.appendChild(st);
       bot && ['🦓','Ετικέτα Zebra','μεγάλος αριθμός σε όλο το πλάτος', "pdxLabelPrint()"]   // 11/11 20:43 (χρήστης)
     ]);
     // (12/11: «Συνταγή e-prescription», «Βιοψίες», «Παραγγελία σε πολλούς», «Ουρολογικό Ημέρας» → στα «Τα πιο συχνά» πάνω)
-    h += grp('Για πολλούς', [
+    h += grpR('Για πολλούς', [
       ['☑','Εκκρεμότητα σε πολλούς','', "pdxDo('bulk')"],
       adm && ['📅','Εισαγωγές & ΑΜ από ΝΠΣ','', "pdxDo('admits')"],
       // 📑 10/11 22:15 (χρήστης: «τα ΕΨΙΝΕ πού τα έβαλες;») — υπήρχε ΜΟΝΟ στην αναζήτηση «Τι θέλεις να κάνεις;»
@@ -7656,14 +7658,22 @@ document.head.appendChild(st);
       // 🌙 12/11 (χρήστης): «όλα για κάθε ασθενή το βράδυ της εισαγωγής»
       bot && ['🌙','Νέες εισαγωγές','τι μαζεύτηκε αυτόματα (ΝΠΣ · ΑΗΦΥ · εργαστηριακά)', "pdxAdmNight()"]
     ]);
-    h += grp('Αρχεία', [
+    h += grpR('Αρχεία', [
       ['📂','Αρχείο ασθενών','κλινικής · όλου του νοσοκομείου', "pdxPtArch()"],
       ['🗄','Αρχείο εξιτηρίων','', "pdxDo('archive')"],
       ['📤','Ανέβασμα ιστορικού','', "pdxDo('up')"],
       ['🛟','Επαναφορά λίστας','', "pdxDo('snap')"]
     ]);
-    h += grp('Υπολογιστές', [['🧮','Partin','', "mobCalc(null,'partin')"],['🫘','R.E.N.A.L.','', "mobCalc(null,'renal')"],['🧪','eGFR','', "mobCalc(null,'egfr')"],['🎯','EAU Risk Group','', "mobCalc(null,'eau')"]]);
+    h += grpR('Υπολογιστές', [['🧮','Partin','', "mobCalc(null,'partin')"],['🫘','R.E.N.A.L.','', "mobCalc(null,'renal')"],['🧪','eGFR','', "mobCalc(null,'egfr')"],['🎯','EAU Risk Group','', "mobCalc(null,'eau')"]]);
     h += '</div>';
+    { const ALL = window.__pdxToolItems = [].concat(F0.map(x=>({ic:x[0], t:x[1], on:x[2], g:'Τα πιο συχνά'})), TI).filter((x, i, A)=>x && x.t && A.findIndex(y=>y.t===x.t)===i);
+      const TF = window.pdxApGet ? ((pdxApGet().tfav)||[]) : [], sel = TF.map(t=>ALL.find(x=>x.t===t)).filter(Boolean);
+      const F = sel.length ? sel.map(x=>[x.ic, x.t, x.on]) : F0;
+      const mk = ()=>{
+      return '<div class="mtp-h" style="margin:14px 16px 6px">Τα πιο συχνά</div><div class="mtp-freq" style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px;max-width:620px">'
+        + F.map(x=>'<div onclick="'+x[2]+'" style="background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)"><span style="font-size:26px">'+x[0]+'</span><b style="font-size:13px;line-height:1.2">'+x[1]+'</b></div>').join('') + '</div>';
+      };
+      h = h.replace('<!--TFAV-->', F.length ? mk() : ''); }
     return h + '<div style="height:110px"></div>' + tabs();
   }
   // 👤 ΕΓΩ
@@ -8629,7 +8639,10 @@ document.head.appendChild(st);
     window.pdxAppearance = function(){
       const pg = iosPage('Εμφάνιση', 'Ρυθμίσεις', ()=>{ const o = get();
         const pick = (key, val, lab, sub)=>({t:lab, sub, raw: (o[key]||'')===val || (!o[key] && val==='') ? '<span style="color:var(--acc,#0A84FF);font-size:19px">✓</span>' : '', on:'void 0', data:'data-ap="'+key+'|'+val+'"'});
-        let h = iosGroup('Θέμα', [pick('theme','','Όπως τώρα', document.documentElement.classList.contains('pdx-night')?'σκούρο':'ανοιχτό'), pick('theme','light','☀️ Ανοιχτό'), pick('theme','dark','🌙 Σκούρο'), pick('theme','auto','🌓 Αυτόματα', 'όπως το κινητό/υπολογιστής')]);
+        // 14/11 (χρήστης: «το "Όπως τώρα" είναι πλεονασμός») → μόνο Ανοιχτό / Σκούρο / Αυτόματα· χωρίς επιλογή, το ✓ δείχνει το τρέχον
+        const night = document.documentElement.classList.contains('pdx-night'), thv = o.theme || (night ? 'dark' : 'light');
+        const tpick = (val, lab, sub)=>Object.assign(pick('theme', val, lab, sub), {raw: thv===val ? '<span style="color:var(--acc,#0A84FF);font-size:19px">✓</span>' : ''});
+        let h = iosGroup('Θέμα', [tpick('light','☀️ Ανοιχτό'), tpick('dark','🌙 Σκούρο'), tpick('auto','🌓 Αυτόματα', 'όπως το κινητό/υπολογιστής')]);
         h += iosGroup('Μέγεθος γραμμάτων', Object.keys(FS).map(k=>pick('fs', k==='m'?'':k, FS[k][0]+(k==='m'?' (προεπιλογή)':''))));
         h += iosGroup('Χρώμα έμφασης', Object.keys(ACC).map(k=>Object.assign(pick('acc', k==='blue'?'':k, ACC[k][0]), {t:'<span style="color:'+ACC[k][2]+';font-size:20px;vertical-align:-2px">●</span> '+ACC[k][0]})));
         h += iosGroup('Προβολή', [{t:'Πιο πυκνές λίστες', sub:'περισσότερα στην οθόνη', sw:!!o.dense, on:'void 0', data:'data-apt="dense"'}, {t:'Island χωρίς ετικέτες', sub:'μόνο εικονίδια στην κάτω μπάρα', sw:!!o.nolab, on:'void 0', data:'data-apt="nolab"'}, {t:'Λιγότερη κίνηση', sub:'χωρίς εφέ/γλιστρήματα', sw:!!o.still, on:'void 0', data:'data-apt="still"'}]);
@@ -8637,11 +8650,19 @@ document.head.appendChild(st);
         const all = (window.__pdxSetItems||[]), fav = window.pdxApFav();
         h += iosGroup('⭐ Συχνά στις Ρυθμίσεις — πάτα για να μπει/βγει · ↑ για σειρά', all.filter(x=>x.k && x.k!=='Εμφάνιση').map(x=>{ const i = fav.indexOf(x.k);
           return {t:(i>=0?'<b style="color:var(--acc,#0A84FF)">'+(i+1)+'.</b> ':'')+x.r.ic+' '+x.k.replace(/[<>&]/g,''), sub:x.g||'', raw:(i>0?'<button data-apup="'+encodeURIComponent(x.k)+'" style="border:0;background:none;font-size:18px;color:var(--acc,#0A84FF);padding:6px 10px">↑</button>':'')+'<span style="font-size:18px">'+(i>=0?'⭐':'☆')+'</span>', on:'void 0', data:'data-apf="'+encodeURIComponent(x.k)+'"'}; }) , all.length ? 'Οι επιλεγμένες εμφανίζονται πρώτες, πάνω-πάνω στις Ρυθμίσεις.' : 'Άνοιξε μία φορά τις Ρυθμίσεις για να εμφανιστεί η λίστα.');
+        // ⭐ 14/11 (χρήστης): «συχνά» και στα Εργαλεία — ό,τι διαλέξεις μπαίνει στο πλέγμα «Τα πιο συχνά» (με τη σειρά σου)
+        { const allT = (window.__pdxToolItems||[]), tf = (o.tfav||[]);
+          h += iosGroup('⭐ Τα πιο συχνά στα Εργαλεία — πάτα για να μπει/βγει · ↑ για σειρά', allT.map(x=>{ const i = tf.indexOf(x.t);
+            return {t:(i>=0?'<b style="color:var(--acc,#0A84FF)">'+(i+1)+'.</b> ':'')+x.ic+' '+String(x.t).replace(/[<>&]/g,''), sub:x.g||'', raw:(i>0?'<button data-aptup="'+encodeURIComponent(x.t)+'" style="border:0;background:none;font-size:18px;color:var(--acc,#0A84FF);padding:6px 10px">↑</button>':'')+'<span style="font-size:18px">'+(i>=0?'⭐':'☆')+'</span>', on:'void 0', data:'data-aptf="'+encodeURIComponent(x.t)+'"'}; }),
+            allT.length ? (tf.length ? 'Στα Εργαλεία, πάνω-πάνω, φαίνονται ΜΟΝΟ αυτά, με αυτή τη σειρά.' : 'Χωρίς επιλογή φαίνονται τα προεπιλεγμένα.') : 'Άνοιξε μία φορά τα Εργαλεία για να εμφανιστεί η λίστα.'); }
         h += iosGroup('', [{t:'<span style="color:#FF3B30">Επαναφορά εμφάνισης</span>', on:'void 0', data:'data-apr="1"'}]);
         return h + '<div style="height:60px"></div>'; });
       pg.el.addEventListener('click', e=>{ const o = get();
         const a = e.target.closest('[data-ap]'), t = e.target.closest('[data-apt]'), up = e.target.closest('[data-apup]'), f = e.target.closest('[data-apf]'), r = e.target.closest('[data-apr]');
-        if(up){ e.stopPropagation(); const k = decodeURIComponent(up.dataset.apup), L = window.pdxApFav().slice(), i = L.indexOf(k); if(i>0){ L.splice(i,1); L.splice(i-1,0,k); o.fav = L; put(o); } }
+        const tup = e.target.closest('[data-aptup]'), tf = e.target.closest('[data-aptf]');
+        if(tup){ e.stopPropagation(); const k = decodeURIComponent(tup.dataset.aptup), L = (o.tfav||[]).slice(), i = L.indexOf(k); if(i>0){ L.splice(i,1); L.splice(i-1,0,k); o.tfav = L; put(o); } }
+        else if(tf){ const k = decodeURIComponent(tf.dataset.aptf), L = (o.tfav||[]).slice(), i = L.indexOf(k); if(i>=0) L.splice(i,1); else L.push(k); o.tfav = L; put(o); }
+        else if(up){ e.stopPropagation(); const k = decodeURIComponent(up.dataset.apup), L = window.pdxApFav().slice(), i = L.indexOf(k); if(i>0){ L.splice(i,1); L.splice(i-1,0,k); o.fav = L; put(o); } }
         else if(a){ const [key, val] = a.dataset.ap.split('|'); if(val) o[key] = val; else delete o[key]; put(o); }
         else if(t){ const k = t.dataset.apt; o[k] = !o[k]; put(o); }
         else if(f){ const k = decodeURIComponent(f.dataset.apf), L = window.pdxApFav().slice(), i = L.indexOf(k); if(i>=0) L.splice(i,1); else L.push(k); o.fav = L; put(o); }
