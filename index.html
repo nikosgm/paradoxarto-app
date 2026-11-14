@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v390';
+const APP_VER = '2026-11-14-v391';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8150,7 +8150,7 @@ document.head.appendChild(st);
   };
   // 🤖 απάντηση ΜΟΝΟ JSON (αφαιρεί ```, κρατά από το 1ο { ως το τελευταίο }). → {json} ή {off|error}
   window.pdxAiJSON = async function(task, system, user, max, model){
-    const r = await window.pdxAI(task, { system, max_tokens:max||1200, model:model||undefined, temperature:0, messages:[{ role:'user', content:user }] });
+    const r = await window.pdxAI(task, { system, max_tokens:max||1200, model:model||undefined, messages:[{ role:'user', content:user }] });
     if(!r.ok) return r;
     const t = String(r.text||''), a = t.indexOf('{'), z = t.lastIndexOf('}');
     try{ return { ok:true, json: JSON.parse(t.slice(a, z+1)), usage:r.usage }; }catch(e){ return { error:'η απάντηση δεν ήταν JSON' }; }

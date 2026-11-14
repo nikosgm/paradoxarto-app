@@ -348,8 +348,11 @@ async function aiScan(id, khex){
     const r = await fetch(F, { method:'POST', headers:H, signal: ac.signal, body: JSON.stringify({ scan: { id, k: khex, token: tok.get() } }) }); clearTimeout(to);
     const j = await r.json().catch(()=>null);
     if(j && (j.ok || (j.ok === false && j.msg))) return j;
-    return null;
-  }catch(e){ return null; }
+    // 14/11 14:11 (χρήστης: «με πέταξε στη συζήτηση Claude — θέλω με το που ανεβάζω να τελειώνει εκεί»): AI ανοιχτό → ΠΟΤΕ αυτόματα στη συζήτηση·
+    // σφάλμα → 1 αυτόματη επανάληψη, μετά μήνυμα με «Ξανά» (η σάρωση μένει διαθέσιμη)
+    if(j && j.off) return null;
+    return { fail: true, error: (j && j.error) || ('HTTP ' + r.status) };
+  }catch(e){ return { fail: true, error: String((e && e.message) || e) }; }
 }
 async function send(srcs, w0, h0){
   // 📋 10/11 (χρήστης: «μας πέταξε στη συζήτηση Claude χωρίς να γράψει κάτι»): η εφαρμογή Claude στο iPhone ΔΕΝ γεμίζει πάντα το μήνυμα από τον σύνδεσμο.
@@ -386,7 +389,19 @@ async function send(srcs, w0, h0){
     // αν οι λειτουργίες AI είναι ανοιχτές → ανάγνωση ΑΠΕΥΘΕΙΑΣ (pdx-ai «scan», ίδιες οδηγίες) → «Νέα ιστορικά» → η εφαρμογή το βάζει στον ασθενή «προς διόρθωση».
     // Κλειστό AI / σφάλμα → ο παλιός δρόμος (συζήτηση Claude), χωρίς να χαθεί τίποτα (η σάρωση ξαναγίνεται διαθέσιμη).
     if(!op && !window.__scanNoAi){
-      const ar = await aiScan(id, [...raw].map(b=>b.toString(16).padStart(2, '0')).join(''));
+      const khex = [...raw].map(b=>b.toString(16).padStart(2, '0')).join('');
+      let ar = await aiScan(id, khex);
+      if(ar && ar.fail){ await new Promise(r=>setTimeout(r, 1500)); ar = await aiScan(id, khex); }
+      if(ar && ar.fail){
+        if(window.__clipRes) window.__clipRes.no();
+        const show = ()=>{ msg('<div style="font-size:44px">⚠</div><div style="max-width:320px;text-align:center">Δεν διαβάστηκε: ' + E(String(ar.error || '').slice(0, 160)) + '</div>'
+          + '<button class="btn" id="aiag">↻ Ξανά</button><button class="btn sec" id="nx" style="min-width:0">Νέα σάρωση</button>'
+          + '<a class="go2" href="' + ('claude://claude.ai/new?q=' + encodeURIComponent(ask)) + '" style="font-size:13px;opacity:.7">ή στη συζήτηση Claude</a>');
+          $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+          $('aiag').onclick = async ()=>{ ar = await aiScan(id, khex); if(ar && ar.fail) return show(); fin(); }; };
+        const fin = ()=>{ if(ar && ar.ok){ msg('<div style="font-size:54px">✅</div><b style="font-size:20px">' + (ar.doc_type === 'report' ? '📋 Πόρισμα' : '🩺 Ιστορικό') + (ar.name ? ' ' + E(ar.name) : '') + '</b><div style="max-width:320px;text-align:center">' + (ar.doc_type === 'report' ? 'Στα «Πορίσματα» του Παραδόχαρτου.' : 'Μπαίνει μόνο του στον ασθενή ως <b>πρόχειρο «προς διόρθωση»</b>.') + '</div><button class="btn" id="nx">Νέα σάρωση</button>'); $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); }; } else show(); };
+        show(); busy = false; return;
+      }
       if(ar && ar.ok){
         if(window.__clipRes) window.__clipRes.no();
         const what = ar.doc_type === 'report' ? '📋 Πόρισμα' : '🩺 Ιστορικό';
