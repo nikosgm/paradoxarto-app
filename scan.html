@@ -122,7 +122,7 @@ async function camera(){
     if(gen !== camGen) return;
     // δεν επιτράπηκε η ζωντανή κάμερα → η κάμερα του κινητού
     camStop();
-    msg('<div style="font-size:60px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.7;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή</div>' + (natOn() ? '<div style="opacity:.7;font-size:13px;margin-top:6px">📷 Κάμερα iPhone — χωρίς ερώτηση άδειας (αλλαγή: «Τι σαρώνω»)</div>' : ''));
+    msg('<div style="font-size:60px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.7;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή</div>' + (natOn() ? '<div style="opacity:.7;font-size:13px;margin-top:6px">📷 Κάμερα iPhone — χωρίς ερώτηση άδειας (αλλαγή: «⚙︎ Ρυθμίσεις»)</div>' : ''));
     $('shot').onclick = ()=>{ if(busy) return; $('cf').value = ''; $('cf').click(); };
   }
   $('gal').onclick = ()=>{ if(busy) return; $('gf').value = ''; $('gf').click(); };
@@ -143,11 +143,11 @@ const ONE_MODE = true;
 const modeGet = ()=>{ if(ONE_MODE) return ''; try{ const m = localStorage.getItem(MODE); if(m != null) return MODES[m] ? m : '';
   const old = localStorage.getItem('pdx_scan_op') === '1' ? 'op' : localStorage.getItem('pdx_scan_rot') === '1' ? 'prog' : ''; localStorage.setItem(MODE, old); return old; }catch(e){ return ''; } };
 const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog', histOn = ()=>modeGet() === 'hist';
-const modePaint = ()=>{ const m = modeGet(), M = MODES[m], b = $('mod'); b.innerHTML = M[0] + ' ' + M[1] + ' ▾'; b.style.background = m ? (m === 'prog' ? '#34C759' : m === 'op' ? '#AF52DE' : '#0A84FF') : '#ffffff26'; };
+const modePaint = ()=>{ const m = modeGet(), M = MODES[m], b = $('mod'); if(ONE_MODE){ b.innerHTML = '⚙︎ Ρυθμίσεις'; b.style.background = '#ffffff26'; return; } b.innerHTML = M[0] + ' ' + M[1] + ' ▾'; b.style.background = m ? (m === 'prog' ? '#34C759' : m === 'op' ? '#AF52DE' : '#0A84FF') : '#ffffff26'; };
 const modeSet = (x)=>{ try{ localStorage.setItem(MODE, x); }catch(e){} modePaint(); };
 $('mod').onclick = ()=>{ if(busy) return; const cur = modeGet();   // 14/11: ΧΩΡΙΣ camStop — αλλιώς νέα ερώτηση άδειας στην επιστροφή
   // 10/11 βράδυ (χρήστης: «κολλάει στις ρυθμίσεις, δεν γυρίζει στη φωτογραφία»): το μενού ήταν ψηλότερο από την οθόνη χωρίς κύλιση/έξοδο → κυλάει + «✓ Πίσω στην κάμερα»
-  msg('<div style="width:100%;max-width:340px;display:flex;align-items:center;justify-content:space-between"><b style="font-size:19px">Τι σαρώνω;</b><button class="btn" id="mclose" style="min-width:0;padding:8px 14px;font-size:15px;background:#34C759">✓ Κάμερα</button></div>' + Object.keys(MODES).map(k=>'<button class="btn" data-m="' + k + '" style="width:100%;max-width:340px;text-align:left;background:' + (k === cur ? '#0A84FF' : '#ffffff1f') + '"><b>' + MODES[k][0] + ' ' + MODES[k][1] + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + MODES[k][2] + '</span></button>').join(''));
+  msg('<div style="width:100%;max-width:340px;display:flex;align-items:center;justify-content:space-between"><b style="font-size:19px">' + (ONE_MODE ? '⚙︎ Ρυθμίσεις σάρωσης' : 'Τι σαρώνω;') + '</b><button class="btn" id="mclose" style="min-width:0;padding:8px 14px;font-size:15px;background:#34C759">✓ Κάμερα</button></div>' + (ONE_MODE ? [] : Object.keys(MODES)).map(k=>'<button class="btn" data-m="' + k + '" style="width:100%;max-width:340px;text-align:left;background:' + (k === cur ? '#0A84FF' : '#ffffff1f') + '"><b>' + MODES[k][0] + ' ' + MODES[k][1] + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + MODES[k][2] + '</span></button>').join(''));
   // 💬 ίδια συζήτηση Claude για όλες τις σαρώσεις: επικόλληση του συνδέσμου της (Claude → ⋯ → Κοινοποίηση/Αντιγραφή συνδέσμου ή από τη γραμμή διεύθυνσης)
   let cur0 = ''; try{ cur0 = localStorage.getItem('pdx_scan_chat') || ''; }catch(e){}
   if(false) $('msg').insertAdjacentHTML('beforeend', '<button class="btn" id="chatpin" style="width:100%;max-width:340px;text-align:left;background:#ffffff1f"><b>💬 ' + (cur0 ? 'Ίδια συζήτηση Claude ✓' : 'Νέα συζήτηση Claude σε κάθε σάρωση') + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + (cur0 ? 'πάτα για αλλαγή ή για νέα κάθε φορά' : 'πάτα για να ορίσεις μία συζήτηση για όλες') + '</span></button>');
@@ -182,7 +182,7 @@ $('mod').onclick = ()=>{ if(busy) return; const cur = modeGet();   // 14/11: Χ�
   const back = ()=>{ $('msg').classList.remove('menu'); if(stream) $('msg').style.display = 'none'; else camera(); };
   $('mclose').onclick = back;
   $('msg').querySelectorAll('[data-m]').forEach(x=>x.onclick = ()=>{ modeSet(x.dataset.m); back(); }); };
-modePaint(); if(ONE_MODE){ try{ $('mod').style.display = 'none'; }catch(e){} }
+modePaint();   // 14/11: ΠΟΤΕ κρυφό — εδώ μέσα είναι η Συντόμευση iPhone και η Κάμερα iPhone (ΣΦΑΛΜΑΤΑ)
 try{ if(!localStorage.getItem('pdx_scan_via2')){ localStorage.setItem('pdx_scan_via', 'page'); localStorage.setItem('pdx_scan_via2', '1'); } }catch(e){}   // 10/11: μία φορά → όλες οι συσκευές στη Σελίδα Σάρωσης
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
