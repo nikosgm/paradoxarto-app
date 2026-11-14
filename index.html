@@ -2412,7 +2412,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v421';
+const APP_VER = '2026-11-14-v422';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7677,7 +7677,7 @@ document.head.appendChild(st);
     let h = nuiTop('Εργαλεία', 'ενέργειες χωρίς να ψάχνεις') + cmdBar;
     // 12/11 βράδυ (Εργαστήριο εμφάνισης, «Πλέγμα 3»): τα 6 πιο συχνά σε πλέγμα 3 στηλών πάνω-πάνω, τα υπόλοιπα σε λίστα από κάτω
     { const F = [bot && ['🧾','Παραγγελία σε πολλούς',"pdxOrderBulk()"], ['🧪','Εργαστηριακά όλων',"window.labsFullOpen && labsFullOpen('')"], bot && ['💊','Συνταγή',"pdxDo('rxout')"],
-        bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['📧','Email',"pdxMail()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
+        bot && ['🎙','Βοηθός',"pdxVoice()"], bot && ['🔬','Βιοψίες',"pdxBiopsies()"], bot && ['📧','Email',"pdxMail()"], bot && ['🩻','Απεικονίσεις',"pdxCtInbox()"], (bot || att) && ['🌤','Ουρολογικό Ημέρας',"pdxDayUnit()"]].filter(Boolean);
       // ⭐ 14/11 (χρήστης: «πέρα από τα συχνά στις ρυθμίσεις, θέλω και τα συχνά στα εργαλεία»): τα «Τα πιο συχνά» διαλέγονται από 🎨 Εμφάνιση (επιλογή + σειρά)
       window.__pdxToolF = F; h += '<!--TFAV-->'; }
     const F0 = window.__pdxToolF || [], TI = [];
@@ -8261,6 +8261,7 @@ document.head.appendChild(st);
     ['πορεία νόσου','📈','Πορεία νόσου: υπαγόρευση → SOAP','όλο το κείμενο στο S, μοιράζεις με το χέρι'],
     ['πρακτικό','📝','Πρακτικό χειρουργείου από υπαγόρευση','φόρμα + επιλογή προτύπου (όπως πριν)'],
     ['ογκολογικό','🎗','Σύνοψη ογκολογικού + μητρώο','συμπληρώνεις με το χέρι'],
+    ['βοηθός','🎙','Φωνητικός βοηθός (εντολές με επιβεβαίωση)','ο βοηθός δεν λειτουργεί — κάνεις τις ενέργειες από τα κουμπιά'],
     ['επισκευή bot','🛠','Bot: επισκευή αλλαγμένων σελίδων','το bot σταματά και αναφέρει το σφάλμα (όπως πριν)']];
   window.pdxAiPage = async function(){
     let st = null, msg = '';
@@ -9078,6 +9079,7 @@ document.head.appendChild(st);
       ['🗄','Αρχείο','αρχειο εξιτηρια archive', k=>pdxDo('archive'), false],
       ['👤','Λογαριασμός','λογαριασμος κωδικος password', k=>pdxDo('acct'), false],
       ['🛏','Οι θάλαμοί μου','θαλαμοι μου', k=>pdxDo('mine'), false],
+      ['🎙','Βοηθός (φωνητικές εντολές)','βοηθος φωνη υπαγορευση εντολη voice', k=>pdxVoice(), false],
       ['🌙','Σκούρο θέμα','σκουρο dark νυχτα', k=>pdxDo('night'), false]
     ].filter(a=>a[3]);
     const nz = s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ς/g,'σ');
@@ -19635,6 +19637,117 @@ function applyFs(){ ov.style.setProperty('--fs', fsScale()); }
 // 🎤 8/11 (εντολή χρήστη): ΠΟΡΕΙΑ ΝΟΣΟΥ με υπαγόρευση από το κινητό — δωρεάν, καλά ελληνικά: Whisper large-v3-turbo στον Μεσαίο.
 // Ηχογράφηση → 16 kHz mono WAV → κρυπτογράφηση με το κλειδί της κλινικής → εντολή stt → κείμενο (προεπισκόπηση/διόρθωση) →
 // αποθήκευση στην καρτέλα (courseNotes). Η καταχώριση στο ΝΠΣ προστίθεται μόλις ολοκληρωθεί ο χάρτης της φόρμας.
+// 🎙 14/11 (χρήστης: «εφαρμογή υπαγόρευσης/φωνητικών εντολών — με API AI για να καταλαβαίνει απόλυτα τι λέω», ΠΑΝΤΑ με επιβεβαίωση):
+// φωνή → κείμενο (αναγνώριση iPhone ή 🎤 πληκτρολογίου) → Claude (pdx-ai, κλειδί μόνο στον διακομιστή) → κάρτες ενεργειών → ✓ ο γιατρός → εκτέλεση.
+// Ενέργειες: παραγγελία (εξετάσεις/πακέτα), κλήση για εκτίμηση, παροχέτευση ml, αιματοκρίτης/εργαστηριακά, πορεία νόσου, συνταγή/παραπεμπτικά, εκκρεμότητα.
+// Τίποτα δεν εκτελείται χωρίς ✓· το bot σταματά πριν από κάθε «Καταχώριση/Υποβολή» όπως πάντα. Κλειστό AI → δεν «μαντεύει» (μήνυμα).
+window.pdxVoice = function(seed){
+  const E7 = v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const st = {text: String(seed||''), sr:null, busy:'', err:'', hint:'', acts:null, unclear:'', P:[]};
+  const nz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  const recK = k=>(String(k).indexOf('extra')===0 ? extraPatients : data)[k];
+  const ptsAll = async ()=>{ const P = [];
+    [data, extraPatients].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) P.push({k, name:String(d.name).trim(), bed: k.indexOf('extra')===0 ? 'Εκτός' : k, surg:d.surgery||'', amka:d.amka||''}); }));
+    try{ const N = window.pdxNpsAllPts ? await pdxNpsAllPts() : []; N.forEach(r=>{ if(!P.some(x=>nz(x.name)===nz(r.name) || (r.amka && String(x.amka)===String(r.amka)))) P.push({k:'nps:'+r.name, name:r.name, bed:'ΝΠΣ', surg:'', amka:r.amka||''}); }); }catch(e){}
+    return P; };
+  const SYS = 'Είσαι ο φωνητικός βοηθός μιας ουρολογικής κλινικής. Ο γιατρός υπαγορεύει εντολές στα ελληνικά (μπορεί να έχει λάθη αναγνώρισης φωνής, ονόματα σε γενική/αιτιατική, π.χ. «στον Κούτσαρη» = ΚΟΥΤΣΑΡΗΣ, «του Παπαδόπουλου» = ΠΑΠΑΔΟΠΟΥΛΟΣ).'
+    + ' Μετέτρεψε την υπαγόρευση σε ενέργειες. Επέστρεψε ΜΟΝΟ JSON: {"actions":[...],"unclear":""}. Τύποι ενεργειών:'
+    + ' {"type":"order","p":id,"tests":["…"],"packs":["…"],"when":"Τώρα"|"Αύριο πρωί","urgency":"Ρουτίνας"|"Επείγον"} — εξετάσεις αίματος/ούρων·'
+    + ' {"type":"consult","p":id,"spec":"ακριβώς μία από τις ειδικότητες της λίστας","reason":"τι ζητάμε"}·'
+    + ' {"type":"drain","p":id,"ml":αριθμός,"which":1|2|3} — ml παροχέτευσης·'
+    + ' {"type":"lab","p":id,"key":"hct"|"wbc"|"crp"|"cr","value":αριθμός} — τιμή εξέτασης που ανακοινώνει ο γιατρός (π.χ. σημερινός αιματοκρίτης 32)·'
+    + ' {"type":"course","p":id,"text":"η πορεία νόσου όπως ειπώθηκε"}·'
+    + ' {"type":"rx","p":id,"text":"φάρμακα ή/και παραπεμπτικά όπως ειπώθηκαν, π.χ. Lincofren πρωί-βράδυ 5 μέρες + υπέρηχος νεφρών-κύστης"}·'
+    + ' {"type":"todo","p":id,"text":"εκκρεμότητα"}.'
+    + ' Κανόνες: "p" = ο αριθμός (#) του ασθενή από τη λίστα· αν λέει ΑΜΚΑ, βρες τον ασθενή με αυτό τον ΑΜΚΑ, αλλιώς "p":null και "amka":"…". Αν ο ασθενής είναι αμφίβολος (δύο πιθανοί ή κανένας), "p":null και "who":"ό,τι ακούστηκε".'
+    + ' Εξετάσεις: γράψε τα ονόματα ΑΚΡΙΒΩΣ όπως στη λίστα εξετάσεων όταν ταιριάζουν· «ένα Χ»/«το Χ» όπου Χ είναι όνομα πακέτου = "packs":["Χ" όπως στη λίστα πακέτων]· αν ζητά πακέτο που ΔΕΝ υπάρχει, βάλ\' το στο "packs" όπως ειπώθηκε.'
+    + ' ΠΟΤΕ μην προσθέτεις κάτι που δεν ειπώθηκε. Μια φράση μπορεί να έχει πολλές ενέργειες ή πολλούς ασθενείς. Ό,τι δεν κατάλαβες → "unclear".';
+  const run = async ()=>{
+    const txt = String(st.text||'').trim(); if(txt.length < 3){ st.err = 'Πες ή γράψε μια εντολή.'; return pg.redraw(); }
+    if(!(window.pdxAiOn && pdxAiOn())){ st.err = 'Ο βοηθός χρειάζεται τις λειτουργίες AI (Ρυθμίσεις → Λειτουργίες AI) — είναι κλειστές.'; return pg.redraw(); }
+    st.err = ''; st.acts = null; st.busy = 'Ο βοηθός καταλαβαίνει την εντολή…'; pg.redraw();
+    try{
+      st.P = await ptsAll(); const packs = window.pdxOrderPacks ? await pdxOrderPacks() : {packs:[], tests:[]};
+      let specs = []; try{ const c = JSON.parse(localStorage.getItem('pdx_consult_cat')||'null'); specs = ((c && c.specs)||[]).filter(x=>x.deps&&x.deps.length).map(x=>x.spec); }catch(e){}
+      const u = 'Ασθενείς:\n' + st.P.map((x,i)=>'#'+(i+1)+' '+x.bed+' '+x.name+(x.surg?' ('+x.surg+')':'')+(x.amka?' ΑΜΚΑ '+x.amka:'')).join('\n')
+        + '\n\nΠακέτα: ' + ((packs.packs||[]).map(x=>x.name).join(', ')||'—') + '\nΕξετάσεις: ' + ((packs.tests||[]).join(', ')||'—')
+        + '\nΕιδικότητες για εκτίμηση: ' + (specs.join(', ')||'—') + '\n\nΥπαγόρευση: «' + txt + '»';
+      const r = await pdxAiJSON('βοηθός', SYS, u, 1500); st.busy = '';
+      if(!(r.ok && r.json)){ st.err = '⚠ ' + (r.error || 'ο βοηθός δεν απάντησε'); return pg.redraw(); }
+      st.unclear = String(r.json.unclear||'').trim();
+      st.acts = (Array.isArray(r.json.actions) ? r.json.actions : []).slice(0, 12).map(a=>{ const i = +a.p; const pt = i>=1 && i<=st.P.length ? st.P[i-1] : null; return Object.assign({}, a, {pt, st:''}); });
+      for(const a of st.acts){ a.pt = a.pt || (a.amka && st.P.find(x=>String(x.amka)===String(a.amka).replace(/\D/g,''))) || null; prep(a, packs, specs); }
+      if(!st.acts.length && !st.unclear) st.unclear = 'Δεν βρέθηκε καμία ενέργεια.';
+    }catch(e){ st.busy = ''; st.err = '⚠ ' + (e.message||e); }
+    pg.redraw(); };
+  // έλεγχος κάθε ενέργειας ΠΡΙΝ φανεί (τι λείπει → η κάρτα το λέει, χωρίς κουμπί εκτέλεσης)
+  const prep = (a, packs, specs)=>{ a.bad = '';
+    if(!a.pt) a.bad = 'Δεν βρέθηκε σίγουρα ο ασθενής' + (a.who ? ' («'+a.who+'»)' : a.amka ? ' (ΑΜΚΑ '+a.amka+')' : '');
+    if(a.type==='order'){ a.packObjs = []; (a.packs||[]).forEach(n=>{ const o = (packs.packs||[]).find(x=>nz(x.name)===nz(n) || nz(x.name).replace(/Ο$/,'')===nz(n).replace(/Ο$/,'')); if(o) a.packObjs.push(o); else a.bad = a.bad || 'Δεν υπάρχει πακέτο «'+n+'» — φτιάξ\' το στα «Πακέτα εξετάσεων»'; });
+      a.tests = (a.tests||[]).map(String).filter(Boolean); if(!a.tests.length && !a.packObjs.length) a.bad = a.bad || 'Καμία εξέταση'; }
+    if(a.type==='consult' && !a.bad){ if(!specs.length) a.bad = 'Δεν υπάρχει ο κατάλογος ειδικοτήτων — άνοιξε μία φορά «Κλήση για εκτίμηση»'; else if(specs.indexOf(a.spec)<0) a.bad = 'Άγνωστη ειδικότητα «'+(a.spec||'')+'»'; }
+    if(a.type==='drain' && !(+a.ml >= 0)) a.bad = a.bad || 'Δεν ακούστηκε ποσότητα';
+    if(a.type==='lab' && (!/^(hct|wbc|crp|cr)$/.test(a.key) || !isFinite(+a.value))) a.bad = a.bad || 'Δεν ακούστηκε τιμή';
+    if(/^(course|rx|todo)$/.test(a.type) && !String(a.text||'').trim()) a.bad = a.bad || 'Κενό κείμενο';
+    if(!/^(order|consult|drain|lab|course|rx|todo)$/.test(a.type)) a.bad = 'Άγνωστη ενέργεια'; };
+  const LAB = {hct:'Αιματοκρίτης', wbc:'Λευκά', crp:'CRP', cr:'Κρεατινίνη'};
+  const desc = a=>{ const who = a.pt ? '<b>'+E7(a.pt.name)+'</b> <span style="color:#8E8E93">'+E7(a.pt.bed)+'</span>' : '<b style="color:#B42318">ασθενής;</b>';
+    const T = {order:['🧾','Παραγγελία', [].concat((a.packObjs||[]).map(x=>'📦 '+x.name), a.tests||[]).join(', ') + ' · ' + (a.when||'Τώρα') + (a.urgency==='Επείγον'?' · ⚡ επείγον':'')],
+      consult:['📞','Κλήση για εκτίμηση', (a.spec||'') + (a.reason?' — '+a.reason:'')], drain:['💧','Παροχέτευση'+(+a.which>1?' '+a.which:''), (a.ml)+' ml'],
+      lab:['🩸', LAB[a.key]||a.key, String(a.value)], course:['📈','Πορεία νόσου', a.text], rx:['💊','Συνταγή / παραπεμπτικά', a.text], todo:['☑','Εκκρεμότητα', a.text]}[a.type] || ['❓', a.type, ''];
+    return {ic:T[0], t:T[1], who, what:T[2]}; };
+  const exec = async a=>{ const k0 = a.pt.k; let k = k0; if(/^nps:/.test(k) && window.pdxNpsKey) k = pdxNpsKey(k, true); const d = recK(k);
+    if(a.type==='order'){ const ok = await pdxBotSend(k, 'order', {tests:a.tests||[], packs:(a.packObjs||[]).map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:a.when==='Αύριο πρωί'?'Αύριο πρωί':'Τώρα', urgency:a.urgency==='Επείγον'?'Επείγον':'Ρουτίνας', note:''}); return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Καταχώρηση»)' : '⚠ δεν στάλθηκε'; }
+    if(a.type==='consult'){ const M = window.pdxConsultMap ? await pdxConsultMap() : {map:{}}; const dp = (M.map||{})[a.spec]; if(!dp){ setTimeout(()=>mobAct(k,'consult'), 300); return '↪ άνοιξε η «Κλήση για εκτίμηση» (δεν έχει οριστεί υποτμήμα για «'+a.spec+'»)'; }
+      const rf = ((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''; const ok = await pdxBotSend(k, 'consult', {spec:a.spec, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited:false, text: window.pdxConsultText ? pdxConsultText(d, a.reason||'') : (a.reason||''), reason:a.reason||''});
+      return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Υποβολή»)' : '⚠ δεν στάλθηκε'; }
+    if(a.type==='drain' || a.type==='lab'){ if(!d) return '⚠ ο ασθενής δεν έχει καρτέλα';
+      if(a.type==='drain'){ const f = +a.which===2 ? 'drain2Ml' : +a.which===3 ? 'drain3Ml' : 'drainMl'; d[f] = String(+a.ml); }
+      else { d[a.key+'Prev'] = d[a.key] != null && d[a.key] !== '' ? d[a.key] : (d[a.key+'Prev']||''); d[a.key] = String(a.value).replace('.', ','); }
+      try{ window.MEAS && MEAS.sync(d); }catch(e){} saveEntryToStorage(k, String(k).indexOf('extra')===0, d, true); try{ window.mobRefresh && mobRefresh(); }catch(e){} return '✓ γράφτηκε στην καρτέλα'; }
+    if(a.type==='todo'){ if(window.pdxTodoAdd){ pdxTodoAdd(k, String(a.text).trim(), null); return '✓ προστέθηκε'; } return '⚠ μη διαθέσιμο'; }
+    if(a.type==='course'){ pg.close(); setTimeout(()=>{ window.pdxDictate(k); setTimeout(()=>{ const ta = document.querySelector('#iosPg [data-tx]'); if(ta){ ta.value = a.text; ta.dispatchEvent(new Event('input', {bubbles:true})); } }, 400); }, 420); return '↪ άνοιξε η «Πορεία νόσου» με το κείμενο — έλεγξε και στείλε'; }
+    if(a.type==='rx'){ pg.close(); setTimeout(()=>window.pdxRxSheet(k, a.text), 420); return '↪ άνοιξε η συνταγή με το κείμενο — έλεγξε και στείλε'; }
+    return '⚠ άγνωστη ενέργεια'; };
+  if(!document.getElementById('vcCss')){ const c = document.createElement('style'); c.id = 'vcCss'; c.textContent = '.pdx-vcard,.pdx-vtx{color:#1C1C1E}html.pdx-night .pdx-vcard,html.pdx-night .pdx-vtx{color:#F5F5F7!important;background:#1C1C1E!important}'; document.head.appendChild(c); }
+  const pg = iosPage('🎙 Βοηθός', 'Πίσω', ()=>{
+    let h = '<div style="margin:6px 16px 10px;font-size:13.5px;color:#6B7280;line-height:1.4">Πες τι θέλεις, π.χ. «παρήγγειλε ένα μικρό στον Κούτσαρη», «κλήση στους πνευμονολόγους για τον Σκουμπή για προεγχειρητική», «η παροχέτευση του Παπαδόπουλου έβγαλε 50, αιματοκρίτης 32». <b>Τίποτα δεν γίνεται χωρίς το ✓ σου.</b></div>';
+    h += '<button data-vmic style="display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 32px);margin:0 16px 10px;min-height:64px;border:0;border-radius:18px;background:'+(st.sr?'#FF3B30':'#0A84FF')+';color:#fff;font-size:18px;font-weight:800">'+(st.sr?'⏹ Σταμάτα':'🎙 Μίλα')+'</button>';
+    if(st.hint) h += '<div style="margin:0 16px 8px;font-size:13.5px;color:#B26A00">'+st.hint+'</div>';
+    h += '<textarea data-vtx class="pdx-vtx" placeholder="…ή γράψε / πάτα το 🎤 του πληκτρολογίου" style="display:block;width:calc(100% - 32px);margin:0 16px;box-sizing:border-box;min-height:96px;font-size:16px;line-height:1.45;padding:12px;border:0;border-radius:14px;background:var(--card,#fff);color:inherit">'+E7(st.text)+'</textarea>';
+    h += '<button data-vgo style="display:block;width:calc(100% - 32px);margin:10px 16px;min-height:50px;border:0;border-radius:14px;background:#34C759;color:#fff;font-size:16.5px;font-weight:800"'+(st.busy?' disabled':'')+'>✨ Κατάλαβε την εντολή</button>';
+    if(st.busy) h += '<div style="margin:6px 16px;color:#8E8E93">⏳ '+E7(st.busy)+'</div>';
+    if(st.err) h += '<div style="margin:6px 16px;color:#FF3B30;font-size:14px">'+E7(st.err)+'</div>';
+    if(st.acts){ const n = st.acts.filter(a=>!a.bad && !a.st).length;
+      h += '<div class="ios-h">Ενέργειες · '+st.acts.length+'</div>';
+      st.acts.forEach((a,i)=>{ const D = desc(a);
+        h += '<div class="pdx-vcard" style="margin:0 16px 8px;background:var(--card,#fff);border-radius:14px;padding:12px 13px"><div style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:22px">'+D.ic+'</span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15.5px">'+E7(D.t)+' · '+D.who+'</div><div style="font-size:14.5px;margin-top:3px;overflow-wrap:anywhere">'+E7(D.what)+'</div>'
+          + (a.bad ? '<div style="color:#B42318;font-size:13.5px;margin-top:5px">⚠ '+E7(a.bad)+'</div>' : '') + (a.st ? '<div style="color:'+(/^⚠/.test(a.st)?'#B42318':'#1A7F37')+';font-size:13.5px;margin-top:5px;font-weight:600">'+E7(a.st)+'</div>' : '') + '</div></div>'
+          + (!a.bad && !a.st ? '<div style="display:flex;gap:8px;margin-top:10px"><button data-vno="'+i+'" style="flex:1;min-height:42px;border:0;border-radius:11px;background:rgba(118,118,128,.14);color:inherit;font-weight:700">✕ Όχι</button><button data-vok="'+i+'" style="flex:1.4;min-height:42px;border:0;border-radius:11px;background:#0A84FF;color:#fff;font-weight:800">✓ Εκτέλεση</button></div>' : '') + '</div>'; });
+      if(n > 1) h += '<button data-vall style="display:block;width:calc(100% - 32px);margin:4px 16px 8px;min-height:48px;border:0;border-radius:14px;background:#0A84FF;color:#fff;font-weight:800;font-size:16px">✓ Εκτέλεση όλων ('+n+')</button>';
+      if(st.unclear) h += '<div style="margin:6px 16px;font-size:14px;color:#B26A00">❓ '+E7(st.unclear)+'</div>'; }
+    return h + '<div style="height:40px"></div>'; });
+  const doOne = async i=>{ const a = st.acts[i]; if(!a || a.bad || a.st) return; a.st = '⏳ …'; pg.redraw(); try{ a.st = await exec(a); }catch(e){ a.st = '⚠ ' + (e.message||e); } if(pg.el.isConnected) pg.redraw(); };
+  pg.el.addEventListener('input', e=>{ if(e.target.dataset.vtx!=null) st.text = e.target.value; });
+  pg.el.addEventListener('click', async e=>{ const t = e.target;
+    if(t.closest('[data-vgo]')) return run();
+    const ok = t.closest('[data-vok]'); if(ok) return doOne(+ok.dataset.vok);
+    const no = t.closest('[data-vno]'); if(no){ st.acts.splice(+no.dataset.vno, 1); return pg.redraw(); }
+    if(t.closest('[data-vall]')){ for(let i=0;i<st.acts.length;i++){ const a = st.acts[i]; if(!a.bad && !a.st && !/^(course|rx)$/.test(a.type)) await doOne(i); } const r = st.acts.findIndex(a=>!a.bad && !a.st); if(r>=0) await doOne(r); return; }
+    if(t.closest('[data-vmic]')){
+      if(st.sr){ try{ st.sr.stop(); }catch(x){} return; }
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν ξεκίνησε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; pg.redraw(); setTimeout(()=>{ const ta = pg.el.querySelector('[data-vtx]'); ta && ta.focus(); }, 50); };
+      if(!SR) return kb();
+      st.hint = ''; st.err = ''; const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; const base = String(st.text||'').trim(); let fin = '';
+      r.onresult = ev=>{ let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'')+x[0].transcript.trim(); else inter += x[0].transcript; }
+        st.text = (base?base+' ':'') + fin + (inter?(fin?' ':'')+inter:''); const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.value = st.text; };
+      r.onerror = ev=>{ st.sr = null; const c = ev && ev.error; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')) kb(); else pg.redraw(); };
+      r.onend = ()=>{ st.sr = null; st.text = ((base?base+' ':'') + fin).trim() || st.text; pg.redraw(); if(String(st.text).trim().length > 5 && !st.acts) run(); };
+      try{ r.start(); st.sr = r; pg.redraw(); }catch(er){ st.sr = null; kb(); }
+    } });
+  if(st.text) run();
+};
 window.pdxDictate = function(k){
   const isX = String(k).indexOf('extra')===0, rec = (isX ? extraPatients : data)[k]; if(!rec) return;
   const E4 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
