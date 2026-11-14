@@ -2413,7 +2413,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v415';
+const APP_VER = '2026-11-14-v416';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14419,6 +14419,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const nAdmS = r=>{ if(r.admit) return String(r.admit); try{ const x = NB.enr[nbNz(r.name)] || {}; if(x.adm && x.adm.from) return String(x.adm.from); }catch(e){} try{ const t = nbNz(r.name); for(const st of [data, extraPatients]) for(const k in (st||{})){ const d = st[k]; if(d && d.admitDate && (r.am && String(d.am)===String(r.am) || nbNz(d.name)===t)) return String(d.admitDate); } }catch(e){} return ''; };
   const nAdm = r=>{ const s = nAdmS(r); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]).getTime(); m = s.match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return new Date(y,+m[2]-1,+m[1]).getTime(); };
   // 14/11 22:01: ημερομηνία εισαγωγής ΝΠΣ για όποιον ασθενή (ταξινόμηση στη Μαζική παραγγελία)
+  // 14/11 22:05 (χρήστης: «Αξονικές ειδικευομένων δεν βρίσκει κανέναν — υπάρχουν πολλοί ασθενείς του ΝΠΣ»): ΟΛΗ η λίστα ΝΠΣ με ημ. εισαγωγής
+  window.pdxNpsAllPts = async ()=>{ try{ if(!Array.isArray(NB.rows)) await nbLoad(true); }catch(e){} return (NB.rows||[]).map(r=>{ const x = NB.enr[nbNz(r.name)] || {}, t = nAdm(r), d = t ? new Date(t) : null;
+    return {name:r.name, am:x.am||r.am||'', amka:x.amka||r.amka||'', ad: d ? String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear() : ''}; }); };
   window.pdxNpsAdmT = (name, am)=>{ try{ const t = nbNz(name), r = (NB.rows||[]).find(z=>nbNz(z.name)===t || (am && String(z.am||'')===String(am))) || {name, am}; return nAdm(r) || 0; }catch(e){ return 0; } };
   const nAdmTxt = r=>{ const t = nAdm(r); if(!t) return ''; const d = new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
   const npsSort = (A)=>{ const m = NSO(), C = new Intl.Collator('el',{sensitivity:'base'}); if(m==='abc') A.sort((a,b)=>C.compare(String(a.name||''),String(b.name||''))); else if(m==='adm') A.sort((a,b)=>nAdm(b)-nAdm(a) || C.compare(String(a.name||''),String(b.name||''))); return A; };
@@ -20382,6 +20385,10 @@ window.pdxCtInbox = async function(){
     const nz = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim(), srt = x=>nz(x).split(' ').sort().join(' ');
     const adOf = d=>{ if(d.admitDate) return d.admitDate; const r = cv.find(x=>nz(x.name)===nz(d.name)) || cv.find(x=>srt(x.name)===srt(d.name)); return (r && r.admit) || ''; };
     const pts = []; [data, extraPatients].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) pts.push({key:k, name:d.name, fname:d.fname||'', ad:adOf(d), amka:pdxAmkaOk(d.amka)?String(d.amka):'', am:/^\d{8}$/.test(String(d.am||''))?String(d.am):''}); }));
+    // 14/11 22:05: + ΟΛΟΙ οι ασθενείς της λίστας ΝΠΣ, και ημ. εισαγωγής ΝΠΣ όπου έλειπε (πριν: μόνο κρεβάτια Παραδόχαρτου + παλιά «Εικόνα κλινικής» → «χωρίς ημ. εισαγωγής»)
+    try{ const N = window.pdxNpsAllPts ? await pdxNpsAllPts() : []; N.forEach(r=>{ const q = pts.find(x=>srt(x.name)===srt(r.name) || (r.am && x.am===String(r.am)));
+      if(q){ if(!q.ad && r.ad) q.ad = r.ad; if(!q.am && /^\d{8}$/.test(String(r.am))) q.am = String(r.am); if(!q.amka && pdxAmkaOk(r.amka)) q.amka = String(r.amka); }
+      else pts.push({key:'nps:'+r.name, name:r.name, fname:String(r.name).trim().split(/\s+/)[1]||'', ad:r.ad, amka:pdxAmkaOk(r.amka)?String(r.amka):'', am:/^\d{8}$/.test(String(r.am||''))?String(r.am):''}); }); }catch(e){}
     if(!pts.length){ st.msg='Καμία λίστα ασθενών.'; pg.redraw(); return; }
     st.busy = 'Το bot διαβάζει τους φακέλους των ειδικευομένων…'; st.msg=''; pg.redraw();
     try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctinbox', name:'🩻 Αξονικές ειδικευομένων', room:null, kind:'ctinbox', payload:{pts, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
