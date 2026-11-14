@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v399';
+const APP_VER = '2026-11-14-v400';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15058,7 +15058,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // 🟢 14/11 (χρήστης: «θέλω να παίρνει την εργασία instant»): κάθε υπολογιστής πιάνει έναν browser τη φορά — όποιος δουλεύει άλλη εργασία
     // κάνει τη νέα παραγγελία να περιμένει (16–21″ σήμερα). Δίπλα σε κάθε εκτυπωτή: 🟢 ελεύθερος / ⏳ απασχολημένος (ζωντανά ανά 3″).
     st.busy = {}; const BUSYK = {order:'παραγγελία', orderprep:'ετοιμάζει φόρμα', npslist:'λίστα ΝΠΣ', medlabs:'εργαστηριακά', bxscan:'βιοψίες', comorb:'συννοσηρότητες', epsine:'ΕΨΙΝΕ', rx:'συνταγή', ref:'παραπεμπτικό', discharge:'εξιτήριο'};
-    const busyGet = async ()=>{ const r = await sb6.from('oncall_jobs').select('kind,name,bot:payload->>bot').eq('status','running'); const m = {}; (r.data||[]).forEach(x=>{ if(x.bot && !(x.kind==='orderprep' && nrm(x.name)===nrm(d.name))) m[x.bot] = BUSYK[x.kind] || 'άλλη εργασία'; }); return m; };
+    const busyGet = async ()=>{ const r = await sb6.from('oncall_jobs').select('kind,name,status,bot:payload->>bot').in('status',['running','review']); const m = {}; (r.data||[]).forEach(x=>{ if(x.bot && !(x.kind==='orderprep' && nrm(x.name)===nrm(d.name))) m[x.bot] = x.status==='review' ? 'περιμένει έγκριση' : (BUSYK[x.kind] || 'άλλη εργασία'); }); return m; };   // 14/11: και φόρμα σε έγκριση = κρατά τον υπολογιστή
     try{ st.busy = await busyGet(); st.busySig = JSON.stringify(st.busy); }catch(e){}
     clearInterval(window.__pdxBusyT); const busyT = window.__pdxBusyT = setInterval(async ()=>{ try{ if(!document.getElementById('pdxOrdOv')) return clearInterval(busyT); const m = await busyGet(), sg = JSON.stringify(m); if(sg !== st.busySig){ st.busySig = sg; st.busy = m; draw(); } }catch(e){} }, 3000);
     const CATS = await pdxMedCats();
