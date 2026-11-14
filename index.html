@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v435';
+const APP_VER = '2026-11-15-v436';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15329,6 +15329,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const IMGS = imgList(cat), a = fav.concat(IMGS, cat.filter(t=>!isImgAny(t)));
     return {all: a.filter((t,i)=>t && a.indexOf(t)===i), imgs: IMGS, fav, medilabi: cat.length>0, isImg: t=>isImgAny(t) || IMGS.indexOf(t)>=0, cat: t=>(isImgAny(t) || IMGS.indexOf(t)>=0) ? 'img' : ocatOf(t)};
   };
+  // 🖨 15/11 00:53 (χρήστης: «οι επιλογές εκτυπωτή να πιάνουν μία γραμμή — πιο μικρές, κόψε γράμματα: Γωνιακός → Γων.»)
+  window.pdxPcShort = nm=>({'Γωνιακός':'Γων.','Μεσαίος':'Μεσ.','Παράθυρο':'Παράθ.','Εξωτερικά':'Εξωτ.','Πόρτα':'Πόρτα'})[String(nm||'').trim()] || (String(nm||'').length > 6 ? String(nm).slice(0,5)+'.' : String(nm||''));
   window.pdxOrderSheet = async function(k, pre){
     const d = recOf(k); if(!d) return;
     // ⚡ 9/11 (χρήστης: «μέχρι να πατήσω τις εξετάσεις να ανοίγει την παραγγελία»): ΠΡΟΕΤΟΙΜΑΣΙΑ από ΚΑΘΕ είσοδο της παραγγελίας
@@ -15373,6 +15375,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     ov = document.createElement('div'); ov.id='pdxOrdOv';
     ov.style.cssText='position:fixed;inset:0;z-index:9650;background:rgba(15,25,35,.45);display:flex;align-items:flex-end;justify-content:center;font-family:-apple-system,"Segoe UI",Roboto,sans-serif';
     const C = 'border:1.5px solid var(--mp,#1D4E80);border-radius:999px;padding:7px 12px;font-size:14.5px;background:#fff;color:var(--mp,#1D4E80);font-weight:600';
+    const CP = C.replace('padding:7px 12px;font-size:14.5px','padding:6px 2px;font-size:12.5px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis');   // 🖨 15/11: εκτυπωτές σε ΜΙΑ γραμμή, ισομοιρασμένοι
     const CON = ';background:var(--mp,#1D4E80);color:#fff';
     const list = ()=>{
       const q = nrm(st.q);
@@ -15413,7 +15416,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '</div><div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid #EEF1F4;background:#FAFBFC;border-radius:0 0 0 0">'
         + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+(st.when==='Αύριο πρωί'?'<span style="font-size:13px;color:#64748B">ώρα παραγγελίας 08:00</span>':'')+'</div>'
-        + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" title="'+(st.busy[id]?'Απασχολημένος: '+E(st.busy[id])+' — η παραγγελία θα περιμένει':'Ελεύθερος τώρα')+'" style="'+C+(st.pat===id?CON:'')+'">'+(st.busy[id]?'⏳ ':'<span style="color:#30A46C">●</span> ')+E(nm)+(st.busy[id]?' <span style="font-size:11.5px;opacity:.75">· '+E(st.busy[id])+'</span>':'')+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="Ο υπολογιστής δεν απαντά τώρα" style="'+C+';opacity:.45;border-style:dashed">'+E(window.__ordOff[id])+' · εκτός</button>').join('')+'</div>' : '')
+        + (PR.length ? '<div class="pat-row" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;margin-top:8px"><span style="font-size:13px;color:#475569;flex:none">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" title="'+E(nm)+' · '+(st.busy[id]?'Απασχολημένος: '+E(st.busy[id])+' — η παραγγελία θα περιμένει':'Ελεύθερος τώρα')+'" style="'+CP+(st.pat===id?CON:'')+'">'+(st.busy[id]?'⏳':'<span style="color:#30A46C;font-size:9px;vertical-align:1px">●</span>')+' '+E(window.pdxPcShort(nm))+'</button>').join('')+'<button data-pat="" title="Τυχαία — όποιος είναι ελεύθερος" style="'+CP+';flex:0 0 34px'+(!st.pat?CON:'')+'">⚡</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="'+E(window.__ordOff[id])+' — δεν απαντά τώρα" style="'+CP+';opacity:.45;border-style:dashed">'+E(window.pdxPcShort(window.__ordOff[id]))+'</button>').join('')+'</div>' : '')
         // ➕ 11/11 (χρήστης): «για να προσθέτουμε εξετάσεις που ξεχάσαμε σε ήδη παραγγελθείσες» → πράσινο «+» της τελευταίας παραγγελίας στο Medilabi
         + (MULTI ? '' : '<div style="margin-top:8px"><button data-addto style="'+C+(st.addTo?CON:'')+'">➕ Στην τελευταία παραγγελία (ξεχάστηκε)</button>'+(st.addTo?'<div style="font-size:12.5px;color:#475569;margin-top:4px">Μπαίνουν στο ίδιο σωληνάριο/barcode — μόνο μεμονωμένες εξετάσεις, όχι πακέτα.</div>':'')+'</div>')
         // 🩻 11/11 (χρήστης): απεικονιστικές → «Πρόσθετες Πληροφορίες» στο Medilabi με Κλινικές Πληροφορίες (ιστορικό + τι ζητάμε) από ΠΡΟΤΥΠΟ — επεξεργάσιμο
@@ -15796,23 +15799,35 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // (1) κάθε έναρξη = ΝΕΑ αναγνώριση· η προηγούμενη κλείνει ΤΕΛΕΙΩΣ (abort) και περιμένουμε 350ms — στο iPhone μια 2η αναγνώριση πάνω στην 1η «δεν ακούει τίποτα»
   // (2) «Σταμάτα» = stop() + ΔΙΚΟ μας τέλος σε 0,7″ (ΠΟΤΕ αναμονή του onend)· (3) γεγονότα παλιάς συνεδρίας αγνοούνται (id)· (4) ΠΟΤΕ κλείδωμα όσο δουλεύει το AI.
   // opt: {base:()=>κείμενο που υπάρχει, onText:(όλο, προσωρινό)=>…, onEnd:(όλο)=>…, onState:(on)=>…, onFail:(λόγος)=>…}
-  window.pdxMic = function(opt){ opt = opt || {}; let cur = null, seq = 0, lastEnd = 0;
+  // 15/11 00:46 (χρήστης: «πάλι πατάω υπαγόρευση, το σβήνω και όταν ξαναπατάω δεν ακούει»): το iPhone ανοίγει το μικρόφωνο ΜΟΝΟ μέσα στο ίδιο το πάτημα —
+  // η αναμονή 350ms πριν το start() το έχανε. Τώρα: start() ΑΜΕΣΩΣ (συγχρονικά), η παλιά κλείνει (abort) ακριβώς πριν· «κουφή» αναγνώριση (4″ χωρίς ήχο/αποτέλεσμα)
+  // → μήνυμα + 🎤 πληκτρολογίου· ημερολόγιο γεγονότων ΧΩΡΙΣ κείμενο (pdx_miclog + oncall_labs «micdiag|…») για διάγνωση στο πραγματικό κινητό.
+  const micLog = (ev, x)=>{ try{ const L = JSON.parse(localStorage.getItem('pdx_miclog')||'[]'); L.push(Object.assign({t:Date.now(), ev}, x||{})); const L2 = L.slice(-40); localStorage.setItem('pdx_miclog', JSON.stringify(L2)); window.__micLogDirty = 1;
+    clearTimeout(window.__micLogT); window.__micLogT = setTimeout(()=>{ try{ if(typeof sb6==='undefined' || !window.__micLogDirty) return; window.__micLogDirty = 0; const u = (window.__pdxUser && window.__pdxUser.id || 'anon').slice(0,8);
+      sb6.from('oncall_labs').upsert({name_key:'micdiag|'+u, name:'🎙 διάγνωση υπαγόρευσης', data:{ua:navigator.userAgent.slice(0,140), standalone:!!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)), ver:(typeof APP_VER!=='undefined'?APP_VER:''), L:L2}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }catch(e){} }, 4000); }catch(e){} };
+  window.pdxMicLog = micLog;
+  window.pdxMic = function(opt){ opt = opt || {}; let cur = null, seq = 0;
     const SRC = ()=>window.SpeechRecognition || window.webkitSpeechRecognition;
-    const finish = (sess, why)=>{ if(!sess || sess.done) return; sess.done = true; if(cur===sess) cur = null; lastEnd = Date.now(); try{ sess.r.abort(); }catch(e){}
+    const finish = (sess, why)=>{ if(!sess || sess.done) return; sess.done = true; clearTimeout(sess.deaf); if(cur===sess) cur = null; try{ sess.r.abort(); }catch(e){}
+      micLog('end', {id:sess.id, why, got:sess.fin.length, heard:!!sess.heard, ms:Date.now()-sess.t0});
       const all = ((sess.base ? sess.base+' ' : '') + sess.fin).trim(); opt.onState && opt.onState(false); if(why!=='abort') opt.onEnd && opt.onEnd(all, sess.fin); };
     const api = { get on(){ return !!cur; },
-      stop(){ const s0 = cur; if(!s0) return; try{ s0.r.stop(); }catch(e){} cur = null; opt.onState && opt.onState(false); setTimeout(()=>finish(s0, 'stop'), 700); },
+      stop(){ const s0 = cur; if(!s0) return; micLog('stop', {id:s0.id}); try{ s0.r.stop(); }catch(e){} cur = null; opt.onState && opt.onState(false); setTimeout(()=>finish(s0, 'stop'), 700); },
       cancel(){ const s0 = cur; if(s0) finish(s0, 'abort'); },
-      async start(){ const SR = SRC(); if(!SR){ opt.onFail && opt.onFail('nosr'); return false; }
+      start(){ const SR = SRC(); if(!SR){ opt.onFail && opt.onFail('nosr'); return false; }
         if(cur){ const s0 = cur; finish(s0, 'abort'); }
-        const wait = 350 - (Date.now() - lastEnd); if(wait > 0) await new Promise(z=>setTimeout(z, wait));
         const my = ++seq, r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; try{ r.maxAlternatives = 1; }catch(e){}
-        const sess = {r, id:my, base:String(opt.base ? opt.base() : '').trim(), fin:'', done:false}; cur = sess;
-        r.onresult = ev=>{ if(sess.done || cur!==sess) return; let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) sess.fin += (sess.fin?' ':'')+String(x[0].transcript||'').trim(); else inter += x[0].transcript; }
+        const sess = {r, id:my, base:String(opt.base ? opt.base() : '').trim(), fin:'', done:false, heard:false, t0:Date.now()}; cur = sess;
+        const hear = ()=>{ if(!sess.heard){ sess.heard = true; clearTimeout(sess.deaf); micLog('heard', {id:my, ms:Date.now()-sess.t0}); } };
+        r.onaudiostart = ()=>{ micLog('audio', {id:my, ms:Date.now()-sess.t0}); }; r.onspeechstart = hear;
+        r.onresult = ev=>{ if(sess.done || cur!==sess) return; hear(); let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) sess.fin += (sess.fin?' ':'')+String(x[0].transcript||'').trim(); else inter += x[0].transcript; }
           opt.onText && opt.onText(((sess.base ? sess.base+' ' : '') + sess.fin + (inter ? (sess.fin?' ':'')+inter : '')).replace(/\s+/g,' ').trimStart(), inter); };
-        r.onerror = ev=>{ const c = ev && ev.error; if(sess.done) return; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ finish(sess, 'abort'); opt.onFail && opt.onFail(c); } else if(c==='no-speech' || c==='aborted'){ finish(sess, 'end'); } };
-        r.onend = ()=>{ if(!sess.done) finish(sess, 'end'); };
-        try{ r.start(); }catch(e){ cur = null; opt.onFail && opt.onFail('start'); return false; }
+        r.onerror = ev=>{ const c = ev && ev.error; micLog('err', {id:my, c:String(c||''), ms:Date.now()-sess.t0}); if(sess.done) return; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ finish(sess, 'abort'); opt.onFail && opt.onFail(c); } else if(c==='no-speech' || c==='aborted' || c==='network'){ finish(sess, 'end'); } };
+        r.onend = ()=>{ micLog('onend', {id:my, ms:Date.now()-sess.t0}); if(!sess.done) finish(sess, 'end'); };
+        try{ r.start(); }catch(e){ cur = null; micLog('startfail', {id:my, e:String(e && e.name || e).slice(0,40)}); opt.onFail && opt.onFail('start'); return false; }
+        micLog('start', {id:my});
+        // 4″ χωρίς ήχο/αποτέλεσμα → «κουφή»: κλείνει και προτείνει το 🎤 του πληκτρολογίου (δουλεύει πάντα στο iPhone)
+        sess.deaf = setTimeout(()=>{ if(sess.done || sess.heard || cur!==sess) return; micLog('deaf', {id:my}); finish(sess, 'abort'); opt.onFail && opt.onFail('deaf'); }, 4000);
         opt.onState && opt.onState(true); return true; } };
     return api; };
   window.pdxRxStudio = function(opt){
@@ -15997,9 +16012,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + (ed && S.meds.length ? '<button class="ch" data-favadd>＋ τα τωρινά ('+S.meds.length+')</button>' : '')
         + (ed && C.hide.length ? '<button class="ch" data-favreset style="opacity:.8">↺ επαναφορά κρυμμένων ('+C.hide.length+')</button>' : '');
     }
+    const rxHid = ()=>{ try{ return new Set(JSON.parse(localStorage.getItem('pdx_rx_hid')||'[]').map(String)); }catch(e){ return new Set(); } };
     function drawHist(){
       const box = root.querySelector('[data-hist]'); if(!box) return;
-      const L = S.hist.filter(j=>{ const p = j.payload||{}; return !p.hid && !(S.me && Array.isArray(p.hidBy) && p.hidBy.includes(S.me)); }).slice(0,8);
+      const HL = rxHid(), L = S.hist.filter(j=>{ const p = j.payload||{}; return !HL.has(String(j.id)) && !p.hid && !(S.me && Array.isArray(p.hidBy) && p.hidBy.includes(S.me)); }).slice(0,8);
       if(!L.length){ box.innerHTML = '<div class="r" style="color:#8E8E93">Καμία ακόμα</div>'; return; }
       const ST = {new:['περιμένει',''], seen:['παραλήφθηκε',''], running:['ετοιμάζεται…','run'], done:['έτοιμη για έλεγχο','ok'], review:['για έλεγχο','ok'], approve:['καταχωρίζεται…','run'], approved:['καταχωρίστηκε','ok'], failed:['απέτυχε','bad'], cancelled:['ακυρώθηκε',''], dismissed:['έκλεισε','']};
       box.innerHTML = L.map(j=>{ const p = j.payload||{}, st = ST[j.status]||[j.status,''], dt = new Date(j.created_at);
@@ -16198,7 +16214,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         onText:t=>{ S.q = t; const a2 = root.querySelector('[data-rxq]'); if(a2){ a2.value = t; a2.scrollTop = a2.scrollHeight; } },
         onState:on=>{ S.sr = on; micLbl(); },
         onEnd:t=>{ S.q = t; if(String(t||'').trim().length > 3) rxQuick(); },
-        onFail:()=>{ S.sr = false; micLbl(); if(ta) ta.focus(); } });
+        onFail:(why)=>{ S.sr = false; micLbl(); S.qMsg = why==='deaf' ? '🎙 Η αναγνώριση δεν άκουσε — πάτα μέσα στο κουτί και το 🎤 του πληκτρολογίου (κάτω δεξιά).' : '🎙 Η υπαγόρευση δεν ξεκίνησε — πάτα μέσα στο κουτί και το 🎤 του πληκτρολογίου.'; draw(); const t2 = root.querySelector('[data-rxq]'); if(t2) t2.focus(); } });
       if(MIC.on) MIC.stop(); else MIC.start(); }
     async function goRef(){
       refresh(); const gr = root.querySelector('[data-a="goref"]'); if(!gr || gr.disabled || !window.PDX_REF_ON) return;
@@ -16272,7 +16288,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 🗑 ιστορικό: ΑΠΟΚΡΥΨΗ (payload.hid) — όχι διαγραφή από τη βάση· μόνο τελειωμένες (όχι σε εξέλιξη/για έλεγχο)
       // ανά γιατρό (payload.hidBy=[uid]) — ο «Καθαρισμός» ενός δεν κρύβει το ιστορικό των άλλων·
       // φρέσκο διάβασμα + φύλαξη σε status ΚΑΙ updated_at, ώστε να μη σβηστεί αποτέλεσμα που έγραψε στο μεταξύ το bot
+      // 🧹 15/11 00:56 (χρήστης: «πατάω καθαρισμό συνταγών και δεν φεύγουνε»): πριν, έφευγαν ΜΟΝΟ αν πετύχαινε η εγγραφή στον server (μία-μία, σιωπηλή αποτυχία
+      // σε συνταγές άλλου χρήστη) → τώρα φεύγουν ΑΜΕΣΩΣ (απόκρυψη στη συσκευή «pdx_rx_hid») και ο server ενημερώνεται στο παρασκήνιο
       const hideJobs = async (ids)=>{ const F = /^(done|failed|cancelled|dismissed|approved)$/;
+        { const H = rxHid(); ids.forEach(id=>{ const j = S.hist.find(x=>x.id===id); if(j && F.test(j.status)) H.add(String(id)); }); try{ localStorage.setItem('pdx_rx_hid', JSON.stringify([...H].slice(-500))); }catch(e){} drawHist(); }
         let me = null; try{ const ss = (await sb6.auth.getSession()).data.session; me = ss && ss.user && ss.user.id; }catch(e){}
         if(!me){ toast('Δεν βρέθηκε ο χρήστης — ξαναδοκίμασε'); return; }
         for(const id of ids){ const j = S.hist.find(x=>x.id===id); if(!j || !F.test(j.status)) continue;
@@ -16341,7 +16360,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxScanRxOpen = function(x){ const p = x.payload || {};
     if(p.mode==='opnote') return window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:p.patient||{}, opnote:p.opnote||{}});
     const allOk = p.amka_sure !== false && /^\d{11}$/.test(String(p.amka||'')) && ![].concat(p.meds||[], p.exams||[]).some(x=>!x || x.miss || x.ep===0 || typeof x==='string');
-    window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[], autoGo: allOk && ((p.meds||[]).length + (p.exams||[]).length) > 0});
+    window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[], autoGo: false});   // 15/11 00:44 (χρήστης: «να πατάω έγκριση ΠΡΙΝ ξεκινήσει να ετοιμάζει συνταγογράφηση από σάρωση»): ΠΟΤΕ αυτόματη έναρξη — μόνο όταν πατήσεις «Ετοίμασε»
+    if(allOk) setTimeout(()=>toast('📷 Από τη σάρωση: έλεγξε και πάτα «Ετοίμασε» για να ξεκινήσει το bot'), 500);
     const miss = [].concat((p.meds||[]).filter(m=>m.miss).map(m=>'💊 '+(m.src||m.line||m.name)), (p.exams||[]).filter(x=>x && x.miss).map(x=>'🧾 '+x.n)); if(miss.length) setTimeout(()=>alert('⚠ Δεν βρέθηκαν στον κατάλογο του e-prescription:\n'+miss.join('\n')+'\n\nΠρόσθεσέ τα με την αναζήτηση (✓ = από τον κατάλογο).'), 600); };
   (function(){ let id = ''; try{ id = new URLSearchParams(location.search).get('scanrx') || ''; }catch(e){} if(!id) return;
     try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
@@ -24594,20 +24614,27 @@ window.CLS_MODE='A';
         const r = hf(R), cc = hf(C); if(!(cc > r * 1.15)) return 0;   // 15/11 00:04: 1,35 → 1,15 (σκαναρισμένος ΠΙΝΑΚΑΣ: οι γραμμές του πίνακα «ισοπεδώνουν» τη διαφορά — Scan_20261113 έβγαζε 1,28· όρθια σελίδα 0,57)
         // γυρισμένο: οι αρχές των γραμμών (πυκνότερο μελάνι) είναι πάνω → γύρισμα δεξιόστροφα (90)· κάτω → αριστερόστροφα (270)
         let top = 0, bot = 0; for(let y=0;y<H;y++){ if(y < H*0.3) top += R[y]; else if(y > H*0.7) bot += R[y]; }
-        return top >= bot ? 90 : 270; }catch(e){ return 0; } };
+        return top >= bot ? 270 : 90; }catch(e){ return 0; } };   // 15/11: διορθώθηκε η φορά (αρχές γραμμών πάνω = δεξιόστροφα γυρισμένο → 270)
     const orRotate = (c, deg)=>{ const o = document.createElement('canvas'), q = ((deg % 360) + 360) % 360; if(!q) return c; const sw = q % 180 !== 0; o.width = sw ? c.height : c.width; o.height = sw ? c.width : c.height;
       const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(q * Math.PI / 180); x.drawImage(c, -c.width/2, -c.height/2); return o; };
     window.pdxOrRotGuess = orRotGuess;
+    // 🔄 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): η ΦΟΡΑ από το «βάρος» του μελανιού μπερδεύεται από σφραγίδες/υπογραφές → αν είναι ανοιχτό το AI,
+    // ΜΙΑ ερώτηση με μικρή εικόνα (480px): «όρθιο ή ανάποδα;» → ανάποδα = +180°. Κλειστό AI / σφάλμα → μένει ο κανόνας.
+    const orRotAi = async (cv, deg)=>{ try{ if(!(window.pdxAiOn && pdxAiOn()) || !window.pdxAI) return deg; const W = 480, H = Math.round(cv.height*W/cv.width), t = document.createElement('canvas'); t.width = W; t.height = H; t.getContext('2d').drawImage(cv, 0, 0, W, H);
+      const data = t.toDataURL('image/jpeg', .7).split(',')[1];
+      const r = await pdxAI('ίσιωμα', {model:'claude-haiku-5-5', max_tokens:8, messages:[{role:'user', content:[{type:'image', source:{type:'base64', media_type:'image/jpeg', data}}, {type:'text', text:'Το κείμενο αυτής της σελίδας διαβάζεται κανονικά (ΟΡΘΙΟ) ή είναι γυρισμένο ανάποδα, 180° (ΑΝΑΠΟΔΑ); Απάντησε μόνο ΟΡΘΙΟ ή ΑΝΑΠΟΔΑ.'}]}]});
+      const a = String((r && r.text) || '').toUpperCase(); return /ΑΝΑΠΟΔ/.test(a) ? (deg + 180) % 360 : deg; }catch(e){ return deg; } };
+    window.pdxOrRotAi = orRotAi;
     const pdfImgs = async (bytes)=>{ await new Promise((ok,no)=>{ if(window.pdfjsLib) return ok(); const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload=ok; sc.onerror=()=>no(new Error('δεν φορτώθηκε ο προβολέας PDF')); document.head.appendChild(sc); });
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const doc = await pdfjsLib.getDocument({data: bytes}).promise, out = [];
       for(let i=1;i<=Math.min(doc.numPages, 8);i++){ const pgx = await doc.getPage(i), v0 = pgx.getViewport({scale:1}), sc = Math.min(3, 2000/Math.max(v0.width, v0.height)), v = pgx.getViewport({scale:sc});
-        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; const deg = orRotGuess(c); out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85)); }
+        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = orRotGuess(c); if(deg) deg = await orRotAi(orRotate(c, deg), deg); out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85)); }
       return out; };
     const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
       for(const f of (ix.files||[])){ let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); const extra = rotGet(f); if(extra) imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); files.push(Object.assign({}, f, {imgs})); }
       st.m = {files}; };
-    const rotK = f=>'pdx_or_rot|'+st.iso+'|'+(f.n||f.subj||''), rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
+    const rotK = f=>'pdx_or_rot2|'+st.iso+'|'+(f.n||f.subj||''),   /* 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): παλιό ↻ (πριν το αυτόματο) ακύρωνε το αυτόματο ίσιωμα (270°+90°) → νέο κλειδί, οι παλιές τιμές αγνοούνται */ rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
     const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
     const loadMail = async (fresh)=>{ st.merr = ''; if(typeof sb6==='undefined') return; const ck = 'or|'+st.iso;
       try{ if(!fresh){ const c = await pdxBxCache.get(ck); if(c && c.idx && c.bin){ st.mbusy = 'Άνοιγμα…'; pg.redraw(); await showMail(c.idx, c.bin); st.mbusy=''; pg.redraw(); return; } }
@@ -24918,7 +24945,7 @@ window.pdxLabelPrint = function(){
       + '</div>';
     h += '<div class="ios-h">2η γραμμή (προαιρετική)</div><div class="ios-g noic" style="padding:12px 14px"><input data-f="text" data-raw autocapitalize="off" autocorrect="off" value="'+E3(st.text)+'" placeholder="π.χ. επώνυμο" '+inp+'></div>';
     h += '<div class="ios-h">Αντίγραφα</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+[1,2,3,4,5].map(n=>'<button data-c="'+n+'" class="pb'+(st.copies===n?' pb-pri':'')+'" style="flex:1">'+n+'</button>').join('')+'</div>';
-    h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:8px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" class="pb'+(pc===id?' pb-pri':'')+'" style="flex:1">'+nm+'</button>').join('')+'</div>';
+    h += '<div class="ios-h">Εκτυπωτής</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:6px">'+PCS.map(([id,nm])=>'<button data-pc="'+id+'" title="'+nm+'" class="pb'+(pc===id?' pb-pri':'')+'" style="flex:1 1 0;min-width:0;padding-left:0;padding-right:0;white-space:nowrap">'+(window.pdxPcShort ? pdxPcShort(nm) : nm)+'</button>').join('')+'</div>';   // 🖨 15/11 00:55 (χρήστης: «δεν είναι στοιχισμένο — το Εξωτερικά πολύ δεξιά»): ισομοιρασμένα, συντομεύσεις
     const stp = (k,l,u,step)=>'<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0"><span style="font-size:15px">'+l+'</span><span style="display:flex;align-items:center;gap:8px"><button class="pb pb-ic" data-st="'+k+'" data-d="-'+step+'" style="width:38px">−</button><b style="min-width:62px;text-align:center;font-size:16px">'+(k==='sz'&&!fmt.sz?'Αυτόμ.':fmt[k]+u)+'</b><button class="pb pb-ic" data-st="'+k+'" data-d="'+step+'" style="width:38px">+</button></span></div>';
     // ⚙️ «Μορφή ετικέτας» (πλάτος/ύψος/περιθώρια/μετατόπιση) αφαιρέθηκε 15/11 00:07 — οι τιμές μένουν όπως είναι ρυθμισμένες ανά εκτυπωτή
     h += '<div style="margin:16px"><button class="pb pb-pri pb-lg" data-go style="width:100%">🦓 Εκτύπωση</button><div style="margin-top:10px;color:#475569;font-size:14px">'+E3(st.msg)+'</div></div>';
