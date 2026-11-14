@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v387';
+const APP_VER = '2026-11-14-v388';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8603,6 +8603,14 @@ document.head.appendChild(st);
     const whenL = s=>{ const d = dOf(s); return d ? d.toLocaleString('el-GR',{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : ''; };
     const who = a=>a ? (a.name || a.address || '') : '';
     const kb = n=>n>=1e6 ? (n/1e6).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB';
+    const mailFrame = h=>{ let d; try{ d = new DOMParser().parseFromString(String(h||''), 'text/html'); }catch(e){ return linkify(String(h||'')); }
+      d.querySelectorAll('script,iframe,object,embed,form,meta,link,base').forEach(x=>x.remove());
+      d.querySelectorAll('*').forEach(el=>{ [...el.attributes].forEach(a=>{ if(/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name); }); });
+      d.querySelectorAll('img').forEach(im=>{ if(/^cid:/i.test(im.getAttribute('src')||'')) im.remove(); });   // ενσωματωμένες εικόνες (υπογραφές) δεν φορτώνονται
+      const css = '<base target="_blank"><style>html,body{margin:0;padding:0;background:#fff;color:#111;font:15.5px/1.5 -apple-system,system-ui,sans-serif;word-wrap:break-word;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}td,th{padding:3px 5px;vertical-align:top}pre{white-space:pre-wrap}</style>';
+      const doc = '<!doctype html><html><head><meta charset="utf-8">' + css + '</head><body>' + d.body.innerHTML + '</body></html>';
+      return '<div class="mhw"><iframe class="mhtml" sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" srcdoc="' + doc.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '" onload="try{var b=this.contentDocument;this.style.height=Math.max(b.documentElement.scrollHeight,b.body.scrollHeight)+4+\'px\'}catch(e){}"></iframe></div>'; };
+    window.__pdxMailFrame = mailFrame;
     const txtOfHtml = h=>{ try{ const d = new DOMParser().parseFromString(String(h||''), 'text/html'); d.querySelectorAll('script,style').forEach(x=>x.remove()); d.querySelectorAll('br').forEach(x=>x.replaceWith('\n')); d.querySelectorAll('p,div,tr,li,h1,h2,h3').forEach(x=>x.append('\n')); return (d.body.textContent||'').replace(/\n{3,}/g,'\n\n').trim(); }catch(e){ return ''; } };
     const linkify = t=>E(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
     async function job(op, pl, label){
@@ -8626,7 +8634,8 @@ document.head.appendChild(st);
     const loadList = (more)=>run(more ? 'Περισσότερα…' : 'Μηνύματα…', async ()=>{ const start = more ? (st.list||[]).length : 0;
       const r = await job('mlist', {folder:st.fid, start, limit:40, q:st.q||undefined}, '📧 λίστα'); if(!st.fid) st.fid = r.folder;
       st.list = more ? (st.list||[]).concat(r.list||[]) : (r.list||[]); st.total = r.total||st.list.length; st.at = Date.now(); });
-    const openMail = (id)=>run('Άνοιγμα…', async ()=>{ const r = await job('mread', {id}, '📧 μήνυμα'); st.open = r.mail; const x = (st.list||[]).find(m=>m.id===id); if(x && !x.seen){ x.seen = true; const f = (st.folders||[]).find(f=>f.id===st.fid); if(f && f.unread) f.unread--; } });
+    // 14/11: το άνοιγμα ΔΕΝ το κάνει «διαβασμένο» στο Kerio (ούτε εδώ) — μένει αδιάβαστο για τον υπολογιστή της κλινικής
+    const openMail = (id)=>run('Άνοιγμα…', async ()=>{ const x = (st.list||[]).find(m=>m.id===id); const r = await job('mread', {id, wasUnseen: !!(x && !x.seen)}, '📧 μήνυμα'); st.open = r.mail; });
     const getAtt = (i)=>run('Λήψη συνημμένου…', async ()=>{ const m = st.open, a = m && m.atts[i]; if(!a) return;
       const r = await job('matt', {id:m.id, att:a.id, url:a.url, name:a.name, type:a.type}, '📧 συνημμένο');
       const dl = await sb6.storage.from('img-enc').download(r.id+'/0.bin'); if(dl.error) throw new Error(dl.error.message);
@@ -8687,6 +8696,7 @@ document.head.appendChild(st);
       + '#pdxMail .bar{display:flex;gap:8px;padding:8px 14px}#pdxMail .bar input{flex:1;min-width:0;font:16px -apple-system,system-ui,sans-serif;padding:10px 12px;border-radius:11px;border:0;background:rgba(118,118,128,.14);color:inherit}'
       + '#pdxMail .btn{border:0;border-radius:11px;padding:10px 14px;font:600 15px -apple-system,system-ui,sans-serif;background:#1D4E80;color:#fff;min-height:44px;cursor:pointer}#pdxMail .btn.g{background:rgba(118,118,128,.16);color:inherit}'
       + '#pdxMail .rd{background:var(--ios-card,#fff);margin:10px 12px;border-radius:14px;padding:14px 16px}#pdxMail .rd h2{font-size:19px;margin:0 0 8px}#pdxMail .rd .meta{font-size:13.5px;color:#6B6B70;line-height:1.5}'
+      + '#pdxMail .mhw{margin:0 -6px;overflow-x:auto;border-radius:10px;background:#fff}#pdxMail .mhtml{display:block;width:100%;min-height:80px;border:0;background:#fff}#pdxMail .rd .body:has(.mhw){white-space:normal}'
       + '#pdxMail .rd .body{white-space:pre-wrap;word-wrap:break-word;font-size:15.5px;line-height:1.5;margin-top:12px;user-select:text;-webkit-user-select:text}#pdxMail .att{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:11px;background:rgba(118,118,128,.1);margin-top:8px;cursor:pointer}'
       + '#pdxMail .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 12px}#pdxMail .cp{background:var(--ios-card,#fff);margin:10px 12px;border-radius:14px;padding:6px 14px}'
       + '#pdxMail .cp .f{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 0;border-bottom:.5px solid rgba(60,60,67,.18)}#pdxMail .cp .f>span{color:#8E8E93;font-size:14px;min-width:42px}'
@@ -8715,7 +8725,9 @@ document.head.appendChild(st);
       }
       const m = st.open;
       if(m){
-        const body = m.text ? linkify(m.text) : m.html ? linkify(txtOfHtml(m.html)) : '<i style="color:#8E8E93">(χωρίς κείμενο)</i>';
+        // 14/11 (χρήστης: «δεν φαίνεται όλο το email»): HTML → ΟΛΟΚΛΗΡΟ σε ασφαλές πλαίσιο (sandbox χωρίς scripts· πίνακες/μορφή όπως στο Kerio)·
+        // αλλιώς όλο το απλό κείμενο. Το ύψος του πλαισίου = όλο το περιεχόμενο (χωρίς εσωτερική κύλιση).
+        const body = m.html ? mailFrame(m.html) : m.text ? linkify(m.text) : '<i style="color:#8E8E93">(χωρίς κείμενο)</i>';
         h += '<div class="bar"><button class="btn g" data-back>‹ '+E(((st.folders||[]).find(f=>f.id===st.fid)||{}).name || 'Λίστα')+'</button></div>'
           + '<div class="rd"><h2>'+E(m.subject || '(χωρίς θέμα)')+'</h2><div class="meta"><b style="color:inherit">'+E(who(m.from))+'</b> &lt;'+E((m.from||{}).address||'')+'&gt;<br>'
           + 'Προς: '+E((m.to||[]).map(who).join(', '))+((m.cc||[]).length ? '<br>Κοιν.: '+E(m.cc.map(who).join(', ')) : '')+'<br>'+E(whenL(m.date))+'</div>'
