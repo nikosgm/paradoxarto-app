@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v395';
+const APP_VER = '2026-11-14-v396';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -4350,7 +4350,10 @@ function showDischarge(kOpt){
   // 📄 14/11: «Word εξιτηρίων»: ποιο αρχείο / ποιος αριθμός θα πάρει (✎ αλλαγή ονόματος αρχείου & αριθμού)
   const dcw = document.createElement('div'); dcw.style.cssText='font-size:13px;color:#64748B;margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap';
   const dcwDraw = async ()=>{ const by = pdxDcBy(); dcw.innerHTML = '📄 Word: <b>Εξιτήρια_'+String(by).replace(/[<>&]/g,'')+'.docx</b> <span data-dcwn>…</span> <button type="button" data-dcwe style="border:0;background:none;color:#0A84FF;font-size:13px;padding:4px">✎</button>';
-    try{ const r = await pdxDbCall('GET', '/api/dcnotes?by='+encodeURIComponent(by)); const x = dcw.querySelector('[data-dcwn]'); if(x) x.textContent = r && r.next ? '· επόμενος #'+r.next : ''; }catch(e){ const x = dcw.querySelector('[data-dcwn]'); if(x) x.textContent = '· (η βάση της κλινικής δεν απαντά τώρα)'; }
+    // 14/11 (χρήστης: «έχω ήδη αρίθμηση»): αν υπάρχει το ΔΙΚΟ του Word στον φάκελό του (\\pronas\…\<ΓΙΑΤΡΟΣ>) → εκεί, με την αρίθμηση του Word (χωρίς ✎ αριθμού)
+    try{ const r = await pdxDbCall('GET', '/api/dcnotes?by='+encodeURIComponent(by)); const x = dcw.querySelector('[data-dcwn]'); if(x) x.textContent = r && r.next ? '· επόμενος #'+r.next : '';
+      if(r && r.own){ const b = dcw.querySelector('b'); if(b) b.textContent = r.file + ' (ο φάκελός σου)'; const e = dcw.querySelector('[data-dcwe]'); if(e) e.style.display = 'none'; }
+      else if(r && r.why){ const w = document.createElement('span'); w.style.color = '#B26A00'; w.textContent = '⚠ το δικό σου Word δεν έχει αναγνωρίσιμη αρίθμηση — γράφεται χωριστό αρχείο'; dcw.appendChild(w); } }catch(e){ const x = dcw.querySelector('[data-dcwn]'); if(x) x.textContent = '· (η βάση της κλινικής δεν απαντά τώρα)'; }
     dcw.querySelector('[data-dcwe]').onclick = async ()=>{ const nb = prompt('Όνομα του Word εξιτηρίων (π.χ. ΜΑΥΡΟΥΔΗΣ):', pdxDcBy()); if(nb==null) return; try{ localStorage.setItem('pdx_dcword_by', nb.trim().toUpperCase()); }catch(e){}
       const st = prompt('Αριθμός του ΠΡΩΤΟΥ εξιτηρίου σε αυτό το Word (π.χ. αν το τελευταίο σου είναι το 20, γράψε 21 — αν το Word έχει ήδη εξιτήρια από εδώ, βάλε τον αριθμό του πρώτου):', ''); 
       if(st && +st>0){ try{ await pdxDbCall('POST', '/api/dcnotes/cfg', {by: pdxDcBy(), start: +st}); }catch(e){ alert('⚠ '+(e.message||e)); } } dcwDraw(); }; };
