@@ -2411,7 +2411,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v408';
+const APP_VER = '2026-11-14-v409';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10030,7 +10030,7 @@ document.head.appendChild(st);
   })();
   window.mobAct = function(k, id){
     const dT = (String(k).indexOf('extra-')===0 ? extraPatients : data)[k];
-    if(dT && dT._npsTemp && /^(labs|ahfylabs|comorb|ehrlabs)$/.test(id)){ if(window.pdxLabsFor) pdxLabsFor({name:dT.name, amka:dT.amka, am:dT.am, medPid:dT.medPid, k}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
+    if(dT && dT._npsTemp && /^(labs|ehrlabs)$/.test(id)){   /* 14/11 21:27 (χρήστης, ΣΚΟΥΜΠΗΣ εκτός κλινικής): Συννοσηρότητες/ΑΗΦΥ άνοιγαν Medilabi — τώρα τη δική τους οθόνη */ if(window.pdxLabsFor) pdxLabsFor({name:dT.name, amka:dT.amka, am:dT.am, medPid:dT.medPid, k}); else toast('Πρόσθεσε πρώτα τον ασθενή σε κρεβάτι'); return; }   // 7/11: ασθενής ΝΠΣ εκτός λίστας → αναζήτηση Medilabi
     if(id==='labs'){ if(window.pdxLabsUnified) return pdxLabsUnified(k); if(window.labsFullOpen) return labsFullOpen(k); return; }
     if(window.pdxBot) pdxBot(k, id);
   };
