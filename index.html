@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v445';
+const APP_VER = '2026-11-15-v446';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16092,7 +16092,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           +(/^(done|failed|cancelled|dismissed|approved)$/.test(j.status)?'<button class="pb pb-lnk pb-mut" data-hdel="'+j.id+'" aria-label="Διαγραφή">✕</button>':'')
           +(j.status==='review'?'<button class="again pb pb-pri" data-rev="'+j.id+'">👀 Έλεγχος</button>':'<button class="again" data-use="'+j.id+'">'+(j.status==='failed'?'Ξανά':'Χρήση')+'</button>')+'</div>'; }).join('');
     }
-    function refresh(){ { const ps = root.querySelector('[data-a="packsave"]'); if(ps) ps.style.display = (S.meds.length||S.ex.length) ? '' : 'none'; }
+    // ⚡ 15/11 01:19 (χρήστης: «ναι, η συνταγή να ετοιμάζει όσο γράφω»): με το 1ο φάρμακο/εξέταση → προετοιμασία (rxname: σύνδεση e-prescription,
+    // κλείσιμο παλιών επισκέψεων, άνοιγμα ασθενή) σε έναν υπολογιστή· η συνταγή/παραπεμπτικό πάει μετά στον ΙΔΙΟ (payload.only) αν η προετοιμασία πέτυχε (<6′)
+    const prepAmka = ()=>S.k ? String((recOf(S.k)||{}).amka||'') : String(S.amka||'');
+    function prepMaybe(){ try{ if(!(S.meds.length || S.ex.length) || typeof sb6==='undefined' || !(window.pdxIsBotUser && pdxIsBotUser())) return; const a = prepAmka();
+      if(!/^\d{11}$/.test(a) || S.prepA===a) return; S.prepA = a; S.prepId = 0;
+      sb6.from('oncall_jobs').insert({name_key:'zzz_rxname', name:'Α.Μ.Κ.Α. ··'+a.slice(-2), room:null, kind:'rxname', payload:{amka:a, quiet:true, prep:true}, status:'new'}).select('id').single().then(r=>{ if(r && r.data) S.prepId = r.data.id; }, ()=>{}); }catch(e){} }
+    async function prepOnly(){ try{ if(!S.prepId || S.prepA!==prepAmka()) return {}; const q = await sb6.from('oncall_jobs').select('status,payload,created_at').eq('id', S.prepId).maybeSingle(); const j = q && q.data;
+      if(j && j.status==='done' && j.payload && /^b[a-z0-9]{10,16}$/.test(j.payload.bot||'') && Date.now()-Date.parse(j.created_at) < 6*60000) return {only:j.payload.bot}; }catch(e){} return {}; }
+    function refresh(){ prepMaybe(); { const ps = root.querySelector('[data-a="packsave"]'); if(ps) ps.style.display = (S.meds.length||S.ex.length) ? '' : 'none'; }
       const d = S.k ? recOf(S.k) : null, okP = !!d || (/^\d{11}$/.test(S.amka) && window.pdxAmkaOk && pdxAmkaOk(S.amka));
       const icd = [...root.querySelectorAll('[data-icdw] [data-c].on')].map(x=>x.getAttribute('data-c').split(' ')[0]);
       S.icd = icd;
@@ -16245,12 +16253,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       try{
         if(S.k){ const d = recOf(S.k); label = d.name;
           const th = ((typeof DISCHARGE_CFG!=='undefined'&&DISCHARGE_CFG.therapists)||{})[d.therapist]||d.therapist||'';
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:S.k, kind:'rx', payload:Object.assign(epU?{epUser:epU}:{}, rep, {icd:S.icd, meds, mode:'review', therapist:th, quiet:true}, pdxRxDirect()), status:'new'}).select('id').single();
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:S.k, kind:'rx', payload:Object.assign(await prepOnly(), epU?{epUser:epU}:{}, rep, {icd:S.icd, meds, mode:'review', therapist:th, quiet:true}, pdxRxDirect()), status:'new'}).select('id').single();
           if(r.error) throw r.error; id = r.data.id;
         } else {
           const nm = S.who && S.who.name ? S.who.name : ('Α.Μ.Κ.Α. ··'+S.amka.slice(-2)); label = nm;
           if(S.pendRx){ sb6.from('oncall_jobs').update({status:'cancelled', note:'η συνταγή στάλθηκε πριν βρεθεί το όνομα'}).eq('id', S.pendRx).in('status',['new','seen','running']).then(()=>{}); S.pendRx = 0; }
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign({amka:S.amka, icd:S.icd, meds, mode:'review', general:true, quiet:true}, pdxRxDirect(), rep, epU?{epUser:epU}:{}), status:'new'}).select('id').single();
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign(await prepOnly(), {amka:S.amka, icd:S.icd, meds, mode:'review', general:true, quiet:true}, pdxRxDirect(), rep, epU?{epUser:epU}:{}), status:'new'}).select('id').single();
           if(r.error) throw r.error; id = r.data.id;
         }
       }catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)); return; }
@@ -16300,7 +16308,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const cats = Object.keys(byCat); let nOk = 0;
       try{ for(const g of cats){
           const pl = Object.assign({cat:g, just:just.slice(0,2000), exams:byCat[g].map(x=>({name:x.n, kind:x.k||'', ep:!!x.ep})), icd:S.icd, urgent:S.urg, withRx:S.withRx, mode:'review', quiet:true}, d ? {} : {amka:S.amka, general:true}, epU ? {epUser:epU} : {});
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:d?S.k:null, kind:'ref', payload:pl, status:'new'}).select('id').single(); if(r.error) throw r.error;
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:d?S.k:null, kind:'ref', payload:Object.assign(await prepOnly(), pl), status:'new'}).select('id').single(); if(r.error) throw r.error;
           nOk++; watchJob(r.data.id, nm+' · παραπεμπτικό'+(cats.length>1?' '+nOk+'/'+cats.length:'')); }
         S.sending = false; if(cats.length>1) toast('📋 '+cats.length+' παραπεμπτικά (ένα ανά κατηγορία)'); S.ex = []; drawEx(); }
       catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)+(nOk?' (στάλθηκαν '+nOk+'/'+cats.length+')':'')); }
