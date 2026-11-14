@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v448';
+const APP_VER = '2026-11-15-v449';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -5691,7 +5691,8 @@ function persistCurrent(){
   if(_old && _old.comorb) cleanRecord.comorb = JSON.parse(JSON.stringify(_old.comorb));   // συννοσηρότητες ICD-10 (🩺) ακολουθούν τον ασθενή
   if(_old && _old.comorbSuggest) cleanRecord.comorbSuggest = JSON.parse(JSON.stringify(_old.comorbSuggest));   // αμφίβολα από τον ΑΗΦΥ, για απόφαση
   if(_old && _old.comorbAuto) cleanRecord.comorbAuto = JSON.parse(JSON.stringify(_old.comorbAuto));   // κατάσταση αυτόματης αναζήτησης ΑΗΦΥ
-  if(_old && Array.isArray(_old.chronicMeds) && String(_old.name||'').trim().toUpperCase()===String(cleanRecord.name||'').trim().toUpperCase()) cleanRecord.chronicMeds = JSON.parse(JSON.stringify(_old.chronicMeds));   // 💊 χρόνια φάρμακα ΑΗΦΥ
+  if(_old && Array.isArray(_old.chronicMeds) && String(_old.name||'').trim().toUpperCase()===String(cleanRecord.name||'').trim().toUpperCase()) cleanRecord.chronicMeds = JSON.parse(JSON.stringify(_old.chronicMeds));
+  if(_old && _old.chronicPin && typeof _old.chronicPin==='object' && String(_old.name||'').trim().toUpperCase()===String(cleanRecord.name||'').trim().toUpperCase()) cleanRecord.chronicPin = JSON.parse(JSON.stringify(_old.chronicPin));   // 15/11: «＋ Χρόνιο / ✕» με το χέρι   // 💊 χρόνια φάρμακα ΑΗΦΥ
   if(_old && _old.amka) cleanRecord.amka = _old.amka;
   if(_old && _old.admitDate) cleanRecord.admitDate = _old.admitDate;   // ημ. εισαγωγής από το ΝΠΣ (📅)
   if(_old && _old.am) cleanRecord.am = _old.am;   // αριθμός μητρώου από το ΝΠΣ
@@ -20437,24 +20438,37 @@ window.pdxChronicMeds = function(k){
   const nrm3 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
   const fd = iso=>/^\d{4}-\d\d-\d\d/.test(String(iso||'')) ? String(iso).slice(8,10)+'/'+String(iso).slice(5,7)+'/'+String(iso).slice(2,4) : '';
   const st = {busy:'', job:null, showOther:false, msg:''};
+  // 💊 15/11 01:48 (χρήστης: «δεν έβαλε το Forxiga — 4 φορές τον χρόνο· θέλει ρύθμιση»): (α) ίδιος κανόνας με το bot 0.21.408 και για ΠΑΛΙΑ αποτελέσματα
+  // (≥3 τον χρόνο ό,τι κενό κι αν έχουν · 2 για φάρμακα χρόνιας νόσου · ποτέ αντιβιώσεις) (β) «＋ Χρόνιο» / «✕» με το χέρι, μένει στον ασθενή (rec.chronicPin)
+  const cmKey = x=>String(x.atc||'').slice(0,7) || String(x.sub||x.name||'').toUpperCase().split(/[\s(,]/)[0];
+  const cmAuto = x=>{ const last = Date.parse(x.last||''), recent = last && Date.now()-last <= 270*864e5, atc = String(x.atc||''), y1 = +x.y1||0;
+    if(!recent || /^J0[1-5]/.test(atc)) return false; if(/^(D|R01|S01|S02|S03)/.test(atc)) return y1 >= 4;
+    return y1 >= 3 || (y1 >= 2 && /^(A10|C0[1-9]|C10|B01|G04C|H03|N03|N06A|R03|L02)/.test(atc)); };
+  const cmSplit = M=>{ const P = rec.chronicPin || {}, all = [].concat((M.chronic||[]).map(x=>Object.assign({}, x, {auto0:true})), M.other||[]); const ch = [], ot = [];
+    all.forEach(x=>{ const k = cmKey(x), pin = P[k]; const on = pin===true || (pin!==false && (x.auto0 || cmAuto(x))); (on ? ch : ot).push(Object.assign({}, x, {k, pin, why: pin===true ? 'με το χέρι' : x.why})); });
+    return {ch, ot}; };
   const pg = iosPage('💊 Χρόνια φάρμακα', '', ()=>{
     let h = '<div style="margin:6px 16px 0;font-size:14px;color:#6B7280">'+E5(rec.name)+' · από τις συνταγές του ΑΗΦΥ (θεράπων ιατρός)</div>';
     const M = st.job && st.job.payload && st.job.payload.result && st.job.payload.result.meds;
     if(st.busy) h += '<div style="margin:12px 16px;color:#0A84FF;font-weight:600">⏳ '+E5(st.busy)+'</div>';
-    if(M){ h += iosGroup('Χρόνια · '+M.chronic.length, M.chronic.length ? M.chronic.map(x=>({t:'<b>'+E5(x.name)+'</b><br><span style="font-size:13px;color:#6B7280">'+E5([x.sub && x.sub!==x.name ? x.sub : '', x.dose].filter(Boolean).join(' · '))+'</span><br><span style="font-size:12.5px;color:#1A7F37">'+E5(x.why)+' · τελευταία '+E5(fd(x.last))+'</span>'})) : [{t:'<span style="color:#6B7280">Κανένα μόνιμο φάρμακο.</span>'}]);
-      h += '<button data-cmo style="display:block;margin:4px 16px;border:0;background:none;color:#0A84FF;font-size:15px;min-height:40px">'+(st.showOther?'Απόκρυψη':'Εμφάνιση')+' άλλων ('+M.other.length+': σύντομα, παλιά, αντιβιώσεις)</button>';
-      if(st.showOther) h += iosGroup('Άλλα', M.other.map(x=>({t:E5(x.name)+'<br><span style="font-size:12.5px;color:#8E8E93">'+E5(x.why)+(x.last?' · '+E5(fd(x.last)):'')+'</span>'})));
-      h += '<div style="margin:6px 16px;font-size:12.5px;color:#8E8E93">'+M.rx+' συνταγές · ενημέρωση '+E5(new Date(st.job.updated_at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'. «Χρόνια» = τον τελευταίο χρόνο ≥3 συνταγές με κενό ≤6 μηνών, ή συνταγή ≥2 μηνών (τρίμηνη/εξάμηνη)· ποτέ αντιβιώσεις.</div>'; }
+    if(M){ const SP = cmSplit(M), btn = (k,v,t,c)=>'<button data-cmpin="'+E5(k)+'" data-v="'+v+'" style="float:right;border:0;border-radius:9px;padding:6px 10px;margin-left:8px;font-size:13.5px;font-weight:700;background:'+c+'">'+t+'</button>';
+      h += iosGroup('Χρόνια · '+SP.ch.length, SP.ch.length ? SP.ch.map(x=>({t:btn(x.k,'0','✕','rgba(255,59,48,.12);color:#FF3B30')+'<b>'+E5(x.name)+'</b><br><span style="font-size:13px;color:#6B7280">'+E5([x.sub && x.sub!==x.name ? x.sub : '', x.dose].filter(Boolean).join(' · '))+'</span><br><span style="font-size:12.5px;color:#1A7F37">'+E5(x.why)+' · τελευταία '+E5(fd(x.last))+'</span>'})) : [{t:'<span style="color:#6B7280">Κανένα μόνιμο φάρμακο.</span>'}]);
+      h += '<button data-cmo style="display:block;margin:4px 16px;border:0;background:none;color:#0A84FF;font-size:15px;min-height:40px">'+(st.showOther?'Απόκρυψη':'Εμφάνιση')+' άλλων ('+SP.ot.length+': σύντομα, παλιά, αντιβιώσεις)</button>';
+      if(st.showOther) h += iosGroup('Άλλα', SP.ot.map(x=>({t:btn(x.k,'1','＋ Χρόνιο','rgba(10,132,255,.12);color:#0A84FF')+E5(x.name)+'<br><span style="font-size:12.5px;color:#8E8E93">'+E5(x.pin===false?'βγήκε με το χέρι':x.why)+(x.last?' · '+E5(fd(x.last)):'')+'</span>'})));
+      h += '<div style="margin:6px 16px;font-size:12.5px;color:#8E8E93">'+M.rx+' συνταγές · ενημέρωση '+E5(new Date(st.job.updated_at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'. «Χρόνια» = τον τελευταίο χρόνο ≥3 συνταγές, ή 2 για φάρμακα χρόνιας νόσου (διαβήτης, πίεση, αντιπηκτικά, προστάτης…), ή συνταγή ≥2 μηνών· ποτέ αντιβιώσεις. «＋ Χρόνιο» / «✕» για αλλαγή με το χέρι.</div>'; }
     else if(!st.busy) h += '<div style="margin:12px 16px;color:#6B7280">Δεν έχουν έρθει ακόμα από τον ΑΗΦΥ.</div>';
     if(st.msg) h += '<div style="margin:8px 16px;color:#B42318;font-size:14px">'+E5(st.msg)+'</div>';
     h += '<button data-cmg '+(st.busy?'disabled':'')+' style="display:block;width:calc(100% - 32px);margin:12px 16px;min-height:48px;border:0;border-radius:12px;background:'+(st.busy?'#9CA3AF':'#0A84FF')+';color:#fff;font-weight:700;font-size:15.5px">↻ Φέρε από τον ΑΗΦΥ</button>';
     return h + '<div style="height:40px"></div>'; });
   const load = async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('id,status,note,payload,updated_at').eq('kind','ehrmeds').eq('name_key', nrm3(rec.name)).eq('status','done').order('id',{ascending:false}).limit(1);
       st.job = (r.data||[])[0] || null; const M = st.job && st.job.payload && st.job.payload.result && st.job.payload.result.meds;
-      if(M){ const L = M.chronic.map(x=>({name:x.name, sub:x.sub, atc:x.atc, dose:x.dose, last:x.last})); if(JSON.stringify(L)!==JSON.stringify(rec.chronicMeds||[])){ rec.chronicMeds = L; try{ rec.touchedAt = Date.now(); saveEntryToStorage(k, isX, rec, true); }catch(e){} } } }catch(e){}
+      if(M){ const L = cmSplit(M).ch.map(x=>({name:x.name, sub:x.sub, atc:x.atc, dose:x.dose, last:x.last})); if(JSON.stringify(L)!==JSON.stringify(rec.chronicMeds||[])){ rec.chronicMeds = L; try{ rec.touchedAt = Date.now(); saveEntryToStorage(k, isX, rec, true); }catch(e){} } } }catch(e){}
     pg.redraw(); };
   pg.el.addEventListener('click', async e=>{
     if(e.target.closest('[data-cmo]')){ st.showOther = !st.showOther; pg.redraw(); return; }
+    const pn = e.target.closest('[data-cmpin]'); if(pn){ const P = Object.assign({}, rec.chronicPin||{}); P[pn.dataset.cmpin] = pn.dataset.v==='1'; rec.chronicPin = P;
+      const M = st.job && st.job.payload && st.job.payload.result && st.job.payload.result.meds; if(M) rec.chronicMeds = cmSplit(M).ch.map(x=>({name:x.name, sub:x.sub, atc:x.atc, dose:x.dose, last:x.last}));
+      try{ rec.touchedAt = Date.now(); saveEntryToStorage(k, isX, rec, true); }catch(er){} pg.redraw(); return; }
     if(!e.target.closest('[data-cmg]') || st.busy) return;
     if(!(window.pdxIsBotUser && pdxIsBotUser())){ st.msg = 'Το bot είναι διαθέσιμο μόνο σε ενεργούς γιατρούς'; pg.redraw(); return; }
     st.busy = 'Στάλθηκε στον υπολογιστή με ΑΗΦΥ…'; st.msg = ''; pg.redraw();
