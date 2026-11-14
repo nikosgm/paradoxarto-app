@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v424';
+const APP_VER = '2026-11-14-v425';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7397,6 +7397,9 @@ document.head.appendChild(st);
     else if(S.ok===false) h += '<div class="mbst sleep"><b>😴 Ο υπολογιστής του bot δεν απαντά</b><p>Τελευταία επαφή '+esc(window.pdxBotSeenTxt?pdxBotSeenTxt(S.seen):'')+'. Είναι σε αναστολή, κλειστός, χωρίς Chrome, ή το Παραδόχαρτο εκεί χρειάζεται σύνδεση (π.χ. άλλαξε κωδικός). Οι εντολές <b>δεν χάνονται</b>: θα γίνουν μόλις ξανασυνδεθεί.</p></div>';
     else if(S.ok===true) h += '<div class="mbst ok"><b>🟢 Ο υπολογιστής του bot είναι ενεργός</b><p>Τελευταία επαφή '+esc(window.pdxBotSeenTxt?pdxBotSeenTxt(S.seen):'')+(S.by?' · δουλεύει με τη σύνδεση του/της <b>'+esc(S.by)+'</b> στο Παραδόχαρτο':'')+'.</p></div>';
     else h += '<div class="mbst"><b>Κατάσταση υπολογιστή άγνωστη</b><p>Ο υπολογιστής δεν έχει στείλει ακόμα σήμα (χρειάζεται ef-bot 0.14.3 ή νεότερο).</p></div>';
+    // 14/11 22:44 (χρήστης: «σβήσ' τα όλα — να δείχνει μόνο ότι είναι ενεργά τα bot και τις εκκρεμείς/ολοκληρωμένες ενέργειες»):
+    // χωρίς Medilabi/πρόσβαση/«ταυτόχρονη δουλειά»/λογαριασμούς/κωδικούς/κουμπιά — όλα αυτά υπάρχουν στις Ρυθμίσεις → Κατάσταση συστημάτων
+    if(false){
     if(S.med && window.pdxMedTxt) h += '<div class="mbst" style="font-size:14px;line-height:1.45">'+esc(pdxMedTxt(S.med))+'</div>';
     if(S.noaccess && S.noaccess.length) h += '<div class="mbst sleep" style="font-size:14px;line-height:1.5"><b>⚠ Το bot δεν μπορεί να διαβάσει: '+esc(S.noaccess.join(', '))+'</b><br>Στον υπολογιστή του νοσοκομείου: <b>chrome://extensions</b> → ef-bot → <b>Λεπτομέρειες</b> → «Πρόσβαση σε ιστότοπους» → <b>«Σε όλους τους ιστότοπους»</b>. Χωρίς αυτό δεν δουλεύουν '+(S.noaccess.some(x=>/e-prescription|gsis|oauth|sso/i.test(x))?'η συνταγογράφηση':'')+(S.noaccess.some(x=>/172\.16\.1\.26/.test(x))?(S.noaccess.some(x=>/e-prescription|gsis|oauth|sso/i.test(x))?' και ':'')+'ο Evorad':'')+'.</div>';
     if(S.par && window.authRole==='admin'){
@@ -7421,6 +7424,7 @@ document.head.appendChild(st);
     // 10/11 βράδυ (χρήστης): «Κωδικοί του bot» ΟΧΙ εδώ — υπάρχουν ήδη στις Ρυθμίσεις
     // 10/11 βράδυ (χρήστης): χωρίς «Συνταγογράφηση με ΑΜΚΑ» / «Evorad: χαρτογράφηση» (δεν χρησιμοποιούνται πια) — εδώ και οι ενέργειες
     h += '<div class="mbst" style="display:flex;flex-wrap:wrap;gap:8px"><button onclick="pdxDo(\'botlog\')" style="flex:1 1 200px;border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:12px;padding:11px;font-size:15px;font-weight:700">📜 Όλες οι ενέργειες bot</button>'+'</div>';   // (χωρίς «Βρες τον Evorad» — δεν έχει πια νόημα)
+    }
     if(!S.jobs) return h + '<div class="msec">Φόρτωση…</div><div style="height:96px"></div>' + (page ? botPgFoot : tabs());
     const J = S.jobs.filter(j=>!window.pdxMineKeep || !j.room || pdxMineKeep(j.room)), act = J.filter(j=>['new','running','review','approve','seen'].indexOf(j.status)>=0), rest = J.filter(j=>act.indexOf(j)<0);
     h += '<div class="msec"><h3>Σε αναμονή · '+act.length+'</h3>'+(act.length ? act.map(jobRow).join('') : '<div class="mjob mu">Καμία εντολή σε αναμονή.</div>')+'</div>';
@@ -15608,7 +15612,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // 📷 14/11 (χρήστης: «από φωτογραφία χαρτιού: ΑΜΚΑ + φάρμακα → συνταγή»): γραμμές φαρμάκων/ICD από τη σάρωση — ό,τι δεν αναγνωρίζεται μένει για χειροκίνητη προσθήκη
     if(Array.isArray(opt.icd) && opt.icd.length) S.icd = opt.icd.map(x=>String(x).toUpperCase().replace(/[^A-Z0-9.]/g,'')).filter(x=>/^[A-Z]\d/.test(x)).slice(0, 6);
     if(Array.isArray(opt.lines)){ const bad = []; opt.lines.forEach(l=>{ const r = addLine(String(l||'')); if(!r || r.bad || (r.missing && r.missing.length)) bad.push(String(l||'')); }); if(bad.length) setTimeout(()=>{ try{ alert('📷 Από τη σάρωση — δεν αναγνωρίστηκαν αυτόματα (πρόσθεσέ τα με το χέρι):\n\n• ' + bad.join('\n• ')); }catch(e){} }, 600); }
-    if(Array.isArray(opt.ex)) opt.ex.forEach(x=>{ const n = String(x && (x.n||x.name) || '').trim(); if(n && !S.ex.some(y=>y.n.toLowerCase()===n.toLowerCase())) S.ex.push({n, k:(x.k||x.kind)||exKind(n)}); });   // 📦 πακέτο → παραπεμπτικό
+    if(Array.isArray(opt.ex)) opt.ex.forEach(x=>{ const n = String(x && (x.n||x.name) || '').trim(); if(n && !S.ex.some(y=>y.n.toLowerCase()===n.toLowerCase())) S.ex.push({n, k:(x.k||x.kind)||exKind(n), ep:!!x.ep}); });   // 📦 πακέτο → παραπεμπτικό
     const pg = window.iosPage('Συνταγή', opt.onBack ? 'Ασθενής' : 'Πίσω', ()=>'<div class="rxs" data-rxs></div>');
     if(opt.onBack){ const bk = pg.el.querySelector('.ios-back'); if(bk) bk.onclick = ()=>{ pg.close(); opt.onBack(); }; }   // 🔎 από την καρτέλα «Ασθενείς»
     const root = pg.el.querySelector('[data-rxs]');
@@ -16061,7 +16065,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const draw = ()=>{ ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--ink,#111);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto">'
         + '<div style="display:flex;align-items:center"><b style="font-size:19px;flex:1">📷 Από σάρωση</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 14px;font-size:15px">Αργότερα</button></div>'
         + '<div style="font-size:13px;color:#64748B;margin:4px 0 10px">Διαβάστηκαν από φωτογραφία — άνοιξε για <b>έλεγχο</b> και αποστολή (το bot σταματά πάντα για έγκριση).</div>'
-        + L.map(x=>{ const p = x.payload, n = p.mode==='opnote' ? E4(((p.opnote||{}).op||'επέμβαση') + ((p.opnote||{}).date ? ' · ' + p.opnote.date : '')) : p.mode==='ref' ? (p.exams||[]).length + ' εξετάσεις' : (p.meds||[]).length + ' φάρμακα';
+        + L.map(x=>{ const p = x.payload, n = p.mode==='opnote' ? E4(((p.opnote||{}).op||'επέμβαση') + ((p.opnote||{}).date ? ' · ' + p.opnote.date : '')) : p.mode==='ref' || !(p.meds||[]).length ? (p.exams||[]).length + ' εξετάσεις' : (p.exams||[]).length ? (p.meds||[]).length + ' φάρμακα + ' + (p.exams||[]).length + ' εξετάσεις' : (p.meds||[]).length + ' φάρμακα';
           return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #EEF1F4"><div style="flex:1;min-width:0"><b style="font-size:16px">'+(p.mode==='opnote'?'📝 Πρακτικό':p.mode==='ref'?'🧾 Παραπεμπτικό':'💊 Συνταγή')+'</b><div style="font-size:13px;color:#64748B">ΑΜΚΑ '+E4(p.amka||'—')+(p.amka_sure===false?' <b style="color:#B26A00">(έλεγξέ το)</b>':'')+' · '+n+'</div></div>'
             + '<button data-no="'+x.id+'" style="border:0;background:#EEF2F6;border-radius:11px;padding:10px 12px;font-size:14.5px">🗑</button><button data-go="'+x.id+'" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:11px;padding:10px 14px;font-size:14.5px;font-weight:600">Άνοιγμα</button></div>'; }).join('') + '</div>'; };
       draw(); document.body.appendChild(ov);
@@ -16070,7 +16074,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(!id) return; const x = L.find(y=>y.id===id); L.splice(L.indexOf(x), 1);
         await sb6.from('oncall_jobs').update({status: no ? 'dismissed' : 'done', updated_at:new Date().toISOString()}).eq('id', id).eq('status','scanrx');
         if(go && x && x.payload.mode==='opnote'){ ov.remove(); window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:x.payload.patient||{}, opnote:x.payload.opnote||{}}); return; }   // 📝 14/11: φόρμα πρακτικού για έλεγχο
-        if(go && x){ ov.remove(); const p = x.payload; window.pdxRxStudio({amka:p.amka, mode:p.mode==='ref'?'ref':'rx', lines:(p.meds||[]).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).map(n=>({n})), icd:p.icd||[]}); return; }
+        if(go && x){ ov.remove(); const p = x.payload; window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[]});
+          const miss = [].concat((p.meds||[]).filter(m=>m.miss).map(m=>'💊 '+(m.src||m.line||m.name)), (p.exams||[]).filter(x=>x && x.miss).map(x=>'🧾 '+x.n)); if(miss.length) setTimeout(()=>alert('⚠ Δεν βρέθηκαν στον κατάλογο του e-prescription:\n'+miss.join('\n')+'\n\nΔιόρθωσέ τα με την αναζήτηση (✓ = από τον κατάλογο).'), 600);   // 14/11 22:42
+          return; }
         if(!L.length) ov.remove(); else draw(); });
     }catch(e){} };
   setTimeout(function scanRxTick(){ try{ if(!document.hidden) pdxScanRxCheck(); }catch(e){} setTimeout(scanRxTick, 60000); }, 20000);
@@ -16511,6 +16517,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
 
   // ---------- 📦 από το φύλλο παραγγελίας / τη Συνταγή: διάλεξε πακέτο → προεπισκόπηση → προσθήκη ----------
   // 📦 8/11 (εντολή χρήστη): τα πακέτα παραγγελίας φαίνονται κατευθείαν στο φύλλο — ένα πάτημα = μπαίνουν όλες οι εξετάσεις (χωρίς προεπισκόπηση)
+  window.pdxPacksAll = async function(){ try{ if(S.packs===null) await load(); }catch(e){} return (S.packs||[]).filter(p=>p && p.name && (p.items||[]).length); };   // 🎙 14/11: για τον βοηθό (ΤΑ ΠΡΑΓΜΑΤΙΚΑ πακέτα της εφαρμογής)
   window.pdxOrderPackList = async function(){ try{ if(S.packs===null) await load(); }catch(e){} return (S.packs||[]).filter(p=>p.fam==='order' && (p.items||[]).length).sort((a,b)=>(!!(b.fav&&b.fav[S.me]) - !!(a.fav&&a.fav[S.me])) || (b.uses||0)-(a.uses||0) || a.name.localeCompare(b.name,'el'))
     .map(p=>({id:p.id, name:p.name, r:{tests:p.items.filter(x=>x.t!=='prof').map(x=>x.n), profs:p.items.filter(x=>x.t==='prof').map(x=>x.n), pack:p.name}})); };
   window.pdxOrderPackUsed = id=>markUsed(id);
@@ -19655,52 +19662,88 @@ window.pdxVoice = function(seed){
     return P; };
   const SYS = 'Είσαι ο φωνητικός βοηθός μιας ουρολογικής κλινικής. Ο γιατρός υπαγορεύει εντολές στα ελληνικά (μπορεί να έχει λάθη αναγνώρισης φωνής, ονόματα σε γενική/αιτιατική, π.χ. «στον Κούτσαρη» = ΚΟΥΤΣΑΡΗΣ, «του Παπαδόπουλου» = ΠΑΠΑΔΟΠΟΥΛΟΣ).'
     + ' Μετέτρεψε την υπαγόρευση σε ενέργειες. Επέστρεψε ΜΟΝΟ JSON: {"actions":[...],"unclear":""}. Τύποι ενεργειών:'
-    + ' {"type":"order","p":id,"tests":["…"],"packs":["…"],"when":"Τώρα"|"Αύριο πρωί","urgency":"Ρουτίνας"|"Επείγον"} — εξετάσεις αίματος/ούρων·'
+    + ' {"type":"order","p":id,"tests":["…"],"packs":["…"],"when":"Τώρα"|"Αύριο πρωί","urgency":"Ρουτίνας"|"Επείγον"} — ΠΑΡΑΓΓΕΛΙΑ εξετάσεων στο εργαστήριο του νοσοκομείου (Medilabi) για νοσηλευόμενο («παρήγγειλε», «στείλε αίμα»)·'
+    + ' {"type":"ref","p":id,"amka":"","exams":["…"],"packs":["…"]} — ΠΑΡΑΠΕΜΠΤΙΚΟ e-prescription («παραπεμπτικό», «γράψε εξετάσεις», για εξωτερικό/εξιτήριο)·'
+    + ' {"type":"rxe","p":id,"amka":"","meds":[{"name":"…","dose":"1","freq":2,"days":7,"line":"όπως ειπώθηκε"}]} — ΣΥΝΤΑΓΗ φαρμάκων e-prescription·'
     + ' {"type":"consult","p":id,"spec":"ακριβώς μία από τις ειδικότητες της λίστας","reason":"τι ζητάμε"}·'
     + ' {"type":"drain","p":id,"ml":αριθμός,"which":1|2|3} — ml παροχέτευσης·'
     + ' {"type":"lab","p":id,"key":"hct"|"wbc"|"crp"|"cr","value":αριθμός} — τιμή εξέτασης που ανακοινώνει ο γιατρός (π.χ. σημερινός αιματοκρίτης 32)·'
     + ' {"type":"course","p":id,"text":"η πορεία νόσου όπως ειπώθηκε"}·'
-    + ' {"type":"rx","p":id,"text":"φάρμακα ή/και παραπεμπτικά όπως ειπώθηκαν, π.χ. Lincofren πρωί-βράδυ 5 μέρες + υπέρηχος νεφρών-κύστης"}·'
+
     + ' {"type":"todo","p":id,"text":"εκκρεμότητα"}.'
     + ' Κανόνες: "p" = ο αριθμός (#) του ασθενή από τη λίστα· αν λέει ΑΜΚΑ, βρες τον ασθενή με αυτό τον ΑΜΚΑ, αλλιώς "p":null και "amka":"…". Αν ο ασθενής είναι αμφίβολος (δύο πιθανοί ή κανένας), "p":null και "who":"ό,τι ακούστηκε".'
-    + ' Εξετάσεις: γράψε τα ονόματα ΑΚΡΙΒΩΣ όπως στη λίστα εξετάσεων όταν ταιριάζουν· «ένα Χ»/«το Χ» όπου Χ είναι όνομα πακέτου = "packs":["Χ" όπως στη λίστα πακέτων]· αν ζητά πακέτο που ΔΕΝ υπάρχει, βάλ\' το στο "packs" όπως ειπώθηκε.'
+    + ' Εξετάσεις: ΜΙΑ ανά στοιχείο, ολογράφως· «γενική καλλιέργεια ούρων» / «γενική και καλλιέργεια ούρων» = ΔΥΟ: "Γενική ούρων", "Καλλιέργεια ούρων"· «ένα Χ»/«το Χ» όπου Χ είναι όνομα πακέτου = "packs":["Χ" ακριβώς όπως στη λίστα πακέτων]. Η αντιστοίχιση με τους επίσημους καταλόγους γίνεται μετά — εσύ γράψε καθαρά τι ειπώθηκε. Συνταγή + παραπεμπτικό στην ίδια φράση = δύο ενέργειες (rxe και ref).'
     + ' ΠΟΤΕ μην προσθέτεις κάτι που δεν ειπώθηκε. Μια φράση μπορεί να έχει πολλές ενέργειες ή πολλούς ασθενείς. Ό,τι δεν κατάλαβες → "unclear".';
   const run = async ()=>{
     const txt = String(st.text||'').trim(); if(txt.length < 3){ st.err = 'Πες ή γράψε μια εντολή.'; return pg.redraw(); }
     if(!(window.pdxAiOn && pdxAiOn())){ st.err = 'Ο βοηθός χρειάζεται τις λειτουργίες AI (Ρυθμίσεις → Λειτουργίες AI) — είναι κλειστές.'; return pg.redraw(); }
     st.err = ''; st.acts = null; st.busy = 'Ο βοηθός καταλαβαίνει την εντολή…'; pg.redraw();
     try{
-      st.P = await ptsAll(); const packs = window.pdxOrderPacks ? await pdxOrderPacks() : {packs:[], tests:[]};
+      st.P = await ptsAll();
+      // 14/11 22:46 (χρήστης: «λες ότι δεν υπάρχει μικρό ενώ υπάρχει — βλέπεις τα δικά σου»): τα ΠΡΑΓΜΑΤΙΚΑ «Πακέτα» της εφαρμογής (oncall_labs pack|…), όλες οι οικογένειες
+      const PA = window.pdxPacksAll ? await pdxPacksAll() : [];
+      const packs = {packs: PA.map(x=>({name:x.name, fam:x.fam, tests:(x.items||[]).map(i=>i.n).filter(Boolean)})), tests:[]};
       let specs = []; try{ const c = JSON.parse(localStorage.getItem('pdx_consult_cat')||'null'); specs = ((c && c.specs)||[]).filter(x=>x.deps&&x.deps.length).map(x=>x.spec); }catch(e){}
       const u = 'Ασθενείς:\n' + st.P.map((x,i)=>'#'+(i+1)+' '+x.bed+' '+x.name+(x.surg?' ('+x.surg+')':'')+(x.amka?' ΑΜΚΑ '+x.amka:'')).join('\n')
-        + '\n\nΠακέτα: ' + ((packs.packs||[]).map(x=>x.name).join(', ')||'—') + '\nΕξετάσεις: ' + ((packs.tests||[]).join(', ')||'—')
+        + '\n\nΠακέτα παραγγελίας (Medilabi): ' + (packs.packs.filter(x=>x.fam==='order').map(x=>x.name).join(', ')||'—')
+        + '\nΠακέτα παραπεμπτικού/συνταγής (e-prescription): ' + (packs.packs.filter(x=>x.fam!=='order').map(x=>x.name+' ('+x.fam+')').join(', ')||'—')
         + '\nΕιδικότητες για εκτίμηση: ' + (specs.join(', ')||'—') + '\n\nΥπαγόρευση: «' + txt + '»';
       const r = await pdxAiJSON('βοηθός', SYS, u, 1500); st.busy = '';
       if(!(r.ok && r.json)){ st.err = '⚠ ' + (r.error || 'ο βοηθός δεν απάντησε'); return pg.redraw(); }
       st.unclear = String(r.json.unclear||'').trim();
       st.acts = (Array.isArray(r.json.actions) ? r.json.actions : []).slice(0, 12).map(a=>{ const i = +a.p; const pt = i>=1 && i<=st.P.length ? st.P[i-1] : null; return Object.assign({}, a, {pt, st:''}); });
-      for(const a of st.acts){ a.pt = a.pt || (a.amka && st.P.find(x=>String(x.amka)===String(a.amka).replace(/\D/g,''))) || null; prep(a, packs, specs); }
+      st.busy = 'Αντιστοίχιση με τους καταλόγους (Medilabi / e-prescription)…'; pg.redraw();
+      for(const a of st.acts){ a.pt = a.pt || (a.amka && st.P.find(x=>String(x.amka)===String(a.amka).replace(/\D/g,''))) || null; await prep(a, packs, specs); }
+      { const O = st.acts.filter(a=>a.type==='order' && !a.bad && (a.tests||[]).length); if(O.length){ const e = await mapMedilabi(O); if(e) O.forEach(a=>{ a.bad = a.bad || e; }); }
+        st.acts.filter(a=>a.type==='order' && !a.bad).forEach(a=>{ if(!(a.tests||[]).length && !(a.packObjs||[]).length) a.bad = 'Καμία εξέταση του καταλόγου Medilabi'; }); }
+      st.busy = '';
       if(!st.acts.length && !st.unclear) st.unclear = 'Δεν βρέθηκε καμία ενέργεια.';
     }catch(e){ st.busy = ''; st.err = '⚠ ' + (e.message||e); }
     pg.redraw(); };
-  // έλεγχος κάθε ενέργειας ΠΡΙΝ φανεί (τι λείπει → η κάρτα το λέει, χωρίς κουμπί εκτέλεσης)
-  const prep = (a, packs, specs)=>{ a.bad = '';
-    if(!a.pt) a.bad = 'Δεν βρέθηκε σίγουρα ο ασθενής' + (a.who ? ' («'+a.who+'»)' : a.amka ? ' (ΑΜΚΑ '+a.amka+')' : '');
-    if(a.type==='order'){ a.packObjs = []; (a.packs||[]).forEach(n=>{ const o = (packs.packs||[]).find(x=>nz(x.name)===nz(n) || nz(x.name).replace(/Ο$/,'')===nz(n).replace(/Ο$/,'')); if(o) a.packObjs.push(o); else a.bad = a.bad || 'Δεν υπάρχει πακέτο «'+n+'» — φτιάξ\' το στα «Πακέτα εξετάσεων»'; });
-      a.tests = (a.tests||[]).map(String).filter(Boolean); if(!a.tests.length && !a.packObjs.length) a.bad = a.bad || 'Καμία εξέταση'; }
+  // 14/11 22:45 (χρήστης: «να αντιστοιχούνται εξετάσεις/φάρμακα με ό,τι υπάρχει ήδη στη λίστα, όχι με δικά μας»):
+  // παραγγελία → ΜΟΝΟ κατάλογος Medilabi (pdxMedCats) + τα πακέτα «παραγγελίας»· παραπεμπτικό/συνταγή → ΜΟΝΟ κατάλογος e-prescription (pdx-ai epmatch).
+  const NZ7 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9Α-Ω]+/g,' ').trim();
+  const medNames = async ()=>{ try{ const C = window.pdxMedCats ? await pdxMedCats() : []; const a = [].concat(...C.map(c=>c.keys||[])); return a.filter((t,i)=>t && a.indexOf(t)===i); }catch(e){ return []; } };
+  const cands = (L, q, n)=>{ const W = NZ7(q).split(' ').filter(w=>w.length>=2); if(!W.length) return [];
+    return L.map((s,i)=>{ const T = NZ7(s).split(' '); let m = 0; for(const w of W){ const pf = w.slice(0, Math.min(4, w.length)); if(T.some(t=>t.startsWith(pf))) m++; } return [m, -String(s).length, i]; }).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]||b[1]-a[1]).slice(0, n).map(x=>x[2]); };
+  const mapMedilabi = async (acts)=>{ const ML = await medNames(); if(!ML.length) return 'χωρίς κατάλογο Medilabi στη συσκευή';
+    const Q = []; acts.forEach(a=>(a.tests||[]).forEach((t,ti)=>{ const ex = ML.find(x=>NZ7(x)===NZ7(t)); if(ex){ a.tests[ti] = ex; return; } Q.push({a, ti, t, c:cands(ML, t, 10)}); }));
+    if(!Q.length) return '';
+    const u = Q.map((q,i)=>'ΕΞΕΤΑΣΗ '+i+': «'+q.t+'»\n'+(q.c.map(j=>'  '+j+') '+ML[j]).join('\n')||'  (κανένας υποψήφιος)')).join('\n');
+    const r = await pdxAiJSON('βοηθός', 'Αντιστοιχίζεις εξετάσεις που ζήτησε γιατρός με τον ΕΠΙΣΗΜΟ κατάλογο εξετάσεων του εργαστηρίου (Medilabi). Για κάθε εξέταση διάλεξε ΑΚΡΙΒΩΣ έναν αριθμό από τους υποψηφίους της ή null αν κανένας δεν είναι αυτό που ζητήθηκε. ΜΟΝΟ JSON {"pick":[αριθμός|null,…]}.', u, 400);
+    const P = (r.ok && r.json && r.json.pick) || [];
+    Q.forEach((q,i)=>{ const j = P[i]; if(Number.isInteger(j) && q.c.includes(j)) q.a.tests[q.ti] = ML[j]; else { q.a.miss = (q.a.miss||[]).concat(q.t); q.a.tests[q.ti] = null; } });
+    acts.forEach(a=>{ a.tests = (a.tests||[]).filter(Boolean); }); return ''; };
+  const mapEp = async (a)=>{ const r = await pdxAI('βοηθός-κατάλογος', {epmatch:{meds:a.type==='rxe' ? (a.meds||[]) : [], exams:a.type==='ref' ? (a.exams||[]) : []}});
+    if(!r.ok) throw new Error(r.error||'κατάλογος e-prescription: χωρίς απάντηση');
+    if(a.type==='ref'){ a.exL = (r.exams||[]).filter(x=>x.ep); a.miss = (r.exams||[]).filter(x=>!x.ep).map(x=>x.n); }
+    else { a.medL = (r.meds||[]).filter(x=>x.ep); a.miss = (r.meds||[]).filter(x=>!x.ep).map(x=>x.src||x.line||x.name); } };
+  const prep = async (a, packs, specs)=>{ a.bad = '';
+    if(!a.pt && !(/^(ref|rxe)$/.test(a.type) && /^\d{11}$/.test(String(a.amka||'')))) a.bad = 'Δεν βρέθηκε σίγουρα ο ασθενής' + (a.who ? ' («'+a.who+'»)' : a.amka ? ' (ΑΜΚΑ '+a.amka+')' : '');
+    if(a.type==='order'){ a.packObjs = []; (a.packs||[]).forEach(n=>{ const o = (packs.packs||[]).find(x=>x.fam==='order' && NZ7(x.name)===NZ7(n)) || (packs.packs||[]).find(x=>x.fam==='order' && NZ7(x.name).startsWith(NZ7(n))); if(o) a.packObjs.push(o); else a.bad = a.bad || 'Δεν υπάρχει πακέτο παραγγελίας «'+n+'»'; });
+      a.tests = (a.tests||[]).map(String).filter(Boolean); }
+    if(a.type==='ref'){ (a.packs||[]).forEach(n=>{ const o = (packs.packs||[]).find(x=>x.fam!=='order' && NZ7(x.name)===NZ7(n)); if(o) a.exams = (a.exams||[]).concat(o.tests); else a.bad = a.bad || 'Δεν υπάρχει πακέτο παραπεμπτικού «'+n+'»'; });
+      try{ await mapEp(a); }catch(e){ a.bad = a.bad || ('⚠ '+e.message); } if(!a.bad && !(a.exL||[]).length) a.bad = 'Καμία εξέταση του καταλόγου e-prescription'; }
+    if(a.type==='rxe'){ try{ await mapEp(a); }catch(e){ a.bad = a.bad || ('⚠ '+e.message); } if(!a.bad && !(a.medL||[]).length) a.bad = 'Κανένα φάρμακο του καταλόγου e-prescription'; }
     if(a.type==='consult' && !a.bad){ if(!specs.length) a.bad = 'Δεν υπάρχει ο κατάλογος ειδικοτήτων — άνοιξε μία φορά «Κλήση για εκτίμηση»'; else if(specs.indexOf(a.spec)<0) a.bad = 'Άγνωστη ειδικότητα «'+(a.spec||'')+'»'; }
     if(a.type==='drain' && !(+a.ml >= 0)) a.bad = a.bad || 'Δεν ακούστηκε ποσότητα';
     if(a.type==='lab' && (!/^(hct|wbc|crp|cr)$/.test(a.key) || !isFinite(+a.value))) a.bad = a.bad || 'Δεν ακούστηκε τιμή';
-    if(/^(course|rx|todo)$/.test(a.type) && !String(a.text||'').trim()) a.bad = a.bad || 'Κενό κείμενο';
-    if(!/^(order|consult|drain|lab|course|rx|todo)$/.test(a.type)) a.bad = 'Άγνωστη ενέργεια'; };
+    if(/^(course|todo)$/.test(a.type) && !String(a.text||'').trim()) a.bad = a.bad || 'Κενό κείμενο';
+    if(!/^(order|ref|rxe|consult|drain|lab|course|todo)$/.test(a.type)) a.bad = 'Άγνωστη ενέργεια'; };
   const LAB = {hct:'Αιματοκρίτης', wbc:'Λευκά', crp:'CRP', cr:'Κρεατινίνη'};
   const desc = a=>{ const who = a.pt ? '<b>'+E7(a.pt.name)+'</b> <span style="color:#8E8E93">'+E7(a.pt.bed)+'</span>' : '<b style="color:#B42318">ασθενής;</b>';
-    const T = {order:['🧾','Παραγγελία', [].concat((a.packObjs||[]).map(x=>'📦 '+x.name), a.tests||[]).join(', ') + ' · ' + (a.when||'Τώρα') + (a.urgency==='Επείγον'?' · ⚡ επείγον':'')],
+    const ms = (a.miss||[]).length ? ' · ⚠ εκτός καταλόγου: '+a.miss.join(', ') : '';
+    const T = {order:['🧾','Παραγγελία (Medilabi)', [].concat((a.packObjs||[]).map(x=>'📦 '+x.name), a.tests||[]).join(', ') + ' · ' + (a.when||'Τώρα') + (a.urgency==='Επείγον'?' · ⚡ επείγον':'') + ms],
+      ref:['📋','Παραπεμπτικό (e-prescription)', (a.exL||[]).map(x=>'✓ '+x.n).join(', ') + ms], rxe:['💊','Συνταγή (e-prescription)', (a.medL||[]).map(x=>'✓ '+x.line).join(' · ') + ms],
       consult:['📞','Κλήση για εκτίμηση', (a.spec||'') + (a.reason?' — '+a.reason:'')], drain:['💧','Παροχέτευση'+(+a.which>1?' '+a.which:''), (a.ml)+' ml'],
-      lab:['🩸', LAB[a.key]||a.key, String(a.value)], course:['📈','Πορεία νόσου', a.text], rx:['💊','Συνταγή / παραπεμπτικά', a.text], todo:['☑','Εκκρεμότητα', a.text]}[a.type] || ['❓', a.type, ''];
-    return {ic:T[0], t:T[1], who, what:T[2]}; };
-  const exec = async a=>{ const k0 = a.pt.k; let k = k0; if(/^nps:/.test(k) && window.pdxNpsKey) k = pdxNpsKey(k, true); const d = recK(k);
-    if(a.type==='order'){ const ok = await pdxBotSend(k, 'order', {tests:a.tests||[], packs:(a.packObjs||[]).map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:a.when==='Αύριο πρωί'?'Αύριο πρωί':'Τώρα', urgency:a.urgency==='Επείγον'?'Επείγον':'Ρουτίνας', note:''}); return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Καταχώρηση»)' : '⚠ δεν στάλθηκε'; }
+      lab:['🩸', LAB[a.key]||a.key, String(a.value)], course:['📈','Πορεία νόσου', a.text], todo:['☑','Εκκρεμότητα', a.text]}[a.type] || ['❓', a.type, ''];
+    return {ic:T[0], t:T[1], who: a.pt ? who : (a.amka ? '<b>ΑΜΚΑ '+E7(a.amka)+'</b>' : who), what:T[2]}; };
+  const exec = async a=>{
+    if(a.type==='ref' || a.type==='rxe'){ const k1 = a.pt && !/^nps:/.test(a.pt.k) ? a.pt.k : ''; const am = String((a.pt && a.pt.amka) || a.amka || '').replace(/\D/g,'');
+      pg.close(); setTimeout(()=>window.pdxRxStudio(Object.assign(k1 ? {k:k1, text:''} : {amka:am}, a.type==='ref' ? {mode:'ref', ex:(a.exL||[]).map(x=>({n:x.n, k:x.k, ep:true}))} : {mode:'rx', lines:(a.medL||[]).map(x=>x.line)})), 420);
+      return '↪ άνοιξε η «Συνταγή» με ό,τι αντιστοιχίστηκε στον κατάλογο — έλεγξε και στείλε'; }
+    const k0 = a.pt.k; let k = k0; if(/^nps:/.test(k) && window.pdxNpsKey) k = pdxNpsKey(k, true); const d = recK(k);
+    if(a.type==='order'){ const T0 = [].concat(a.tests||[], ...(a.packObjs||[]).map(x=>x.tests||[])).filter((t,i,A)=>t && A.indexOf(t)===i); const ok = await pdxBotSend(k, 'order', {tests:T0, packs:[], when:a.when==='Αύριο πρωί'?'Αύριο πρωί':'Τώρα', urgency:a.urgency==='Επείγον'?'Επείγον':'Ρουτίνας', note:''}); return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Καταχώρηση»)' : '⚠ δεν στάλθηκε'; }
     if(a.type==='consult'){ const M = window.pdxConsultMap ? await pdxConsultMap() : {map:{}}; const dp = (M.map||{})[a.spec]; if(!dp){ setTimeout(()=>mobAct(k,'consult'), 300); return '↪ άνοιξε η «Κλήση για εκτίμηση» (δεν έχει οριστεί υποτμήμα για «'+a.spec+'»)'; }
       const rf = ((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''; const ok = await pdxBotSend(k, 'consult', {spec:a.spec, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited:false, text: window.pdxConsultText ? pdxConsultText(d, a.reason||'') : (a.reason||''), reason:a.reason||''});
       return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Υποβολή»)' : '⚠ δεν στάλθηκε'; }
@@ -19710,12 +19753,28 @@ window.pdxVoice = function(seed){
       try{ window.MEAS && MEAS.sync(d); }catch(e){} saveEntryToStorage(k, String(k).indexOf('extra')===0, d, true); try{ window.mobRefresh && mobRefresh(); }catch(e){} return '✓ γράφτηκε στην καρτέλα'; }
     if(a.type==='todo'){ if(window.pdxTodoAdd){ pdxTodoAdd(k, String(a.text).trim(), null); return '✓ προστέθηκε'; } return '⚠ μη διαθέσιμο'; }
     if(a.type==='course'){ pg.close(); setTimeout(()=>{ window.pdxDictate(k); setTimeout(()=>{ const ta = document.querySelector('#iosPg [data-tx]'); if(ta){ ta.value = a.text; ta.dispatchEvent(new Event('input', {bubbles:true})); } }, 400); }, 420); return '↪ άνοιξε η «Πορεία νόσου» με το κείμενο — έλεγξε και στείλε'; }
-    if(a.type==='rx'){ pg.close(); setTimeout(()=>window.pdxRxSheet(k, a.text), 420); return '↪ άνοιξε η συνταγή με το κείμενο — έλεγξε και στείλε'; }
     return '⚠ άγνωστη ενέργεια'; };
+  const sttSend = async blob=>{ try{
+      st.busy = '🎧 Μεταγραφή στον υπολογιστή του νοσοκομείου…'; pg.redraw();
+      const ab = await blob.arrayBuffer(), AC = window.AudioContext || window.webkitAudioContext, ac = new AC(), buf = await ac.decodeAudioData(ab); try{ ac.close(); }catch(e){}
+      const n = Math.ceil(buf.duration*16000), off = new OfflineAudioContext(1, n, 16000), src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start(); const rr = await off.startRendering(), f = rr.getChannelData(0);
+      const out = new DataView(new ArrayBuffer(44 + f.length*2)), W = (o, x)=>{ for(let i=0;i<x.length;i++) out.setUint8(o+i, x.charCodeAt(i)); };
+      W(0,'RIFF'); out.setUint32(4, 36+f.length*2, true); W(8,'WAVE'); W(12,'fmt '); out.setUint32(16,16,true); out.setUint16(20,1,true); out.setUint16(22,1,true); out.setUint32(24,16000,true); out.setUint32(28,32000,true); out.setUint16(32,2,true); out.setUint16(34,16,true); W(36,'data'); out.setUint32(40, f.length*2, true);
+      for(let i=0;i<f.length;i++){ const v = Math.max(-1, Math.min(1, f[i])); out.setInt16(44+i*2, v<0 ? v*0x8000 : v*0x7FFF, true); }
+      if(!(await pdxCK.ready())) throw new Error('η συσκευή δεν έχει το κλειδί της κλινικής');
+      const u8 = await pdxCK.sealBytes(new Uint8Array(out.buffer)); let b = ''; for(let i=0;i<u8.length;i+=0x8000) b += String.fromCharCode.apply(null, u8.subarray(i, i+0x8000));
+      const P = st.P.length ? st.P : await ptsAll(); let PK = []; try{ PK = (window.pdxPacksAll ? await pdxPacksAll() : []).map(x=>x.name); }catch(e){}
+      const prompt = ('Εντολές γιατρού ουρολογικής κλινικής. Ασθενείς: ' + P.map(x=>String(x.name).split(' ')[0]).join(', ') + '. Πακέτα: ' + PK.join(', ') + '. Γενική αίματος, γενική ούρων, καλλιέργεια ούρων, κρεατινίνη, ουρία, CRP, PSA, αιματοκρίτης, παροχέτευση, παραπεμπτικό, συνταγή, εκτίμηση.').slice(0, 400);
+      const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_stt', name:'🎙 Βοηθός', room:null, kind:'stt', payload:{a:btoa(b), prompt, quiet:true, only:'bmw51nismmo82h'}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+      for(let i=0;i<90;i++){ await new Promise(r=>setTimeout(r, 1500)); if(!pg.el.isConnected) return; const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); const j = q.data; if(!j) continue;
+        if(j.status==='done'){ const o = await pdxCK.decrypt(j.payload.result.enc); const tx = String(o.text||'').trim(); if(tx){ st.text = tx; const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.value = tx; } st.busy = ''; st.acts = null; pg.redraw(); return run(); }
+        if(/^(failed|cancelled|dismissed)$/.test(j.status)) throw new Error(j.note||'η μεταγραφή απέτυχε'); }
+      throw new Error('η μεταγραφή άργησε'); }
+    catch(e){ st.busy = ''; st.hint = 'Η μεταγραφή στον υπολογιστή δεν έγινε ('+E7(e.message||e)+') — κράτησα ό,τι άκουσε το iPhone.'; pg.redraw(); if(String(st.text||'').trim().length > 5 && !st.acts) run(); } };
   if(!document.getElementById('vcCss')){ const c = document.createElement('style'); c.id = 'vcCss'; c.textContent = '.pdx-vcard,.pdx-vtx{color:#1C1C1E}html.pdx-night .pdx-vcard,html.pdx-night .pdx-vtx{color:#F5F5F7!important;background:#1C1C1E!important}'; document.head.appendChild(c); }
   const pg = iosPage('🎙 Βοηθός', 'Πίσω', ()=>{
     let h = '<div style="margin:6px 16px 10px;font-size:13.5px;color:#6B7280;line-height:1.4">Πες τι θέλεις, π.χ. «παρήγγειλε ένα μικρό στον Κούτσαρη», «κλήση στους πνευμονολόγους για τον Σκουμπή για προεγχειρητική», «η παροχέτευση του Παπαδόπουλου έβγαλε 50, αιματοκρίτης 32». <b>Τίποτα δεν γίνεται χωρίς το ✓ σου.</b></div>';
-    h += '<button data-vmic style="display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 32px);margin:0 16px 10px;min-height:64px;border:0;border-radius:18px;background:'+(st.sr?'#FF3B30':'#0A84FF')+';color:#fff;font-size:18px;font-weight:800">'+(st.sr?'⏹ Σταμάτα':'🎙 Μίλα')+'</button>';
+    h += '<button data-vmic style="display:flex;align-items:center;justify-content:center;gap:10px;width:calc(100% - 32px);margin:0 16px 10px;min-height:64px;border:0;border-radius:18px;background:'+(st.sr||st.rec?'#FF3B30':'#0A84FF')+';color:#fff;font-size:18px;font-weight:800">'+(st.sr||st.rec?'⏹ Σταμάτα':'🎙 Μίλα')+'</button>';
     if(st.hint) h += '<div style="margin:0 16px 8px;font-size:13.5px;color:#B26A00">'+st.hint+'</div>';
     h += '<textarea data-vtx class="pdx-vtx" placeholder="…ή γράψε / πάτα το 🎤 του πληκτρολογίου" style="display:block;width:calc(100% - 32px);margin:0 16px;box-sizing:border-box;min-height:96px;font-size:16px;line-height:1.45;padding:12px;border:0;border-radius:14px;background:var(--card,#fff);color:inherit">'+E7(st.text)+'</textarea>';
     h += '<button data-vgo style="display:block;width:calc(100% - 32px);margin:10px 16px;min-height:50px;border:0;border-radius:14px;background:#34C759;color:#fff;font-size:16.5px;font-weight:800"'+(st.busy?' disabled':'')+'>✨ Κατάλαβε την εντολή</button>';
@@ -19736,18 +19795,24 @@ window.pdxVoice = function(seed){
     if(t.closest('[data-vgo]')) return run();
     const ok = t.closest('[data-vok]'); if(ok) return doOne(+ok.dataset.vok);
     const no = t.closest('[data-vno]'); if(no){ st.acts.splice(+no.dataset.vno, 1); return pg.redraw(); }
-    if(t.closest('[data-vall]')){ for(let i=0;i<st.acts.length;i++){ const a = st.acts[i]; if(!a.bad && !a.st && !/^(course|rx)$/.test(a.type)) await doOne(i); } const r = st.acts.findIndex(a=>!a.bad && !a.st); if(r>=0) await doOne(r); return; }
+    if(t.closest('[data-vall]')){ for(let i=0;i<st.acts.length;i++){ const a = st.acts[i]; if(!a.bad && !a.st && !/^(course|ref|rxe)$/.test(a.type)) await doOne(i); } const r = st.acts.findIndex(a=>!a.bad && !a.st); if(r>=0) await doOne(r); return; }
     if(t.closest('[data-vmic]')){
-      if(st.sr){ try{ st.sr.stop(); }catch(x){} return; }
+      if(st.sr || st.rec){ try{ st.sr && st.sr.stop(); }catch(x){} try{ st.rec && st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} return; }
+      // 🎧 14/11 22:46 (χρήστης: «η αναγνώριση φωνής δεν είναι τόσο καλή — θέλω τόσο καλή όσο τη δική σου»): ΚΑΙ ηχογράφηση → μεταγραφή στον υπολογιστή
+      // του νοσοκομείου (Whisper, ήχος κρυπτογραφημένος με το κλειδί της κλινικής) με λεξιλόγιο: επώνυμα ασθενών, πακέτα, εξετάσεις. Η άμεση αναγνώριση του iPhone μένει ως εφεδρεία.
+      try{ if(navigator.mediaDevices && window.MediaRecorder && window.pdxCK){ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
+        rec.ondataavailable = ev=>{ if(ev.data && ev.data.size) ch.push(ev.data); };
+        rec.onstop = ()=>{ try{ ms.getTracks().forEach(x=>x.stop()); }catch(x){} st.rec = null; const blob = new Blob(ch, {type: rec.mimeType || 'audio/mp4'}); if(blob.size > 3000) sttSend(blob); else pg.redraw(); };
+        rec.start(); st.rec = rec; } }catch(er){ st.rec = null; }
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν ξεκίνησε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; pg.redraw(); setTimeout(()=>{ const ta = pg.el.querySelector('[data-vtx]'); ta && ta.focus(); }, 50); };
-      if(!SR) return kb();
+      if(!SR){ if(st.rec){ st.recUsed = true; return pg.redraw(); } return kb(); }
       st.hint = ''; st.err = ''; const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; const base = String(st.text||'').trim(); let fin = '';
       r.onresult = ev=>{ let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'')+x[0].transcript.trim(); else inter += x[0].transcript; }
         st.text = (base?base+' ':'') + fin + (inter?(fin?' ':'')+inter:''); const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.value = st.text; };
       r.onerror = ev=>{ st.sr = null; const c = ev && ev.error; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')) kb(); else pg.redraw(); };
-      r.onend = ()=>{ st.sr = null; st.text = ((base?base+' ':'') + fin).trim() || st.text; pg.redraw(); if(String(st.text).trim().length > 5 && !st.acts) run(); };
-      try{ r.start(); st.sr = r; pg.redraw(); }catch(er){ st.sr = null; kb(); }
+      r.onend = ()=>{ st.sr = null; st.text = ((base?base+' ':'') + fin).trim() || st.text; if(st.rec){ try{ st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} } pg.redraw(); if(!st.recUsed && String(st.text).trim().length > 5 && !st.acts) run(); };
+      st.recUsed = !!st.rec; try{ r.start(); st.sr = r; pg.redraw(); }catch(er){ st.sr = null; if(!st.rec) kb(); else pg.redraw(); }
     } });
   if(st.text) run();
 };
