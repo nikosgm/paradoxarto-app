@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v392';
+const APP_VER = '2026-11-14-v394';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7091,6 +7091,16 @@ document.head.appendChild(st);
   #mobView .mtabs>span{white-space:nowrap!important;flex:1 1 auto!important;padding:0 6px;font-size:14.5px;letter-spacing:-.1px}
   #mobView .mtabs .on{color:var(--mp,#1D4E80)!important}
   #mobView .mtabs>span.on,#mobView .mtabs>span:active{background:rgba(29,78,128,.14)!important}
+  /* 14/11 (χρήστης: «το island σαν του App Store — ένα κυκλάκι που δείχνει πού ακριβώς βρισκόμαστε»): «χάπι» που ΓΛΙΣΤΡΑΕΙ στην ενεργή ενότητα */
+  #mobView .mtabs.pill{position:fixed}#mobView .mtabs.pill>span{position:relative;z-index:1}
+  #mobView .mtabs.pill>span.on,#mobView .mtabs.pill>span:active{background:transparent!important}
+  #mobView .mtabs.pill::before{content:"";position:absolute;z-index:0;left:var(--px,0);top:var(--py,3px);width:var(--pw,0);height:var(--ph,36px);border-radius:999px;background:rgba(29,78,128,.15);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 1px 4px rgba(0,0,0,.08);transition:left .32s cubic-bezier(.32,.72,0,1),width .32s cubic-bezier(.32,.72,0,1);opacity:var(--po,0)}
+  html.pdx-night #mobView .mtabs.pill::before{background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+  #mobView .mtabs.pill.np::before{transition:none}
+  #mobView .nv-tb.pill>button{z-index:1}
+  #mobView .nv-tb.pill::before{content:"";position:absolute;z-index:0;left:var(--px,0);top:var(--py,6px);width:var(--pw,0);height:var(--ph,50px);border-radius:999px;background:rgba(29,78,128,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.7);transition:left .34s cubic-bezier(.32,.72,0,1),width .34s cubic-bezier(.32,.72,0,1);opacity:var(--po,0)}
+  html.pdx-night #mobView .nv-tb.pill::before{background:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+  #mobView .nv-tb.pill.np::before{transition:none}
   #mobView .mm{background:rgba(29,78,128,.07)!important;border:0!important;border-radius:18px!important}
   #mobView .mgrid{gap:6px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%;box-sizing:border-box}#mobView .mm{display:flex!important;flex-direction:column;align-items:center;justify-content:center;min-width:0}#mobView .mm{padding:5px 6px!important;border-radius:14px!important}#mobView .mm b{font-size:18px!important;line-height:1.15}#mobView .mm span,#mobView .mm i{font-size:10.5px!important;text-align:center}#mobView .ti{font-size:10px!important;margin-right:2px}
   #mobView .madd button,#mobView .mbtn,#mobView .mchartbtn{background:var(--mp,#1D4E80)!important;border-radius:999px!important}
@@ -8321,6 +8331,17 @@ document.head.appendChild(st);
     const surg = String(rec.surgery||rec.surgeryCustom||'').trim(), nm = String(rec.name||'').trim();
     const nk = nm.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ');
     return pdxDbCall('POST', '/api/events', {rows:[{patient:{name:nm, amka:String(rec.amka||'').replace(/\D/g,'')}, date:day, kind:'dcnote', title:surg||'Εξιτήριο', body:{text:String(text), surg, by:pdxDcBy()}, src:'paradoxarto', ext_id:'dcnote|'+nk+'|'+day}]}).catch(()=>null); };
+  // 🫧 14/11: χάπι της κάτω μπάρας — μετακινείται στο ενεργό κουμπί (θυμάται την προηγούμενη θέση για να «γλιστρήσει»)
+  (function(){ let last = null, raf = 0;
+    const place = ()=>{ raf = 0; const bar = document.querySelector('#mobView .nv-tb') || document.querySelector('#mobView .mtabs'); if(!bar) return; const on = bar.querySelector(':scope > button.on, :scope > span.on'); bar.classList.add('pill');
+      if(!on || !on.offsetWidth){ bar.style.setProperty('--po','0'); return; }
+      const br = bar.getBoundingClientRect(), r = on.getBoundingClientRect(), nv = bar.classList.contains('nv-tb'), padX = nv ? 10 : 0, w = nv ? Math.max(r.width + 2*padX, 64) : r.width;
+      const v = {x: Math.max(4, r.left - br.left + (r.width - w)/2), y: nv ? Math.max(4, (br.height - Math.min(br.height - 8, 54))/2) : r.top - br.top, w, h: nv ? Math.min(br.height - 8, 54) : r.height};
+      if(bar.__pp !== 1 && last){ bar.classList.add('np'); bar.style.setProperty('--px', last.x+'px'); bar.style.setProperty('--pw', last.w+'px'); bar.style.setProperty('--py', v.y+'px'); bar.style.setProperty('--ph', v.h+'px'); bar.style.setProperty('--po','1'); void bar.offsetWidth; bar.classList.remove('np'); }
+      bar.__pp = 1; bar.style.setProperty('--px', v.x+'px'); bar.style.setProperty('--pw', v.w+'px'); bar.style.setProperty('--py', v.y+'px'); bar.style.setProperty('--ph', v.h+'px'); bar.style.setProperty('--po','1'); last = v; };
+    const go = ()=>{ if(!raf) raf = requestAnimationFrame(place); };
+    const start = ()=>{ const mv = document.getElementById('mobView'); if(!mv){ setTimeout(start, 800); return; } new MutationObserver(go).observe(mv, {childList:true, subtree:true, attributes:true, attributeFilter:['class']}); addEventListener('resize', go); go(); };
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start(); window.pdxTabPill = go; })();
   window.pdxDbCall = function(method, path, body){
     return new Promise((ok, no)=>{ pdxDbQ.push({method:String(method||'GET').toUpperCase(), path, body, ok, no});
       clearTimeout(pdxDbT); pdxDbT = setTimeout(()=>{ while(pdxDbQ.length) pdxDbSend(pdxDbQ.splice(0, 20)); }, 250); });
@@ -8531,10 +8552,16 @@ document.head.appendChild(st);
     const nm = esc(String(window.authName||'').replace(/@paradoxarto\.app$/,'')), role = {resident:'Ειδικευόμενος',attending:'Επιμελητής',admin:'Διαχειριστής'}[window.authRole]||'';
     let h = '<div class="ios-wrap"><div style="height:calc(env(safe-area-inset-top,0px) + 10px)"></div><div class="ios-big" style="font-size:34px;font-weight:700;margin:4px 16px 0">Ρυθμίσεις</div>';
     h += iosGroup('', [{ic:'👤', t:'<b style="font-size:19px;font-weight:600">'+(nm||'Λογαριασμός')+'</b>', sub:role+' · κωδικός, στοιχεία', on:"pdxDo('acct')"}]);
+    // ⭐ 14/11 (χρήστης: «ο καθένας να επιλέγει τα πιο συχνά κουμπιά που θέλει να εμφανίζονται πρώτα στις ρυθμίσεις»): «⭐ Συχνά» = επιλογή & σειρά του χρήστη
+    // (🎨 Εμφάνιση → Συχνά στις Ρυθμίσεις)· τα επιλεγμένα ΔΕΝ ξαναφαίνονται στην ομάδα τους. Κλειδί γραμμής = ο τίτλος της.
+    const FAV = (window.pdxApFav ? pdxApFav() : []), ALL = []; window.__pdxSetItems = ALL;
+    const rk = r=>String(r.t||'').replace(/<[^>]+>/g,'').trim();
+    const G = (head, rows)=>{ rows = (rows||[]).filter(Boolean); rows.forEach(r=>ALL.push({k:rk(r), r, g:head})); return iosGroup(head, rows.filter(r=>FAV.indexOf(rk(r))<0)); };
+    h += '<!--FAV-->';
     // 🧹 10/11 βράδυ (χρήστης: «καθάρισμα στις ρυθμίσεις — να μη χρειάζεται να πατάω 5 ενότητες για να βρω κάτι»): ΟΛΑ σε αυτή τη σελίδα, σε λίγες καθαρές ομάδες·
     // κάθε γραμμή ανοίγει κατευθείαν τη σελίδα της (χωρίς το ενδιάμεσο «Διαχείριση ›»)
     const clin = ['resident','attending','admin'].indexOf(window.authRole)>=0, nb = (window.__pdxScanDevN||0) + (window.__pdxRepN||0);
-    h += iosGroup('Καθημερινά', [
+    h += G('Καθημερινά', [
       {ic:'🔔', t:'Ειδοποιήσεις', v: push?'Ναι':'Όχι', on:"pdxNotifPage()"},
       {ic:'🛏', t:'Οι θάλαμοί μου', v:(M.rooms&&M.rooms.length?esc(M.rooms.join(', ')):''), on:"pdxDo('mine')"},
       typeof window.pdxPacks==='function' && {ic:'📦', t:'Πακέτα', on:"window.pdxPacks && pdxPacks()"},
@@ -8542,11 +8569,11 @@ document.head.appendChild(st);
       att && {ic:'📞', t:'Κλήσεις για εκτίμηση', on:"pdxDo('consult')"},
       {ic:'⚠', t:'Όρια εργαστηριακών', on:"pdxDo('labwarn')"}
     ]);
-    if(clin) h += iosGroup('Κλινική', [
+    if(clin) h += G('Κλινική', [
       {ic:'🗂', t:'Βάση δεδομένων', sub:'Αρχείο Ασθενών · CD · αξονικές', on:"pdxDbPage()"},
       {ic:'📷', t:'Σάρωση', sub:'σάρωση · πορίσματα για έλεγχο · συσκευές', v:(nb?'<b style="color:#FF3B30">'+nb+'</b>':''), on:"pdxScanHub()"}
     ]);
-    h += iosGroup('Bot', [
+    h += G('Bot', [
       bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:"pdxDo('bot')"} : {ic:'🤖', t:'Ενέργειες bot', on:"pdxDo('botlog')"},
       {ic:'🩺', t:'Κατάσταση συστημάτων', on:"pdxHealth()"},
       (adm || bot) && {ic:'🔐', t:'Κωδικοί', sub: adm ? 'νέος κωδικός (ΝΠΣ · e-prescription · Medilabi · Kerio…) · έλεγχος' : 'έλεγχος', on: adm ? "pdxCredHub()" : "pdxCredCheck()"},
@@ -8555,7 +8582,8 @@ document.head.appendChild(st);
       adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
       adm && {ic:'🗺', t:'Χάρτες & σφάλματα συστημάτων', sub:'αυτόματα αρχεία ανά σύστημα · νυχτερινή σάρωση', on:"pdxSysDocs()"}
     ]);
-    h += iosGroup('Εμφάνιση & ασφάλεια', [
+    h += G('Εμφάνιση & ασφάλεια', [
+      {ic:'🎨', t:'Εμφάνιση', sub:'θέμα · γράμματα · χρώμα · συχνά κουμπιά · αρχική', on:"pdxAppearance()"},
       {ic:'✨', t:'Εμφάνιση λίστας', v:esc(VMS[VM()]), on:"pdxViewPick()"},
       {ic:'🌙', t:'Σκούρο θέμα', sw: night, on:"pdxDo('night');mobRefresh()"},
       {ic:'🔒', t:'Κρυπτογράφηση', v:(window.pdxCryptoStatus?pdxCryptoStatus():''), on:"pdxCryptoPage()"},
@@ -8563,8 +8591,60 @@ document.head.appendChild(st);
       adm && {ic:'⬇️', t:'Κατέβασμα / ενημέρωση bot', on:"pdxBotDownload()"},
       adm && {ic:'📥', t:'Εισαγωγή JSON', on:"importFbJson()"}
     ]);
+    { const fr = FAV.map(k=>(ALL.find(x=>x.k===k)||{}).r).filter(Boolean); h = h.replace('<!--FAV-->', fr.length ? iosGroup('⭐ Συχνά', fr) : ''); }
     return h + '<div style="height:120px"></div></div>' + tabs();
   }
+  // 🎨 14/11 (χρήστης: «δυνατότητα στον καθένα να τροποποιεί την εφαρμογή — νέα ενότητα Εμφάνιση, όσο περισσότερες τροποποιήσεις μπορείς»)
+  // Ανά συσκευή (localStorage «pdx_ap»): θέμα · μέγεθος γραμμάτων · χρώμα έμφασης · πυκνότητα · ετικέτες island · λιγότερη κίνηση · αρχική ενότητα · ⭐ συχνά στις Ρυθμίσεις
+  (function(){
+    const K = 'pdx_ap', get = ()=>{ try{ return JSON.parse(localStorage.getItem(K)||'{}')||{}; }catch(e){ return {}; } }, put = o=>{ try{ localStorage.setItem(K, JSON.stringify(o)); }catch(e){} };
+    const ACC = {blue:['Μπλε','#1D4E80','#0A84FF'], green:['Πράσινο','#1F6F43','#30A46C'], purple:['Μωβ','#5B3E96','#8E6CEF'], orange:['Πορτοκαλί','#9A4A0E','#F08A24'], red:['Κόκκινο','#8E1B1B','#E5484D'], teal:['Τιρκουάζ','#0E5F6B','#12A4B6'], gray:['Γκρι','#3F4650','#8E8E93']};
+    const FS = {s:['Μικρά',0.92], m:['Κανονικά',1], l:['Μεγάλα',1.1], xl:['Πολύ μεγάλα',1.22]};
+    const START = {pts:'Κλινική', tools:'Εργαλεία', me:'Ρυθμίσεις', labs:'Εργαστηριακά'};
+    let mq = null;
+    const apply = ()=>{ const o = get(), R = document.documentElement;
+      // θέμα
+      const th = o.theme || '';
+      if(th==='auto'){ if(!mq && window.matchMedia){ mq = matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener && mq.addEventListener('change', apply); } R.classList.toggle('pdx-night', !!(mq && mq.matches)); }
+      else if(th==='dark' || th==='light'){ R.classList.toggle('pdx-night', th==='dark'); try{ localStorage.setItem('pdx_night', th==='dark'?'1':'0'); }catch(e){} }
+      // στυλ
+      let css = '';
+      const f = (FS[o.fs]||FS.m)[1]; if(f!==1) css += 'body{zoom:'+f+'}';
+      const a = ACC[o.acc]; if(a && o.acc!=='blue') css += ':root{--mp:'+a[1]+'!important;--acc:'+a[2]+'!important;--accn:'+a[2]+'!important}html.pdx-night{--acc:'+a[2]+'!important}';
+      if(o.dense) css += '.ios-r{min-height:38px!important;font-size:15.5px!important}.ios-t{padding:5px 0!important}.nv-p,.nv-card{padding-top:7px!important;padding-bottom:7px!important}';
+      if(o.nolab) css += '#mobView .nv-tb button span{display:none!important}#mobView .nv-tb{height:52px!important}';
+      if(o.still) css += '*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}';
+      let st = document.getElementById('pdxApCss'); if(!st){ st = document.createElement('style'); st.id = 'pdxApCss'; document.head.appendChild(st); } st.textContent = css;
+      R.classList.toggle('pdx-dense', !!o.dense); };
+    window.pdxApGet = get; window.pdxApApply = apply;
+    window.pdxApFav = ()=>{ const v = get().fav; return Array.isArray(v) ? v : []; };
+    apply();
+    // αρχική ενότητα (μία φορά στο άνοιγμα της εφαρμογής)
+    setTimeout(()=>{ const st = get().start; if(!st || st==='pts') return; try{ if(st==='labs'){ window.labsFullOpen && labsFullOpen(''); } else if(window.mobTab) mobTab(st); }catch(e){} }, 1200);
+    window.pdxAppearance = function(){
+      const pg = iosPage('Εμφάνιση', 'Ρυθμίσεις', ()=>{ const o = get();
+        const pick = (key, val, lab, sub)=>({t:lab, sub, raw: (o[key]||'')===val || (!o[key] && val==='') ? '<span style="color:var(--acc,#0A84FF);font-size:19px">✓</span>' : '', on:'void 0', data:'data-ap="'+key+'|'+val+'"'});
+        let h = iosGroup('Θέμα', [pick('theme','','Όπως τώρα', document.documentElement.classList.contains('pdx-night')?'σκούρο':'ανοιχτό'), pick('theme','light','☀️ Ανοιχτό'), pick('theme','dark','🌙 Σκούρο'), pick('theme','auto','🌓 Αυτόματα', 'όπως το κινητό/υπολογιστής')]);
+        h += iosGroup('Μέγεθος γραμμάτων', Object.keys(FS).map(k=>pick('fs', k==='m'?'':k, FS[k][0]+(k==='m'?' (προεπιλογή)':''))));
+        h += iosGroup('Χρώμα έμφασης', Object.keys(ACC).map(k=>Object.assign(pick('acc', k==='blue'?'':k, ACC[k][0]), {t:'<span style="color:'+ACC[k][2]+';font-size:20px;vertical-align:-2px">●</span> '+ACC[k][0]})));
+        h += iosGroup('Προβολή', [{t:'Πιο πυκνές λίστες', sub:'περισσότερα στην οθόνη', sw:!!o.dense, on:'void 0', data:'data-apt="dense"'}, {t:'Island χωρίς ετικέτες', sub:'μόνο εικονίδια στην κάτω μπάρα', sw:!!o.nolab, on:'void 0', data:'data-apt="nolab"'}, {t:'Λιγότερη κίνηση', sub:'χωρίς εφέ/γλιστρήματα', sw:!!o.still, on:'void 0', data:'data-apt="still"'}]);
+        h += iosGroup('Αρχική ενότητα στο άνοιγμα', Object.keys(START).map(k=>pick('start', k==='pts'?'':k, START[k])));
+        const all = (window.__pdxSetItems||[]), fav = window.pdxApFav();
+        h += iosGroup('⭐ Συχνά στις Ρυθμίσεις — πάτα για να μπει/βγει · ↑ για σειρά', all.filter(x=>x.k && x.k!=='Εμφάνιση').map(x=>{ const i = fav.indexOf(x.k);
+          return {t:(i>=0?'<b style="color:var(--acc,#0A84FF)">'+(i+1)+'.</b> ':'')+x.r.ic+' '+x.k.replace(/[<>&]/g,''), sub:x.g||'', raw:(i>0?'<button data-apup="'+encodeURIComponent(x.k)+'" style="border:0;background:none;font-size:18px;color:var(--acc,#0A84FF);padding:6px 10px">↑</button>':'')+'<span style="font-size:18px">'+(i>=0?'⭐':'☆')+'</span>', on:'void 0', data:'data-apf="'+encodeURIComponent(x.k)+'"'}; }) , all.length ? 'Οι επιλεγμένες εμφανίζονται πρώτες, πάνω-πάνω στις Ρυθμίσεις.' : 'Άνοιξε μία φορά τις Ρυθμίσεις για να εμφανιστεί η λίστα.');
+        h += iosGroup('', [{t:'<span style="color:#FF3B30">Επαναφορά εμφάνισης</span>', on:'void 0', data:'data-apr="1"'}]);
+        return h + '<div style="height:60px"></div>'; });
+      pg.el.addEventListener('click', e=>{ const o = get();
+        const a = e.target.closest('[data-ap]'), t = e.target.closest('[data-apt]'), up = e.target.closest('[data-apup]'), f = e.target.closest('[data-apf]'), r = e.target.closest('[data-apr]');
+        if(up){ e.stopPropagation(); const k = decodeURIComponent(up.dataset.apup), L = window.pdxApFav().slice(), i = L.indexOf(k); if(i>0){ L.splice(i,1); L.splice(i-1,0,k); o.fav = L; put(o); } }
+        else if(a){ const [key, val] = a.dataset.ap.split('|'); if(val) o[key] = val; else delete o[key]; put(o); }
+        else if(t){ const k = t.dataset.apt; o[k] = !o[k]; put(o); }
+        else if(f){ const k = decodeURIComponent(f.dataset.apf), L = window.pdxApFav().slice(), i = L.indexOf(k); if(i>=0) L.splice(i,1); else L.push(k); o.fav = L; put(o); }
+        else if(r){ if(!confirm('Επαναφορά όλων των ρυθμίσεων εμφάνισης;')) return; put({}); }
+        else return;
+        apply(); pg.redraw(); try{ window.mobRefresh && mobRefresh(); }catch(_){} });
+      return pg; };
+  })();
   // 🏥 επιλογή ασθενή από τη λίστα ΝΠΣ της κλινικής (τελευταία ανάγνωση 3449) — πάτημα, χωρίς πληκτρολόγηση· αναζήτηση προαιρετική
   window.pdxNpsPick = function(title, hint){ return new Promise(async res=>{
     let rows = [], at = 0; try{ const r = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(6);
