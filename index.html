@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v438';
+const APP_VER = '2026-11-15-v439';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8756,7 +8756,6 @@ document.head.appendChild(st);
       bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:"pdxDo('bot')"} : {ic:'🤖', t:'Ενέργειες bot', on:"pdxDo('botlog')"},
       {ic:'🩺', t:'Κατάσταση συστημάτων', on:"pdxHealth()"},
       (adm || bot) && {ic:'🔐', t:'Κωδικοί', sub: adm ? 'νέος κωδικός (ΝΠΣ · e-prescription · Medilabi · Kerio…) · έλεγχος' : 'έλεγχος', on: adm ? "pdxCredHub()" : "pdxCredCheck()"},
-      bot && {ic:'⏰', t:'Παραγγελία «Αύριο πρωί»', v:esc((window.__ordAm && window.__ordAm.time) || '06:30'), on:"pdxOrderAmPage()"},
       adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:"pdxAutoApprove()"},
       adm && {ic:'🤖', t:'Λειτουργίες AI', v:(window.pdxAiOn && window.pdxAiOn() ? 'Ανοιχτές' : 'Κλειστές'), on:"pdxAiPage()"},
       adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
@@ -15345,13 +15344,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxOrderAmTxt = function(ts){ const d = new Date(ts), t = new Date(), tm = new Date(t); tm.setDate(t.getDate()+1);
     const day = d.toDateString()===t.toDateString() ? 'σήμερα' : d.toDateString()===tm.toDateString() ? 'αύριο' : d.toLocaleDateString('el-GR',{weekday:'short', day:'numeric', month:'numeric'});
     return day+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
-  window.pdxOrderAmPage = async function(){ const v = await pdxOrderAmLoad(true);
-    const pg = iosPage('Παραγγελία «Αύριο πρωί»', 'Ρυθμίσεις', ()=>'<div class="ios-h">Ώρα που τρέχει το bot</div><div class="ios-g noic" style="padding:12px 14px;display:flex;gap:10px;align-items:center"><input data-amt type="time" value="'+esc(v.time)+'" style="font-size:17px;padding:8px 10px;border:1px solid #CBD5E1;border-radius:10px;background:var(--card,#fff);color:inherit"><button class="pb pb-pri" data-amsave>Αποθήκευση</button></div>'
-      +'<div style="margin:6px 20px;font-size:13.5px;color:#64748B">Όταν διαλέγεις «Αύριο πρωί» στην παραγγελία, το bot κάνει την παραγγελία στο Medilabi και τυπώνει το barcode σε αυτή την ώρα. Ισχύει για όλη την κλινική.</div>');
-    pg.addEventListener('click', async ev=>{ if(!ev.target.closest('[data-amsave]')) return; const t = (pg.querySelector('[data-amt]')||{}).value||'';
-      if(!/^\d{2}:\d{2}$/.test(t)){ toast('Διάλεξε ώρα'); return; }
-      const r = await sb6.from('oncall_config').upsert({key:'order_am', value:{time:t}, updated_at:new Date().toISOString()}, {onConflict:'key'});
-      if(r.error){ toast('Δεν αποθηκεύτηκε: '+r.error.message); return; } window.__ordAm = {time:t}; toast('⏰ «Αύριο πρωί» = '+t); }); };
+  // 15/11 01:25 (χρήστης: «αλλάζω την ώρα, πατάω αποθήκευση και δεν αποθηκεύεται» — το κλικ ήταν δεμένο σε pg αντί για pg.el· «μην ξοδεύεις ολόκληρη ενότητα»)
+  // → η ώρα αλλάζει ΜΕΣΑ στην παραγγελία (δίπλα στο «⏰»), αποθηκεύεται για όλη την κλινική
+  window.pdxOrderAmSave = async function(t){ if(!/^\d{2}:\d{2}$/.test(t||'')) return {error:'χωρίς ώρα'};
+    const r = await sb6.from('oncall_config').upsert({key:'order_am', value:{time:t}, updated_at:new Date().toISOString()}, {onConflict:'key'});
+    if(r.error) return {error:r.error.message}; window.__ordAm = {time:t}; return {ok:true}; };
   window.pdxPcShort = nm=>({'Γωνιακός':'Γων.','Μεσαίος':'Μεσ.','Παράθυρο':'Παράθ.','Εξωτερικά':'Εξωτ.','Πόρτα':'Πόρτα'})[String(nm||'').trim()] || (String(nm||'').length > 6 ? String(nm).slice(0,5)+'.' : String(nm||''));
   window.pdxOrderSheet = async function(k, pre){
     const d = recOf(k); if(!d) return;
@@ -15440,7 +15437,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // ➕ 15/11 01:12 (χρήστης: «το στην τελευταία παραγγελία να πάει δίπλα στο τώρα / αύριο πρωί — να κερδίσουμε χώρο»)
         + '<div class="when-row" style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+';white-space:nowrap;flex:none'+(st.when===w?CON:'')+'">'+w+'</button>').join('')
           +(MULTI ? '' : '<button data-addto title="Στην τελευταία παραγγελία (ξεχάστηκε) — ίδιο σωληνάριο/barcode" style="'+C+';white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis'+(st.addTo?CON:'')+'">➕ Στην τελευταία</button>')+'</div>'
-        +(st.when==='Αύριο πρωί'?'<div style="font-size:13px;color:#64748B;margin-top:4px">⏰ Το bot θα την κάνει και θα τυπώσει '+E(pdxOrderAmTxt(pdxOrderAmAt()))+' · αλλάζει από Ρυθμίσεις → Bot</div>':'')
+        +(st.when==='Αύριο πρωί'?'<div style="font-size:13px;color:#64748B;margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">⏰ Το bot θα την κάνει και θα τυπώσει '+E(pdxOrderAmTxt(pdxOrderAmAt()).replace(/\s*\d{2}:\d{2}$/,''))+' στις <input data-amt type="time" value="'+E((window.__ordAm&&window.__ordAm.time)||'06:30')+'" style="font-size:15px;padding:3px 6px;border:1.5px solid #CBD5E1;border-radius:8px;background:transparent;color:inherit"></div>':'')
         +(st.addTo && !MULTI?'<div style="font-size:12.5px;color:#475569;margin-top:4px">Μπαίνουν στο ίδιο σωληνάριο/barcode — μόνο μεμονωμένες εξετάσεις, όχι πακέτα.</div>':'')
         + (PR.length ? '<div class="pat-row" style="display:flex;gap:4px;flex-wrap:nowrap;align-items:center;margin-top:8px"><span style="font-size:13px;color:#475569;flex:none">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" title="'+E(nm)+' · '+(st.busy[id]?'Απασχολημένος: '+E(st.busy[id])+' — η παραγγελία θα περιμένει':'Ελεύθερος τώρα')+'" style="'+CP+(st.pat===id?CON:'')+'">'+(st.busy[id]?'⏳':'<span style="color:#30A46C;font-size:9px;vertical-align:1px">●</span>')+' '+E(window.pdxPcShort(nm))+'</button>').join('')+'<button data-pat="" title="Τυχαία — όποιος είναι ελεύθερος" style="'+CP+';flex:0 0 34px'+(!st.pat?CON:'')+'">⚡</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="'+E(window.__ordOff[id])+' — δεν απαντά τώρα" style="'+CP+';opacity:.45;border-style:dashed">'+E(window.pdxPcShort(window.__ordOff[id]))+'</button>').join('')+'</div>' : '')
         // ➕ 11/11 (χρήστης): «για να προσθέτουμε εξετάσεις που ξεχάσαμε σε ήδη παραγγελθείσες» → πράσινο «+» της τελευταίας παραγγελίας στο Medilabi
@@ -15458,6 +15455,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     };
     const toggle = t=>{ st.dupOk = false; st.msg = ''; const i = st.sel.indexOf(t); if(i>=0) st.sel.splice(i,1); else st.sel.push(t); };
     draw(); document.body.appendChild(ov);
+    ov.addEventListener('change', async e=>{ const ti = e.target.closest && e.target.closest('[data-amt]'); if(!ti) return;   // ⏰ 15/11: ώρα «Αύριο πρωί» επιτόπου
+      const r = await pdxOrderAmSave(ti.value); toast(r.ok ? '⏰ «Αύριο πρωί» = '+ti.value+' (για όλη την κλινική)' : '⚠ Δεν αποθηκεύτηκε: '+(r.error||'')); if(r.ok) draw(); });
     ov.addEventListener('input', e=>{
       if(e.target.matches('[data-note]')){ st.note = e.target.value; return; }
       if(e.target.matches('[data-clin]')){ st.clin = e.target.value; return; }
