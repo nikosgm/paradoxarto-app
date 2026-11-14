@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v386';
+const APP_VER = '2026-11-14-v387';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -9270,7 +9270,7 @@ document.head.appendChild(st);
     const all = entries(true), day = ntDay(), seen = ntSeen(all), HP = window.HIST_PEND || {}, HD = ntHid();
     const hist = Object.keys(HP).map(k=>({k, e:all.find(x=>x.k===k)})).filter(x=>x.e && !HD['h:'+x.k]);
     // ✏️ 11/11: ιστορικά που μπήκαν αυτόματα στον ασθενή και δεν έχουν διορθωθεί ακόμα → «προς διόρθωση»
-    all.forEach(e=>{ const c = e.d && e.d.caseHist; if(c && c.auto && c.reviewed===false && !hist.some(x=>x.k===e.k) && !HD['h:'+e.k+':'+(c.at||0)]) hist.push({k:e.k, e, fix:true, at:c.at||0}); });
+    all.forEach(e=>{ const c = e.d && e.d.caseHist; if(c && (c.auto || c.draft) && c.reviewed===false && !hist.some(x=>x.k===e.k) && !HD['h:'+e.k+':'+(c.at||0)]) hist.push({k:e.k, e, fix:true, at:c.at||0}); });
     const att = all.filter(e=>{ const a = attVis(e); return a.length && seen[e.k] && seen[e.k].d===day; });
     const td = all.filter(e=>todos(e.d).length && !HD[ntTdId(e)]);
     const rep0 = window.__pdxRepN || 0, un0 = window.HIST_UNASSIGNED || 0;
@@ -20248,6 +20248,8 @@ window.openCaseHist = function(key, isExtra){
   var rec = store(isExtra)[key];
   if(!rec){ return; }
   ctx = { key:key, isExtra:!!isExtra, h: rec.caseHist || null, edit:false, imgs:null, err:'' };
+  // 14/11: πρόχειρο ιστορικό (reviewed:false) → ανοίγει ΚΑΤΕΥΘΕΙΑΝ για διόρθωση, με τα αβέβαια σημειωμένα· κλείσιμο = δεν χάνεται
+  if(ctx.h && ctx.h.reviewed === false && ctx.h.d){ ctx.h = JSON.parse(JSON.stringify(ctx.h)); ctx.review = true; ctx.edit = true; ctx.hDraft = true; ctx.prevH = rec.caseHistPrev || null; ctx.draftSnap = null; }
   applyFs();
   ov.classList.add('open');
   render();
@@ -20282,6 +20284,11 @@ window.openCaseHistFromEntry = function(){
 function closeOv(){
   if(busy) return;
   if(ctx && ctx.isNew && ctx.placing){ if(!confirm('Ο ασθενής δεν έχει προστεθεί ακόμα. Να κλείσει χωρίς αποθήκευση;')) return; ctx.placing = false; ctx.review = false; ctx.edit = false; ctx.h = null; }
+  if(ctx && ctx.review && ctx.hDraft && ctx.h){   // 14/11: πρόχειρο → ΔΕΝ χάνεται· με διορθώσεις γίνεται οριστικό
+    collectEdits();
+    if(JSON.stringify(ctx.h.d) !== ctx.draftSnap) finalizeHist(); else persist();
+    ctx.review = false; ctx.edit = false;
+  }
   if(ctx && ctx.review){ if(!confirm('Η μεταγραφή δεν έχει επιβεβαιωθεί και θα χαθεί. Να κλείσει;')) return; var r0 = getRec(); ctx.review=false; ctx.edit=false; ctx.h = (r0&&r0.caseHist)||null; }
   if(ctx && ctx.edit && ctx.h){ collectEdits(); persist(); }
   ov.classList.remove('open');
@@ -20524,6 +20531,7 @@ function importParsed(parsed){
   ctx.orig = raw0;
   ctx.imgs = null; ctx.pendingImgs = null;
   ctx.review = true; ctx.edit = true;
+  saveDraft();
   renderCard();
 }
 function pullClipboard(){
@@ -20565,6 +20573,7 @@ function renderPaste(){
     ctx.orig = JSON.parse(JSON.stringify(parsed));
     ctx.imgs = null; ctx.pendingImgs = null;
     ctx.review = true; ctx.edit = true;
+    saveDraft();
     renderCard();
   };
 }
@@ -20607,13 +20616,15 @@ function renderCard(){
 
   if(ctx.review){
     barHtml([
-      {title:'Έλεγχος μεταγραφής'},
+      {title: ctx.hDraft ? '✏️ Πρόχειρο — προς διόρθωση' : 'Έλεγχος μεταγραφής'},
       {label:'A−', fn:function(){ lsSet(CH_FS_LS, Math.max(.3, fsScale()-.15)); applyFs(); }},
       {label:'A+', fn:function(){ lsSet(CH_FS_LS, Math.min(2.8, fsScale()+.15)); applyFs(); }},
       {label:'🖼️ Πρωτότυπο', fn:showOriginal},
-      {label:'Ακύρωση', fn:cancelReview},
+      // 14/11: στο πρόχειρο το «‹» ΚΛΕΙΝΕΙ κρατώντας το (αποθηκευμένο)· η διαγραφή είναι ξεχωριστό κουμπί
+      ctx.hDraft ? {label:'Κλείσιμο', fn:closeOv} : {label:'Ακύρωση', fn:cancelReview},
+      ctx.hDraft ? {label:'🗑 Απόρριψη', fn:cancelReview} : null,
       {label: ctx.isNew ? 'Συνέχεια ›' : '✓ Επιβεβαίωση', fn:confirmReview, on:true}
-    ]);
+    ].filter(Boolean));
   } else barHtml([
     {title:'📄 Ιστορικό'},
     {label: e?'✓ Αποθήκευση':'✎ Επεξεργασία', fn: toggleEdit, on:e},
@@ -20721,6 +20732,8 @@ function renderCard(){
   $('chBody').querySelectorAll('[data-add]').forEach(function(btn){ btn.onclick = function(){ addItem(btn.getAttribute('data-add')); }; });
   $('chBody').querySelectorAll('[data-sa]').forEach(function(btn){ btn.onclick = function(){ acceptSugg(+btn.getAttribute('data-sa')); }; });
   $('chBody').querySelectorAll('[data-sd]').forEach(function(btn){ btn.onclick = function(){ dropSugg(+btn.getAttribute('data-sd')); }; });
+  // 14/11: «στιγμιότυπο» του πρόχειρου ΟΠΩΣ εμφανίζεται (με τα κενά πεδία της φόρμας) → στο κλείσιμο, «άλλαξε;» = πραγματική διόρθωση από τον γιατρό
+  if(ctx.hDraft && ctx.review && e && ctx.draftSnap == null){ try{ collectEdits(); }catch(_){} ctx.draftSnap = JSON.stringify(ctx.h.d); }
 }
 
 /* ---------- Προτάσεις "Για έλεγχο" ---------- */
@@ -20830,7 +20843,7 @@ function confirmReview(){
   var rec = getRec();
   if(!rec){ alert('Ο ασθενής δεν βρέθηκε πια στη λίστα.'); return; }
   ctx.h.d.uncertain = [];                // ελέγχθηκε από τον γιατρό
-  ctx.h.reviewed = true;
+  ctx.h.reviewed = true; ctx.h.draft = false; ctx.hDraft = false;
   ctx.h.at = Date.now();
   persist();
   histInboxDone(ctx.inboxId); ctx.inboxId = null;
@@ -20838,7 +20851,36 @@ function confirmReview(){
   ctx.pendingImgs = null; ctx.review = false; ctx.edit = false;
   renderCard();
 }
+/* 14/11 (χρήστης: «το ιστορικό να αποθηκεύεται σαν πρόχειρο και όταν το επεξεργάζομαι να γίνεται οριστικό, αλλά να μην χάνεται αν δεν το επιβεβαιώσω· ένα κλικ»):
+   μετά την ανάγνωση → ΑΜΕΣΩΣ στον ασθενή ως πρόχειρο (reviewed:false, draft:true, τα αβέβαια σημειωμένα, εικόνες αποθηκευμένες, το παλιό στο caseHistPrev).
+   Κλείσιμο χωρίς αλλαγές → μένει πρόχειρο «προς διόρθωση». Κλείσιμο με διορθώσεις ή «Επιβεβαίωση» → οριστικό. «Απόρριψη» → διαγραφή προχείρου, επιστροφή στο προηγούμενο. */
+function saveDraft(){
+  if(!ctx || ctx.isNew || !ctx.h) return;
+  var rec = getRec(); if(!rec) return;
+  var prev = rec.caseHist;
+  if(prev && prev.d && !prev.draft && prev.reviewed !== false && JSON.stringify(prev.d).length > 20) rec.caseHistPrev = prev;
+  ctx.prevH = prev || null;
+  ctx.h.reviewed = false; ctx.h.draft = true; ctx.h.at = Date.now();
+  persist();
+  if(ctx.pendingImgs && ctx.h.imgId && typeof fbDb!=='undefined' && fbDb){ try{ fbDb.ref(CH_IMG_PATH+ctx.h.imgId).set(ctx.pendingImgs); ctx.pendingImgs = null; }catch(e){ console.error(e); } }
+  if(ctx.inboxId){ try{ histInboxDone(ctx.inboxId); }catch(e){} ctx.inboxId = null; }
+  ctx.hDraft = true; ctx.draftSnap = null;
+}
+window.__pdxSaveDraft = saveDraft;
+function finalizeHist(){   // οριστικό χωρίς ερωτήσεις (κλείσιμο μετά από διορθώσεις)
+  if(!ctx || !ctx.h) return;
+  try{ logFixes(); }catch(e){}
+  ctx.h.d.uncertain = []; ctx.h.reviewed = true; ctx.h.draft = false; ctx.h.at = Date.now();
+  persist(); ctx.hDraft = false;
+}
 function cancelReview(){
+  if(ctx && ctx.hDraft){
+    if(!confirm('Να διαγραφεί το πρόχειρο ιστορικό' + (ctx.prevH && !ctx.prevH.draft ? ' και να επιστρέψει το προηγούμενο' : '') + ';')) return;
+    var rd = getRec();
+    if(rd){ if(ctx.prevH && !ctx.prevH.draft && ctx.prevH.reviewed !== false) rd.caseHist = ctx.prevH; else delete rd.caseHist; delete rd.caseHistPrev; saveEntryToStorage(ctx.key, ctx.isExtra, rd, true); }
+    ctx.hDraft = false; ctx.review = false; ctx.edit = false; ctx.pendingImgs = null; ctx.imgs = null;
+    ctx.h = (rd && rd.caseHist) || null; render(); return;
+  }
   if(!confirm('Να απορριφθεί η μεταγραφή χωρίς αποθήκευση;')) return;
   ctx.inboxId = null;
   ctx.review = false; ctx.edit = false; ctx.pendingImgs = null;
@@ -21467,7 +21509,8 @@ function onFiles(files){
       ctx.h = { v:1, at:Date.now(), imgId:id, d:parsed };
       ctx.orig = raw; ctx.lexNote = applied;
       ctx.imgs = imgs; ctx.pendingImgs = imgs;
-      ctx.review = true; ctx.edit = true;   // δεν αποθηκεύεται τίποτα πριν την επιβεβαίωση
+      ctx.review = true; ctx.edit = true;
+      saveDraft();   // 14/11: αποθηκεύεται ΑΜΕΣΩΣ ως πρόχειρο στον ασθενή («προς διόρθωση») — δεν χάνεται αν δεν επιβεβαιωθεί
     });
   }).then(function(){
     busy = false; render();

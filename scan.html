@@ -336,6 +336,21 @@ async function progFlow(pages, raw){
     }
   }
 }
+// 🤖 14/11: απευθείας ανάγνωση από το API (μόνο όταν το AI είναι ανοιχτό). null = πήγαινε στον παλιό δρόμο.
+async function aiScan(id, khex){
+  if(typeof window.__aiScan === 'function') return window.__aiScan(id, khex);   // δοκιμές
+  const F = SB + '/functions/v1/pdx-ai', H = { 'Content-Type':'application/json', apikey: KEY };
+  try{
+    const h = await (await fetch(F, { method:'POST', headers:H, body: JSON.stringify({ haskey: 1 }) })).json();
+    if(!h || !h.on) return null;
+    msg('<div class="spin"></div><div>🤖 Διαβάζει το ιστορικό…</div><div style="opacity:.7;font-size:14px">~20–40″ · μπαίνει μόνο του στον ασθενή</div>');
+    const ac = new AbortController(), to = setTimeout(()=>ac.abort(), 150000);
+    const r = await fetch(F, { method:'POST', headers:H, signal: ac.signal, body: JSON.stringify({ scan: { id, k: khex, token: tok.get() } }) }); clearTimeout(to);
+    const j = await r.json().catch(()=>null);
+    if(j && (j.ok || (j.ok === false && j.msg))) return j;
+    return null;
+  }catch(e){ return null; }
+}
 async function send(srcs, w0, h0){
   // 📋 10/11 (χρήστης: «μας πέταξε στη συζήτηση Claude χωρίς να γράψει κάτι»): η εφαρμογή Claude στο iPhone ΔΕΝ γεμίζει πάντα το μήνυμα από τον σύνδεσμο.
   // Το Safari επιτρέπει αντιγραφή μόνο ΤΗ ΣΤΙΓΜΗ του πατήματος → «κλείνουμε θέση» στο πρόχειρο τώρα και τη γεμίζουμε όταν ανέβει η σάρωση.
@@ -367,6 +382,30 @@ async function send(srcs, w0, h0){
     // → ΣΥΖΗΤΗΣΗ Claude: νέα συζήτηση με έτοιμο μήνυμα «διάβασε τη σάρωση #s…k…» → εργαλεία scan_read/scan_save της σύνδεσης «Παραδόχαρτο».
     // Η σελίδα (artifact) μένει για τον διαχειριστή και το πρακτικό. Η συσκευή θυμάται τι πάτησε τελευταία (pdx_scan_via) και την επόμενη φορά ανοίγει μόνο του.
     const ask = 'Διάβασε τη σάρωση του Παραδόχαρτου ' + tag + ' και πέρασέ τη στο Παραδόχαρτο (σύνδεσμος Παραδόχαρτο/Paradoxarto, εργαλεία scan_read και scan_save).';
+    // ⚡ 14/11 (χρήστης: «πατάω Σάρωση, κλικ το ιστορικό και αυτόματα να εγκαθίσταται στον ασθενή αναγνωρίζοντας το όνομα»):
+    // αν οι λειτουργίες AI είναι ανοιχτές → ανάγνωση ΑΠΕΥΘΕΙΑΣ (pdx-ai «scan», ίδιες οδηγίες) → «Νέα ιστορικά» → η εφαρμογή το βάζει στον ασθενή «προς διόρθωση».
+    // Κλειστό AI / σφάλμα → ο παλιός δρόμος (συζήτηση Claude), χωρίς να χαθεί τίποτα (η σάρωση ξαναγίνεται διαθέσιμη).
+    if(!op && !window.__scanNoAi){
+      const ar = await aiScan(id, [...raw].map(b=>b.toString(16).padStart(2, '0')).join(''));
+      if(ar && ar.ok){
+        if(window.__clipRes) window.__clipRes.no();
+        const what = ar.doc_type === 'report' ? '📋 Πόρισμα' : '🩺 Ιστορικό';
+        msg('<div style="font-size:54px">✅</div><b style="font-size:20px">' + what + (ar.name ? ' ' + E(ar.name) : '') + '</b>'
+          + '<div style="max-width:320px;text-align:center">' + (ar.doc_type === 'report' ? 'Στα «Πορίσματα» του Παραδόχαρτου.' : 'Μπαίνει μόνο του στον ασθενή ως <b>πρόχειρο «προς διόρθωση»</b>' + (ar.sure ? '' : ' (το όνομα δεν διαβάστηκε σίγουρα — δες «Νέα ιστορικά»)') + '.') + '</div>'
+          + '<button class="btn" id="nx">Νέα σάρωση</button>');
+        $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+        busy = false; return;
+      }
+      // πρακτικό / πρόγραμμα: ο παλιός δρόμος τα χειρίζεται (σελίδα πρακτικού, email προγράμματος) → συνέχεια παρακάτω
+      if(ar && ar.ok === false && ar.msg && ar.doc_type !== 'opnote' && ar.doc_type !== 'program'){
+        if(window.__clipRes) window.__clipRes.ok(ask);
+        msg('<div style="font-size:44px">ℹ</div><div style="max-width:320px;text-align:center">' + E(ar.msg) + '</div>'
+          + '<a class="go2" href="' + ('claude://claude.ai/new?q=' + encodeURIComponent(ask)) + '">💬 Ανάγνωση στη συζήτηση Claude</a><button class="btn" id="nx">Νέα σάρωση</button>');
+        $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+        busy = false; return;
+      }
+      // off ή σφάλμα → συνέχεια με τον παλιό δρόμο
+    }
     // 9/11: μέσα στην εφαρμογή «Σάρωση» (PWA) το https://claude.ai άνοιγε ΜΕΣΑ στη Σάρωση → σχήμα claude:// (ανοίγει την εφαρμογή Claude, όπως η σελίδα)
     // 9/11 (χρήστης: «ίδια συζήτηση, όχι 100 συνομιλίες για 100 ιστορικά»): αν έχει οριστεί σύνδεσμος συζήτησης (pdx_scan_chat) → εκεί
     // 10/11 (χρήστης: «χθες με νέα συζήτηση έγραφε, σήμερα όχι»): η εφαρμογή Claude γεμίζει το μήνυμα ΜΟΝΟ σε νέα συζήτηση (/new?q=)· σε υπάρχουσα (/chat/…) το αγνοεί → πάντα νέα
