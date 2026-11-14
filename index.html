@@ -409,6 +409,8 @@ body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:max(calc(env(sa
 .pb-dng{background:rgba(255,59,48,.12);color:#D70015}
 .pb-out{background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
 .pb-lnk{background:none;padding:6px 2px;min-height:32px}
+/* 14/11 21:30 (χρήστης: «γιατί στη μέση;»): το .pb κεντράρει με flex → όπου ζητείται text-align:left, στοίχιση αριστερά ΠΡΑΓΜΑΤΙΚΑ */
+.pb[style*="text-align:left"]{justify-content:flex-start}
 .pb-dngc{color:#D70015}.pb-okc{color:#1F8A3E}.pb-mut{color:#8E8E93}
 .pb-lg{min-height:46px;font-size:16px;font-weight:700}
 .pb-sm{min-height:32px;padding:6px 10px;font-size:13.5px;border-radius:9px}
@@ -2411,7 +2413,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v410';
+const APP_VER = '2026-11-14-v411';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14299,7 +14301,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const L = {};
     keys.forEach(k=>{ const nm = String(k).split(/\s*@@\s*/)[0], I = info[k], grp = byBase[testBase(k)] || [k], low = nzT(nm);
       let tag = '';
-      if(I.mat && grp.length > 1 && !(MAT_IN_NAME[I.mat] && MAT_IN_NAME[I.mat].test(low))) tag = I.mat;
+      // 14/11 21:30 (χρήστης): «Κρεατινίνη», ΟΧΙ «Κρεατινίνη · αίμα» — το αίμα ΠΟΤΕ ετικέτα· μόνο τα ούρα/άλλο δείγμα
+      if(I.mat && I.mat !== 'αίμα' && grp.length > 1 && !(MAT_IN_NAME[I.mat] && MAT_IN_NAME[I.mat].test(low))) tag = I.mat;
       else if(I.mat && I.mat !== 'αίμα' && !(MAT_IN_NAME[I.mat] && MAT_IN_NAME[I.mat].test(low))) tag = I.mat;
       // ίδιο όνομα ΚΑΙ ίδιο δείγμα σε άλλο τμήμα → και το τμήμα
       const sameMat = grp.filter(x=>x!==k && info[x].mat === I.mat);
@@ -14307,7 +14310,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       L[k] = nm + (tag ? ' · ' + tag : '') + (dep ? ' · ' + dep : '');
     });
     // ⭐ σύντομα αγαπημένα: «Κρεατινίνη · αίμα»
-    Object.keys(FAV_ALIAS).forEach(a=>{ const tgt = FAV_ALIAS[a]; if(L[tgt] && !/· αίμα/.test(L[tgt])) L[tgt] = String(tgt) + ' · αίμα'; });
+    Object.keys(FAV_ALIAS).forEach(a=>{ const tgt = FAV_ALIAS[a]; if(L[tgt]) L[tgt] = String(tgt).split(/\s*@@\s*/)[0]; });   // σκέτο όνομα (χωρίς «· αίμα»)
     window.__testLbl = L; window.__testInfo = info;
     return L; }
   window.__pdxTestLblBuild = testLblBuild;
@@ -14346,7 +14349,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // κάθε εξέταση δείχνεται με το ΔΕΙΓΜΑ της (αίμα / ούρα / βιολ. υγρό / ΕΝΥ / κόπρανα) όταν το όνομα δεν το λέει ήδη και υπάρχει άλλη εξέταση με ίδιο όνομα·
   // αν μοιάζουν και στο δείγμα → και το τμήμα του Medilabi. Τα σύντομα αγαπημένα («Κρεατινίνη») = η εξέταση αίματος, με ετικέτα, και ΔΕΝ διπλασιάζονται
   // με την αντίστοιχη του καταλόγου («Κρεατινίνη (Crea)»). Έλεγχος: tests/order-names.js (πραγματικός κατάλογος → καμία διπλή ετικέτα).
-  const tLbl = t=>{ const k = String(t||''); const L = window.__testLbl && window.__testLbl[k]; if(L) return L; const f = FAV_ALIAS[nzT(k)]; if(f) return k + ' · αίμα'; return k.replace(/\s*@@\s*/,' · '); };
+  const tLbl = t=>{ const k = String(t||''); const L = window.__testLbl && window.__testLbl[k]; if(L) return L; const f = FAV_ALIAS[nzT(k)]; if(f) return k; return k.replace(/\s*@@\s*/,' · '); };
   const ocatOf = t=>{ const u = String(t||'').split(/\s*@@\s*/)[0].normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
     if(/^Α\/Α|ΑΚΤΙΝΟΓΡ|ΑΚΤΙΝΟΣΚ|^XR\b/.test(u)) return 'xr'; if(/^CT\b|ΑΞΟΝΙΚ/.test(u)) return 'ct'; if(/ΥΠΕΡΗΧ|^U\/?S\b|TRIPLEX|DOPPLER/.test(u)) return 'us'; if(/MRI|ΜΑΓΝΗΤ/.test(u)) return 'mri';
     if(/ΚΑΛΛΙΕΡΓ|ΟΥΡΩΝ|\bΟΥΡΑ|ΑΝΤΙΒΙΟΓΡ|ΚΟΠΡΑΝ/.test(u)) return 'ur';
@@ -15135,7 +15138,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(st.tab==='fav' && !st.q && favEdit) h += '<div style="font-size:12.5px;color:#64748B;padding:8px 0 2px">Πάτα το ⭐ μιας εξέτασης για να μπει/βγει από τα αγαπημένα (για όλη την κλινική).</div>';
         if(!cat.length && ['xr','ct','us','mri','all','lab','ur'].indexOf(st.tab)>=0 && !st.q) h += '<div style="color:#64748B;font-size:13.5px;padding:8px 0">Ο κατάλογος του Medilabi δεν έχει έρθει ακόμα από το bot.</div>';
         h += L.map(t=>{ const on = st.sel.indexOf(t)>=0, isFav = fav.indexOf(t)>=0;
-          return '<div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF1F4"><button class="pb pb-lnk" data-t="'+E(t)+'" style="flex:1;min-width:0;text-align:left"><span style="display:inline-block;width:22px;height:22px;border-radius:7px;vertical-align:-5px;margin-right:9px;border:2px solid var(--mp,#1D4E80);background:'+(on?'var(--mp,#1D4E80)':'#fff')+';color:#fff;text-align:center;line-height:19px;font-size:15px">'+(on?'✓':'')+'</span>'+E(tLbl(t))+'</button>'+(favEdit ? '<button data-fav="'+E(t)+'" aria-label="'+(isFav?'Αφαίρεση από':'Προσθήκη στα')+' αγαπημένα" style="flex:none;border:0;background:none;min-width:44px;min-height:44px;font-size:17px;opacity:'+(isFav?1:.25)+'">⭐</button>' : '<span style="font-size:15px;opacity:'+(isFav?1:.18)+'">⭐</span>')+'</div>'; }).join('') || '<div style="color:#64748B;padding:10px 0">Καμία εξέταση'+(st.q?' για «'+E(st.q)+'»':'')+'.</div>';
+          return '<div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #EEF1F4"><button class="pb pb-lnk" data-t="'+E(t)+'" style="flex:1;min-width:0;text-align:left;justify-content:flex-start"><span style="display:inline-block;width:22px;height:22px;border-radius:7px;vertical-align:-5px;margin-right:9px;border:2px solid var(--mp,#1D4E80);background:'+(on?'var(--mp,#1D4E80)':'#fff')+';color:#fff;text-align:center;line-height:19px;font-size:15px">'+(on?'✓':'')+'</span>'+E(tLbl(t))+'</button>'+(favEdit ? '<button data-fav="'+E(t)+'" aria-label="'+(isFav?'Αφαίρεση από':'Προσθήκη στα')+' αγαπημένα" style="flex:none;border:0;background:none;min-width:44px;min-height:44px;font-size:17px;opacity:'+(isFav?1:.25)+'">⭐</button>' : '<span style="font-size:15px;opacity:'+(isFav?1:.18)+'">⭐</span>')+'</div>'; }).join('') || '<div style="color:#64748B;padding:10px 0">Καμία εξέταση'+(st.q?' για «'+E(st.q)+'»':'')+'.</div>';
       }
       h += '</div><div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid #EEF1F4;background:#FAFBFC;border-radius:0 0 0 0">'
         + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
