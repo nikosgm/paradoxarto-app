@@ -2412,7 +2412,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v418';
+const APP_VER = '2026-11-14-v419';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7643,7 +7643,11 @@ document.head.appendChild(st);
       // ⭐ 14/11 (χρήστης: «πέρα από τα συχνά στις ρυθμίσεις, θέλω και τα συχνά στα εργαλεία»): τα «Τα πιο συχνά» διαλέγονται από 🎨 Εμφάνιση (επιλογή + σειρά)
       window.__pdxToolF = F; h += '<!--TFAV-->'; }
     const F0 = window.__pdxToolF || [], TI = [];
-    const grp0 = grp, grpR = (title, rows)=>{ (rows||[]).filter(Boolean).forEach(r=>TI.push({ic:r[0], t:r[1], on:r[3], g:title})); return grp0(title, rows); };
+    // 🔲 14/11 22:12 (χρήστης: «τα εργαλεία όλα σε κουμπάκια, ανά ενότητες»): ίδιο πλέγμα με «Τα πιο συχνά» (κλάση mtp-freq → ίδιο σκοτεινό/Mac ύφος)
+    const tGrid = (()=>{ try{ return !(window.pdxApGet && pdxApGet().tgrid===false);   /* 14/11 22:15: «ναι, κάν' τα κουμπάκια» → προεπιλογή */ }catch(e){ return false; } })();
+    const grpG = (t, items)=>{ const L = (items||[]).filter(Boolean); if(!L.length) return ''; return '<div class="mtp-gw"><div class="mtp-h" style="margin:16px 16px 6px">'+t+'</div><div class="mtp-freq" style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px">'
+      + L.map(([ic,txt,sub,on])=>'<div onclick="'+on+'" title="'+esc(String(sub||'').replace(/<[^>]*>/g,''))+'" style="background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)"><span style="font-size:26px">'+ic+'</span><b style="font-size:13px;line-height:1.2">'+txt+'</b></div>').join('')+'</div></div>'; };
+    const grp0 = tGrid ? grpG : grp, grpR = (title, rows)=>{ (rows||[]).filter(Boolean).forEach(r=>TI.push({ic:r[0], t:r[1], on:r[3], g:title})); return grp0(title, rows); };
     const clin = ['resident','attending','admin'].indexOf(window.authRole)>=0;
     h += '<div class="mtp-cols">';
     if(clin) h += grpR('Κλινική', [
