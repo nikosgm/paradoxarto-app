@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v391';
+const APP_VER = '2026-11-14-v392';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -4339,10 +4339,28 @@ function showDischarge(kOpt){
     const rxMeds = (rxAfter.querySelector('input')||{}).checked && window.pdxRxParse ? window.pdxRxParse(ta.value).meds : [];
     const pl = {text: txt, therapist: rec.therapist||'', therapistName: thName, extraDx: window.pdxComorbForDischarge ? pdxComorbForDischarge(dKey) : []};
     if(rxMeds.length) pl.rxAfter = {icd:['N39'], meds: rxMeds, therapist: thName || rec.therapist || '', mode:'review'};
+    { const rf = (refAfter.querySelector('input')||{}).checked && window.pdxRefParse ? pdxRefParse(ta.value) : [];
+      const jf = [rec.dx, rec.surgery].map(x=>String(x||'').trim()).filter(Boolean).join(' · ') || 'Ουρολογικός έλεγχος';
+      if(rf.length) pl.refAfter = rf.map(g=>({cat:g.cat, exams:g.exams, icd:['N39'], just:jf, mode:'review', urgent:false, general:true, therapist: thName || rec.therapist || ''})); }
+    try{ window.pdxDcWord && pdxDcWord(rec, txt); }catch(e){}   // 📄 14/11: και στο Word «Εξιτήρια <ΣΥΝΤΑΚΤΗΣ>» (βάση κλινικής)
     window.pdxBotSend(dKey, 'discharge', pl).then(ok=>{
-      bot.textContent = ok ? ('✓ Στάλθηκε — θα έρθει σύνοψη για έγκριση' + (rxMeds.length ? ' · μετά την έγκριση: 💊 συνταγή' : '')) : '🤖 Στείλε στον ιατρικό φάκελο (συμπλήρωση από το bot)'; bot.disabled = !!ok;
+      bot.textContent = ok ? ('✓ Στάλθηκε — θα έρθει σύνοψη για έγκριση' + (rxMeds.length ? ' · μετά την έγκριση: 💊 συνταγή' : '') + (pl.refAfter ? ' · 📋 παραπεμπτικ'+(pl.refAfter.length===1?'ό':'ά') : '')) : '🤖 Στείλε στον ιατρικό φάκελο (συμπλήρωση από το bot)'; bot.disabled = !!ok;
     });
   };
+  // 📄 14/11: «Word εξιτηρίων»: ποιο αρχείο / ποιος αριθμός θα πάρει (✎ αλλαγή ονόματος αρχείου & αριθμού)
+  const dcw = document.createElement('div'); dcw.style.cssText='font-size:13px;color:#64748B;margin-top:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap';
+  const dcwDraw = async ()=>{ const by = pdxDcBy(); dcw.innerHTML = '📄 Word: <b>Εξιτήρια_'+String(by).replace(/[<>&]/g,'')+'.docx</b> <span data-dcwn>…</span> <button type="button" data-dcwe style="border:0;background:none;color:#0A84FF;font-size:13px;padding:4px">✎</button>';
+    try{ const r = await pdxDbCall('GET', '/api/dcnotes?by='+encodeURIComponent(by)); const x = dcw.querySelector('[data-dcwn]'); if(x) x.textContent = r && r.next ? '· επόμενος #'+r.next : ''; }catch(e){ const x = dcw.querySelector('[data-dcwn]'); if(x) x.textContent = '· (η βάση της κλινικής δεν απαντά τώρα)'; }
+    dcw.querySelector('[data-dcwe]').onclick = async ()=>{ const nb = prompt('Όνομα του Word εξιτηρίων (π.χ. ΜΑΥΡΟΥΔΗΣ):', pdxDcBy()); if(nb==null) return; try{ localStorage.setItem('pdx_dcword_by', nb.trim().toUpperCase()); }catch(e){}
+      const st = prompt('Αριθμός του ΠΡΩΤΟΥ εξιτηρίου σε αυτό το Word (π.χ. αν το τελευταίο σου είναι το 20, γράψε 21 — αν το Word έχει ήδη εξιτήρια από εδώ, βάλε τον αριθμό του πρώτου):', ''); 
+      if(st && +st>0){ try{ await pdxDbCall('POST', '/api/dcnotes/cfg', {by: pdxDcBy(), start: +st}); }catch(e){ alert('⚠ '+(e.message||e)); } } dcwDraw(); }; };
+  setTimeout(dcwDraw, 50);
+  // κουτάκι «📋 παραπεμπτικό μετά το εξιτήριο» (εξετάσεις των οδηγιών)
+  const refAfter = document.createElement('label'); refAfter.style.cssText='display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;color:#334155';
+  const refAfterDraw = ()=>{ const G = window.pdxRefParse ? pdxRefParse(ta.value) : [], ex = [].concat(...G.map(g=>g.exams.map(e=>e.name))); const was = refAfter.querySelector('input'); const on = was ? was.checked : true;
+    refAfter.style.display = ex.length ? 'flex' : 'none';
+    refAfter.innerHTML = '<input type="checkbox" '+(on?'checked':'')+' style="width:19px;height:19px"> 📋 Μετά την έγκριση του εξιτηρίου, παραπεμπτικ'+(G.length===1?'ό':'ά')+': '+ex.map(x=>String(x).replace(/[<>&]/g,'')).join(', ')+' — σταματά πριν την «Καταχώριση»'; };
+  refAfterDraw(); ta.addEventListener('input', ()=>{ clearTimeout(refAfter.t); refAfter.t = setTimeout(refAfterDraw, 400); });
   // κουτάκι «💊 συνταγή μετά το εξιτήριο» (ενημερώνεται όταν αλλάζει το κείμενο)
   const rxAfter = document.createElement('label'); rxAfter.style.cssText='display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;color:#334155';
   const rxAfterDraw = ()=>{ const n = window.pdxRxParse ? window.pdxRxParse(ta.value).meds.length : 0; const was = rxAfter.querySelector('input'); const on = was ? was.checked : true;
@@ -4352,7 +4370,7 @@ function showDischarge(kOpt){
   const rxb = document.createElement('button'); rxb.className='btn btn-secondary'; rxb.style.cssText='width:100%;margin-top:6px;font-weight:700';
   rxb.textContent='💊 Συνταγή στο e-prescription από αυτές τις οδηγίες (bot)';
   rxb.onclick = ()=>{ if(!window.pdxRxSheet) return; const t = ta.value; ov.remove(); window.pdxRxSheet(dKey, t); };
-  const barWrap = document.createElement('div'); barWrap.appendChild(bar); if((window.pdxIsBotUser&&window.pdxIsBotUser())){ barWrap.appendChild(bot); barWrap.appendChild(rxAfter); barWrap.appendChild(rxb); }
+  const barWrap = document.createElement('div'); barWrap.appendChild(bar); if((window.pdxIsBotUser&&window.pdxIsBotUser())){ barWrap.appendChild(bot); barWrap.appendChild(rxAfter); barWrap.appendChild(refAfter); barWrap.appendChild(rxb); barWrap.appendChild(dcw); }
   // 🩺 Συννοσηρότητες του ασθενή → «Επιπλέον διαγνώσεις» του εξιτηρίου (το ef-bot τις διαβάζει από το data-comorb)
   const cmb = document.createElement('div'); cmb.style.cssText='font-size:13.5px;color:#334155;background:#EEF4FA;border-radius:10px;padding:8px 10px;cursor:pointer';
   const cmbDraw = ()=>{ const c = window.pdxComorbForDischarge ? pdxComorbForDischarge(dKey) : [];
@@ -8294,6 +8312,15 @@ document.head.appendChild(st);
   // pdxDbCall('GET', '/api/overview') → Promise(json)
   // 9/11: κλήση στη βάση ΣΥΓΚΕΚΡΙΜΕΝΟΥ υπολογιστή (κάθε υπολογιστής έχει τη δική του τοπική — π.χ. ρυθμίσεις CD)
   window.pdxDbCallOn = function(bot, method, path, body){ return new Promise((ok, no)=>{ pdxDbSend([{bot, method:String(method||'GET').toUpperCase(), path, body, ok, no}]); }); };
+  // 📄 14/11 (χρήστης: «όταν κάνω εξιτήριο να προστίθεται και στο Word "Εξιτήρια Μαυρουδής": αριθμός, όνομα, χειρουργείο, κείμενο»)
+  // → event «dcnote» στη βάση της κλινικής (ext_id = ασθενής+ημέρα: ξαναστάλσιμο = ενημέρωση, όχι διπλό) → η βάση ξαναγράφει το Word.
+  window.pdxDcBy = function(){ try{ const v = localStorage.getItem('pdx_dcword_by'); if(v) return v; }catch(e){}
+    const n = String(window.authName||'').replace(/@.*$/,'').trim(); return (n.split(/\s+/).filter(w=>w.length>2).pop() || n || 'ΚΛΙΝΙΚΗ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); };
+  window.pdxDcWord = function(rec, text){ if(!rec || !String(text||'').trim()) return Promise.resolve(null);
+    const d = new Date(), day = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const surg = String(rec.surgery||rec.surgeryCustom||'').trim(), nm = String(rec.name||'').trim();
+    const nk = nm.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ');
+    return pdxDbCall('POST', '/api/events', {rows:[{patient:{name:nm, amka:String(rec.amka||'').replace(/\D/g,'')}, date:day, kind:'dcnote', title:surg||'Εξιτήριο', body:{text:String(text), surg, by:pdxDcBy()}, src:'paradoxarto', ext_id:'dcnote|'+nk+'|'+day}]}).catch(()=>null); };
   window.pdxDbCall = function(method, path, body){
     return new Promise((ok, no)=>{ pdxDbQ.push({method:String(method||'GET').toUpperCase(), path, body, ok, no});
       clearTimeout(pdxDbT); pdxDbT = setTimeout(()=>{ while(pdxDbQ.length) pdxDbSend(pdxDbQ.splice(0, 20)); }, 250); });
@@ -11967,6 +11994,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     r.total = r.freq && r.days ? Math.ceil(parseFloat(r.dose)*r.freq*r.days) : 0;
     return r;
   };
+  // 📋 14/11 (χρήστης: «να δούμε ότι δουλεύει η συνταγογράφηση εξιτηρίου: παραπεμπτικό και φάρμακα»): εξετάσεις των οδηγιών εξιτηρίου → παραπεμπτικά
+  // (ένα ανά κατηγορία e-prescription). Μόνο γνωστές εξετάσεις — όνομα όπως στο e-prescription (από πραγματικά παραπεμπτικά #3575/#3576).
+  const BIO1 = 'Εξετάσεις Βιολογικών Υλικών 1 (Βιοπαθολογίας) (Αιματολογικές, Βιοχημικές, Μικροβιολογικές)', BIO2 = 'Εξετάσεις Βιολογικών Υλικών 2 (Βιοπαθολογίας & Πυρηνικής Ιατρικής) (Ανοσολογικές, Ορμονολογικές)';
+  const REF_DICT = [[/γενικ[ηή]\s+(εξέταση\s+)?ο[υύ]ρων/i, 'Γενική εξέταση ούρων', BIO1, true], [/καλλι[εέ]ργεια\s+ο[υύ]ρων/i, 'Καλλιέργεια ούρων', BIO1], [/γενικ[ηή]\s+α[ιί]ματος/i, 'Γενική αίματος', BIO1],
+    [/κρεατινίνη/i, 'Κρεατινίνη', BIO1], [/ουρία/i, 'Ουρία', BIO1], [/\bPSA\b/i, 'PSA ολικό', BIO2], [/(u\/?s|υπερηχογράφημα|υπέρηχο)\s+(νεφρ|κύστ|ουροποι)/i, 'Υπερηχογράφημα (u/s) νεφρών, ουρητήρων', 'Υπέρηχοι', true]];
+  window.pdxRefParse = function(text){ const t = String(text||''), by = {};
+    // μόνο στις οδηγίες/επανέλεγχο (όχι στο ιστορικό της νοσηλείας)
+    const m = t.search(/οδηγ[ιί]ες|επανέλεγχ|επανεκτίμηση|σε\s+\d+\s*(ημέρ|εβδομ|μήν)/i); const tail = m >= 0 ? t.slice(m) : '';
+    for(const [re, name, cat, ep] of REF_DICT) if(re.test(tail)) (by[cat] = by[cat] || []).push(Object.assign({name, kind:cat}, ep?{ep:true}:{}));
+    return Object.keys(by).map(cat=>({cat, exams:by[cat]})); };
   window.pdxRxParse = function(text){
     const out = [], bad = [], info = [];
     String(text||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
@@ -12775,7 +12812,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       rows = [];
       const busy = !!st.wait;
       let h = '<form class="pf-bar" data-fq><input name="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="🔍 Αναζήτηση σε όλη την κλινική" value="'+E(st.hits?st.q:'')+'"'+(busy?' disabled':'')+'>'+(st.hits?'<button type="button" data-fx>Άκυρο</button>':'')+'</form>';
-      if(!st.path.length && !st.hits && !st.open) h += '<a href="ct?install=1" style="display:flex;align-items:center;gap:12px;margin:10px 16px 0;padding:12px 14px;border-radius:14px;background:#0E1218;color:#fff;text-decoration:none"><span style="font-size:26px">💻</span><span style="flex:1"><b style="font-size:15.5px">Νίκος CT Viewer · αξονικές με 3D</b><br><small style="opacity:.75">Άνοιγμα / εγκατάσταση ως εφαρμογή υπολογιστή · CD, φάκελοι, χωρίς internet</small></span><span style="opacity:.6;font-size:20px">›</span></a>';
+      // 14/11 (χρήστης): το κουμπί «Νίκος CT Viewer» ΒΓΗΚΕ από τα Αρχεία κλινικής (το CT Viewer μένει στις Απεικονίσεις)
       if(st.err) h += '<div class="pf-err"><span>'+E(st.err)+'</span>'+(st.retry ? '<button type="button" data-retry title="Δοκίμασε ξανά" aria-label="Δοκίμασε ξανά">↻</button>' : '')+'</div>';
       if(st.wait) return h + spin(st.wait);
       if(st.open){ const o = st.open;
@@ -19970,7 +20007,7 @@ window.pdxEpsineOpen = function(){
   const nrmE = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/\s+/g,' ').trim();
   const dmyE = x=>{ const m = String(x||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2]-1, +m[1]) : null; };
   const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const st = {rows:null, at:0, busy:'', msg:'', cur:null, rules:{}, hs:{}, sel:new Set(), selOn:false, du:false};
+  const st = {rows:null, at:0, busy:'', msg:'', cur:null, rules:{}, hs:{}, sel:new Set(), selOn:false, du:(()=>{ try{ return localStorage.getItem('pdx_eps_du')==='1'; }catch(e){ return false; } })()};   // 14/11 (χρήστης: «βγήκα και ξαναμπήκα και τα έχασε — παντού μνήμη»): θυμάται την ενότητα
   // 🌤 14/11 (χρήστης: «στα ΕΨΙΝΕ θέλω και ενότητα ΕΨΙΝΕ Ουρολογικού Ημέρας»): ίδια οθόνη, τμήμα 3434 με τον λογαριασμό του σημερινού ειδικού του Ημέρας
   // (όπως τα εξιτήρια Ημέρας: oncall_config «dayunit» → today.doc / user). Κάθε εργασία ΕΨΙΝΕ του Ημέρας έχει payload.du = {emrUser}.
   const duUser = async ()=>{ try{ const r = await sb6.from('oncall_config').select('value').eq('key','dayunit').maybeSingle(); const C = (r.data && r.data.value) || {}; const d = new Date(), k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -20075,7 +20112,7 @@ window.pdxEpsineOpen = function(){
   pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-eed]'); if(t && st.cur && st.cur.ed){ st.cur.ed[t.dataset.eed] = t.value; st.cur.missOk = false; } });
   pg.el.addEventListener('click', e=>{
     if(e.target.closest('[data-erl]')) return fetchList();
-    { const du = e.target.closest('[data-edu]'); if(du && !st.busy){ const v = du.getAttribute('data-edu')==='1'; if(v!==st.du){ st.du = v; st.sel.clear(); st.selOn = false; st.msg=''; pg.redraw(); loadList().then(()=>{ if(!st.busy && !st.at && st.du) fetchList(); }); } return; } }
+    { const du = e.target.closest('[data-edu]'); if(du && !st.busy){ const v = du.getAttribute('data-edu')==='1'; if(v!==st.du){ st.du = v; try{ localStorage.setItem('pdx_eps_du', v?'1':'0'); }catch(e){} st.sel.clear(); st.selOn = false; st.msg=''; pg.redraw(); loadList().then(()=>{ if(!st.busy && !st.at && st.du) fetchList(); }); } return; } }
     const p = e.target.closest('[data-ept]'); if(p) return openPt(p.dataset.ept);
     if(e.target.closest('[data-eok]')) return finalize(false);
     if(e.target.closest('[data-esave]')) return finalize(true);
@@ -20096,7 +20133,7 @@ window.pdxEpsineOpen = function(){
         .then(()=>{ st.msg = '▶ στάλθηκαν '+L.length+' — το bot τους παίρνει έναν-έναν· τα αποτελέσματα εμφανίζονται εδώ (↻ λίστα)'; st.sel.clear(); st.selOn = false; }, x=>{ st.msg = '⚠ '+(x.message||x); }).then(()=>{ st.busy=''; pg.redraw(); }); return; }
   });
   // 📑 10/11 23:30 (χρήστης: «γράφεις ότι εκκρεμούν 10 — δεν είναι μόνο 10»): παλιά λίστα (> 2 ώρες) → νέα αυτόματα (εύρος 4 μηνών, bot ≥0.21.226)
-  loadList().then(()=>{ if(!st.busy && !st.at) fetchList(); }); return pg;   // 11/11 (χρήστης): η λίστα γίνεται ΤΗ ΝΥΧΤΑ (01:10)· τη μέρα μόνο αν δεν υπάρχει καμία ή με «↻»
+  loadList().then(()=>{ if(!st.busy && !st.at && !st.du) fetchList(); }); return pg;   // Ημέρας: η λίστα φέρνεται ΜΟΝΟ με «↻» (αλλαγή λογαριασμού)   // 11/11 (χρήστης): η λίστα γίνεται ΤΗ ΝΥΧΤΑ (01:10)· τη μέρα μόνο αν δεν υπάρχει καμία ή με «↻»
 };
 // 🔎 10/11 23:10 (χρήστης: «ο φακός να ψάχνει ασθενή σε ΟΛΟ το ΝΠΣ»): εντολή npsfind (μόνο ανάγνωση, εκτός κλινικής, από 2000) → λίστα·
 // πάτημα → 📂 Φάκελος ΝΠΣ του ασθενή (pdxDossierOpen) ή 🌐 Αρχείο (Medilabi)
