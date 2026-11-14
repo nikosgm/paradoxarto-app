@@ -2413,7 +2413,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v411';
+const APP_VER = '2026-11-14-v412';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17370,7 +17370,7 @@ Z99.2:C|αιμοκάθαρση
       +'<div style="display:none"><input data-amka><span data-amkast></span></div>'
       +'<div style="border-top:1px solid #DCE2E8;padding-top:10px;display:flex;flex-direction:column;gap:6px">'
       +'<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-d="dcx" style="width:20px;height:20px;margin-top:1px"><span><b>Εξιτήριο</b> · επιπλέον διαγνώσεις<br><span style="color:#6B7686;font-size:13px">Κρατιούνται στον ασθενή και μπαίνουν μόνες τους όταν βγει το εξιτήριο από το Παραδόχαρτο</span></span></label>'
-      +'<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-d="hist" style="width:20px;height:20px;margin-top:1px"><span><b>Ατομικό ιστορικό</b> στον φάκελο<br><span style="color:#6B7686;font-size:13px">Αποστολή τώρα στο bot του υπολογιστή· την Αποθήκευση την πατάτε εσείς</span></span></label>'
+      +'<label data-hl style="display:flex;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-d="hist" style="width:20px;height:20px;margin-top:1px"><span><b>Ατομικό ιστορικό</b> στον φάκελο<br><span style="color:#6B7686;font-size:13px">Αποστολή τώρα στο bot του υπολογιστή· την Αποθήκευση την πατάτε εσείς</span></span></label>'
       +'</div>'
       +'<div style="display:flex;gap:8px"><button data-go class="btn btn-primary" style="flex:2;font-weight:700"></button><button data-cp class="btn btn-secondary" style="flex:1">Αντιγραφή</button></div>'
       +'<div data-msg style="color:#B23A3A;font-size:13.5px;min-height:1px"></div>';
@@ -17449,8 +17449,11 @@ Z99.2:C|αιμοκάθαρση
       list.innerHTML = h;
       const n = selected().length;
       $('[data-cnt]').textContent = items.length ? (items.length+' κωδικοί · '+n+' επιλεγμένοι') : '';
-      const any = $('[data-d="dcx"]').checked || $('[data-d="hist"]').checked;
-      $('[data-go]').textContent = !any ? '💾 Αποθήκευση στον ασθενή ('+n+')' : $('[data-d="hist"]').checked ? '📤 Αποθήκευση & αποστολή ('+n+')' : '💾 Αποθήκευση για το εξιτήριο ('+n+')';
+      // 14/11 21:22 (χρήστης: «αν το ατομικό ιστορικό είναι ήδη στον φάκελο, δεν χρειάζεται το κουτάκι»): μόνο για ό,τι ΔΕΝ έχει σταλεί ακόμα
+      { const nw = newForHist(), hl = $('[data-hl]'); hl.style.display = nw.length ? 'flex' : 'none'; const sm = hl.querySelector('b'); if(sm && !hl.querySelector('[data-hn]')){ const sp = document.createElement('span'); sp.setAttribute('data-hn',''); sp.style.color = '#6B7686'; (sm.nextSibling || sm).after(sp); }
+        const hn = hl.querySelector('[data-hn]'); if(hn) hn.textContent = nw.length && nw.length < n ? ' · '+nw.length+' νέα (τα άλλα είναι ήδη στον φάκελο)' : ''; }
+      const any = $('[data-d="dcx"]').checked || histOn();
+      $('[data-go]').textContent = !any ? '💾 Αποθήκευση στον ασθενή ('+n+')' : histOn() ? '📤 Αποθήκευση & αποστολή ('+n+')' : '💾 Αποθήκευση για το εξιτήριο ('+n+')';
     }
     // προσυμπλήρωση με ό,τι έχει ήδη κρατηθεί για τον ασθενή (+ ό,τι έφερε ο ΑΗΦΥ και περιμένει απόφαση)
     const sug = d.comorbSuggest && d.comorbSuggest.text ? String(d.comorbSuggest.text).split('\n').filter(l=>{ const m=/^\s*([A-Z]\d\d(?:\.\d{1,2})?)/.exec(l); return !m || !savedSet.has(m[1]); }).join('\n') : '';
@@ -17534,9 +17537,11 @@ Z99.2:C|αιμοκάθαρση
         setTimeout(()=>{ clearInterval(tick); if(document.body.contains(ov) && b.disabled){ b.disabled=false; b.textContent='🤖 Από ΑΗΦΥ'; note.textContent='⌛ Δεν ήρθε απάντηση σε 5 λεπτά. Είναι ανοιχτός ο υπολογιστής με το bot και συνδεδεμένος στον ΑΗΦΥ;'; } }, 5*60000);
       });
     }
+    function newForHist(){ const r0 = recOf(k) || {}, sent = new Set(((r0.comorbNps2 || {}).codes) || []); return selected().filter(x=>x && !sent.has(x.code)); }
+    function histOn(){ return $('[data-d="hist"]').checked && newForHist().length > 0; }
     function go(){
-      const sel = selected(), msg = $('[data-msg]');
-      const wantDcx = $('[data-d="dcx"]').checked, wantHist = $('[data-d="hist"]').checked;
+      const sel = selected(), msg = $('[data-msg]'), nw = newForHist();
+      const wantDcx = $('[data-d="dcx"]').checked, wantHist = histOn();
       if(wantHist && !sel.length){ msg.textContent='Δεν έχει επιλεγεί κανένας κωδικός για αποστολή.'; return; }
       const r = recOf(k); if(!r){ msg.textContent='Ο ασθενής δεν βρέθηκε (μετακινήθηκε ή διαγράφηκε;)'; return; }
       // κρατιούνται πάντα στον ασθενή· το «dcx» λέει αν θα μπουν στο εξιτήριο
@@ -17546,7 +17551,7 @@ Z99.2:C|αιμοκάθαρση
       if(!wantHist){ toast(sel.length ? '🩺 '+sel.length+' συννοσηρότητες '+(wantDcx?'θα μπουν στο εξιτήριο':'κρατήθηκαν στον ασθενή') : 'Οι συννοσηρότητες αφαιρέθηκαν'); close(); return; }
       if(!window.pdxBotSend){ msg.textContent='Η ουρά εργασιών του bot δεν είναι διαθέσιμη.'; return; }
       const b = $('[data-go]'); b.disabled = true; b.textContent = 'Αποστολή…';
-      window.pdxBotSend(k, 'comorb', {codes: sel, targets: ['hist']}).then(ok=>{ if(ok) close(); else { b.disabled=false; draw(); } });
+      window.pdxBotSend(k, 'comorb', {codes: nw, targets: ['hist']}).then(ok=>{ if(ok){ const r2 = recOf(k); if(r2){ r2.comorbNps2 = {codes: (((r2.comorbNps2||{}).codes)||[]).concat(nw.map(x=>x.code)), at: Date.now()}; saveRec(k, r2); } close(); } else { b.disabled=false; draw(); } });   // μόνο τα ΝΕΑ
     }
     setTimeout(()=>{ if(!saved.length) ta.focus(); }, 50);
   };
