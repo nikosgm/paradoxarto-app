@@ -2413,7 +2413,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v416';
+const APP_VER = '2026-11-14-v417';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7987,6 +7987,14 @@ document.head.appendChild(st);
   window.pdxIosBackLabel = ()=>{ const t = document.getElementById('iosPg'); return iosShort(t && !t.__closing && t.__ttl ? t.__ttl : iosCtx()); };
   const iosShort = t=>{ t = String(t||'').trim(); return t.length > 16 ? t.slice(0,15)+'…' : t; };
   if(!window.__pdxTapHook){ window.__pdxTapHook = 1; const tr = e=>{ window.__pdxTapEl = e.target; window.__pdxTapPg = (e.target && e.target.closest) ? e.target.closest('#iosPg,.iosPgU') : null; }; document.addEventListener('pointerdown', tr, true); document.addEventListener('touchstart', tr, {capture:true, passive:true}); document.addEventListener('click', tr, true); }
+  // 🫧 14/11: ρευστές μεταβάσεις — κάθε φύλλο/παράθυρο πάνω από την οθόνη (position:fixed, inset 0) μπαίνει με fade + ελατήριο, όπως στο iPhone
+  window.pdxNoMotion = ()=>{ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } };
+  (function(){ if(window.__pdxSheetAnim) return; window.__pdxSheetAnim = 1;
+    const isSheet = el=>{ if(!(el instanceof HTMLElement) || el.id==='iosPg' || el.classList.contains('ios-pg')) return false; const cs = el.style; return cs.position==='fixed' && /inset:\s*0/.test(el.getAttribute('style')||'') && +(cs.zIndex||0) >= 9000; };
+    const anim = el=>{ if(window.pdxNoMotion()) return; try{ el.animate([{opacity:0},{opacity:1}], {duration:220, easing:'ease-out'}); const c = el.firstElementChild; if(!c) return;
+      const bottom = getComputedStyle(el).alignItems==='flex-end'; c.animate(bottom ? [{transform:'translateY(48%)'},{transform:'none'}] : [{transform:'scale(.94)', opacity:0},{transform:'none', opacity:1}], {duration: bottom ? 420 : 300, easing:'cubic-bezier(.32,.72,0,1)'}); }catch(e){} };
+    const go = ()=>new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{ if(isSheet(n)) anim(n); }))).observe(document.body, {childList:true});
+    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go); })();
   window.iosPage = function(title, back, draw){
     // 9/11 (χρήστης: σύρσιμο «πίσω» έδειχνε από κάτω ξεχασμένα Εργαστηριακά/μισές οθόνες): σελίδα που ΔΕΝ ανοίγει μέσα από τα
     // Εργαστηριακά τα κλείνει· τυχόν «φαντάσματα» συρσίματος (.pdxg/.pdxdim) φεύγουν πριν ανοίξει η νέα σελίδα
@@ -8013,11 +8021,13 @@ document.head.appendChild(st);
     // 🧭 13/11 23:08 (χρήστης: «στα ΕΨΙΝΕ πατάω ένα όνομα και μετά μπορώ να γυρίσω μόνο στα Εργαλεία, όχι στα ΕΨΙΝΕ»):
     // εσωτερική προβολή μιας σελίδας (λεπτομέρεια, σύνταξη…) → api.sub('Λίστα', fn): το «‹» και το σύρσιμο γυρίζουν ΠΡΩΤΑ σε αυτήν· api.sub(null) = κανονικά
     const bk = pg.querySelector('.ios-back'), setLbl = t=>{ bk.innerHTML = '<b>‹</b>'+esc(iosShort(t)); bk.setAttribute('aria-label', 'Πίσω: '+t); };
-    const goBack = ()=>{ const sb = pg.__sub; if(sb){ pg.__sub = null; setLbl(label); pg.style.transition = 'transform .35s cubic-bezier(.32,.72,0,1)'; pg.style.transform = ''; try{ sb.fn(); }catch(e){} try{ pg.querySelector('.ios-body').scrollTop = 0; }catch(e){} return; } close(); };
+    const goBack = ()=>{ const sb = pg.__sub; if(sb){ pg.__sub = null; slideDir = -1; setLbl(label); pg.style.transition = 'transform .35s cubic-bezier(.32,.72,0,1)'; pg.style.transform = ''; try{ sb.fn(); }catch(e){} try{ pg.querySelector('.ios-body').scrollTop = 0; }catch(e){} return; } close(); };
     bk.onclick = goBack;
     window.pdxEdgeSwipe(pg, goBack);
-    const api = { el: pg, inner, close, back: label, redraw: ()=>{ inner.innerHTML = draw(api); },
-      sub: (t, fn)=>{ if(t && fn){ pg.__sub = {t, fn}; setLbl(t); } else { pg.__sub = null; setLbl(label); } }, inSub: ()=>!!pg.__sub };
+    // 🫧 14/11 (χρήστης: «πιο smooth η αλλαγή ενότητας, σαν iPhone, fluid»): είσοδος/έξοδος εσωτερικής προβολής γλιστράει (όπως το push του iOS)
+    let slideDir = 0; const slide = ()=>{ const d = slideDir; slideDir = 0; if(!d || window.pdxNoMotion()) return; try{ inner.animate([{transform:'translateX('+(d>0?'28%':'-22%')+')', opacity:0},{transform:'none', opacity:1}], {duration:340, easing:'cubic-bezier(.32,.72,0,1)'}); }catch(e){} };
+    const api = { el: pg, inner, close, back: label, redraw: ()=>{ inner.innerHTML = draw(api); slide(); },
+      sub: (t, fn)=>{ if(t && fn){ if(!pg.__sub) slideDir = 1; pg.__sub = {t, fn}; setLbl(t); } else { if(pg.__sub) slideDir = -1; pg.__sub = null; setLbl(label); } }, inSub: ()=>!!pg.__sub };
     api.redraw();
     requestAnimationFrame(()=>requestAnimationFrame(()=>pg.classList.add('on')));
     return api;
