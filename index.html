@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v443';
+const APP_VER = '2026-11-15-v444';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8535,7 +8535,9 @@ document.head.appendChild(st);
     let ov = null, err = '', busy = '', msg = '', syncNote = '', bxPend = null;
     // 🔬 15/11 01:30 (χρήστης: «γράφεις ότι ένας περιμένει βιοψία, ενώ περιμένουν παραπάνω»): ο server μετρά μόνο όσους έχει σημειώσει «αναμονή βιοψίας»·
     // ο σωστός αριθμός είναι ο ΙΔΙΟΣ με τη σελίδα «Βιοψίες» = ασθενείς με εκκρεμή βιοψία στη μόνιμη λίστα (bx|store, μετά το pdxBxDone)
-    (async ()=>{ try{ const r = await pdxBxStore.sync([]); bxPend = (r.res||[]).filter(q=>window.pdxBxDone(q.items||[]).some(b=>b && b.pending)).length; if(pg && pg.redraw) pg.redraw(); }catch(e){} })();
+    (async ()=>{ try{ const nz = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+      const adm = name=>{ const n = nz(name); let best = 0; try{ [data, typeof extraPatients!=='undefined' ? extraPatients : {}].forEach(S0=>Object.keys(S0||{}).forEach(k=>{ const d = S0[k]; if(d && d.name && nz(d.name)===n){ const t = pdxBxDt(d.admitDate); if(t > best) best = t; } })); }catch(e){} return best; };
+      bxPend = pdxBxPendN(await pdxBxLoadAll(), adm); if(pg && pg.redraw) pg.redraw(); }catch(e){} })();
     const pg = iosPage('Βάση δεδομένων', 'Ρυθμίσεις', ()=>{
       if(!ov && !err) return '<div style="text-align:center;color:#8E8E93;margin:40px 16px;font-size:15px">⏳ Σύνδεση με το Παράθυρο…<br><small>περίπου 10 δευτερόλεπτα</small></div>';
       if(!ov) return iosGroup('Κατάσταση', [{ic:'🗂', t:'Server · Παράθυρο', sub:'<span style="color:#FF3B30">● '+esc(err)+'</span>'}]) + iosGroup('', [{t:'<span style="color:var(--acc,#0A84FF)">Ξανά</span>', data:'data-db="reload"'}]);
@@ -13411,6 +13413,22 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     }
     return {sync, union, addScan, prune, toRes, ik, KEEP, empty};
   })();
+  // 🔬 15/11 01:37 (χρήστης: «πάλι το ίδιο δείχνει»): ΕΝΑΣ τρόπος μέτρησης για «Βιοψίες» ΚΑΙ «Βάση δεδομένων» — όλοι οι έλεγχοι (bxscan) ∪ μόνιμη λίστα,
+  // και «εκκρεμεί» = εκκρεμής βιοψία ΑΥΤΗΣ της νοσηλείας (ίδιο curItems με τη σελίδα)
+  window.pdxBxLoadAll = async function(){ const r = await sb6.from('oncall_jobs').select('id,status,payload,updated_at').eq('kind','bxscan').in('status',['done','dismissed']).order('id',{ascending:false}).limit(40);
+    const vOk = v=>{ const m = String(v||'').match(/^(\d+)\.(\d+)\.(\d+)/); return m && (+m[1]>0 || +m[2]>19 || (+m[2]===19 && +m[3]>=15)); };
+    const rows = (r.data||[]).filter(x=>x.payload && !x.payload.search && x.payload.result && x.payload.result.enc && vOk(x.payload.result.time && x.payload.result.time.ver));
+    try{ await pdxCK.ready(); }catch(e){}
+    const scans = []; for(const x of rows){ try{ const d = await pdxCK.decrypt(x.payload.result.enc); scans.push({id:x.id, t:d.at || Date.parse(x.updated_at), res:d.res || []}); }catch(e){} }
+    const B = pdxBxStore, mem = B.empty(); scans.slice().sort((a,b)=>a.id-b.id).forEach(x=>B.addScan(mem, x.res, x.t)); B.prune(mem, Date.now());
+    let D = B.toRes(mem); try{ const S = await B.sync(scans); if(S && S.S) D = B.toRes(B.prune(B.union(S.S, mem), Date.now())); }catch(e){}
+    return D; };
+  window.pdxBxDt = s=>{ const m = String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m) return 0; const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return new Date(y, +m[2]-1, +m[1]).getTime(); };
+  window.pdxBxCur = function(it, ad){ const dt = pdxBxDt, s0 = window.pdxBxDone(it).sort((a,b)=>dt(b.date)-dt(a.date)); if(!s0.length) return [];
+    if(ad) return s0.filter(b=>!b.date || dt(b.date) >= ad - 7*864e5);
+    const top = dt(s0[0].date); if(!top || Date.now() - top > 60*864e5) return s0[0].date ? [] : s0.filter(b=>!b.date);
+    return s0.filter(b=>dt(b.date) >= top - 7*864e5); };
+  window.pdxBxPendN = function(D, admOf){ return (D||[]).filter(p=>window.pdxBxCur(p.items||[], admOf ? admOf(p.name) : 0).some(b=>b.pending)).length; };
   window.pdxBiopsies = async function(focusName){
     if(typeof sb6==='undefined' || typeof iosPage!=='function') return;
     // 🔎 «Ασθενείς»: {pid, name, onBack} → ανοίγει κατευθείαν τις βιοψίες αυτού του ασθενή· «‹» γυρίζει στην καρτέλα
@@ -13452,13 +13470,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     }
     const byNew = it=>window.pdxBxDone(it).sort((a,b)=>dt(b.date)-dt(a.date));
     // βιοψίες της νοσηλείας: από 7 ημέρες πριν την εισαγωγή· χωρίς ημ. εισαγωγής → οι πιο πρόσφατες, αν είναι των τελευταίων 60 ημερών
-    function curItems(name, it){
-      const s0 = byNew(it); if(!s0.length) return [];
-      const ad = admOf(name);
-      if(ad) return s0.filter(b=>!b.date || dt(b.date) >= ad - 7*864e5);
-      const top = dt(s0[0].date); if(!top || Date.now() - top > 60*864e5) return s0[0].date ? [] : s0.filter(b=>!b.date);
-      return s0.filter(b=>dt(b.date) >= top - 7*864e5);
-    }
+    function curItems(name, it){ return window.pdxBxCur(it, admOf(name)); }   // 15/11: κοινό με τη «Βάση δεδομένων»
     // παρακολούθηση εργασίας (νέας ή που ΗΔΗ τρέχει — π.χ. ξαναμπήκες στη σελίδα): η εργασία συνεχίζει στο bot ό,τι κι αν κάνεις εδώ
     function watch(id){
       st.job = id;
