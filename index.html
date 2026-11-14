@@ -414,6 +414,7 @@ html.pdx-night .pb-pri{background:#0A84FF;color:#fff}html.pdx-night .pb-ok{backg
 html.pdx-night .pb-dng{background:rgba(255,69,58,.22);color:#FF6961}
 html.pdx-night .pb-out,html.pdx-night .pb-lnk{background:transparent}
 html.pdx-night .pb-dngc{color:#FF6961}html.pdx-night .pb-okc{color:#30D158}html.pdx-night .pb-mut{color:#98989D}
+html:not(.pdx-ai) .ai-only{display:none!important}
 html.pdx-mac .pb{font-size:14px;min-height:34px;padding:7px 12px;border-radius:8px}html.pdx-mac .pb-lg{min-height:40px;font-size:15px}html.pdx-mac .pb-sm{min-height:28px;font-size:13px;padding:4px 9px}html.pdx-mac .pb-ic{width:34px;height:34px;padding:0;border-radius:50%}html.pdx-mac .pb-lnk{min-height:28px;padding:4px 2px}
 </style>
 </head>
@@ -2406,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v384';
+const APP_VER = '2026-11-14-v385';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -6707,6 +6708,7 @@ const ICD10_MAP = {}; // στοιχείο ιστορικού -> [κωδικοί 
     });
     if(cfg && cfg.params && typeof cfg.params==='object') Object.assign(PARAMS, cfg.params);
     if(cfg && cfg.hist_rules && typeof cfg.hist_rules==='object') window.HIST_RULES = cfg.hist_rules;
+    if(cfg && cfg.ai && typeof cfg.ai==='object'){ window.__pdxAi = cfg.ai; try{ document.documentElement.classList.toggle('pdx-ai', cfg.ai.on===true); }catch(e){} }   // 🔌 14/11 γενικός διακόπτης AI
     if(cfg && cfg.features && typeof cfg.features==='object'){ Object.keys(FEATURES).forEach(k=>delete FEATURES[k]); Object.assign(FEATURES, cfg.features); updFeatCss(); if(window.buildMobileView) try{ window.buildMobileView(); }catch(e){} }
     if(cfg && typeof cfg.appCss==='string'){ let ac=document.getElementById('appCssCfg'); if(!ac){ ac=document.createElement('style'); ac.id='appCssCfg'; document.head.appendChild(ac); } if(ac.textContent!==cfg.appCss) ac.textContent=cfg.appCss; }
     if(cfg && cfg.consts && typeof cfg.consts==='object'){
@@ -8131,6 +8133,49 @@ document.head.appendChild(st);
     load();
   };
   // ⚡ Αυτόματη έγκριση ανά λειτουργία (oncall_config 'auto_approve'): το bot ολοκληρώνει χωρίς να περιμένει «Έγκριση» από το κινητό
+
+  // 🤖 14/11 (χρήστης: «όλα τα app να μπορούν εύκολα να απενεργοποιηθούν»): ΕΝΑΣ δρόμος για κάθε λειτουργία AI.
+  // pdxAI(task, {messages, system, max_tokens, model}) → {ok, text, usage} ή {off:true, error} — ΠΟΤΕ εξαίρεση.
+  // Κάθε κουμπί AI: if(!pdxAiOn()) → κρύβεται/χειροκίνητος δρόμος (CSS: html.pdx-ai .ai-only / html:not(.pdx-ai) .ai-only{display:none}).
+  window.pdxAiOn = ()=> !!(window.__pdxAi && window.__pdxAi.on === true);
+  window.pdxAI = async function(task, req){
+    if(!window.pdxAiOn()) return { off:true, error:'Οι λειτουργίες AI είναι κλειστές (Ρυθμίσεις → 🤖 Λειτουργίες AI).' };
+    try{ const ss = (await sb6.auth.getSession()).data.session; if(!ss) return { off:true, error:'χωρίς σύνδεση' };
+      const r = await fetch(SB6_URL + '/functions/v1/pdx-ai', { method:'POST', headers:{ 'content-type':'application/json', apikey:SB6_KEY, Authorization:'Bearer ' + ss.access_token }, body: JSON.stringify(Object.assign({ task }, req||{})) });
+      const j = await r.json().catch(()=>({}));
+      if(j.off){ window.__pdxAi = Object.assign({}, window.__pdxAi||{}, { on:false, reason:j.reason||'' }); document.documentElement.classList.remove('pdx-ai'); return { off:true, error:j.error||'AI κλειστό' }; }
+      if(!r.ok) return { error: j.error || ('HTTP ' + r.status) };
+      return Object.assign({ ok:true }, j);
+    }catch(e){ return { error: String(e && e.message || e) }; }
+  };
+  window.pdxAiPage = async function(){
+    let st = null, msg = '';
+    const ping = async ()=>{ try{ const ss = (await sb6.auth.getSession()).data.session; const r = await fetch(SB6_URL + '/functions/v1/pdx-ai', { method:'POST', headers:{ 'content-type':'application/json', apikey:SB6_KEY, Authorization:'Bearer ' + (ss ? ss.access_token : SB6_KEY) }, body:'{"ping":1}' }); st = await r.json().catch(()=>null); }catch(e){ st = { error:String(e.message||e) }; }
+      if(st && st.ok){ window.__pdxAi = Object.assign({}, window.__pdxAi||{}, { on:st.on, reason:st.reason }); document.documentElement.classList.toggle('pdx-ai', st.on===true); } };
+    await ping();
+    const adm = ['attending','admin'].indexOf(window.authRole) >= 0;
+    const pg = iosPage('Λειτουργίες AI', 'Ρυθμίσεις', ()=>{
+      if(!st) return iosGroup('', [{t:'Φόρτωση…'}]);
+      if(!st.ok) return iosGroup('', [{t:'Δεν απάντησε ο διακομιστής', sub:E(st.error||'')}]);
+      const on = st.on === true;
+      return iosGroup('', [{ic:'🤖', t:'Λειτουργίες AI', sub: on ? 'Ανοιχτές' : ('Κλειστές' + (st.reason ? ' — ' + E(st.reason) + (st.auto ? ' (έκλεισαν αυτόματα)' : '') : '')), sw:on, data:'data-ai="sw"'}],
+          'Κλειστό = καμία κλήση και καμία χρέωση. Όλη η εφαρμογή δουλεύει κανονικά με τον χειροκίνητο τρόπο. Αν τελειώσει η πίστωση ή ακυρωθεί το κλειδί, κλείνουν <b>μόνες τους</b>.' + (msg ? '<br><span style="color:#FF3B30">' + E(msg) + '</span>' : ''))
+        + iosGroup('Κατάσταση', [
+            {ic:'🔑', t:'Κλειδί API', v: st.key ? '✓ υπάρχει' : '✗ λείπει', sub: st.key ? '' : 'Supabase → Edge Functions → Secrets → ANTHROPIC_API_KEY'},
+            {ic:'💶', t:'Αυτόν τον μήνα', v:'$' + (+st.month||0).toFixed(2) + ' / $' + st.cap, sub:(st.n||0) + ' κλήσεις · εκτίμηση — ακριβές ποσό στο console.anthropic.com'},
+            adm && {ic:'⛔', t:'Μηνιαίο όριο', v:'$' + st.cap, on:'', data:'data-ai="cap"'}
+          ].filter(Boolean))
+        + iosGroup('Τι χρησιμοποιεί AI', [{t:'Καμία λειτουργία ακόμα', sub:'Κάθε νέα λειτουργία μπαίνει εδώ και έχει πάντα χειροκίνητο δρόμο.'}]);
+    });
+    pg.el.addEventListener('click', async e=>{ const r = e.target.closest('[data-ai]'); if(!r) return; const a = r.getAttribute('data-ai');
+      if(!adm){ msg = 'Μόνο επιμελητής/διαχειριστής.'; pg.redraw(); return; }
+      let v = {}; try{ const q = await sb6.from('oncall_config').select('value').eq('key','ai').maybeSingle(); v = (q.data && q.data.value) || {}; }catch(er){}
+      if(a === 'sw'){ if(!v.on && !st.key){ msg = 'Πρώτα το κλειδί API (βλ. «Κλειδί API»).'; pg.redraw(); return; } v.on = !v.on; v.reason = v.on ? '' : 'κλειστό από χρήστη'; v.auto = false; }
+      if(a === 'cap'){ const x = prompt('Μηνιαίο όριο σε $ (η εφαρμογή σταματά εκεί):', String(st.cap)); if(x === null) return; const n = +String(x).replace(',', '.'); if(!(n >= 1 && n <= 1000)){ msg = 'Όριο 1–1000 $'; pg.redraw(); return; } v.cap = n; }
+      v.at = new Date().toISOString();
+      const w = await sb6.from('oncall_config').upsert({key:'ai', value:v, updated_at:new Date().toISOString()}, {onConflict:'key'});
+      msg = w.error ? 'Δεν αποθηκεύτηκε: ' + w.error.message : ''; await ping(); pg.redraw(); });
+  };
   window.pdxAutoApprove = async function(){
     const L = [['order','🧾','Παραγγελία εξετάσεων','πατά «Καταχώρηση» στο Medilabi μόλις συμπληρωθεί — μόνο αν μπήκαν ΟΛΕΣ οι εξετάσεις ΚΑΙ ο ασθενής του Medilabi ταιριάζει'],['rx','💊','Συνταγή e-prescription','πατά «Καταχώριση» μόλις συμπληρωθεί — μόνο αν μπήκαν ΟΛΑ τα φάρμακα, ταιριάζει ΑΜΚΑ/όνομα και ο λογαριασμός είναι του θεράποντα· αλλιώς ρωτά'],['ref','📋','Παραπεμπτικό e-prescription','πατά «Καταχώριση» μόνο αν μπήκαν ΟΛΕΣ οι εξετάσεις με διάγνωση· αλλιώς ρωτά'],['discharge','📄','Εξιτήριο (ΝΠΣ)','πατά «Αποθήκευση» (Ημέρας: «Έκδοση») μόλις συμπληρωθεί — μόνο χωρίς ⚠ (π.χ. ICD που δεν βρέθηκε), με ασθενή/θεράποντα/γνωμάτευση· Ημέρας μόνο αν μπήκε η πράξη'],
       ['epsine','📑','ΕΨΙΝΕ (ΝΠΣ)','πατά τσεκ + «Οριστικοποίηση» μόλις ανοίξει — μόνο χωρίς κενά Χειρουργείο/Οδηγίες, όχι ίδια μέρα εισόδου/εξόδου, όχι όταν διορθώνετε πεδία (η νύχτα οριστικοποιεί πάντα έτσι)'],
@@ -8466,6 +8511,7 @@ document.head.appendChild(st);
       {ic:'🩺', t:'Κατάσταση συστημάτων', on:"pdxHealth()"},
       (adm || bot) && {ic:'🔐', t:'Κωδικοί', sub: adm ? 'νέος κωδικός (ΝΠΣ · e-prescription · Medilabi · Kerio…) · έλεγχος' : 'έλεγχος', on: adm ? "pdxCredHub()" : "pdxCredCheck()"},
       adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:"pdxAutoApprove()"},
+      adm && {ic:'🤖', t:'Λειτουργίες AI', v:(window.pdxAiOn && window.pdxAiOn() ? 'Ανοιχτές' : 'Κλειστές'), on:"pdxAiPage()"},
       adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
       adm && {ic:'🗺', t:'Χάρτες & σφάλματα συστημάτων', sub:'αυτόματα αρχεία ανά σύστημα · νυχτερινή σάρωση', on:"pdxSysDocs()"}
     ]);
