@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v394';
+const APP_VER = '2026-11-14-v395';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -20540,17 +20540,34 @@ function histInboxOpen(){
     .then(function(list){
       list = Array.isArray(list) ? list : [];
       if(!list.length){ $('chBody').innerHTML = '<div class="ch-empty"><div class="big">📭</div><h2>Δεν υπάρχουν νέα ιστορικά στη βάση</h2></div>'; return; }
-      $('chBody').innerHTML = '<div class="ch-empty" style="margin-top:3vh"><h2>Διάλεξε ιστορικό</h2>' + list.map(function(r,i){
+      // 🗂 14/11 (χρήστης, φωτο «Νέα ιστορικά»: «Το UI εδώ θέλει διόρθωση»): ΜΙΑ κάρτα ανά ιστορικό (όνομα πάνω, ενέργειες κάτω),
+      // νεότερα πρώτα, ίδιο όνομα πολλές φορές → μία κάρτα «+N παλαιότερα» με «Σβήσε τα παλιά», πρόταση ασθενή ΜΟΝΟ με ίδιο επίθετο
+      // (όχι ΚΟΥΜΠΑΡΟΥΛΗΣ→ΚΟΥΤΣΑΡΗΣ), ώρα λήψης· η επικόλληση πάει κάτω, κλειστή.
+      var nrm = function(x){ return String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9 ]/g,' ').trim(); };
+      var sur = function(x){ return nrm(x).split(/\s+/)[0] || ''; };
+      var ago = function(t){ var m = Math.round((Date.now() - new Date(t).getTime())/60000); if(!(m>=0)) return ''; return m<1 ? 'τώρα' : m<60 ? 'πριν '+m+'′' : m<1440 ? 'πριν '+Math.round(m/60)+' ώρ.' : new Date(t).toLocaleDateString('el-GR',{day:'numeric',month:'numeric'}); };
+      var groups = {}, order = [];
+      list.forEach(function(r,i){ var k = nrm(r.label) || ('#'+r.id); if(!groups[k]){ groups[k] = []; order.push(k); } groups[k].push(i); });
+      order.sort(function(x,y){ return list[groups[y][groups[y].length-1]].id - list[groups[x][groups[x].length-1]].id; });
+      $('chBody').innerHTML = '<div class="hl-wrap"><div class="hl-h">Νέα ιστορικά <span>'+order.length+'</span></div>' + order.map(function(k){
+        var G = groups[k], i = G[G.length-1], r = list[i], old = G.slice(0,-1);
         var d = r.data || {}, sub = [d.age ? d.age+' ετών' : '', d.admission_reason || ''].filter(Boolean).join(' · ');
         var m = window.__oncallMatch ? window.__oncallMatch(String(r.label||'').replace(/\(;\)/g,'')) : null;
+        if(m && m.level!=='ok' && sur(m.name) !== sur(r.label)) m = null;   // μόνο ίδιο επίθετο
         if(d._key){ var rk = store(String(d._key).indexOf('extra')===0)[d._key]; if(rk) m = {key:d._key, level:'ok', extra:String(d._key).indexOf('extra')===0, label:(String(d._key).indexOf('extra')===0?(rk.assignedWard||'Εκτός θαλάμου'):d._key), name:rk.name||''}; }
         var cands = Array.isArray(d._cands) ? d._cands.map(function(k){ var x = String(k).indexOf('extra')===0, rr = store(x)[k]; return rr ? {key:k, level:'q', extra:x, label:(x?(rr.assignedWard||'Εκτός θαλάμου'):k), name:rr.name||''} : null; }).filter(Boolean) : null;
-        list[i]._c = cands;
-        var mb = (cands && cands.length) ? '<div style="font-size:13px;color:#B26A00;margin:0 0 6px">⚠️ Ίδιο επίθετο σε '+cands.length+' ασθενείς — διάλεξε:</div>'+cands.map(function(c,j){ return '<button class="ch-btn p" data-m="'+i+'" data-c="'+j+'" style="text-align:left">? Στον ασθενή <b>'+esc(c.label)+' · '+esc(c.name)+'</b></button>'; }).join('')
-               : (m && m.level!=='no') ? '<button class="ch-btn p" data-m="'+i+'" style="text-align:left">'+(m.level==='ok'?'✓':'?')+' Στον ασθενή <b>'+esc(m.label)+' · '+esc(m.name)+'</b></button>' : '';
-        list[i]._m = m;
-        return '<div class="hrow" data-r="'+i+'"><button class="hdel" data-del="'+i+'">Διαγραφή</button><button class="hx" data-del="'+i+'" title="Διαγραφή">✕</button><div class="hin">'+mb+'<button class="ch-btn s" data-i="'+i+'" style="text-align:left"><b>'+esc(r.label||('#'+r.id))+'</b> — νέος ασθενής<br><span style="font-size:12px;opacity:.75">'+esc(sub)+'</span></button></div>';
+        list[i]._c = cands; list[i]._m = m; list[i]._old = old.map(function(j){ return list[j].id; });
+        var mbtn = function(c, attr){ return '<button class="hc-go'+(c.level==='ok'?'':' q')+'" '+attr+'>'+(c.level==='ok'?'✓ ':'')+'Στον <b>'+esc(c.label)+'</b> · '+esc(c.name)+(c.level==='ok'?'':' <i>πιθανώς</i>')+'</button>'; };
+        var acts = (cands && cands.length) ? '<div class="hc-warn">⚠️ Ίδιο επίθετο σε '+cands.length+' ασθενείς — διάλεξε:</div>' + cands.map(function(c,j){ return mbtn(c, 'data-m="'+i+'" data-c="'+j+'"'); }).join('')
+                 : (m && m.level!=='no') ? mbtn(m, 'data-m="'+i+'"') : '';
+        return '<div class="hrow" data-r="'+i+'"><button class="hdel" data-del="'+i+'">Διαγραφή</button><button class="hx" data-del="'+i+'" title="Διαγραφή">✕</button>'
+          + '<div class="hin hcard"><div class="hc-top"><b>'+esc(r.label||('#'+r.id))+'</b><span class="hc-when">'+ago(r.created_at)+'</span></div>'
+          + (sub ? '<div class="hc-sub">'+esc(sub)+'</div>' : '')
+          + (old.length ? '<div class="hc-dup">+'+old.length+' παλαιότερ'+(old.length>1?'α':'ο')+' με το ίδιο όνομα · <button data-olddel="'+i+'">🗑 Σβήσε τα παλιά</button></div>' : '')
+          + '<div class="hc-act">'+acts+'<button class="hc-new" data-i="'+i+'">+ Νέος ασθενής</button></div></div></div>';
       }).join('') + '</div>';
+      $('chBody').querySelectorAll('button[data-olddel]').forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); var r = list[+b.getAttribute('data-olddel')];
+        (r._old||[]).forEach(function(id){ histInboxDone(id); }); var w = b.closest('.hc-dup'); if(w) w.remove(); }; });
       $('chBody').querySelectorAll('button[data-m]').forEach(function(b){
         b.onclick = function(){
           var r = list[+b.getAttribute('data-m')], m = b.hasAttribute('data-c') ? r._c[+b.getAttribute('data-c')] : r._m, rec = store(m.extra)[m.key];
@@ -20575,17 +20592,31 @@ function histInboxOpen(){
  +'.hrow .hdel{position:absolute;right:0;top:0;bottom:0;width:100px;border:0;border-radius:14px;background:#E0443E;color:#fff;font-size:15px;font-weight:800}'
  +'.hrow .hx{display:none;position:absolute;right:6px;top:6px;z-index:2;width:28px;height:28px;border-radius:50%;border:1px solid #DCE2E8;background:#fff;color:#B23A3A;font-weight:800;cursor:pointer}'
  +'@media (hover:hover) and (pointer:fine){.hrow .hx{display:block}.hrow .hdel{display:none}}'
- +'.hrow.gone{transition:opacity .25s,max-height .3s,margin .3s;opacity:0;max-height:0!important;margin:0}';
+ +'.hrow.gone{transition:opacity .25s,max-height .3s,margin .3s;opacity:0;max-height:0!important;margin:0}'
+ // 14/11: το κόκκινο «Διαγραφή» φαινόταν στις γωνίες (κόκκινα τριγωνάκια) → κρυφό μέχρι να σύρεις
+ +'.hrow .hdel{visibility:hidden}.hrow.act .hdel,.hrow[data-open] .hdel{visibility:visible}'
+ +'.hl-wrap{max-width:620px;margin:8px auto 0;padding:0 14px}.hl-h{font-size:28px;font-weight:700;margin:6px 4px 12px;color:var(--ink,#111)}.hl-h span{font-size:15px;font-weight:700;color:#fff;background:var(--mp,#24364A);border-radius:11px;padding:2px 9px;vertical-align:5px;margin-left:6px}'
+ +'.hrow .hin.hcard{background:var(--card,#fff);border-radius:14px;padding:13px 14px 12px;box-shadow:0 1px 2px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.05)}'
+ +'.hc-top{display:flex;align-items:baseline;gap:8px;padding-right:26px}.hc-top b{font-size:17px;font-weight:700;flex:1;min-width:0;color:var(--ink,#111)}.hc-when{font-size:12.5px;color:#8E8E93;white-space:nowrap}'
+ +'.hc-sub{font-size:14px;color:#6B7280;margin-top:2px}.hc-dup{font-size:13px;color:#B26A00;margin-top:6px}.hc-dup button{border:0;background:none;color:#D93025;font-weight:600;font-size:13px;padding:2px 4px;cursor:pointer}'
+ +'.hc-warn{font-size:13px;color:#B26A00;margin:2px 0}'
+ +'.hc-act{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.hc-act button{border-radius:11px;font-size:14.5px;padding:10px 13px;cursor:pointer;text-align:left;line-height:1.25}'
+ +'.hc-go{flex:1 1 220px;border:0;background:var(--mp,#24364A);color:#fff}.hc-go.q{background:#FFF4E5;color:#8A4B00;border:1px solid #F3C98B}.hc-go i{font-style:normal;font-size:12px;opacity:.8}'
+ +'.hc-new{flex:0 0 auto;border:1px solid var(--mp,#24364A);background:transparent;color:var(--mp,#24364A);font-weight:600}'
+ +'html.pdx-night .hl-h{color:#F2F2F7}html.pdx-night .hrow .hin.hcard{background:#1C1C1E;border-color:#2C2C2E}html.pdx-night .hc-top b{color:#F2F2F7}html.pdx-night .hc-sub{color:#A1A1AA}'
+ +'.hc-new:only-child{flex:1 1 auto;background:var(--mp,#24364A)!important;color:#fff!important;border-color:transparent}.hc-go{color:#fff!important}.hc-go.q{color:#8A4B00!important}'
+ +'html.pdx-night #chBody:has(.hl-wrap){background:#000}html.pdx-night #chPasteD summary{color:#5EB0FF!important}html.pdx-night .hc-new:only-child{background:#0A84FF!important}'
+ +'html.pdx-night .hc-go{background:#0A84FF}html.pdx-night .hc-go.q{background:#3A2A12;color:#FFC777!important;border-color:#6B4A1A}html.pdx-night .hc-new{border-color:#0A84FF;color:#5EB0FF}';
  document.head.appendChild(st); })();
 function histRowsSwipe(root, onDel){
   var W=100, cur=null, x0=0, y0=0, base=0, mode='';
-  var close=function(r){ if(!r) return; var h=r.querySelector('.hin'); h.style.transform=''; r.removeAttribute('data-open'); var d=r.querySelector('.hdel'); d.textContent='Διαγραφή'; d.removeAttribute('data-c'); };
+  var close=function(r){ if(!r) return; var h=r.querySelector('.hin'); h.style.transform=''; r.classList.remove('act'); r.removeAttribute('data-open'); var d=r.querySelector('.hdel'); d.textContent='Διαγραφή'; d.removeAttribute('data-c'); };
   root.querySelectorAll('.hrow').forEach(function(r){
     var h=r.querySelector('.hin');
     h.addEventListener('touchstart',function(e){ root.querySelectorAll('.hrow[data-open]').forEach(function(o){ if(o!==r) close(o); }); cur=r; x0=e.touches[0].clientX; y0=e.touches[0].clientY; base=r.hasAttribute('data-open')?-W:0; mode=''; },{passive:true});
     h.addEventListener('touchmove',function(e){ if(cur!==r) return; var dx=e.touches[0].clientX-x0, dy=e.touches[0].clientY-y0;
       if(!mode){ if(Math.abs(dx)>8 && Math.abs(dx)>Math.abs(dy)) mode='h'; else if(Math.abs(dy)>8) mode='v'; }
-      if(mode!=='h') return; e.stopPropagation(); h.classList.add('sw'); h.style.transform='translateX('+Math.min(0,Math.max(-W-30,base+dx))+'px)'; },{passive:true});
+      if(mode!=='h') return; e.stopPropagation(); h.classList.add('sw'); r.classList.add('act'); h.style.transform='translateX('+Math.min(0,Math.max(-W-30,base+dx))+'px)'; },{passive:true});
     h.addEventListener('touchend',function(e){ if(cur!==r) return; h.classList.remove('sw'); if(mode==='h'){ e.stopPropagation(); var dx=e.changedTouches[0].clientX-x0, open=(base+dx)<-W/2; if(open){ h.style.transform='translateX(-'+W+'px)'; r.setAttribute('data-open','1'); } else close(r); } cur=null; });
     h.addEventListener('click',function(e){ if(r.hasAttribute('data-open')){ e.stopPropagation(); e.preventDefault(); close(r); } },true);
   });
@@ -20597,9 +20628,10 @@ function histRowsSwipe(root, onDel){
 }
 function addPasteBox(){
   var box = document.createElement('div');
-  box.style.cssText = 'margin:12px auto;max-width:560px;padding:0 12px';
-  box.innerHTML = '<div style="font-weight:700;margin-bottom:6px">📋 Επικόλληση από artifact</div><textarea id="chPaste" rows="3" placeholder="Επικόλλησε εδώ το αποτέλεσμα από τη σελίδα ιστορικού…" style="width:100%;box-sizing:border-box;padding:10px;font-size:14px;border:1.5px solid #ccc;border-radius:10px"></textarea><button class="ch-btn p" id="chPasteGo" style="margin-top:6px">Προσθήκη στα νέα ιστορικά</button><div id="chPasteMsg" style="font-size:13px;margin-top:6px"></div>';
-  $('chBody').insertBefore(box, $('chBody').firstChild);
+  box.style.cssText = 'margin:14px auto 30px;max-width:620px;padding:0 14px';
+  // 14/11: σπάνια χρήση (η σάρωση στέλνει απευθείας) → κάτω από τη λίστα, κλειστό· ανοίγει με πάτημα
+  box.innerHTML = '<details id="chPasteD"><summary style="cursor:pointer;color:var(--mp,#24364A);font-size:14.5px;font-weight:600;padding:8px 4px">📋 Επικόλληση από artifact</summary><textarea id="chPaste" rows="3" placeholder="Επικόλλησε εδώ το αποτέλεσμα από τη σελίδα ιστορικού…" style="width:100%;box-sizing:border-box;padding:10px;font-size:14px;border:1.5px solid #ccc;border-radius:10px"></textarea><button class="ch-btn p" id="chPasteGo" style="margin-top:6px">Προσθήκη στα νέα ιστορικά</button><div id="chPasteMsg" style="font-size:13px;margin-top:6px"></div></details>';
+  $('chBody').appendChild(box); if(!$('chBody').querySelector('.hrow')){ var dd = box.querySelector('details'); if(dd) dd.open = true; }
   var msg = function(t, bad){ var m=$('chPasteMsg'); m.textContent=t; m.style.color = bad ? '#B23A3A' : '#2F7D4F'; };
   $('chPasteGo').onclick = function(){
     var txt = $('chPaste').value.trim(), p = null;
