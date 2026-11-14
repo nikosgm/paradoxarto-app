@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v437';
+const APP_VER = '2026-11-15-v438';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15831,28 +15831,39 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     clearTimeout(window.__micLogT); window.__micLogT = setTimeout(()=>{ try{ if(typeof sb6==='undefined' || !window.__micLogDirty) return; window.__micLogDirty = 0; const u = (window.__pdxUser && window.__pdxUser.id || 'anon').slice(0,8);
       sb6.from('oncall_labs').upsert({name_key:'micdiag|'+u, name:'🎙 διάγνωση υπαγόρευσης', data:{ua:navigator.userAgent.slice(0,140), standalone:!!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)), ver:(typeof APP_VER!=='undefined'?APP_VER:''), L:L2}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }catch(e){} }, 4000); }catch(e){} };
   window.pdxMicLog = micLog;
-  window.pdxMic = function(opt){ opt = opt || {}; let cur = null, seq = 0;
+  // 🎙 15/11 01:19 (χρήστης: «τώρα η υπαγόρευση δεν ακούει καθόλου») — micdiag: iPhone (εφαρμογή αρχικής οθόνης) ΣΤΕΛΝΕΙ το κείμενο τη στιγμή του «σταμάτα»·
+  // ο κώδικας έκανε cur = null στο stop() και το onresult (cur!==sess) ΠΕΤΟΥΣΕ ό,τι ερχόταν μετά → «heard» με 0 λέξεις. Τώρα: δεκτά αποτελέσματα μέχρι το onend (έως 1,5″),
+  // και στο iPhone continuous:false με αυτόματη επανεκκίνηση ανά φράση (το continuous:true εκεί σωπαίνει μετά την 1η φορά).
+  window.pdxMic = function(opt){ opt = opt || {}; let cur = null, seq = 0, pend = null;
     const SRC = ()=>window.SpeechRecognition || window.webkitSpeechRecognition;
-    const finish = (sess, why)=>{ if(!sess || sess.done) return; sess.done = true; clearTimeout(sess.deaf); if(cur===sess) cur = null; try{ sess.r.abort(); }catch(e){}
-      micLog('end', {id:sess.id, why, got:sess.fin.length, heard:!!sess.heard, ms:Date.now()-sess.t0});
+    const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent||'') || (navigator.platform==='MacIntel' && navigator.maxTouchPoints > 1);
+    const finish = (sess, why)=>{ if(!sess || sess.done) return; sess.done = true; clearTimeout(sess.deaf); clearTimeout(sess.stopT); if(cur===sess) cur = null; try{ sess.r.abort(); }catch(e){}
+      micLog('end', {id:sess.id, why, got:sess.fin.length, heard:!!sess.heard, ms:Date.now()-sess.t0, n:sess.runs});
       const all = ((sess.base ? sess.base+' ' : '') + sess.fin).trim(); opt.onState && opt.onState(false); if(why!=='abort') opt.onEnd && opt.onEnd(all, sess.fin); };
+    const emit = (sess, inter)=>{ opt.onText && opt.onText(((sess.base ? sess.base+' ' : '') + sess.fin + (inter ? (sess.fin?' ':'')+inter : '')).replace(/\s+/g,' ').trimStart(), inter); };
+    const run = (sess)=>{ const SR = SRC(), r = new SR(), my = sess.id; sess.r = r; sess.runs = (sess.runs||0) + 1; sess.inter = '';
+      r.lang = 'el-GR'; r.continuous = !IOS; r.interimResults = true; try{ r.maxAlternatives = 1; }catch(e){}
+      const hear = ()=>{ if(!sess.heard){ sess.heard = true; clearTimeout(sess.deaf); micLog('heard', {id:my, ms:Date.now()-sess.t0}); } };
+      r.onaudiostart = ()=>{ micLog('audio', {id:my, ms:Date.now()-sess.t0}); }; r.onspeechstart = hear;
+      r.onresult = ev=>{ if(sess.done || sess.r!==r) return; hear(); let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal){ sess.fin += (sess.fin?' ':'')+String(x[0].transcript||'').trim(); } else inter += x[0].transcript; }
+        sess.inter = inter; micLog('res', {id:my, f:sess.fin.length, i:inter.length}); emit(sess, inter); };
+        r.onerror = ev=>{ const c = ev && ev.error; micLog('err', {id:my, c:String(c||''), ms:Date.now()-sess.t0}); if(sess.done || sess.r!==r) return; if(sess.stopping && c==='aborted'){ return; } if(IOS && c==='no-speech' && !sess.stopping) return; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ finish(sess, 'abort'); opt.onFail && opt.onFail(c); } else if(c==='no-speech' || c==='aborted' || c==='network'){ finish(sess, 'end'); } };
+      r.onend = ()=>{ micLog('onend', {id:my, ms:Date.now()-sess.t0}); if(sess.done || sess.r!==r) return;
+        if(sess.inter){ sess.fin += (sess.fin?' ':'')+sess.inter.trim(); sess.inter = ''; emit(sess, ''); }   // iPhone: η τελευταία φράση μένει «ενδιάμεση»
+        if(!sess.stopping && IOS && Date.now()-sess.t0 < 120000){ try{ run(sess); micLog('restart', {id:my, n:sess.runs}); return; }catch(e){ micLog('rsfail', {id:my}); } }
+        finish(sess, sess.stopping ? 'stop' : 'end'); };
+      r.start(); };
     const api = { get on(){ return !!cur; },
-      stop(){ const s0 = cur; if(!s0) return; micLog('stop', {id:s0.id}); try{ s0.r.stop(); }catch(e){} cur = null; opt.onState && opt.onState(false); setTimeout(()=>finish(s0, 'stop'), 700); },
+      stop(){ const s0 = cur; if(!s0) return; micLog('stop', {id:s0.id}); s0.stopping = true; cur = null; pend = s0; opt.onState && opt.onState(false); try{ s0.r.stop(); }catch(e){} s0.stopT = setTimeout(()=>finish(s0, 'stop'), 1500); },
       cancel(){ const s0 = cur; if(s0) finish(s0, 'abort'); },
-      start(){ const SR = SRC(); if(!SR){ opt.onFail && opt.onFail('nosr'); return false; }
+      start(){ if(!SRC()){ opt.onFail && opt.onFail('nosr'); return false; }
         if(cur){ const s0 = cur; finish(s0, 'abort'); }
-        const my = ++seq, r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; try{ r.maxAlternatives = 1; }catch(e){}
-        const sess = {r, id:my, base:String(opt.base ? opt.base() : '').trim(), fin:'', done:false, heard:false, t0:Date.now()}; cur = sess;
-        const hear = ()=>{ if(!sess.heard){ sess.heard = true; clearTimeout(sess.deaf); micLog('heard', {id:my, ms:Date.now()-sess.t0}); } };
-        r.onaudiostart = ()=>{ micLog('audio', {id:my, ms:Date.now()-sess.t0}); }; r.onspeechstart = hear;
-        r.onresult = ev=>{ if(sess.done || cur!==sess) return; hear(); let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) sess.fin += (sess.fin?' ':'')+String(x[0].transcript||'').trim(); else inter += x[0].transcript; }
-          opt.onText && opt.onText(((sess.base ? sess.base+' ' : '') + sess.fin + (inter ? (sess.fin?' ':'')+inter : '')).replace(/\s+/g,' ').trimStart(), inter); };
-        r.onerror = ev=>{ const c = ev && ev.error; micLog('err', {id:my, c:String(c||''), ms:Date.now()-sess.t0}); if(sess.done) return; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ finish(sess, 'abort'); opt.onFail && opt.onFail(c); } else if(c==='no-speech' || c==='aborted' || c==='network'){ finish(sess, 'end'); } };
-        r.onend = ()=>{ micLog('onend', {id:my, ms:Date.now()-sess.t0}); if(!sess.done) finish(sess, 'end'); };
-        try{ r.start(); }catch(e){ cur = null; micLog('startfail', {id:my, e:String(e && e.name || e).slice(0,40)}); opt.onFail && opt.onFail('start'); return false; }
-        micLog('start', {id:my});
-        // 4″ χωρίς ήχο/αποτέλεσμα → «κουφή»: κλείνει και προτείνει το 🎤 του πληκτρολογίου (δουλεύει πάντα στο iPhone)
-        sess.deaf = setTimeout(()=>{ if(sess.done || sess.heard || cur!==sess) return; micLog('deaf', {id:my}); finish(sess, 'abort'); opt.onFail && opt.onFail('deaf'); }, 4000);
+        if(pend && !pend.done) finish(pend, 'stop');   // η προηγούμενη «σταματημένη» γράφει ΠΡΩΤΑ ό,τι πρόλαβε → μετά διαβάζεται η βάση
+        const sess = {id:++seq, base:String(opt.base ? opt.base() : '').trim(), fin:'', done:false, heard:false, t0:Date.now(), runs:0}; cur = sess;
+        try{ run(sess); }catch(e){ cur = null; micLog('startfail', {id:sess.id, e:String(e && e.name || e).slice(0,40)}); opt.onFail && opt.onFail('start'); return false; }
+        micLog('start', {id:sess.id, ios:IOS});
+        // 6″ χωρίς ομιλία → «κουφή»: κλείνει και προτείνει το 🎤 του πληκτρολογίου
+        sess.deaf = setTimeout(()=>{ if(sess.done || sess.heard || cur!==sess) return; micLog('deaf', {id:sess.id}); finish(sess, 'abort'); opt.onFail && opt.onFail('deaf'); }, 6000);
         opt.onState && opt.onState(true); return true; } };
     return api; };
   window.pdxRxStudio = function(opt){
@@ -24638,8 +24649,9 @@ window.CLS_MODE='A';
         const hf = A=>{ let m = 0; for(const v of A) m += v; m /= A.length || 1; let s = 0; for(let i=1;i<A.length;i++) s += Math.abs(A[i]-A[i-1]); return s / (A.length * (m || 1)); };
         const r = hf(R), cc = hf(C); if(!(cc > r * 1.15)) return 0;   // 15/11 00:04: 1,35 → 1,15 (σκαναρισμένος ΠΙΝΑΚΑΣ: οι γραμμές του πίνακα «ισοπεδώνουν» τη διαφορά — Scan_20261113 έβγαζε 1,28· όρθια σελίδα 0,57)
         // γυρισμένο: οι αρχές των γραμμών (πυκνότερο μελάνι) είναι πάνω → γύρισμα δεξιόστροφα (90)· κάτω → αριστερόστροφα (270)
-        let top = 0, bot = 0; for(let y=0;y<H;y++){ if(y < H*0.3) top += R[y]; else if(y > H*0.7) bot += R[y]; }
-        return top >= bot ? 270 : 90; }catch(e){ return 0; } };   // 15/11: διορθώθηκε η φορά (αρχές γραμμών πάνω = δεξιόστροφα γυρισμένο → 270)
+        // 15/11 01:25 (χρήστης: «πάλι δεν ίσιωσε — τι λάθος κάνεις»): στο ΠΡΑΓΜΑΤΙΚΟ Scan_20261113 η σφραγίδα+υπογραφή κάνουν «βαριά» την άλλη πλευρά → η φορά
+        // από το μελάνι ΒΓΑΙΝΕΙ ΛΑΘΟΣ. Τώρα: η φορά που μάθαμε (pdx_or_dir · προεπιλογή 270 = όπως σκανάρει ο σαρωτής της κλινικής) → έλεγχος AI «όρθιο/ανάποδα» → ↻ διδάσκει
+        try{ const pd = +localStorage.getItem('pdx_or_dir'); if(pd===90 || pd===270) return pd; }catch(e){} return 270; }catch(e){ return 0; } };
     const orRotate = (c, deg)=>{ const o = document.createElement('canvas'), q = ((deg % 360) + 360) % 360; if(!q) return c; const sw = q % 180 !== 0; o.width = sw ? c.height : c.width; o.height = sw ? c.width : c.height;
       const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(q * Math.PI / 180); x.drawImage(c, -c.width/2, -c.height/2); return o; };
     window.pdxOrRotGuess = orRotGuess;
@@ -24654,10 +24666,10 @@ window.CLS_MODE='A';
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const doc = await pdfjsLib.getDocument({data: bytes}).promise, out = [];
       for(let i=1;i<=Math.min(doc.numPages, 8);i++){ const pgx = await doc.getPage(i), v0 = pgx.getViewport({scale:1}), sc = Math.min(3, 2000/Math.max(v0.width, v0.height)), v = pgx.getViewport({scale:sc});
-        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = orRotGuess(c); if(deg) deg = await orRotAi(orRotate(c, deg), deg); out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85)); }
+        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = orRotGuess(c); if(deg) deg = await orRotAi(orRotate(c, deg), deg); if(i===1) window.__orAuto = deg; out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85)); }
       return out; };
     const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
-      for(const f of (ix.files||[])){ let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); const extra = rotGet(f); if(extra) imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); files.push(Object.assign({}, f, {imgs})); }
+      for(const f of (ix.files||[])){ window.__orAuto = 0; let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra) imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); files.push(Object.assign({}, f, {imgs})); }
       st.m = {files}; };
     const rotK = f=>'pdx_or_rot2|'+st.iso+'|'+(f.n||f.subj||''),   /* 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): παλιό ↻ (πριν το αυτόματο) ακύρωνε το αυτόματο ίσιωμα (270°+90°) → νέο κλειδί, οι παλιές τιμές αγνοούνται */ rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
     const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
@@ -24684,7 +24696,9 @@ window.CLS_MODE='A';
     const rd0 = pg.redraw; pg.redraw = ()=>{ rd0(); requestAnimationFrame(fit); }; window.addEventListener('resize', ()=>{ if(pg.el.isConnected) fit(); });
     pg.el.addEventListener('click', e=>{ if(e.target.closest('[data-orszoom]')){ st.zoom = !st.zoom; pg.redraw(); return; }
       const rr = e.target.closest('[data-orrot]'); if(rr){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+rr.dataset.orrot]; if(!f) return;
-        try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){} Promise.all(f.imgs.map(u=>rotUrl(u, 90))).then(L=>{ f.imgs = L; pg.redraw(); }); return; }
+        try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){}
+        // 🎓 15/11: όταν η σελίδα είχε γυριστεί αυτόματα (90/270) και τη διορθώνεις με ↻ → μαθαίνει τη ΣΩΣΤΗ φορά για τα επόμενα (όλη η συσκευή)
+        try{ const tot = ((f.auto||0) + rotGet(f)) % 360; if(f.auto && (tot===90 || tot===270)) localStorage.setItem('pdx_or_dir', String(tot)); }catch(x){} Promise.all(f.imgs.map(u=>rotUrl(u, 90))).then(L=>{ f.imgs = L; pg.redraw(); }); return; }
       const z = e.target.closest('[data-orpz]'); if(z){ const i = +z.dataset.orpz; st.pz = st.pz===i ? null : i; pg.redraw(); return; } });
     pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
