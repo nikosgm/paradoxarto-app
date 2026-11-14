@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v398';
+const APP_VER = '2026-11-14-v399';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15055,6 +15055,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); const LIVE = {}; (h.data||[]).forEach(r=>{ if(Date.now()-Date.parse(r.updated_at) < 15*60000) LIVE[r.name_key.slice(9)] = 1; }); if(Object.keys(LIVE).length) Object.keys(BN).forEach(id=>{ if(!LIVE[id]){ (window.__ordOff = window.__ordOff || {})[id] = BN[id]; delete BN[id]; } }); }catch(e){}   // 6/11: μόνο υπολογιστές που ζουν (όχι παλιοί κωδικοί)
     const PR = Object.entries(BN).sort((a,b)=>['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(a[1]) - ['Γωνιακός','Μεσαίος','Πόρτα','Παράθυρο'].indexOf(b[1]));
     if(st.pat && !BN[st.pat]) st.pat = '';
+    // 🟢 14/11 (χρήστης: «θέλω να παίρνει την εργασία instant»): κάθε υπολογιστής πιάνει έναν browser τη φορά — όποιος δουλεύει άλλη εργασία
+    // κάνει τη νέα παραγγελία να περιμένει (16–21″ σήμερα). Δίπλα σε κάθε εκτυπωτή: 🟢 ελεύθερος / ⏳ απασχολημένος (ζωντανά ανά 3″).
+    st.busy = {}; const BUSYK = {order:'παραγγελία', orderprep:'ετοιμάζει φόρμα', npslist:'λίστα ΝΠΣ', medlabs:'εργαστηριακά', bxscan:'βιοψίες', comorb:'συννοσηρότητες', epsine:'ΕΨΙΝΕ', rx:'συνταγή', ref:'παραπεμπτικό', discharge:'εξιτήριο'};
+    const busyGet = async ()=>{ const r = await sb6.from('oncall_jobs').select('kind,name,bot:payload->>bot').eq('status','running'); const m = {}; (r.data||[]).forEach(x=>{ if(x.bot && !(x.kind==='orderprep' && nrm(x.name)===nrm(d.name))) m[x.bot] = BUSYK[x.kind] || 'άλλη εργασία'; }); return m; };
+    try{ st.busy = await busyGet(); st.busySig = JSON.stringify(st.busy); }catch(e){}
+    clearInterval(window.__pdxBusyT); const busyT = window.__pdxBusyT = setInterval(async ()=>{ try{ if(!document.getElementById('pdxOrdOv')) return clearInterval(busyT); const m = await busyGet(), sg = JSON.stringify(m); if(sg !== st.busySig){ st.busySig = sg; st.busy = m; draw(); } }catch(e){} }, 3000);
     const CATS = await pdxMedCats();
     const OPK = window.pdxOrderPackList ? await pdxOrderPackList().catch(()=>[]) : [];
     const IMGS = CATS.length ? [].concat(...CATS.filter(c=>IMG_LAB.test(nrm(c.lab).toUpperCase()) || c.keys.some(isImgAny) && c.keys.every(isImgAny)).map(c=>c.keys)) : imgList(cat);
@@ -15106,7 +15112,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '</div><div style="padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid #EEF1F4;background:#FAFBFC;border-radius:0 0 0 0">'
         + (st.sel.length||st.pks.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;max-height:84px;overflow:auto">'+st.pks.map(i=>'<button data-pk="'+i+'" style="'+C+CON+';border-style:dashed">📦 '+E(P.packs[i].name)+' ✕</button>').join('')+st.sel.map(t=>'<button data-t="'+E(t)+'" style="'+C+CON+'">'+E(tLbl(t))+' ✕</button>').join('')+'</div>' : '<div style="font-size:13px;color:#64748B;margin-bottom:8px">Διάλεξε εξετάσεις ή πακέτο.</div>')
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+['Τώρα','Αύριο πρωί'].map(w=>'<button data-w="'+w+'" style="'+C+(st.when===w?CON:'')+'">'+w+'</button>').join('')+(st.when==='Αύριο πρωί'?'<span style="font-size:13px;color:#64748B">ώρα παραγγελίας 08:00</span>':'')+'</div>'
-        + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" style="'+C+(st.pat===id?CON:'')+'">'+E(nm)+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="Ο υπολογιστής δεν απαντά τώρα" style="'+C+';opacity:.45;border-style:dashed">'+E(window.__ordOff[id])+' · εκτός</button>').join('')+'</div>' : '')
+        + (PR.length ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><span style="font-size:14px;color:#475569">🖨</span>'+PR.map(([id,nm])=>'<button data-pat="'+E(id)+'" title="'+(st.busy[id]?'Απασχολημένος: '+E(st.busy[id])+' — η παραγγελία θα περιμένει':'Ελεύθερος τώρα')+'" style="'+C+(st.pat===id?CON:'')+'">'+(st.busy[id]?'⏳ ':'<span style="color:#30A46C">●</span> ')+E(nm)+(st.busy[id]?' <span style="font-size:11.5px;opacity:.75">· '+E(st.busy[id])+'</span>':'')+'</button>').join('')+'<button data-pat="" style="'+C+(!st.pat?CON:'')+'">⚡ Τυχαία</button>'+Object.keys(window.__ordOff||{}).filter(id=>!BN[id]).map(id=>'<button disabled title="Ο υπολογιστής δεν απαντά τώρα" style="'+C+';opacity:.45;border-style:dashed">'+E(window.__ordOff[id])+' · εκτός</button>').join('')+'</div>' : '')
         // ➕ 11/11 (χρήστης): «για να προσθέτουμε εξετάσεις που ξεχάσαμε σε ήδη παραγγελθείσες» → πράσινο «+» της τελευταίας παραγγελίας στο Medilabi
         + (MULTI ? '' : '<div style="margin-top:8px"><button data-addto style="'+C+(st.addTo?CON:'')+'">➕ Στην τελευταία παραγγελία (ξεχάστηκε)</button>'+(st.addTo?'<div style="font-size:12.5px;color:#475569;margin-top:4px">Μπαίνουν στο ίδιο σωληνάριο/barcode — μόνο μεμονωμένες εξετάσεις, όχι πακέτα.</div>':'')+'</div>')
         // 🩻 11/11 (χρήστης): απεικονιστικές → «Πρόσθετες Πληροφορίες» στο Medilabi με Κλινικές Πληροφορίες (ιστορικό + τι ζητάμε) από ΠΡΟΤΥΠΟ — επεξεργάσιμο
@@ -18469,10 +18475,14 @@ Z99.2:C|αιμοκάθαρση
   function load(){
     if(typeof sb6==='undefined') return Promise.resolve();
     const pc = cfgLoad().catch(()=>{});
-    return Promise.all([pc, sb6.from('oncall_labs').select('name_key,name,pid,data,updated_at').not('name_key','like','ahfy|%').not('name_key','like','efbot|%').not('name_key','like','pack|%').then(r=>{   // όχι το ιστορικό ΑΗΦΥ (📈)
+    // 14/11 17:09 (χρήστης: «τα εργαστηριακά κόλλησαν και δεν φορτώνουν»): η ανάγνωση δεν είχε όριο — μια «κρεμασμένη» σύνδεση στο κινητό = «Φόρτωση…» για πάντα.
+    // Τώρα: έως 12″ → μήνυμα + αυτόματη 2η προσπάθεια· τα στοιχεία που υπάρχουν ήδη μένουν στην οθόνη.
+    const TO = (p, ms)=>Promise.race([p, new Promise((_, no)=>setTimeout(()=>no(new Error('timeout')), ms))]);
+    return Promise.all([TO(pc, 8000).catch(()=>{}), TO(sb6.from('oncall_labs').select('name_key,name,pid,data,updated_at').not('name_key','like','ahfy|%').not('name_key','like','efbot|%').not('name_key','like','pack|%').then(r=>{   // όχι το ιστορικό ΑΗΦΥ (📈)
       if(r.error){ err = /oncall_labs|relation|schema cache/i.test(r.error.message) ? 'Δεν έχει ενεργοποιηθεί ακόμα ο πίνακας εργαστηριακών στη βάση.' : r.error.message; return; }
       err = ''; rows = (r.data || []).filter(x=>!/^pack\|/.test(x.name_key||'')); loadedAt = Date.now();
-    }).catch(e=>{ err = String(e&&e.message||e); })]);
+    }), 12000).catch(e=>{ const to = /timeout/.test(String(e&&e.message||e)); err = to ? '⏱ Η βάση δεν απάντησε σε 12″ — ξαναδοκιμάζω…' : String(e&&e.message||e);
+      if(to && (load.__retry||0) < 3){ load.__retry = (load.__retry||0) + 1; setTimeout(()=>{ load().then(()=>{ if(!err) load.__retry = 0; try{ if(box.classList.contains('on')){ render(); medBar(); } }catch(x){} }); }, 1500); } })]);
   }
 
   // ===== Εργαστηριακά Medilabi: κάρτα ανά ασθενή, ανά ημέρα, ρυθμίσεις (v2) =====
@@ -18806,7 +18816,8 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
       if(show && cl && cl.isConnected) return;
       if(cl){ cl.remove(); cl = null; } if(!show) return;
       cl = src.cloneNode(true); copyStyle(src, cl); cl.removeAttribute('id'); cl.style.setProperty('z-index', '9100'); cl.style.setProperty('position', 'fixed'); cl.id = 'lfTabs';
-      cl.addEventListener('click', e=>{ const kids = [...cl.children], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
+      // 14/11 17:07 (iPhone: «null is not an object (evaluating 'cl.children')»): το κλικ διάβαζε το ΤΡΕΧΟΝ αντίγραφο (μπορεί να έχει ήδη αντικατασταθεί/σβηστεί) → το ίδιο το στοιχείο που πατήθηκε
+      cl.addEventListener('click', e=>{ const me = e.currentTarget, kids = [...((me && me.children) || [])], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = i >= 0 && src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
       document.body.appendChild(cl); labsOn(src, cl); };
     // 14/11 (χρήστης, φωτο: «στα εργαστηριακά το κουμπί που αλλάζει στο island, αυτό το πλαισιάκι δεν δουλεύει»): το αντίγραφο κρατούσε ενεργό
     // το κουμπί της ΠΡΟΗΓΟΥΜΕΝΗΣ οθόνης (π.χ. «Εργαλεία») και χωρίς κυκλάκι → ενεργό το «Εργαστηριακά» (μόνο χρώματα, όχι διαστάσεις) + κυκλάκι που γλιστρά
