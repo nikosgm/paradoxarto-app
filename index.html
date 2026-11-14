@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v446';
+const APP_VER = '2026-11-15-v447';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15937,13 +15937,18 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const recentAmka = ()=>{ const out = [], seen = new Set(), hid = rHid(); S.hist.forEach(j=>{ const a = String((j.payload||{}).amka||''); if(/^\d{11}$/.test(a) && !seen.has(a)){ seen.add(a); if(!(hid[a] && new Date(j.created_at).getTime() <= hid[a])) out.push({amka:a, name:j.name||''}); } }); return out.slice(0,6); };
     function drawRecent(){ const box = root.querySelector('[data-recent]'); if(!box) return; const R = S.k ? [] : recentAmka();
       box.innerHTML = R.length ? '<div class="h" style="margin-top:12px">Πρόσφατοι<button data-rclr class="pb-dngc" style="min-height:44px">Καθαρισμός</button></div><div class="g">'+R.map(x=>'<div class="med" style="padding-top:4px;padding-bottom:4px"><div class="m" data-ra="'+E(x.amka)+'" style="cursor:pointer;min-height:44px;display:flex;flex-direction:column;justify-content:center"><b style="font-size:16px">'+E(/^Α\.Μ\.Κ\.Α\./.test(x.name)?'Ασθενής':x.name)+'</b><span>ΑΜΚΑ ··'+E(x.amka.slice(-4))+'</span></div><button class="del" data-rdel="'+E(x.amka)+'" aria-label="Αφαίρεση από τους πρόσφατους" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('')+'</div>' : ''; }
+    // 📲 15/11 01:43 (χρήστης: «όταν ο ασθενής έχει άυλη, δίπλα στον ΑΜΚΑ να γράφει άυλη με μπλε κεφαλαία» → «ΑΥΛΗ», χωρίς διαλυτικά): από την προετοιμασία (rxname → ayli) ή την πρόσφατη αναζήτηση
+    const aylOf = a=>{ a = String(a||''); if(S.ayl && a in S.ayl) return S.ayl[a]; try{ const c = JSON.parse(localStorage.getItem('pdx_amka_names')||'{}'); return !!(c[a] && c[a].y); }catch(e){ return false; } };
+    const aylB = a=>aylOf(a) ? ' <b data-ayl style="color:#0A84FF;font-weight:800;letter-spacing:.3px">ΑΥΛΗ</b>' : '';
+    const paintWho = a=>{ const w = root.querySelector('[data-who]'); if(!w || !(S.who && S.who.name && S.who.amka===a)) return; const inf0 = window.pdxAmkaInfo ? pdxAmkaInfo(a) : null;
+      w.className = 'who ok'; w.innerHTML = '<b>'+E(S.who.name)+'</b>'+aylB(a)+(inf0 ? ' · '+E(inf0.sex+', '+inf0.age+' ετών') : ''); };
     function draw(){
       const d = S.k ? recOf(S.k) : null;
       // 10/11 βράδυ (χρήστης): ΠΡΩΤΑ ο ΑΜΚΑ (ασθενής) και από κάτω επιλογή Συνταγή / Παραπεμπτικό — ΜΙΑ κοινή επίσκεψη (χωρίς διακόπτη «μαζί με τη συνταγή»)
       // 1) Ασθενής
       // 🎨 14/11 23:29 (χρήστης: «θέλω ακριβώς το UI του Α»)
       let h = '<div class="rxa-top"><button data-a="ephist">🗂 Ιστορικό</button><button data-a="vclose" class="pb-okc">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
-      if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
+      if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka)+aylB(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
       else h += '<div class="r"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'"></div><div class="who" data-who></div>';
       h += '</div></div>';
       if(!d) h += '<div data-recent></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
@@ -16095,9 +16100,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // ⚡ 15/11 01:19 (χρήστης: «ναι, η συνταγή να ετοιμάζει όσο γράφω»): με το 1ο φάρμακο/εξέταση → προετοιμασία (rxname: σύνδεση e-prescription,
     // κλείσιμο παλιών επισκέψεων, άνοιγμα ασθενή) σε έναν υπολογιστή· η συνταγή/παραπεμπτικό πάει μετά στον ΙΔΙΟ (payload.only) αν η προετοιμασία πέτυχε (<6′)
     const prepAmka = ()=>S.k ? String((recOf(S.k)||{}).amka||'') : String(S.amka||'');
-    function prepMaybe(){ try{ if(!(S.meds.length || S.ex.length) || typeof sb6==='undefined' || !(window.pdxIsBotUser && pdxIsBotUser())) return; const a = prepAmka();
+    function prepMaybe(){ try{ if(typeof sb6==='undefined' || !(window.pdxIsBotUser && pdxIsBotUser()) || (!S.k && !(S.who && S.who.name))) return; const a = prepAmka();   // άγνωστος ΑΜΚΑ → η αναζήτηση ονόματος (rxname) ΕΙΝΑΙ η προετοιμασία   // 15/11 01:43: μόλις είναι γνωστός ο ΑΜΚΑ (για να φανεί και η ΑΥΛΗ)
       if(!/^\d{11}$/.test(a) || S.prepA===a) return; S.prepA = a; S.prepId = 0;
-      sb6.from('oncall_jobs').insert({name_key:'zzz_rxname', name:'Α.Μ.Κ.Α. ··'+a.slice(-2), room:null, kind:'rxname', payload:{amka:a, quiet:true, prep:true}, status:'new'}).select('id').single().then(r=>{ if(r && r.data) S.prepId = r.data.id; }, ()=>{}); }catch(e){} }
+      sb6.from('oncall_jobs').insert({name_key:'zzz_rxname', name:'Α.Μ.Κ.Α. ··'+a.slice(-2), room:null, kind:'rxname', payload:{amka:a, quiet:true, prep:true}, status:'new'}).select('id').single().then(async r=>{ if(!(r && r.data)) return; const id = S.prepId = r.data.id; const j = await jobWait(id, 180000).catch(()=>null); const res = j && j.payload && j.payload.result;
+        if(res && S.prepA===a){ (S.ayl = S.ayl || {})[a] = !!res.ayli; if(res.name && window.pdxAmkaNameSave) pdxAmkaNameSave(a, res.name, res.ayli); if(res.ayli){ if(S.k) draw(); else paintWho(a); } } }, ()=>{}); }catch(e){} }
     async function prepOnly(){ try{ if(!S.prepId || S.prepA!==prepAmka()) return {}; const q = await sb6.from('oncall_jobs').select('status,payload,created_at').eq('id', S.prepId).maybeSingle(); const j = q && q.data;
       if(j && j.status==='done' && j.payload && /^b[a-z0-9]{10,16}$/.test(j.payload.bot||'') && Date.now()-Date.parse(j.created_at) < 6*60000) return {only:j.payload.bot}; }catch(e){} return {}; }
     function refresh(){ prepMaybe(); { const ps = root.querySelector('[data-a="packsave"]'); if(ps) ps.style.display = (S.meds.length||S.ex.length) ? '' : 'none'; }
@@ -16204,18 +16210,20 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const ia = root.querySelector('[data-amka]'), w = root.querySelector('[data-who]'); if(!ia||!w) return;
       const a = ia.value.replace(/\D/g,''); if(a!==ia.value) ia.value = a; S.amka = a; refresh();
       if(a.length<11){ w.className='who'; w.textContent = a.length ? (11-a.length)+' ψηφία ακόμα' : ''; S.who=null; lastA=''; return; }
-      if(a===lastA) return; lastA = a; S.who = null;
+      // 15/11: μετά από κάθε draw() η γραμμή άδειαζε (ίδιος ΑΜΚΑ → return) → ξαναγράφεται από ό,τι ξέρουμε (όνομα + ΑΥΛΗ)
+      if(a===lastA){ if(S.who && S.who.name && !w.textContent) paintWho(a); return; }
+      lastA = a; S.who = null;
       if(!pdxAmkaOk(a)){ w.className='who err'; w.textContent='Ο ΑΜΚΑ δεν περνά τον έλεγχο — λάθος ψηφίο;'; refresh(); return; }
       const inf = window.pdxAmkaInfo ? pdxAmkaInfo(a) : null, infT = inf ? inf.sex+', '+inf.age+' ετών' : '';
       w.className='who'; w.innerHTML = '🔎 Ψάχνω το όνομα'+(infT?' · '+E(infT):'');
       const loc = await pdxAmkaName(a); if(lastA!==a) return;
-      if(loc){ S.who = {amka:a, name:loc.name}; w.className='who ok'; w.innerHTML = '<b>'+E(loc.name)+'</b>'+(infT?' · '+E(infT):''); refresh(); return; }
+      if(loc){ S.who = {amka:a, name:loc.name}; if(loc.ayli != null) (S.ayl = S.ayl || {})[a] = !!loc.ayli; paintWho(a); refresh(); return; }
       w.innerHTML = (infT?E(infT)+' · ':'')+'το όνομα έρχεται από το e-prescription (μπορείς να στείλεις και χωρίς)';
       const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_rxname', name:'Α.Μ.Κ.Α. ··'+a.slice(-2), room:null, kind:'rxname', payload:{amka:a, quiet:true}, status:'new'}).select('id').single();
-      if(ins.error) return; S.pendRx = ins.data.id;
+      if(ins.error) return; S.pendRx = ins.data.id; S.prepA = a; S.prepId = ins.data.id;   // ⚡ 15/11: αυτή η αναζήτηση είναι και η προετοιμασία
       const j = await jobWait(ins.data.id, 180000); if(lastA!==a || S.pendRx!==ins.data.id) return; S.pendRx = 0;
       const r = j && j.payload && j.payload.result;
-      if(r && r.name){ window.pdxAmkaNameSave && pdxAmkaNameSave(a, r.name, r.ayli); S.who = {amka:a, name:r.name}; w.className='who ok'; w.innerHTML = '<b>'+E(r.name)+'</b>'+(infT?' · '+E(infT):''); refresh(); }
+      if(r && r.name){ window.pdxAmkaNameSave && pdxAmkaNameSave(a, r.name, r.ayli); (S.ayl = S.ayl || {})[a] = !!r.ayli; S.who = {amka:a, name:r.name}; paintWho(a); refresh(); }   // 15/11: στην ΤΡΕΧΟΥΣΑ γραμμή (η «w» μπορεί να έχει αντικατασταθεί από draw())
       else if(j){ w.className='who'; w.textContent = (j.note||'δεν βρέθηκε όνομα').slice(0,140); }
     }
     function watchJob(id, label){
