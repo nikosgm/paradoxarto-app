@@ -498,7 +498,6 @@ html.pdx-mac .pb{font-size:14px;min-height:34px;padding:7px 12px;border-radius:8
     <button class="btn btn-secondary" onclick="labsFullOpen()">🧪 Εργαστηριακά</button>
     <button class="btn btn-secondary" onclick="archiveOpen()">🔎 Αρχείο ασθενών</button>
     <button class="btn btn-secondary" onclick="toolsPick()">🧰 Χρήσιμα εργαλεία</button>
-    <button class="btn btn-secondary" onclick="histUploadOpen()">📤 Ανέβασμα ιστορικού</button>
     <button class="btn btn-secondary" onclick="snapRestoreOpen()">🛟 Επαναφορά</button>
   </div>
 </div>
@@ -2413,7 +2412,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v417';
+const APP_VER = '2026-11-14-v418';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7668,7 +7667,7 @@ document.head.appendChild(st);
     h += grpR('Αρχεία', [
       ['📂','Αρχείο ασθενών','κλινικής · όλου του νοσοκομείου', "pdxPtArch()"],
       ['🗄','Αρχείο εξιτηρίων','', "pdxDo('archive')"],
-      ['📤','Ανέβασμα ιστορικού','', "pdxDo('up')"],
+      // 14/11 22:11 (χρήστης): «Ανέβασμα ιστορικού» (παλιό artifact) — αφαιρέθηκε
       ['🛟','Επαναφορά λίστας','', "pdxDo('snap')"]
     ]);
     h += grpR('Υπολογιστές', [['🧮','Partin','', "mobCalc(null,'partin')"],['🫘','R.E.N.A.L.','', "mobCalc(null,'renal')"],['🧪','eGFR','', "mobCalc(null,'egfr')"],['🎯','EAU Risk Group','', "mobCalc(null,'eau')"]]);
@@ -8216,7 +8215,7 @@ document.head.appendChild(st);
     try{ return { ok:true, json: JSON.parse(t.slice(a, z+1)), usage:r.usage }; }catch(e){ return { error:'η απάντηση δεν ήταν JSON' }; }
   };
   // λίστα λειτουργιών AI (κλειδί = task του pdxAI) — κάθε νέα προστίθεται ΕΔΩ (κανόνας 13)
-  const AI_USES = [['ιστορικό','📷','Ανάγνωση ιστορικού από φωτογραφία','σελίδα «Ανέβασμα ιστορικού» (όπως πριν)'],
+  const AI_USES = [['ιστορικό','📷','Ανάγνωση ιστορικού από φωτογραφία','η «Σάρωση»'],
     ['πορεία νόσου','📈','Πορεία νόσου: υπαγόρευση → SOAP','όλο το κείμενο στο S, μοιράζεις με το χέρι'],
     ['πρακτικό','📝','Πρακτικό χειρουργείου από υπαγόρευση','φόρμα + επιλογή προτύπου (όπως πριν)'],
     ['ογκολογικό','🎗','Σύνοψη ογκολογικού + μητρώο','συμπληρώνεις με το χέρι'],
@@ -9605,7 +9604,7 @@ document.head.appendChild(st);
     const opt=(a,ic,t,sub)=>'<button class="pb pb-out pb-lg" data-c="'+a+'" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;margin-top:10px"><span style="font-size:28px">'+ic+'</span><span style="flex:1"><b style="display:block;font-size:17px">'+t+'</b><span style="font-size:13.5px;color:#6B7686">'+sub+'</span></span><span style="font-size:22px;color:#9AA7B5">›</span></button>';
     ov.innerHTML='<div class="sb" style="background:#F5F7F9;color:#1D2A33;width:100%;border-radius:22px 22px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .25s cubic-bezier(.32,.72,0,1)">'
       +'<div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:19px">Νέος ασθενής</b><button class="pb" data-x>Ακύρωση</button></div>'
-      +opt('man','✍️','Χειροκίνητα','Όνομα, δωμάτιο, κρεβάτι')+opt('hist','📄','Από ιστορικό','Ιστορικό που ανέβηκε στη βάση')+opt('up','📤','Ανέβασμα ιστορικού','Φωτογραφία → σελίδα Claude (δωρεάν)')+'</div>';
+      +opt('man','✍️','Χειροκίνητα','Όνομα, δωμάτιο, κρεβάτι')+opt('hist','📄','Από ιστορικό','Ιστορικό που ανέβηκε στη βάση')+'</div>';
     document.body.appendChild(ov); requestAnimationFrame(()=>{ ov.querySelector('.sb').style.transform='none'; });
     const t0=Date.now();
     ov.addEventListener('click',e=>{
@@ -20667,7 +20666,6 @@ function renderEmpty(extraHtml){
       ((ctx && ctx.isNew) ? '<p style="margin-top:-8px"><b>Μετά τον έλεγχο της μεταγραφής διαλέγεις δωμάτιο/κρεβάτι</b> και τα στοιχεία περνάνε στα πεδία της καρτέλας (επέμβαση «Προς Χ/Ο», κουμπιά ιστορικού, αλλεργία, αντιπηκτικά). Ό,τι δεν έχει κουμπί πάει στο «Επιπρόσθετο ιστορικό».</p>' : '') +
       (ctx && ctx.err ? '<div class="ch-err">'+esc(ctx.err)+'</div>' : '') +
       '<button class="ch-btn p" id="chGoInbox">📥 Νέα ιστορικά από τη βάση</button>' +
-      '<button class="ch-btn s" id="chGoUpload">📤 Ανέβασμα ιστορικού (φωτογραφία → σελίδα Claude)</button>' +
       '<button class="ch-btn s" id="chGoPaste" style="border-style:dashed">📥 Τράβηγμα ιστορικού από το Claude (πρόχειρο)</button>' +
     '</div>';
   $('chGoPaste').onclick = pullClipboard;
@@ -21815,15 +21813,14 @@ function callClaude(b64list, extra, lo){
   // 🤖 14/11 (χρήστης: «ανάγνωση ιστορικού με ένα κλικ»): με ΑΝΟΙΧΤΟ AI → απευθείας μέσω pdxAI (κλειδί μόνο στον διακομιστή).
   // Κλειστό AI → όπως πριν: σελίδα «Ανέβασμα ιστορικού» (χωρίς χρέωση). Τίποτα δεν αποθηκεύεται πριν την επιβεβαίωση του γιατρού.
   if(!(window.pdxAiOn && window.pdxAiOn())){
-    try{ window.histUploadOpen(); }catch(e){}
-    return Promise.reject(new Error('Η ανάγνωση γίνεται από τη σελίδα «Ανέβασμα ιστορικού» (οι λειτουργίες AI είναι κλειστές).'));
+    return Promise.reject(new Error('Οι λειτουργίες AI είναι κλειστές — για ιστορικό από φωτογραφία χρησιμοποίησε τη «Σάρωση».'));   // 14/11 22:11: όχι πια το παλιό artifact
   }
   var L = b64list, sz = L.reduce(function(a, u){ return a + String(u).length; }, 0);
   if(sz > 9e6 && lo && lo.length) L = lo;   // μικρότερες εικόνες αν το σύνολο είναι πολύ μεγάλο για ένα αίτημα
   var content = L.map(function(u){ return { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:String(u).split(',')[1] } }; });
   content.push({ type:'text', text: PROMPT + (extra||'') });
   return window.pdxAI('ιστορικό', { model: CH_MODEL, max_tokens: 8000, messages:[{ role:'user', content: content }] }).then(function(r){
-    if(r.off){ try{ window.histUploadOpen(); }catch(e){} throw new Error((r.error||'AI κλειστό') + ' — άνοιξε η σελίδα «Ανέβασμα ιστορικού».'); }
+    if(r.off){ throw new Error((r.error||'AI κλειστό') + ' — χρησιμοποίησε τη «Σάρωση».'); }
     if(!r.ok) throw new Error(r.error || 'χωρίς απάντηση');
     var txt = String(r.text||'');
     var a = txt.indexOf('{'), z = txt.lastIndexOf('}');
