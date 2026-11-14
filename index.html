@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v444';
+const APP_VER = '2026-11-15-v445';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12661,7 +12661,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // όνομα χωρίς λέξεις ≥3 γραμμάτων όταν δεν το ξέρουμε, ώστε ο έλεγχος ονόματος του bot να μη σκοντάφτει
         const nm = known ? known.name : ('Α.Μ.Κ.Α. ··'+amka.slice(-2));
         if(pendRx){ sb6.from('oncall_jobs').update({status:'cancelled', note:'η συνταγή στάλθηκε πριν βρεθεί το όνομα'}).eq('id',pendRx).in('status',['new','seen','running']).then(()=>{}); pendRx=0; lastAmka=amka; }   // και σε εξέλιξη: το bot τη σταματά (≤4″) ώστε η συνταγή να ξεκινήσει αμέσως
-        return sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign({amka, icd, meds:p2.meds, mode:'review', general:true}, pdxEpAccGet(ov)?{epUser:pdxEpAccGet(ov)}:{}), status:'new'}).then(r=>{
+        return sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign({amka, icd, meds:p2.meds, mode:'review', general:true}, window.pdxRxDirect ? pdxRxDirect() : {}, pdxEpAccGet(ov)?{epUser:pdxEpAccGet(ov)}:{}), status:'new'}).then(r=>{
           if(r.error){ toast('Σφάλμα: '+r.error.message); return false; }
           toast('💊 Στάλθηκε στο bot — θα ειδοποιηθείς όταν είναι έτοιμη για έλεγχο'); setTimeout(()=>window.mobBotRefresh&&mobBotRefresh(true),800); return true; });
       }, 'Ετοιμασία στο e-prescription');
@@ -13725,7 +13725,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     ov && ov.addEventListener('click', async e=>{
       const b=e.target.closest('[data-again]'); if(!b) return; e.stopPropagation();
       const j=L.find(x=>String(x.id)===b.dataset.again); if(!j) return;
-      const p=Object.assign({}, j.payload); delete p.result;
+      const p=Object.assign({}, j.payload, window.pdxRxDirect ? pdxRxDirect() : {}); delete p.result;   // ⚡ 15/11: «Ξανά» με απευθείας αίτημα όπως όλες
       const ins=await sb6.from('oncall_jobs').insert({name_key:nrm(j.name||''), name:j.name, room:null, kind:'rx', payload:p, status:'new'});
       if(ins.error) return toast('Σφάλμα: '+ins.error.message);
       toast('💊 Ξαναστάλθηκε στο bot'); ov.remove(); setTimeout(()=>window.pdxRxOut(),400);
