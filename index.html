@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v388';
+const APP_VER = '2026-11-14-v389';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14131,10 +14131,43 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // ώστε το bot να το διαλέξει μέσα στο σωστό τμήμα. Χωρίς δικά μας ονόματα.
   let medCats = null;
   // ομαδοποίηση ανά ΤΜΗΜΑ (πρώτο επίπεδο του Medilabi)· κλειδί με τη διαδρομή «ΤΜΗΜΑ › ΥΠΟΚΑΤΗΓΟΡΙΑ» όταν το όνομα υπάρχει αλλού
+  const TEST_JUNK = /^(ΟΧΙ ΠΙΑ|ΔΕΝ ΠΡΑΓΜΑΤΟΠΟΙΕΙΤΑΙ ΠΛΕΟΝ)$|^-{3,}|-{8,}$/;
+  const nzT = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  // σύντομα ονόματα (αγαπημένα/πακέτα) → η εξέταση ΑΙΜΑΤΟΣ του Medilabi (ίδια αντιστοίχιση με το bot, MED_ALIAS)
+  const FAV_ALIAS = {'κρεατινινη':'Κρεατινίνη (Crea)','ουρια':'Ουρία (Urea)','k':'Κάλιο (Κ+)','na':'Νάτριο (Να+)','γλυκοζη':'Γλυκόζη (Glu)','ca':'Ασβέστιο ολικό (TCa 2+)','ασβεστιο':'Ασβέστιο ολικό (TCa 2+)','mg':'Μαγνήσιο (Mg 2+)','crp':'CRP'};
+  window.__pdxFavAlias = FAV_ALIAS;
+  const testMat = c=>{ const u = nzT((c.lab||'')+' '+(c.dep||'')).toUpperCase();
+    if(/ΟΥΡΩΝ|URINE|ΟΥΡΑ\b/.test(u)) return 'ούρα'; if(/\bΕΝΥ\b/.test(u)) return 'ΕΝΥ'; if(/ΚΟΠΡΑΝ/.test(u)) return 'κόπρανα';
+    if(/ΥΓΡΩΝ|ΥΓΡΟΥ/.test(u)) return 'βιολ. υγρό'; if(/ΑΠΕΙΚΟΝ|ΑΚΤΙΝΟ|ΥΠΕΡΗΧ|ΤΟΜΟΓΡ|RIS|ΕΠΕΜΒΑΤ|ΕΝΔΟΣΚΟΠ|ΝΕΥΡΟΦΥΣ|ΑΙΜΟΔΥΝΑΜ|ΚΥΤΤΑΡΟΛΟΓ|ΚΑΛΛΙΕΡΓ|PCR/.test(u)) return '';
+    return 'αίμα'; };
+  const MAT_IN_NAME = {'ούρα':/ουρ(ων|α)\b|urine/, 'ΕΝΥ':/\beny\b|\bενυ\b/, 'κόπρανα':/κοπραν/, 'βιολ. υγρό':/υγρ(ων|ου|ο)\b/, 'αίμα':/αιματος|ορου|πλασματος|- αιμα\b/};
+  const testBase = t=>nzT(String(t).split(/\s*@@\s*/)[0]).replace(/\([^)]*\)/g,' ').replace(/\b(ουρων|ουρα|βιολ|υγρων|υγρου|ενυ|eny|δειγμα|24h|24ωρου|ορου|αιματος|κοπρανων|ολικο|ολικη|ολικες)\b/g,' ').replace(/[^a-zα-ω0-9]+/g,'');
+  const DEP_SHORT = d=>String(d||'').replace(/^(ΤΜΗΜΑ|ΤΜ\.)\s*/,'').replace(/BIOXHMIKO|BΙΟΧΗΜΙΚΟ/,'Βιοχημικό').replace(/ΑΙΜΑΤΟΛΟΓΙΚΟ/,'Αιματολογικό').replace(/ΑΙΜΟΣΤΑΣΗ - ΠΗΞΗ/,'Πήξη').replace(/ΑΙΜ\/ΚΟ ΣΕΒ\/ΛΕΩΣ/,'Αιματολ. Σεβαστουπόλεως').replace(/ΠΡΟΛΗΨΗ Μ\.Α\./,'Πρόληψη Μ.Α.').toLowerCase().replace(/^./,x=>x.toUpperCase()).slice(0,28);
+  function testLblBuild(info){
+    const keys = Object.keys(info), byBase = {};
+    Object.keys(FAV_ALIAS).forEach(a=>{ const b = testBase(FAV_ALIAS[a]); });
+    keys.forEach(k=>{ const b = testBase(k); if(b) (byBase[b] = byBase[b] || []).push(k); });
+    const L = {};
+    keys.forEach(k=>{ const nm = String(k).split(/\s*@@\s*/)[0], I = info[k], grp = byBase[testBase(k)] || [k], low = nzT(nm);
+      let tag = '';
+      if(I.mat && grp.length > 1 && !(MAT_IN_NAME[I.mat] && MAT_IN_NAME[I.mat].test(low))) tag = I.mat;
+      else if(I.mat && I.mat !== 'αίμα' && !(MAT_IN_NAME[I.mat] && MAT_IN_NAME[I.mat].test(low))) tag = I.mat;
+      // ίδιο όνομα ΚΑΙ ίδιο δείγμα σε άλλο τμήμα → και το τμήμα
+      const sameMat = grp.filter(x=>x!==k && info[x].mat === I.mat);
+      const dep = sameMat.length && sameMat.some(x=>info[x].dep !== I.dep) ? DEP_SHORT(I.dep) : (sameMat.length && sameMat.some(x=>info[x].lab !== I.lab) ? DEP_SHORT(I.lab) : '');
+      L[k] = nm + (tag ? ' · ' + tag : '') + (dep ? ' · ' + dep : '');
+    });
+    // ⭐ σύντομα αγαπημένα: «Κρεατινίνη · αίμα»
+    Object.keys(FAV_ALIAS).forEach(a=>{ const tgt = FAV_ALIAS[a]; if(L[tgt] && !/· αίμα/.test(L[tgt])) L[tgt] = String(tgt) + ' · αίμα'; });
+    window.__testLbl = L; window.__testInfo = info;
+    return L; }
+  window.__pdxTestLblBuild = testLblBuild;
+  window.__pdxMedCatsBuild = c=>medCatsBuild(c);
   const medCatsBuild = cats=>{ const P = c=>c.path||c.lab, cnt = {}; cats.forEach(c=>new Set(c.tests||[]).forEach(t=>{ cnt[t] = (cnt[t]||0)+1; }));
     window.__medPath = {}; cats.forEach(c=>(c.tests||[]).forEach(t=>{ if(cnt[t]===1) window.__medPath[t] = P(c); }));   // ⚡ για ομαδική προσθήκη ανά τμήμα στο bot
-    const out = [], by = {}; cats.filter(c=>c && c.lab && (c.tests||[]).length).forEach(c=>{ const dep = c.dep||c.lab; let g = by[dep]; if(!g){ g = by[dep] = {lab:dep, keys:[]}; out.push(g); }
-      [...new Set(c.tests)].forEach(t=>{ const k = cnt[t]>1 ? t+' @@ '+P(c) : t; if(g.keys.indexOf(k)<0) g.keys.push(k); }); });
+    const out = [], by = {}, info = {}; cats.filter(c=>c && c.lab && (c.tests||[]).length).forEach(c=>{ const dep = c.dep||c.lab; let g = by[dep]; if(!g){ g = by[dep] = {lab:dep, keys:[]}; out.push(g); }
+      [...new Set(c.tests)].filter(t=>!TEST_JUNK.test(String(t).trim())).forEach(t=>{ const k = cnt[t]>1 ? t+' @@ '+P(c) : t; if(g.keys.indexOf(k)<0) g.keys.push(k); info[k] = {mat: testMat(c), dep: c.dep||'', lab: c.lab||''}; }); });
+    testLblBuild(info);
     return out; };
   window.pdxMedCats = async function(force){
     if(!force && medCats) return medCats;
@@ -14160,7 +14193,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const imgList = cat=>IMG_FIX.map(([re,def])=>{ const U = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); const hit = (cat||[]).find(t=>re.test(U(t))); return hit || ''; }).filter(Boolean);   // 6/11: ΠΟΤΕ δικά μας ονόματα — μόνο ό,τι υπάρχει στο Medilabi
   const IMG_LAB = /ΑΚΤΙΝ|ΑΞΟΝΙΚ|ΤΟΜΟΓΡΑΦ|ΥΠΕΡΗΧ|ΜΑΓΝΗΤ|ΜΑΣΤΟΓΡΑΦ|ΑΠΕΙΚΟΝ|ΡΑΔΙΟΛΟΓ|\bCT\b|\bMRI\b|TRIPLEX|DOPPLER/;
   const isImgAny = t=>{ const sp = String(t||'').split(/\s*@@\s*/); if(sp[1] && IMG_LAB.test(String(sp[1]).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase())) return true; const u = String(sp[0]||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); return /^Α\/Α|ΑΚΤΙΝΟΓΡ|ΑΚΤΙΝΟΣΚ|^XR\b|^CT\b|ΑΞΟΝΙΚ|ΥΠΕΡΗΧ|^U\/?S\b|TRIPLEX|DOPPLER|MRI|ΜΑΓΝΗΤ|ΣΠΙΝΘΗΡ|SPECT/.test(u); };
-  const tLbl = t=>String(t||'').replace(/\s*@@\s*/,' · ');
+  // 🧪 14/11 (χρήστης: «δεν καταλαβαίνω ποια κρεατινίνη είναι του αίματος και ποια των ούρων — να μην έχουμε ίδια ονομασία για δύο εξετάσεις»):
+  // κάθε εξέταση δείχνεται με το ΔΕΙΓΜΑ της (αίμα / ούρα / βιολ. υγρό / ΕΝΥ / κόπρανα) όταν το όνομα δεν το λέει ήδη και υπάρχει άλλη εξέταση με ίδιο όνομα·
+  // αν μοιάζουν και στο δείγμα → και το τμήμα του Medilabi. Τα σύντομα αγαπημένα («Κρεατινίνη») = η εξέταση αίματος, με ετικέτα, και ΔΕΝ διπλασιάζονται
+  // με την αντίστοιχη του καταλόγου («Κρεατινίνη (Crea)»). Έλεγχος: tests/order-names.js (πραγματικός κατάλογος → καμία διπλή ετικέτα).
+  const tLbl = t=>{ const k = String(t||''); const L = window.__testLbl && window.__testLbl[k]; if(L) return L; const f = FAV_ALIAS[nzT(k)]; if(f) return k + ' · αίμα'; return k.replace(/\s*@@\s*/,' · '); };
   const ocatOf = t=>{ const u = String(t||'').split(/\s*@@\s*/)[0].normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
     if(/^Α\/Α|ΑΚΤΙΝΟΓΡ|ΑΚΤΙΝΟΣΚ|^XR\b/.test(u)) return 'xr'; if(/^CT\b|ΑΞΟΝΙΚ/.test(u)) return 'ct'; if(/ΥΠΕΡΗΧ|^U\/?S\b|TRIPLEX|DOPPLER/.test(u)) return 'us'; if(/MRI|ΜΑΓΝΗΤ/.test(u)) return 'mri';
     if(/ΚΑΛΛΙΕΡΓ|ΟΥΡΩΝ|\bΟΥΡΑ|ΑΝΤΙΒΙΟΓΡ|ΚΟΠΡΑΝ/.test(u)) return 'ur';
@@ -14893,7 +14930,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const OPK = window.pdxOrderPackList ? await pdxOrderPackList().catch(()=>[]) : [];
     const IMGS = CATS.length ? [].concat(...CATS.filter(c=>IMG_LAB.test(nrm(c.lab).toUpperCase()) || c.keys.some(isImgAny) && c.keys.every(isImgAny)).map(c=>c.keys)) : imgList(cat);
     // άλλα απεικονιστικά του καταλόγου ΔΕΝ εμφανίζονται (μόνο τα 5 της κλινικής)
-    const all = ()=>{ const a = CATS.length ? fav.concat(...P.packs.map(x=>x.tests||[]), rec, cat) : fav.concat(...P.packs.map(x=>x.tests||[]), rec, IMGS, cat.filter(t=>!isImgAny(t))); return a.filter((t,i)=>t && a.indexOf(t)===i); };
+    // 14/11: το σύντομο αγαπημένο («Κρεατινίνη») ΚΑΙ η ίδια εξέταση του καταλόγου («Κρεατινίνη (Crea)») = ΜΙΑ γραμμή (το αγαπημένο)
+    const FA = window.__pdxFavAlias || {}, favTgt = new Set(fav.map(t=>FA[String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()]).filter(Boolean));
+    const all = ()=>{ const a = CATS.length ? fav.concat(...P.packs.map(x=>x.tests||[]), rec, cat) : fav.concat(...P.packs.map(x=>x.tests||[]), rec, IMGS, cat.filter(t=>!isImgAny(t))); return a.filter((t,i)=>t && a.indexOf(t)===i && !(favTgt.has(t) && fav.indexOf(t)<0)); };
     let ov = document.getElementById('pdxOrdOv'); if(ov) ov.remove();
     ov = document.createElement('div'); ov.id='pdxOrdOv';
     ov.style.cssText='position:fixed;inset:0;z-index:9650;background:rgba(15,25,35,.45);display:flex;align-items:flex-end;justify-content:center;font-family:-apple-system,"Segoe UI",Roboto,sans-serif';
@@ -14901,7 +14940,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const CON = ';background:var(--mp,#1D4E80);color:#fff';
     const list = ()=>{
       const q = nrm(st.q);
-      if(q) return all().filter(t=>nrm(t).indexOf(q)>=0).slice(0,80);
+      if(q) return all().filter(t=>nrm(t).indexOf(q)>=0 || nrm(tLbl(t)).indexOf(q)>=0).slice(0,80);
       if(st.tab==='fav') return fav; if(st.tab==='rec') return rec; if(st.tab==='all') return all().slice(0,400);
       if(st.tab==='img') return IMGS;
       if(/^L\d+$/.test(st.tab)){ const c = CATS[+st.tab.slice(1)]; return c ? c.keys : []; }
@@ -17199,10 +17238,11 @@ Z99.2:C|αιμοκάθαρση
       const ORD = ['Κυκλοφορικό','Ενδοκρινικά · μεταβολικά','Αναπνευστικό','Νεοπλάσματα','Ουροποιογεννητικό','Πεπτικό','Νευρικό σύστημα','Ψυχικά','Αίμα'];
       [...by.entries()].sort((a,b)=>{ const i=ORD.indexOf(a[0]), j=ORD.indexOf(b[0]); return (i<0?99:i)-(j<0?99:j); }).forEach(([cat, L])=>{
         const on = L.filter(it=>(pick.get(it.code)||{}).on).length, q = L.filter(it=>it.cls==='U').length;
-        const open = chOpen.has(cat) || (!chShut.has(cat) && (q>0 || by.size<=3));
+        // 14/11 (χρήστης: «ακόμα και τα πορτοκαλί μην τα έχεις expand — όλα κλειστά· στα πορτοκαλί μόνο το πορτοκαλί νούμερο»): ΟΛΑ κλειστά, ανοίγει μόνο με πάτημα
+        const open = chOpen.has(cat);
         h += '<details data-ch="'+E(cat)+'"'+(open?' open':'')+' style="border:1px solid #E5E9EE;border-radius:14px;margin:8px 0;overflow:hidden;background:#FBFCFD">'
           + '<summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:700;font-size:15px"><span style="flex:1">'+E(cat)+'</span>'
-          + (q?'<span style="background:#FFF3DF;color:#B26A00;border-radius:99px;padding:2px 8px;font-size:12px">'+q+' ?</span>':'')
+          + (q?'<span style="background:#FFF3DF;color:#B26A00;border-radius:99px;padding:2px 9px;font-size:12.5px;font-weight:700" title="'+q+' αμφίβολα — περιμένουν εσένα">'+q+'</span>':'')
           + '<span style="background:#E8F5EE;color:#0F7B4A;border-radius:99px;padding:2px 9px;font-size:12.5px">'+on+'/'+L.length+'</span><span style="color:#8A94A3">'+(open?'▾':'▸')+'</span></summary>'
           + '<div style="padding:0 12px 4px;background:#fff">'+L.map(row).join('')+'</div></details>';
       });
