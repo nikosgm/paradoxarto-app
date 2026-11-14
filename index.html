@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v427';
+const APP_VER = '2026-11-14-v428';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15410,6 +15410,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   html.pdx-night .rxs .g{background:#1C1C1E}html.pdx-night .rxs input.big,html.pdx-night .rxs input.t,html.pdx-night .rxs select,html.pdx-night .rxs .who b{color:#fff}
   html.pdx-night .rxs .ch{background:#2C2C2E;color:#fff}html.pdx-night .rxs .ch.on{background:#0A84FF}html.pdx-night .rxs .stp{background:#2C2C2E}html.pdx-night .rxs .bar{background:rgba(0,0,0,.9);border-top-color:#38383A}
   html.pdx-night .rxs .r+.r:before,html.pdx-night .rxs .med+.med:before{border-top-color:#38383A}
+  .rxs .rxq{margin:12px 12px 4px;background:#fff;border:2px solid #0A84FF;border-radius:18px;padding:12px}
+  .rxs .rxq textarea{display:block;width:100%;border:0;outline:0;resize:none;font:inherit;font-size:17px;line-height:1.4;background:transparent;color:inherit;min-height:76px}
+  .rxs .rxq-b{display:flex;gap:8px;margin-top:8px}.rxs .rxq-b button{flex:1;min-height:44px;border-radius:12px;border:1px solid #E5E5EA;background:#F2F2F7;font-size:15px;font-weight:700;color:#1C1C1E;font-family:inherit}
+  .rxs .rxq-b button.pri{background:#0A84FF;border-color:#0A84FF;color:#fff}.rxs .rxq-b button:disabled{opacity:.6}
+  .rxs .rxq-m{margin-top:8px;font-size:13.5px;line-height:1.4;color:#1F6F43}.rxs .rxq-m:first-letter{font-weight:700}
+  .rxs details.rxmore{margin:6px 0}.rxs details.rxmore>summary{list-style:none;cursor:pointer;padding:12px 18px 4px;font-size:13px;font-weight:700;color:#0A84FF}.rxs details.rxmore>summary::-webkit-details-marker{display:none}
+  html.pdx-night .rxs input.big,html.pdx-night .rxs input.t,html.pdx-night .rxs select{background:transparent!important}html.pdx-night .rxs .med b{color:#fff}html.pdx-night .rxs .med button:not(.go){background:#2C2C2E;color:#fff}
+  html.pdx-night .rxs .rxq{background:#1C1C1E}html.pdx-night .rxs .rxq-b button{background:#2C2C2E;border-color:#3A3A3C;color:#fff}html.pdx-night .rxs .rxq-b button.pri{background:#0A84FF}
   `; document.head.appendChild(c); })();
   window.pdxRefFav = [['Γενική ούρων','Βιοχημική'],['Καλλιέργεια ούρων','Μικροβιολογική'],['PSA ολικό','Βιοχημική'],['PSA ελεύθερο','Βιοχημική'],['Κρεατινίνη','Βιοχημική'],['Ουρία','Βιοχημική'],['Γενική αίματος','Αιματολογική'],['U/S νεφρών–κύστης','Απεικονιστική'],['U/S προστάτη διακοιλιακό','Απεικονιστική'],['CT ουροποιητικού','Απεικονιστική'],['MRI προστάτη','Απεικονιστική'],['Κυστεοσκόπηση','Ενδοσκόπηση'],['Ουροροομετρία','Λειτουργική']];   // 🧾 συχνές εξετάσεις παραπεμπτικού (και για τα 📦 πακέτα)
   // ✏️ «Συχνές στην κλινική» (παραπεμπτικό): ΚΟΙΝΗ λίστα της κλινικής στο oncall_labs «reffav|clinic» = {items:[[όνομα, είδος, ep]], owner, by, updated}
@@ -15612,6 +15620,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // 📷 14/11 (χρήστης: «από φωτογραφία χαρτιού: ΑΜΚΑ + φάρμακα → συνταγή»): γραμμές φαρμάκων/ICD από τη σάρωση — ό,τι δεν αναγνωρίζεται μένει για χειροκίνητη προσθήκη
     if(Array.isArray(opt.icd) && opt.icd.length) S.icd = opt.icd.map(x=>String(x).toUpperCase().replace(/[^A-Z0-9.]/g,'')).filter(x=>/^[A-Z]\d/.test(x)).slice(0, 6);
     if(Array.isArray(opt.lines)){ const bad = []; opt.lines.forEach(l=>{ const r = addLine(String(l||'')); if(!r || r.bad || (r.missing && r.missing.length)) bad.push(String(l||'')); }); if(bad.length) setTimeout(()=>{ try{ alert('📷 Από τη σάρωση — δεν αναγνωρίστηκαν αυτόματα (πρόσθεσέ τα με το χέρι):\n\n• ' + bad.join('\n• ')); }catch(e){} }, 600); }
+    // 🤖 14/11 23:20 (χρήστης: «όταν βγάζω φωτογραφία το χειρόγραφο, να ετοιμάζει τη συνταγή και το παραπεμπτικό»): από σάρωση με ΟΛΑ ✓ → «Ετοίμασε» μόνο του (σταματά πάντα πριν την Καταχώριση)
+    if(opt.autoGo) setTimeout(async function ag(){ for(let i=0;i<20;i++){ const sel = root && root.querySelector('[data-epsel2]'); if(sel && sel.value) break; await new Promise(r=>setTimeout(r, 500)); }
+      if(!root || !root.isConnected) return; refresh(); const ga = root.querySelector('[data-a="goall"]'); if(ga && !ga.disabled){ toast('🤖 Από τη σάρωση: ετοιμάζω '+ga.textContent.replace(/^Ετοίμασε /,'')+' — σταματά πριν την Καταχώριση'); S.goAll && S.goAll(); } else { const sm = root.querySelector('[data-sum]'); toast('📷 Σχεδόν έτοιμο: '+((sm && sm.textContent) || 'έλεγξε και πάτα «Ετοίμασε»')); } }, 900);
     if(Array.isArray(opt.ex)) opt.ex.forEach(x=>{ const n = String(x && (x.n||x.name) || '').trim(); if(n && !S.ex.some(y=>y.n.toLowerCase()===n.toLowerCase())) S.ex.push({n, k:(x.k||x.kind)||exKind(n), ep:!!x.ep}); });   // 📦 πακέτο → παραπεμπτικό
     const pg = window.iosPage('Συνταγή', opt.onBack ? 'Ασθενής' : 'Πίσω', ()=>'<div class="rxs" data-rxs></div>');
     if(opt.onBack){ const bk = pg.el.querySelector('.ios-back'); if(bk) bk.onclick = ()=>{ pg.close(); opt.onBack(); }; }   // 🔎 από την καρτέλα «Ασθενείς»
@@ -15634,26 +15645,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(!d) h += '<div data-recent></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
       // 2) Λογαριασμός
       h += '<div class="h">Λογαριασμός e-prescription</div><div class="g"><div class="r"><select data-epsel2><option value="">⏳ φόρτωση…</option></select><span style="color:#C7C7CC">⌄</span></div></div>';
-      h += '<div class="seg" style="margin-top:14px"><button data-mode="rx" class="'+(S.mode==='rx'?'on':'')+'">💊 Συνταγή</button><button data-mode="ref" class="'+(S.mode==='ref'?'on':'')+'">🧾 Παραπεμπτικό</button></div>'
-        + '<div class="f" style="margin-top:2px">Ίδια επίσκεψη για συνταγή και παραπεμπτικό· στο τέλος «✅ Κλείσιμο επίσκεψης».</div>';
-      if(S.mode==='ref'){
-        h += '<div class="h">Εξετάσεις'+(S.ex.length?' · '+S.ex.length:'')+'</div><div class="g" data-exl></div>';
-        h += '<div class="g" style="margin-top:8px"><div class="r"><input class="t" data-exq type="search" autocomplete="off" placeholder="🔎 Εξέταση (π.χ. υπέρηχος κοιλίας, PSA)…" enterkeyhint="search"></div><div data-exres></div></div>';
-        h += '<div class="f">Διάλεξε όνομα με <b style="color:#1F6F43">✓</b>: είναι ακριβώς από τον κατάλογο του e-prescription, ώστε το bot να το βρει χωρίς λάθος.</div>';
-        // 10/11 βράδυ (χρήστης): χωρίς τις δικές μας «συχνές» (π.χ. «Γενική ούρων» δεν υπάρχει στον κατάλογο) — ΜΟΝΟ ο κατάλογος e-prescription της χαρτογράφησης
-        h += '<div class="h">Διάγνωση ICD-10</div><div class="g icdw" data-icdw>'+window.pdxIcdChips(['N40','N39','N20','R31','C61','N30'].concat(S.icdSurg && S.icdSurg!=='N39' ? [S.icdSurg] : []), S.icd, RX_ICD_PIN)+'</div>';
-        // (χωρίς «Επείγον» / «Μαζί με τη συνταγή»: το bot δεν τα χρησιμοποιούσε — η επίσκεψη είναι πάντα κοινή)
-        h += '<div class="f">Το bot ανοίγει την επίσκεψη στο e-prescription, γράφει το παραπεμπτικό και <b>σταματά πριν από την «Καταχώριση»</b>· το ελέγχεις και το καταχωρίζεις εσύ.'+(window.PDX_REF_ON?'':' <b>Η αποστολή ενεργοποιείται μόλις το bot μάθει τη φόρμα παραπεμπτικού</b> (χρειάζεται μία κανονική επίσκεψη στο e-prescription από υπολογιστή της κλινικής).')+'</div>';
-        h += '<div class="g" data-jobs style="margin-top:22px;display:none"></div>';
-        h += '<div class="bar"><button class="go" data-a="goref">Ετοίμασε παραπεμπτικό</button><div class="sum" data-sum></div></div>';
-        root.innerHTML = h;
-        window.pdxEpAccFill && pdxEpAccFill(); window.pdxIcdAttach && pdxIcdAttach(root);
-        drawEx(); drawRecent(); drawJobs(); refresh();
-        const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); }
-        const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
-        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true, free:false});
-        return;
-      }
+      // 🎨 14/11 23:20 (χρήστης: «Α + Β + Δ» — πανεύκολο, λιγότερα κλικ): ΜΙΑ σελίδα (φάρμακα + εξετάσεις μαζί, όχι καρτέλες) + ΜΙΑ γραμμή «γράψε ή πες»
+      // → Claude: ανάλυση + αντιστοίχιση ΜΟΝΟ με τον κατάλογο e-prescription → μπαίνουν ως ✓· ΕΝΑ κουμπί «Ετοίμασε συνταγή + παραπεμπτικό».
+      h += '<div class="rxq"><textarea data-rxq rows="2" placeholder="Γράψε ή πες, π.χ. «algofren 1x2 7 μέρες + γενική και καλλιέργεια ούρων»">'+E(S.q||'')+'</textarea>'
+        + '<div class="rxq-b"><button type="button" data-a="rxqmic">🎙 Υπαγόρευση</button><button type="button" data-a="rxqgo" class="pri"'+(S.qBusy?' disabled':'')+'>'+(S.qBusy?'⏳ Καταλαβαίνω…':'✨ Πρόσθεσε')+'</button></div>'
+        + (S.qMsg ? '<div class="rxq-m">'+E(S.qMsg)+'</div>' : '') + '</div>';
       // 3) Φάρμακα
       h += '<div class="h">Φάρμακα'+(S.meds.length?' · '+S.meds.length:'')+'<span style="display:flex;gap:16px"><button data-a="again" style="display:none">Ίδια με την προηγούμενη</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:32px">📦 Πακέτα</button>':'')+'</span></div><div class="g" data-meds></div>';
       const opt = (L, v)=>L.map(x=>'<option value="'+E(x[0])+'"'+(String(x[0])===String(v)?' selected':'')+'>'+E(x[1])+'</option>').join('');
@@ -15667,9 +15663,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div class="r cs"><span class="l">Συμμετοχή<small data-ptxt style="display:none">τώρα 25%</small></span><div class="chs2"><button type="button" data-cspart="25%">25%</button><button type="button" data-cspart="0%">0%</button></div><button class="tg" data-tg0 aria-label="Συμμετοχή 0%" style="display:none"></button></div>'
         + '</div><div class="r" style="flex-wrap:wrap" data-edn></div>'
         + '<div class="r"><div class="pv" data-medpv style="flex:1;padding:0"></div><button class="addb" data-a="add" style="height:44px">Προσθήκη</button></div></div>';
+      h += '<div class="h">Εξετάσεις'+(S.ex.length?' · '+S.ex.length:'')+'</div><div class="g" data-exl></div>'
+        + '<div class="g" style="margin-top:8px"><div class="r"><input class="t" data-exq type="search" autocomplete="off" placeholder="🔎 Εξέταση (π.χ. υπέρηχος κοιλίας, PSA)…" enterkeyhint="search"></div><div data-exres></div></div>';
+      h += '<details class="rxmore"><summary>Επανάληψη συνταγής</summary>';
       h += '<div class="h">Επανάληψη συνταγής</div><div class="g"><div class="r"><span class="l">Επαναλαμβανόμενη</span><select data-rep>'+opt([['0','Όχι'],['2','Δίμηνη'],['3','Τρίμηνη'],['6','Εξάμηνη']], S.rep)+'</select></div>'
         + (S.rep ? '<div class="r"><span class="l">Κάθε</span><select data-every>'+opt([['28','28 ημέρες'],['30','30 ημέρες']], S.every)+'</select></div>' : '')+'</div>'
         + (S.rep ? '<div class="f" style="color:#1D4E80">🔁 Το bot πατά «Μήνες» και «Επανάληψη» ανά '+(S.every||30)+' ημέρες στον οδηγό (νέο — ελέγξτε τη στη σύνοψη πριν την «Καταχώριση»· αν δεν τα βρει, σας το λέει).</div>' : '');
+      h += '</details>';
       h += '<div class="chs" data-favs style="margin-top:8px"></div>';
       // 4) Διάγνωση
       const icdDefs = ['N39','N40','N20','R31','N30'].concat(S.icdSurg && S.icdSurg!=='N39' ? [S.icdSurg] : []);
@@ -15678,18 +15678,20 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '<div class="g" data-jobs style="margin-top:22px;display:none"></div>';
       h += '<div class="h" style="display:flex;justify-content:space-between;align-items:center">Πρόσφατες συνταγές<button class="pb pb-lnk pb-dngc pb-sm" data-hclr>Καθαρισμός</button></div><div class="g hist" data-hist><div class="r" style="color:#8E8E93">Φόρτωση…</div></div>';
       h += '<div class="f">Το bot ανοίγει επίσκεψη στο e-prescription, γράφει τη συνταγή και <b>σταματά πριν την «Καταχώριση»</b>· την ελέγχεις και την καταχωρίζεις εσύ.</div>';
-      h += '<div class="bar"><button class="go" data-a="go">Ετοίμασε στο e-prescription</button><div class="sum" data-sum></div></div>';
+      h += '<div class="bar"><button class="go" data-a="goall">Ετοίμασε</button><button data-a="go" style="display:none"></button><button data-a="goref" style="display:none"></button><div class="sum" data-sum></div></div>';
       root.innerHTML = h;
       window.pdxEpAccFill && pdxEpAccFill();
       window.pdxIcdAttach && pdxIcdAttach(root);
-      drawMeds(); drawFavs(); drawHist(); drawRecent(); refresh();
+      drawMeds(); drawFavs(); drawHist(); drawRecent(); drawEx(); refresh();
+      { const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
+        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true}); }
       const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); else setTimeout(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
       const mq = root.querySelector('[data-medq]'); mq.value = S.f.q||''; mq.addEventListener('input', medPreview); mq.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFromInput(); } });
       syncForm();
     }
     function drawEx(){
       const box = root.querySelector('[data-exl]'); if(box){ box.style.display = S.ex.length ? '' : 'none';
-        box.innerHTML = S.ex.map((x,i)=>'<div class="med"><div class="m"><b style="white-space:normal">'+E(x.n)+'</b><span>'+(x.ep?'<b style="display:inline;font-size:14px;color:#1F6F43">✓ κατάλογος</b> · ':'')+E(x.k||'Εξέταση')+'</span></div><button class="del" data-exdel="'+i+'" aria-label="Αφαίρεση">✕</button></div>').join(''); }
+        box.innerHTML = S.ex.map((x,i)=>'<div class="med"><div class="m"><b style="white-space:normal">'+E(x.n)+'</b><span>'+(x.src && x.src.toLowerCase()!==x.n.toLowerCase() ? 'γράφτηκε «'+E(x.src)+'» · ' : '')+(x.ep?'<b style="display:inline;font-size:14px;color:#1F6F43">✓ κατάλογος</b> · ':'')+E(x.k||'Εξέταση')+'</span></div><button class="del" data-exdel="'+i+'" aria-label="Αφαίρεση">✕</button></div>').join(''); }
       const fb = root.querySelector('[data-exfavs]'); if(fb) fb.innerHTML = REF_FAV.map(f=>'<button class="ch'+(S.ex.some(x=>x.n.toLowerCase()===f[0].toLowerCase())?' on':'')+'" data-exf="'+E(f[0])+'" style="min-height:40px">'+(f[2]?'✓ ':'⭐ ')+E(f[0])+'</button>').join('');
       const hh = root.querySelectorAll('.h'); hh.forEach(x=>{ if(/^Εξετάσεις/.test(x.textContent)) x.textContent = 'Εξετάσεις'+(S.ex.length?' · '+S.ex.length:''); });
       refresh();
@@ -15782,6 +15784,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const icd = [...root.querySelectorAll('[data-icdw] [data-c].on')].map(x=>x.getAttribute('data-c').split(' ')[0]);
       S.icd = icd;
       const go = root.querySelector('[data-a="go"]'), sum = root.querySelector('[data-sum]');
+      if(root.querySelector('[data-a="goall"]')){   // 🎨 ενιαία σελίδα
+        const gr = root.querySelector('[data-a="goref"]'), ga = root.querySelector('[data-a="goall"]');
+        const m0 = !okP ? 'Γράψε ΑΜΚΑ ή διάλεξε ασθενή' : !(S.meds.length || S.ex.length) ? 'Πρόσθεσε φάρμακο ή εξέταση' : !icd.length ? 'Διάλεξε διάγνωση' : (S.ex.length && !window.PDX_REF_ON) ? 'Το παραπεμπτικό δεν είναι ακόμα ενεργό' : '';
+        if(go) go.disabled = !!m0 || S.sending || !S.meds.length; if(gr) gr.disabled = !!m0 || S.sending || !S.ex.length;
+        if(ga){ ga.disabled = !!m0 || S.sending; ga.textContent = S.sending ? 'Στέλνω…' : S.meds.length && S.ex.length ? 'Ετοίμασε συνταγή + παραπεμπτικό' : S.ex.length ? 'Ετοίμασε παραπεμπτικό' : 'Ετοίμασε συνταγή'; }
+        if(sum) sum.textContent = m0 || [S.meds.length ? S.meds.length+' '+(S.meds.length===1?'φάρμακο':'φάρμακα') : '', S.ex.length ? S.ex.length+' '+(S.ex.length===1?'εξέταση':'εξετάσεις') : '', icd.join(', ')].filter(Boolean).join(' · ') + ' · σταματά πριν την Καταχώριση';
+        const ag = root.querySelector('[data-a="again"]'); if(ag){ const j = S.amka && S.hist.find(x=>String((x.payload||{}).amka||'')===S.amka); ag.style.display = j ? '' : 'none'; }
+        return; }
       if(S.mode==='ref'){ const gr = root.querySelector('[data-a="goref"]'), sm = root.querySelector('[data-sum]');
         const m2 = !okP ? 'Γράψε ΑΜΚΑ ή διάλεξε ασθενή' : !S.ex.length ? 'Πρόσθεσε τουλάχιστον μία εξέταση' : !icd.length ? 'Διάλεξε διάγνωση' : !window.PDX_REF_ON ? 'Έτοιμο — η αποστολή ενεργοποιείται μόλις το bot μάθει τη φόρμα' : '';
         if(gr){ gr.disabled = !!m2 || S.sending; gr.textContent = S.sending ? 'Στέλνω…' : 'Ετοίμασε παραπεμπτικό'; }
@@ -15932,6 +15942,29 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       S.meds = []; if(!S.k){ S.amka=''; S.who=null; lastA=''; const ia = root.querySelector('[data-amka]'); if(ia){ ia.value=''; } const w = root.querySelector('[data-who]'); if(w) w.textContent=''; }
       drawMeds(); refresh(); try{ root.closest('.ios-body').scrollTo({top:0, behavior:'smooth'}); }catch(e){}
     }
+    async function goAll(){ const hadX = S.ex.length; if(S.meds.length) await go(); if(hadX){ S.sending = false; refresh(); await goRef(); } }
+    S.goAll = goAll;
+    // ✨ γραμμή «γράψε ή πες» → Claude (ανάλυση) → κατάλογος e-prescription (pdx-ai epmatch) → μέσα ως ✓
+    async function rxQuick(){ const ta = root.querySelector('[data-rxq]'); const txt = String((ta && ta.value) || S.q || '').trim(); S.q = txt; if(txt.length < 3) return;
+      if(!(window.pdxAiOn && pdxAiOn())){ S.qMsg = 'Χρειάζονται οι λειτουργίες AI (Ρυθμίσεις → Λειτουργίες AI).'; return draw(); }
+      S.qBusy = true; S.qMsg = ''; draw();
+      try{ const r = await pdxAiJSON('συνταγή', 'Ο γιατρός γράφει/υπαγορεύει σε μία γραμμή ΦΑΡΜΑΚΑ (συνταγή) και/ή ΕΞΕΤΑΣΕΙΣ (παραπεμπτικό), με συντομογραφίες ή λάθη αναγνώρισης φωνής. Επέστρεψε ΜΟΝΟ JSON {"meds":[{"name":"εμπορική/δραστική όπως γράφτηκε","strength":"","dose":"1","freq":αριθμός ανά ημέρα,"days":αριθμός,"line":"όπως γράφτηκε"}],"exams":["μία εξέταση ανά στοιχείο, ολογράφως — «γεν. + καλλ. ούρων» / «γενική καλλιέργεια ούρων» = ΔΥΟ: Γενική ούρων, Καλλιέργεια ούρων"]}. 1x2 = 2 φορές/ημέρα, πρωί-βράδυ = 2, 3x1 = 3. ΠΟΤΕ κάτι που δεν γράφτηκε.', txt, 700);
+        if(!(r.ok && r.json)) throw new Error(r.error || 'δεν κατάλαβα');
+        const m = await pdxAI('συνταγή-κατάλογος', {epmatch:{meds:r.json.meds||[], exams:r.json.exams||[]}}); if(!m.ok) throw new Error(m.error || 'κατάλογος: χωρίς απάντηση');
+        const miss = []; (m.meds||[]).forEach(x=>{ if(!x.ep){ miss.push('💊 '+(x.src||x.line||x.name)); return; } const q = addLine(x.line); if(!q || q.bad || (q.missing && q.missing.length)) miss.push('💊 '+x.line); });
+        (m.exams||[]).forEach(x=>{ if(!x.ep){ miss.push('🧾 '+x.n); return; } if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:true, src:x.src||''}); });
+        S.q = ''; S.qMsg = miss.length ? '⚠ Δεν βρέθηκαν στον κατάλογο: '+miss.join(', ')+' — πρόσθεσέ τα με την αναζήτηση.' : '✓ Από τον κατάλογο e-prescription: '+[(m.meds||[]).length ? (m.meds||[]).length+((m.meds||[]).length===1?' φάρμακο':' φάρμακα') : '', (m.exams||[]).length ? (m.exams||[]).length+((m.exams||[]).length===1?' εξέταση':' εξετάσεις') : ''].filter(Boolean).join(' · ');
+      }catch(e){ S.qMsg = '⚠ '+(e.message||e); }
+      S.qBusy = false; draw(); }
+    function rxMic(){ const SR = window.SpeechRecognition || window.webkitSpeechRecognition, ta = root.querySelector('[data-rxq]');
+      if(!SR){ if(ta) ta.focus(); return; }
+      if(S.sr){ try{ S.sr.stop(); }catch(e){} return; }
+      const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; const base = String((ta && ta.value) || '').trim(); let fin = '';
+      const lbl = t=>{ const b = root.querySelector('[data-a="rxqmic"]'); if(b) b.textContent = t; };
+      r.onresult = ev=>{ let it = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'')+x[0].transcript.trim(); else it += x[0].transcript; } const t = (base?base+' ':'')+fin+(it?(fin?' ':'')+it:''); S.q = t; const a2 = root.querySelector('[data-rxq]'); if(a2) a2.value = t; };
+      r.onerror = ()=>{ S.sr = null; lbl('🎙 Υπαγόρευση'); if(ta) ta.focus(); };
+      r.onend = ()=>{ S.sr = null; lbl('🎙 Υπαγόρευση'); if(String(S.q||'').trim().length > 3) rxQuick(); };
+      try{ r.start(); S.sr = r; lbl('⏹ Σταμάτα'); }catch(e){ if(ta) ta.focus(); } }
     async function goRef(){
       refresh(); const gr = root.querySelector('[data-a="goref"]'); if(!gr || gr.disabled || !window.PDX_REF_ON) return;
       S.sending = true; refresh();
@@ -16017,6 +16050,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         draw(); return; }
       const a = t.closest('[data-a]'); if(!a) return;
       if(a.dataset.a==='add') addFromInput();
+      else if(a.dataset.a==='goall') goAll();
+      else if(a.dataset.a==='rxqgo') rxQuick();
+      else if(a.dataset.a==='rxqmic') rxMic();
       else if(a.dataset.a==='go') go();
       else if(a.dataset.a==='goref') goRef();
       else if(a.dataset.a==='exadd'){ const q = root.querySelector('[data-exq]'); exAdd(q && q.value); }
@@ -16059,7 +16095,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 📲 14/11 23:01 (χρήστης: «μόλις ανεβάσω συνταγή/παραπεμπτικό, κουμπί που με πάει κατευθείαν στην έγκριση»): άνοιγμα ενός «📷 Από σάρωση» απευθείας
   window.pdxScanRxOpen = function(x){ const p = x.payload || {};
     if(p.mode==='opnote') return window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:p.patient||{}, opnote:p.opnote||{}});
-    window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[]});
+    const allOk = p.amka_sure !== false && /^\d{11}$/.test(String(p.amka||'')) && ![].concat(p.meds||[], p.exams||[]).some(x=>!x || x.miss || x.ep===0 || typeof x==='string');
+    window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[], autoGo: allOk && ((p.meds||[]).length + (p.exams||[]).length) > 0});
     const miss = [].concat((p.meds||[]).filter(m=>m.miss).map(m=>'💊 '+(m.src||m.line||m.name)), (p.exams||[]).filter(x=>x && x.miss).map(x=>'🧾 '+x.n)); if(miss.length) setTimeout(()=>alert('⚠ Δεν βρέθηκαν στον κατάλογο του e-prescription:\n'+miss.join('\n')+'\n\nΠρόσθεσέ τα με την αναζήτηση (✓ = από τον κατάλογο).'), 600); };
   (function(){ let id = ''; try{ id = new URLSearchParams(location.search).get('scanrx') || ''; }catch(e){} if(!id) return;
     try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
