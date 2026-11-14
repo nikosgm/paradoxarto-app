@@ -96,19 +96,33 @@ function camStop(){ clearTimeout(camIdle); if(stream){ try{ stream.getTracks().f
 function camKick(){ clearTimeout(camIdle); camIdle = setTimeout(()=>{ if(busy || !stream || document.hidden) return; camStop();
   msg('<div style="font-size:48px">📷</div><div>Η κάμερα έκλεισε (δεν χρησιμοποιήθηκε)</div><button class="btn" id="camon">Άνοιγμα κάμερας</button>'); $('camon').onclick = ()=>camera(); }, 90000); }
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); return; } setTimeout(()=>{ if(!document.hidden && !stream && !busy && $('msg').style.display === 'none') camera(); }, 300); });
+// 📷 14/11 (χρήστης: «έκανα allow και πάλι ζητάει έγκριση κάθε φορά»): σε εφαρμογή της αρχικής οθόνης το iOS ΔΕΝ κρατά την άδεια κάμερας
+// (η ρύθμιση «Allow» του Safari ισχύει μόνο μέσα στο Safari). Άρα: (1) η κάμερα που είναι ήδη ανοιχτή ΞΑΝΑΧΡΗΣΙΜΟΠΟΙΕΙΤΑΙ (όχι νέο αίτημα)·
+// (2) επιλογή «Κάμερα iPhone» (pdx_scan_native): ο κύκλος ανοίγει την κάμερα του iPhone — ΠΟΤΕ ερώτηση άδειας.
+const natOn = ()=>{ try{ return localStorage.getItem('pdx_scan_native') === '1'; }catch(e){ return false; } };
+let camGen = 0;   // 14/11: κάθε κλήση έχει αριθμό — μια παλιότερη που τελειώνει αργότερα ΔΕΝ ξαναβάζει τη ζωντανή κάμερα
 async function camera(){
+  const gen = ++camGen;
   $('bar').style.visibility = 'visible';
+  if(stream && stream.getVideoTracks().some(t=>t.readyState === 'live') && !natOn()){ $('msg').style.display = 'none'; camKick(); return; }
   msg('<div class="spin"></div>');
   try{
-    stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:3840 }, height:{ ideal:2160 } } });
+    if(natOn()) throw new Error('native');
+    const st0 = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:3840 }, height:{ ideal:2160 } } });
+    if(gen !== camGen){ try{ st0.getTracks().forEach(t=>t.stop()); }catch(x){} return; }
+    stream = st0;
     const v = $('v'); v.srcObject = stream; await v.play().catch(()=>{});
+    if(gen !== camGen) return;
     $('msg').style.display = 'none'; camKick();
     try{ const tr = stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if(cap.focusMode && cap.focusMode.includes('continuous')) await tr.applyConstraints({ advanced:[{ focusMode:'continuous' }] }); }catch(e){}
+    if(gen !== camGen) return;
     $('shot').onclick = ()=>{ if(busy || !v.videoWidth) return; camKick(); $('fl').style.opacity = '.8'; setTimeout(()=>{ $('fl').style.opacity = '0'; }, 120); shoot(); };
     live();
   }catch(e){
+    if(gen !== camGen) return;
     // δεν επιτράπηκε η ζωντανή κάμερα → η κάμερα του κινητού
-    msg('<div style="font-size:60px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.7;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή</div>');
+    camStop();
+    msg('<div style="font-size:60px">📷</div><div>Πάτα τον <b>πράσινο κύκλο</b> και τράβηξε</div><div style="opacity:.7;font-size:14px">ή 🖼 για φωτογραφίες από τη συλλογή</div>' + (natOn() ? '<div style="opacity:.7;font-size:13px;margin-top:6px">📷 Κάμερα iPhone — χωρίς ερώτηση άδειας (αλλαγή: «Τι σαρώνω»)</div>' : ''));
     $('shot').onclick = ()=>{ if(busy) return; $('cf').value = ''; $('cf').click(); };
   }
   $('gal').onclick = ()=>{ if(busy) return; $('gf').value = ''; $('gf').click(); };
@@ -131,7 +145,7 @@ const modeGet = ()=>{ if(ONE_MODE) return ''; try{ const m = localStorage.getIte
 const opOn = ()=>modeGet() === 'op', rotOn = ()=>modeGet() === 'prog', histOn = ()=>modeGet() === 'hist';
 const modePaint = ()=>{ const m = modeGet(), M = MODES[m], b = $('mod'); b.innerHTML = M[0] + ' ' + M[1] + ' ▾'; b.style.background = m ? (m === 'prog' ? '#34C759' : m === 'op' ? '#AF52DE' : '#0A84FF') : '#ffffff26'; };
 const modeSet = (x)=>{ try{ localStorage.setItem(MODE, x); }catch(e){} modePaint(); };
-$('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
+$('mod').onclick = ()=>{ if(busy) return; const cur = modeGet();   // 14/11: ΧΩΡΙΣ camStop — αλλιώς νέα ερώτηση άδειας στην επιστροφή
   // 10/11 βράδυ (χρήστης: «κολλάει στις ρυθμίσεις, δεν γυρίζει στη φωτογραφία»): το μενού ήταν ψηλότερο από την οθόνη χωρίς κύλιση/έξοδο → κυλάει + «✓ Πίσω στην κάμερα»
   msg('<div style="width:100%;max-width:340px;display:flex;align-items:center;justify-content:space-between"><b style="font-size:19px">Τι σαρώνω;</b><button class="btn" id="mclose" style="min-width:0;padding:8px 14px;font-size:15px;background:#34C759">✓ Κάμερα</button></div>' + Object.keys(MODES).map(k=>'<button class="btn" data-m="' + k + '" style="width:100%;max-width:340px;text-align:left;background:' + (k === cur ? '#0A84FF' : '#ffffff1f') + '"><b>' + MODES[k][0] + ' ' + MODES[k][1] + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + MODES[k][2] + '</span></button>').join(''));
   // 💬 ίδια συζήτηση Claude για όλες τις σαρώσεις: επικόλληση του συνδέσμου της (Claude → ⋯ → Κοινοποίηση/Αντιγραφή συνδέσμου ή από τη γραμμή διεύθυνσης)
@@ -151,6 +165,9 @@ $('mod').onclick = ()=>{ if(busy) return; camStop(); const cur = modeGet();
     if(t && !/^https:\/\/claude\.ai\/chat\/[0-9a-f-]{36}/.test(t)){ alert('Δεν είναι σύνδεσμος συζήτησης Claude (https://claude.ai/chat/…)'); return; }
     try{ if(t) localStorage.setItem('pdx_scan_chat', t); else localStorage.removeItem('pdx_scan_chat'); }catch(e){} $('mod').onclick(); };
   $('msg').classList.add('menu'); $('msg').scrollTop = 0;
+  // 📷 14/11: ζωντανή κάμερα (ζητά άδεια σε κάθε άνοιγμα της εφαρμογής από την αρχική οθόνη) ή κάμερα iPhone (ποτέ ερώτηση)
+  $('msg').insertAdjacentHTML('beforeend', '<button class="btn" id="natcam" style="width:100%;max-width:340px;text-align:left;background:#ffffff1f"><b>' + (natOn() ? '📷 Κάμερα iPhone ✓' : '🎥 Ζωντανή κάμερα ✓') + '</b><br><span style="font-size:13px;font-weight:500;opacity:.85">' + (natOn() ? 'χωρίς ερώτηση άδειας · πάτα για ζωντανή προεπισκόπηση' : 'το iPhone ζητά άδεια σε κάθε άνοιγμα · πάτα για «Κάμερα iPhone» (χωρίς ερώτηση)') + '</span></button>');
+  $('natcam').onclick = ()=>{ try{ if(natOn()) localStorage.removeItem('pdx_scan_native'); else localStorage.setItem('pdx_scan_native', '1'); }catch(e){} camStop(); $('msg').classList.remove('menu'); camera(); };
   const back = ()=>{ $('msg').classList.remove('menu'); if(stream) $('msg').style.display = 'none'; else camera(); };
   $('mclose').onclick = back;
   $('msg').querySelectorAll('[data-m]').forEach(x=>x.onclick = ()=>{ modeSet(x.dataset.m); back(); }); };
