@@ -99,7 +99,9 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop
 // 📷 14/11 (χρήστης: «έκανα allow και πάλι ζητάει έγκριση κάθε φορά»): σε εφαρμογή της αρχικής οθόνης το iOS ΔΕΝ κρατά την άδεια κάμερας
 // (η ρύθμιση «Allow» του Safari ισχύει μόνο μέσα στο Safari). Άρα: (1) η κάμερα που είναι ήδη ανοιχτή ΞΑΝΑΧΡΗΣΙΜΟΠΟΙΕΙΤΑΙ (όχι νέο αίτημα)·
 // (2) επιλογή «Κάμερα iPhone» (pdx_scan_native): ο κύκλος ανοίγει την κάμερα του iPhone — ΠΟΤΕ ερώτηση άδειας.
-const natOn = ()=>{ try{ return localStorage.getItem('pdx_scan_native') === '1'; }catch(e){ return false; } };
+// 14/11 21:31 (χρήστης: «κρατάω τη Σάρωση και πατάω Allow· βγάλε τις ρυθμίσεις»): ΠΑΝΤΑ ζωντανή κάμερα (χωρίς επιλογή → καμία κολλημένη ρύθμιση)
+const SETTINGS_OFF = true;
+const natOn = ()=>{ if(SETTINGS_OFF) return false; try{ return localStorage.getItem('pdx_scan_native') === '1'; }catch(e){ return false; } };
 let camGen = 0;   // 14/11: κάθε κλήση έχει αριθμό — μια παλιότερη που τελειώνει αργότερα ΔΕΝ ξαναβάζει τη ζωντανή κάμερα
 async function camera(){
   const gen = ++camGen;
@@ -184,7 +186,7 @@ $('mod').onclick = ()=>{ if(busy) return; const cur = modeGet();   // 14/11: Χ�
   const back = ()=>{ $('msg').classList.remove('menu'); if(stream) $('msg').style.display = 'none'; else camera(); };
   $('mclose').onclick = back;
   $('msg').querySelectorAll('[data-m]').forEach(x=>x.onclick = ()=>{ modeSet(x.dataset.m); back(); }); };
-modePaint();   // 14/11: ΠΟΤΕ κρυφό — εδώ μέσα είναι η Συντόμευση iPhone και η Κάμερα iPhone (ΣΦΑΛΜΑΤΑ)
+modePaint(); if(SETTINGS_OFF){ try{ $('mod').style.display = 'none'; }catch(e){} }   // 14/11 21:31: χωρίς Ρυθμίσεις — μόνο κάμερα + 🖼 συλλογή (πολλές)
 try{ if(!localStorage.getItem('pdx_scan_via2')){ localStorage.setItem('pdx_scan_via', 'page'); localStorage.setItem('pdx_scan_via2', '1'); } }catch(e){}   // 10/11: μία φορά → όλες οι συσκευές στη Σελίδα Σάρωσης
 $('gf').onchange = (e)=>fromFiles(e.target.files);
 $('cf').onchange = (e)=>fromFiles(e.target.files);
