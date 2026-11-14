@@ -2412,7 +2412,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v420';
+const APP_VER = '2026-11-14-v421';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10182,6 +10182,7 @@ document.head.appendChild(st);
         + (sub?'<div class="pts">'+sub+'</div>':'')
         + '</div>'; }
     h += hdrChips(k, d);
+    try{ if(window.pdxOpsBanner) h += pdxOpsBanner(k, d); }catch(e){}   // 🔪 14/11: επέμβαση σήμερα (ΝΠΣ) + 📝 Πρακτικό
     const TL={hct:()=>tile('Ht','hct',d.hct,d.hctPrev,LTM(d,'hct')),wbc:()=>tile('WBC','wbc',d.wbc,d.wbcPrev,LTM(d,'wbc')),crp:()=>tile('CRP','crp',d.crp,d.crpPrev,LTM(d,'crp')),cr:()=>tile('Cr','cr',d.cr,d.crPrev,LTM(d,'cr')),temp:()=>tile('Θερμ.','temp',d.temp,''),
       drainMl:()=>'',
       diuresis:()=>(d.foleyTypes||[]).map((t,_i,_a)=>(window.__ik=t,tile(_a.length>1?esc(t)+' ml':'ml','td:'+t,((d.typeDiuresis||{})[t]||(d.diuresis?'✔':'')),((d.typeDiuresisPrev||{})[t]),(window.MEAS&&MEAS.mobSub(d,'td:'+t))||'','td:'+t,d))).join('')};
@@ -14446,6 +14447,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(res && Array.isArray(res.rows) && (res.dpt||'3449')==='3449'){ NB.rows = res.rows; NB.listAt = Date.parse(j.updated_at)||0; }
       const e = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npsenrich').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-3*864e5).toISOString()).order('id',{ascending:true}).limit(20);
       (e.data||[]).forEach(x=>{ const P = x.payload && x.payload.result && x.payload.result.pts || {}; Object.keys(P).forEach(n=>{ NB.enr[nbNz(n)] = P[n]; }); });
+      // 🔪 14/11: επεμβάσεις ΝΠΣ (εντολές/πρακτικά) — η τελευταία ανάγνωση των 2 ημερών
+      try{ const o = await sb6.from('oncall_jobs').select('payload').eq('kind','npsops').eq('status','done').not('payload->result','is',null).gte('created_at', new Date(Date.now()-2*864e5).toISOString()).order('id',{ascending:false}).limit(1);
+        const P = (((o.data||[])[0]||{}).payload||{}).result; if(P && P.pts) window.pdxNbOpsSet(P); }catch(e){}
       await nbAuto(); }catch(e){}
     NB.busy = false; try{ nbPaint(); }catch(e){} try{ const sg = (NB.rows ? NB.rows.length : -1)+'|'+NB.listAt; if(sg !== NB.vsig){ NB.vsig = sg; if(window.__npsView && window.mobRefresh) mobRefresh(); } }catch(e){}   // φίλτρο ΝΠΣ: μόνο όταν άλλαξε η λίστα (όχι άλμα στο scroll κάθε λεπτό)
   }
@@ -14459,6 +14463,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const live = await sb6.from('oncall_jobs').select('id,kind,created_at,status').in('kind',['npslist','npsenrich']).gte('created_at', d0.toISOString()).not('status','in','(failed,cancelled)').limit(20);
     const L = live.data || [];
     if(!L.some(x=>x.kind==='npslist')){ await sb6.from('oncall_jobs').insert({name_key:'zzz_npslist', name:'Ασθενείς ΝΠΣ 3449', room:null, kind:'npslist', payload:{dpt:'3449', quiet:true, auto:true}, status:'new'}); return; }
+    // 🔪 14/11 (χρήστης: «επεμβάσεις ΝΠΣ → τη μέρα της επέμβασης + ειδοποίηση πρακτικού»): 13:00 ανάγνωση, 20:00 ανάγνωση + 🔔 όσοι χειρουργήθηκαν σήμερα χωρίς πρακτικό
+    try{ const hh = new Date().getHours(); if(hh >= 13 && Array.isArray(NB.rows) && NB.rows.length){ const s0 = new Date(); s0.setHours(hh >= 20 ? 20 : 13, 0, 0, 0);
+      const q = await sb6.from('oncall_jobs').select('id,status').eq('kind','npsops').gte('created_at', s0.toISOString()).limit(3);
+      if(!(q.data||[]).length) await sb6.from('oncall_jobs').insert({name_key:'zzz_npsops', name:'🔪 Επεμβάσεις ΝΠΣ ('+NB.rows.length+')', room:null, kind:'npsops', payload:{names:NB.rows.map(r=>r.name).slice(0,45), remind: hh >= 20, quiet:true}, status:'new'}); } }catch(e){}
     if(L.some(x=>x.kind==='npsenrich' && /^(new|seen|running)$/.test(x.status))) return;
     if(L.filter(x=>x.kind==='npsenrich').length >= 3) return;   // όχι ατέρμονα
     const miss = (NB.rows||[]).filter(r=>!nbHere(r)).map(r=>r.name).filter(n=>{ const x = NB.enr[nbNz(n)]; return !x || (!x.amka && !x.am && !x.err) || (x.amka && !x.pid && !x.medErr && !x.dx); });
@@ -14471,6 +14479,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const nAdm = r=>{ const s = nAdmS(r); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]).getTime(); m = s.match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return new Date(y,+m[2]-1,+m[1]).getTime(); };
   // 14/11 22:01: ημερομηνία εισαγωγής ΝΠΣ για όποιον ασθενή (ταξινόμηση στη Μαζική παραγγελία)
   // 14/11 22:05 (χρήστης: «Αξονικές ειδικευομένων δεν βρίσκει κανέναν — υπάρχουν πολλοί ασθενείς του ΝΠΣ»): ΟΛΗ η λίστα ΝΠΣ με ημ. εισαγωγής
+  // 🔪 14/11: επεμβάσεις ΝΠΣ του ασθενή ΣΗΜΕΡΑ (εντολή) και αν υπάρχει πρακτικό σήμερα
+  window.pdxNbOpsSet = P=>{ NB.ops = {}; Object.keys(P.pts||{}).forEach(n=>{ NB.ops[nbNz(n)] = P.pts[n]; }); NB.opsAt = P.at||0; };
+  window.pdxOpsToday = (name)=>{ try{ const x = (NB.ops||{})[nbNz(name)]; if(!x) return null; const d = new Date(), t = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const ord = (x.ord||[]).filter(o=>o.d===t); if(!ord.length) return null; return {ord, note:(x.note||[]).some(o=>o.d===t)}; }catch(e){ return null; } };
+  window.pdxOpsBanner = (k, d)=>{ const E3 = v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])), esc = E3; const o = d && d.name ? pdxOpsToday(d.name) : null; if(!o) return '';
+    const nps = o.ord.map(x=>x.t).filter(Boolean).join(' · '), ours = String(d.surgery||'').trim();
+    if(!document.getElementById('opsbCss')){ const c = document.createElement('style'); c.id = 'opsbCss'; c.textContent = 'html.pdx-night .pdx-opsb{background:#2A2110!important;color:#F5F5F7}html.pdx-night .pdx-opsb.ok{background:#0F2A1C!important}html.pdx-night .pdx-opsb div div+div{color:#C7C7CC!important}'; document.head.appendChild(c); }
+    return '<div class="pdx-opsb'+(o.note?' ok':'')+'" style="margin:10px 12px 0;background:'+(o.note?'#ECFDF3':'#FFF7E6')+';border-radius:14px;padding:11px 13px;display:flex;gap:10px;align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:15px">🔪 Επέμβαση σήμερα</div>'
+      + '<div style="font-size:13.5px;color:#4B5563;margin-top:2px;overflow-wrap:anywhere">'+(ours?'<b>'+E3(ours)+'</b> · ':'')+'ΝΠΣ: '+E3(nps||'εντολή επέμβασης')+'</div></div>'
+      + (o.note ? '<span style="color:#1F8A4C;font-weight:700;font-size:13.5px;white-space:nowrap">✓ πρακτικό</span>' : '<button onclick="mobAct(\''+esc(k)+'\',\'opnote\')" style="border:0;background:#0A84FF;color:#fff;border-radius:10px;padding:9px 12px;font-weight:700;font-size:14px;white-space:nowrap">📝 Πρακτικό</button>') + '</div>'; };
   window.pdxNpsAllPts = async ()=>{ try{ if(!Array.isArray(NB.rows)) await nbLoad(true); }catch(e){} return (NB.rows||[]).map(r=>{ const x = NB.enr[nbNz(r.name)] || {}, t = nAdm(r), d = t ? new Date(t) : null;
     return {name:r.name, am:x.am||r.am||'', amka:x.amka||r.amka||'', ad: d ? String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear() : ''}; }); };
   window.pdxNpsAdmT = (name, am)=>{ try{ const t = nbNz(name), r = (NB.rows||[]).find(z=>nbNz(z.name)===t || (am && String(z.am||'')===String(am))) || {name, am}; return nAdm(r) || 0; }catch(e){ return 0; } };
@@ -14729,7 +14747,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '<div style="display:flex;gap:6px;margin:4px 16px 8px;flex-wrap:wrap">'+[['all','Όλοι '+rows.length],['miss','🟠 Λείπουν '+nO],['ok','🟢 Και στα δύο '+nG]].concat(onlyMine.length?[['gone','⚪ Μόνο Παραδόχαρτο '+onlyMine.length]]:[]).map(([v,t])=>'<button data-f="'+v+'" style="border:0;border-radius:999px;padding:6px 11px;font-size:13px;font-weight:700;background:'+(flt===v?'#1D4E80;color:#fff':'#fff;color:#334155')+'">'+t+'</button>').join('')+'</div>';
       const card = (dot, title, sub, act)=>'<button '+act+' style="display:flex;gap:10px;align-items:center;width:calc(100% - 32px);margin:0 16px 6px;text-align:left;border:1px solid #E5E9EF;border-radius:12px;background:#fff;padding:10px 12px;color:#1F2933"><span style="font-size:13px">'+dot+'</span><span style="flex:1;min-width:0"><b style="display:block;font-size:15px">'+title+'</b><small style="color:#64748B;font-size:12.5px">'+sub+'</small></span><span style="color:#94A3B8">›</span></button>';
       rows.forEach(({r,m}, i)=>{ if(flt==='miss'&&m || flt==='ok'&&!m || flt==='gone') return;
-        const sub = [r.am?'ΑΜ '+r.am:'', nAdmTxt(r)?'εισ. '+nAdmTxt(r):'', r.doc||''].filter(Boolean).map(E3).join(' · ');
+        const sub = [(()=>{ const o = window.pdxOpsToday && pdxOpsToday(r.name); return o ? (o.note ? '🔪 σήμερα ✓ πρακτικό' : '🔪 σήμερα · 📝 πρακτικό εκκρεμεί') : ''; })(), r.am?'ΑΜ '+r.am:'', nAdmTxt(r)?'εισ. '+nAdmTxt(r):'', r.doc||''].filter(Boolean).map(E3).join(' · ');   // 🔪 14/11
         h += card(m?'🟢':'🟠', E3(r.name), sub + (m ? ' · στο Παραδόχαρτο: '+E3(String(m.k).startsWith('extra-')?'εκτός θαλάμου':m.k) : ' · <b style="color:#B45309">λείπει από το Παραδόχαρτο</b>'), m ? 'data-open="'+E3(m.k)+'"' : 'data-add="'+i+'"'); });
       if(flt==='all'||flt==='gone') onlyMine.forEach(x=>{ h += card('⚪', E3(x.d.name), E3(x.k)+' · δεν φαίνεται στον ΝΠΣ (έξοδος ή άλλη κλινική;)', 'data-open="'+E3(x.k)+'"'); });
       return h + '<div class="ios-f" style="margin:10px 16px 60px">Πάτα έναν ασθενή για την καρτέλα με όλες τις ενέργειες · στους 🟠 υπάρχει και «＋ Προσθήκη σε κρεβάτι».</div>';
