@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v433';
+const APP_VER = '2026-11-15-v434';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15219,10 +15219,29 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     });
   };
   // 📦 κατάλογος του φύλλου παραγγελίας (για τα πακέτα): ό,τι μπορεί να διαλέξει κανείς εδώ — αγαπημένα, πακέτα κλινικής, 5 απεικονιστικά, Medilabi
+  // 🧪 15/11 00:24 (χρήστης: «βγάλε τις εξετάσεις που έχουμε βάλει εμείς — ΜΟΝΟ αυτές που τραβάει από το Medilabi· το έχουμε πει άπειρες φορές»):
+  // ΚΑΝΕΝΑ δικό μας όνομα («Γενική αίματος», «Ουρία», «K», «Na»…) στις επιλογές. Παλιά ονόματα (παλιές παραγγελίες/ρυθμίσεις) → το όνομα του καταλόγου
+  // με τον ΙΔΙΟ πίνακα που χρησιμοποιεί το bot (MED_ALIAS)· ό,τι δεν αντιστοιχίζεται → έξω. «Συχνές» = πόσο συχνά παραγγέλθηκαν (90 ημέρες).
+  const OLD2CAT = {'γενικη αιματος':'ΑΙΜΟΔΙΑΓΡΑΜΜΑ','ουρια':'ΟΥΡΙΑ','κρεατινινη':'ΚΡΕΑΤΙΝΙΝΗ','k':'ΚΑΛΙΟ','na':'ΝΑΤΡΙΟ','γλυκοζη':'ΓΛΥΚΟΖΗ (GLU)','ca':'ΑΣΒΕΣΤΙΟ ΟΛΙΚΟ','ασβεστιο':'ΑΣΒΕΣΤΙΟ ΟΛΙΚΟ',
+    'γενικη ουρων':'ΓΕΝΙΚΗ ΕΞΕΤΑΣΗ ΟΥΡΩΝ','καλλιεργεια ουρων':'ΚΑΛΛΙΕΡΓΕΙΑ ΟΥΡΩΝ','pt - inr':'INR','pt-inr':'INR','καλλιεργεια αιματος':'ΑΙΜΟΚΑΛΛΙΕΡΓΕΙΑ','ομαδα - διασταυρωση':'ΟΜΑΔΑ','mg':'ΜΑΓΝΗΣΙΟ','p':'ΦΩΣΦΟΡ','αιμοδιαγραμμα':'ΑΙΜΟΔΙΑΓΡΑΜΜΑ'};
+  const nzU = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  window.pdxToCat = function(name, cat){ const n = String(name||'').trim(); if(!n) return null; if(cat.indexOf(n)>=0) return n;
+    const w = OLD2CAT[nzU(n).toLowerCase()] || nzU(n); const L = cat.filter(t=>nzU(t).indexOf(w)===0).sort((a,b)=>a.length-b.length); return L[0] || null; };
+  let ordUse = null;
+  async function orderUse(){ if(ordUse) return ordUse; try{ const c = JSON.parse(localStorage.getItem('pdx_orduse')||'null'); if(c && Date.now()-c.at < 6*3600e3){ ordUse = c.m; return ordUse; } }catch(e){}
+    const m = {}; try{ const r = await sb6.from('oncall_jobs').select('tests:payload->tests').eq('kind','order').gte('created_at', new Date(Date.now()-90*864e5).toISOString()).limit(1000);
+      (r.data||[]).forEach(j=>(Array.isArray(j.tests)?j.tests:[]).forEach(t=>{ m[t] = (m[t]||0)+1; })); }catch(e){}
+    ordUse = m; try{ localStorage.setItem('pdx_orduse', JSON.stringify({at:Date.now(), m})); }catch(e){} return m; }
+  // «Συχνές» της παραγγελίας: ΜΟΝΟ ονόματα του καταλόγου Medilabi, κατά συχνότητα
+  window.pdxOrderFav = async function(cat, n){ const U = await orderUse(), C = {};
+    Object.keys(U).forEach(t=>{ const c = window.pdxToCat(t, cat); if(c) C[c] = (C[c]||0) + U[t]; });
+    let L = Object.keys(C).sort((a,b)=>C[b]-C[a]);
+    if(L.length < 8){ const P = await pdxOrderPacks(); [].concat(P.tests||[], cfg().orderTests||[], TESTS_DEF).forEach(t=>{ const c = window.pdxToCat(t, cat); if(c && L.indexOf(c)<0) L.push(c); }); }
+    return L.slice(0, n||16); };
   window.pdxOrderCatalog = async function(){
     const P = await pdxOrderPacks(), cat = await pdxMedCatalog();
-    const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
-    const IMGS = imgList(cat), a = fav.concat(...P.packs.map(x=>x.tests||[]), IMGS, cat.filter(t=>!isImgAny(t)));
+    const fav = cat.length ? await window.pdxOrderFav(cat) : [];
+    const IMGS = imgList(cat), a = fav.concat(IMGS, cat.filter(t=>!isImgAny(t)));
     return {all: a.filter((t,i)=>t && a.indexOf(t)===i), imgs: IMGS, fav, medilabi: cat.length>0, isImg: t=>isImgAny(t) || IMGS.indexOf(t)>=0, cat: t=>(isImgAny(t) || IMGS.indexOf(t)>=0) ? 'img' : ocatOf(t)};
   };
   window.pdxOrderSheet = async function(k, pre){
@@ -15233,8 +15252,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(Date.now()-last > 240000){ sessionStorage.setItem(K, String(Date.now())); const pa0 = window.pdxPrintAt && window.pdxPrintAt() || ''; try{ if(pa0) sessionStorage.setItem('pdx_oprep_at_'+nrm(d.name), JSON.stringify({pat:pa0, t:Date.now()})); }catch(x){}
         sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:k, kind:'orderprep', payload: pa0 ? {printAt: pa0} : {}}).then(()=>{}, ()=>{}); } } }catch(e){}
     const P = await pdxOrderPacks(), cat = await pdxMedCatalog();
-    const fav = (P.tests && P.tests.length) ? P.tests.slice() : (Array.isArray(cfg().orderTests)&&cfg().orderTests.length ? cfg().orderTests.slice() : TESTS_DEF.slice());
-    let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t=>{ if(rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
+    const fav = cat.length ? await window.pdxOrderFav(cat) : [];   // 🧪 15/11: ΜΟΝΟ κατάλογος Medilabi
+    let rec = []; try{ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','order').eq('name_key', nrm(d.name)).in('status',['approved','done','review','approve']).order('id',{ascending:false}).limit(6); (r.data||[]).forEach(x=>((x.payload||{}).tests||[]).forEach(t0=>{ const t = cat.length ? window.pdxToCat(t0, cat) : t0; if(t && rec.indexOf(t)<0) rec.push(t); })); }catch(e){}
+    if(cat.length) (P.packs||[]).forEach(pk=>{ pk.tests = (pk.tests||[]).map(t=>window.pdxToCat(t, cat)).filter((t,i,a)=>t && a.indexOf(t)===i); });   // 🧪 15/11: και τα παλιά πακέτα → ονόματα καταλόγου
     const st = {sel:[], pks:[], tab: 'fav', q:'', when:'Τώρα', urg:'Ρουτίνας', note:'', msg:'', pat: pdxPrintAt()};
     // 🩻 πρότυπο Κλινικών Πληροφοριών (oncall_config «img_clin_tpl», κοινό για όλη την κλινική)
     const CLIN_DEF = 'Ιστορικό:\n{ιστορικό}\n\nΖητείται: {εξετάσεις} — ';
@@ -15244,7 +15264,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       let age = ''; try{ const a = String(d.amka||''); if(/^\d{11}$/.test(a)){ const y = +a.slice(4,6), n = new Date().getFullYear()%100; age = String(new Date().getFullYear() - ((y>n?1900:2000)+y)); } }catch(e){}
       return clinTpl().replace(/\{ιστορικό\}/g, hist || '—').replace(/\{εξετάσεις\}/g, st.sel.filter(isImgAny).map(t=>String(t).split(/\s*@@\s*/)[0]).join(', ')).replace(/\{ηλικία\}/g, age).replace(/\{φύλο\}/g, d.sex||''); };
     // 8/11: επιστρέφει ΤΙ πρόσθεσε (για να αναιρείται με 2ο πάτημα στο πακέτο — μόνο αυτά, όχι ό,τι είχε διαλέξει ο γιατρός)
-    const addPre = x=>{ const add = {t:[], p:[]}; if(!x) return add; (x.tests||[]).forEach(t=>{ if(t && st.sel.indexOf(t)<0){ st.sel.push(t); add.t.push(t); } });
+    const addPre = x=>{ const add = {t:[], p:[]}; if(!x) return add; (x.tests||[]).forEach(t0=>{ const t = (cat.length && String(t0).indexOf('@@')<0) ? (window.pdxToCat(t0, cat) || '') : t0; if(t && st.sel.indexOf(t)<0){ st.sel.push(t); add.t.push(t); } });   /* 🧪 15/11: παλιά ονόματα πακέτων → κατάλογος */
       (x.profs||[]).forEach(n=>{ let i = P.packs.findIndex(q=>q && q.medilabi===n); if(i<0){ P.packs.push({name:n, medilabi:n, tests:[]}); i = P.packs.length-1; } if(st.pks.indexOf(i)<0){ st.pks.push(i); add.p.push(i); } }); return add; };   // 📦 από πακέτο: μόνο προεπιλογή — η αποστολή γίνεται εδώ, με τους ίδιους ελέγχους
     addPre(pre);
     const BN = Object.assign({}, await pdxBotNames());
