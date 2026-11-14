@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v447';
+const APP_VER = '2026-11-15-v448';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -20201,30 +20201,21 @@ window.pdxVoice = function(seed){
     const no = t.closest('[data-vno]'); if(no){ st.acts.splice(+no.dataset.vno, 1); return pg.redraw(); }
     if(t.closest('[data-vall]')){ for(let i=0;i<st.acts.length;i++){ const a = st.acts[i]; if(!a.bad && !a.st && !/^(course|ref|rxe)$/.test(a.type)) await doOne(i); } const r = st.acts.findIndex(a=>!a.bad && !a.st); if(r>=0) await doOne(r); return; }
     if(t.closest('[data-vmic]')){
-      if(st.sr || st.rec){ const r0 = st.sr; try{ r0 && r0.stop(); }catch(x){} try{ st.rec && st.rec.state!=='inactive' && st.rec.stop(); }catch(x){}
-        // 14/11 23:38: στο iPhone το onend δεν έρχεται πάντα → το κουμπί «κολλούσε»· τελειώνουμε εμείς μετά από 0,7″
-        if(r0) setTimeout(()=>{ try{ r0.abort(); }catch(x){} if(st.sr===r0){ st.sr = null; pg.redraw(); if(!st.recUsed && String(st.text).trim().length > 5 && !st.acts) run(); } }, 700); return; }
-      // 🎧 14/11 22:46 (χρήστης: «η αναγνώριση φωνής δεν είναι τόσο καλή — θέλω τόσο καλή όσο τη δική σου»): ΚΑΙ ηχογράφηση → μεταγραφή στον υπολογιστή
-      // του νοσοκομείου (Whisper, ήχος κρυπτογραφημένος με το κλειδί της κλινικής) με λεξιλόγιο: επώνυμα ασθενών, πακέτα, εξετάσεις. Η άμεση αναγνώριση του iPhone μένει ως εφεδρεία.
-      // 14/11 22:58 (χρήστης: «όσο μιλάω να γράφει, όπως εδώ»): ΖΩΝΤΑΝΗ αναγνώριση iPhone ΠΡΩΤΑ· η ηχογράφηση έπιανε το μικρόφωνο και τη σταματούσε → ΜΟΝΟ αν δεν υπάρχει ζωντανή
-      const SR0 = window.SpeechRecognition || window.webkitSpeechRecognition;
-      try{ if(!SR0 && navigator.mediaDevices && window.MediaRecorder && window.pdxCK){ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
-        rec.ondataavailable = ev=>{ if(ev.data && ev.data.size) ch.push(ev.data); };
-        rec.onstop = ()=>{ try{ ms.getTracks().forEach(x=>x.stop()); }catch(x){} st.rec = null; const blob = new Blob(ch, {type: rec.mimeType || 'audio/mp4'}); if(blob.size > 3000) sttSend(blob); else pg.redraw(); };
-        rec.start(); st.rec = rec; } }catch(er){ st.rec = null; }
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν ξεκίνησε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; pg.redraw(); setTimeout(()=>{ const ta = pg.el.querySelector('[data-vtx]'); ta && ta.focus(); }, 50); };
-      if(!SR){ if(st.rec){ st.recUsed = true; return pg.redraw(); } return kb(); }
-      st.hint = ''; st.err = ''; const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; const base = String(st.text||'').trim(); let fin = '';
-      r.onresult = ev=>{ let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'')+x[0].transcript.trim(); else inter += x[0].transcript; }
-        st.text = (base?base+' ':'') + fin + (inter?(fin?' ':'')+inter:''); const ta = pg.el.querySelector('[data-vtx]'); if(ta){ ta.value = st.text; ta.scrollTop = ta.scrollHeight; } };
-      r.onerror = async ev=>{ st.sr = null; const c = ev && ev.error;
-        if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ try{ if(navigator.mediaDevices && window.MediaRecorder && window.pdxCK){ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
-            rec.ondataavailable = e2=>{ if(e2.data && e2.data.size) ch.push(e2.data); }; rec.onstop = ()=>{ try{ ms.getTracks().forEach(x=>x.stop()); }catch(x){} st.rec = null; const blob = new Blob(ch, {type: rec.mimeType || 'audio/mp4'}); if(blob.size > 3000) sttSend(blob); else pg.redraw(); };
-            rec.start(); st.rec = rec; st.recUsed = true; st.hint = '🎧 Η ζωντανή γραφή δεν επιτρέπεται εδώ — ηχογραφώ· πάτα «Σταμάτα» όταν τελειώσεις.'; return pg.redraw(); } }catch(x){} kb(); }
-        else pg.redraw(); };
-      r.onend = ()=>{ st.sr = null; st.text = ((base?base+' ':'') + fin).trim() || st.text; if(st.rec){ try{ st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} } pg.redraw(); if(!st.recUsed && String(st.text).trim().length > 5 && !st.acts) run(); };
-      st.recUsed = !!st.rec; try{ r.start(); st.sr = r; pg.redraw(); }catch(er){ st.sr = null; if(!st.rec) kb(); else pg.redraw(); }
+      // 🎙 15/11 01:50 (χρήστης: «η υπαγόρευση πάλι δεν δουλεύει — γράφω, σβήνω, ξαναπατάω και δεν με ακούει»): ο Βοηθός είχε ΔΙΚΟ του παλιό μικρόφωνο
+      // (ίδια λάθη με πριν: iPhone στέλνει τις λέξεις μετά το «σταμάτα», 2ο πάτημα κουφό) → τώρα το ΚΟΙΝΟ pdxMic, όπως συνταγή/πορεία/πρακτικό.
+      if(st.rec){ try{ st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} return; }
+      const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν άκουσε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; st.sr = null; pg.redraw(); setTimeout(()=>{ const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.focus(); }, 60); };
+      st.vmic = st.vmic || window.pdxMic({ base:()=>{ const ta = pg.el.querySelector('[data-vtx]'); return ta ? ta.value : String(st.text||''); },
+        onText:(txt)=>{ st.text = txt; const ta = pg.el.querySelector('[data-vtx]'); if(ta){ ta.value = txt; ta.scrollTop = ta.scrollHeight; } },
+        onState:(on)=>{ st.sr = on ? 1 : null; if(on){ st.hint = ''; st.err = ''; } pg.redraw(); },
+        onEnd:(all)=>{ st.text = all || st.text; pg.redraw(); if(String(st.text).trim().length > 5 && !st.acts) run(); },
+        onFail:async (why)=>{ if(why==='nosr' && navigator.mediaDevices && window.MediaRecorder && window.pdxCK){   // χωρίς αναγνώριση στη συσκευή → ηχογράφηση → μεταγραφή στο νοσοκομείο
+            try{ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
+              rec.ondataavailable = ev=>{ if(ev.data && ev.data.size) ch.push(ev.data); };
+              rec.onstop = ()=>{ try{ ms.getTracks().forEach(x=>x.stop()); }catch(x){} st.rec = null; const blob = new Blob(ch, {type: rec.mimeType || 'audio/mp4'}); if(blob.size > 3000) sttSend(blob); else pg.redraw(); };
+              rec.start(); st.rec = rec; st.hint = '🎧 Ηχογραφώ — πάτα ξανά για «Σταμάτα».'; return pg.redraw(); }catch(e){} }
+          kb(); } });
+      if(st.vmic.on) st.vmic.stop(); else st.vmic.start();
     } });
   if(st.text) run();
 };
