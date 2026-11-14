@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v396';
+const APP_VER = '2026-11-14-v397';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7104,6 +7104,8 @@ document.head.appendChild(st);
   #mobView .nv-tb.pill::before{content:"";position:absolute;z-index:0;left:var(--px,0);top:var(--py,6px);width:var(--pw,0);height:var(--ph,50px);border-radius:999px;background:rgba(29,78,128,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.7);transition:left .34s cubic-bezier(.32,.72,0,1),width .34s cubic-bezier(.32,.72,0,1);opacity:var(--po,0)}
   html.pdx-night #mobView .nv-tb.pill::before{background:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
   #mobView .nv-tb.pill.np::before{transition:none}
+  #lfTabs.pill::before{content:"";position:absolute;z-index:0;left:var(--px,0);top:var(--py,6px);width:var(--pw,0);height:var(--ph,50px);border-radius:999px;background:rgba(29,78,128,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.7);transition:left .34s cubic-bezier(.32,.72,0,1),width .34s cubic-bezier(.32,.72,0,1);opacity:var(--po,0);pointer-events:none}
+  html.pdx-night #lfTabs.pill::before{background:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}#lfTabs.pill.np::before{transition:none}#lfTabs.pill > *{position:relative;z-index:1}
   #mobView .mm{background:rgba(29,78,128,.07)!important;border:0!important;border-radius:18px!important}
   #mobView .mgrid{gap:6px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%;box-sizing:border-box}#mobView .mm{display:flex!important;flex-direction:column;align-items:center;justify-content:center;min-width:0}#mobView .mm{padding:5px 6px!important;border-radius:14px!important}#mobView .mm b{font-size:18px!important;line-height:1.15}#mobView .mm span,#mobView .mm i{font-size:10.5px!important;text-align:center}#mobView .ti{font-size:10px!important;margin-right:2px}
   #mobView .madd button,#mobView .mbtn,#mobView .mchartbtn{background:var(--mp,#1D4E80)!important;border-radius:999px!important}
@@ -18796,7 +18798,21 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
       if(cl){ cl.remove(); cl = null; } if(!show) return;
       cl = src.cloneNode(true); copyStyle(src, cl); cl.removeAttribute('id'); cl.style.setProperty('z-index', '9100'); cl.style.setProperty('position', 'fixed'); cl.id = 'lfTabs';
       cl.addEventListener('click', e=>{ const kids = [...cl.children], i = kids.findIndex(k=>k.contains(e.target)); labsFullClose(); const t = src.children[i]; if(t) setTimeout(()=>t.click(), 30); });
-      document.body.appendChild(cl); };
+      document.body.appendChild(cl); labsOn(src, cl); };
+    // 14/11 (χρήστης, φωτο: «στα εργαστηριακά το κουμπί που αλλάζει στο island, αυτό το πλαισιάκι δεν δουλεύει»): το αντίγραφο κρατούσε ενεργό
+    // το κουμπί της ΠΡΟΗΓΟΥΜΕΝΗΣ οθόνης (π.χ. «Εργαλεία») και χωρίς κυκλάκι → ενεργό το «Εργαστηριακά» (μόνο χρώματα, όχι διαστάσεις) + κυκλάκι που γλιστρά
+    const COLP = ['color','-webkit-text-fill-color','fill','stroke','font-weight','opacity'];
+    const copyCol = (f, t)=>{ if(!f || !t) return; const cs = getComputedStyle(f); COLP.forEach(n=>t.style.setProperty(n, cs.getPropertyValue(n))); [...f.children].forEach((c, j)=>copyCol(c, t.children[j])); };
+    const labsOn = (src, cl)=>{ try{ const kids = [...cl.children], li = kids.findIndex(k=>/labsFullOpen/.test(k.getAttribute('onclick')||'')); if(li < 0) return;
+      const pi = [...src.children].findIndex(k=>k.classList.contains('on')), inact = [...src.children].find((k, j)=>j!==pi && j!==li) || src.children[li];
+      if(pi >= 0 && pi !== li){ copyCol(src.children[pi], kids[li]); copyCol(inact, kids[pi]); kids[pi].classList.remove('on'); }
+      kids[li].classList.add('on');
+      if(!cl.classList.contains('nv-tb')) return;
+      const br = cl.getBoundingClientRect(), pos = (b)=>{ const r = b.getBoundingClientRect(), w = Math.max(r.width + 20, 64), h = Math.min(br.height - 8, 54); return {x: Math.max(4, r.left - br.left + (r.width - w)/2), y: Math.max(4, (br.height - h)/2), w, h}; };
+      const set = (v)=>{ cl.style.setProperty('--px', v.x+'px'); cl.style.setProperty('--py', v.y+'px'); cl.style.setProperty('--pw', v.w+'px'); cl.style.setProperty('--ph', v.h+'px'); cl.style.setProperty('--po', '1'); };
+      cl.classList.add('pill');
+      if(pi >= 0 && pi !== li){ cl.classList.add('np'); set(pos(kids[pi])); void cl.offsetWidth; cl.classList.remove('np'); }
+      requestAnimationFrame(()=>set(pos(kids[li]))); }catch(e){} };
     window.__lfIslSync = sync;
     new MutationObserver(()=>sync()).observe(box, {attributes:true, attributeFilter:['class']});
     // 9/11 (χρήστης): η λίστα (κινητό) πιάνει ΟΛΗ την οθόνη και κυλάει ΠΙΣΩ από την κάτω μπάρα (όχι κόψιμο πάνω από αυτή)
