@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v405';
+const APP_VER = '2026-11-14-v406';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15968,14 +15968,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const draw = ()=>{ ov.innerHTML = '<div style="background:var(--card,#fff);color:var(--ink,#111);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto">'
         + '<div style="display:flex;align-items:center"><b style="font-size:19px;flex:1">📷 Από σάρωση</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 14px;font-size:15px">Αργότερα</button></div>'
         + '<div style="font-size:13px;color:#64748B;margin:4px 0 10px">Διαβάστηκαν από φωτογραφία — άνοιξε για <b>έλεγχο</b> και αποστολή (το bot σταματά πάντα για έγκριση).</div>'
-        + L.map(x=>{ const p = x.payload, n = p.mode==='ref' ? (p.exams||[]).length + ' εξετάσεις' : (p.meds||[]).length + ' φάρμακα';
-          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #EEF1F4"><div style="flex:1;min-width:0"><b style="font-size:16px">'+(p.mode==='ref'?'🧾 Παραπεμπτικό':'💊 Συνταγή')+'</b><div style="font-size:13px;color:#64748B">ΑΜΚΑ '+E4(p.amka||'—')+(p.amka_sure===false?' <b style="color:#B26A00">(έλεγξέ το)</b>':'')+' · '+n+'</div></div>'
+        + L.map(x=>{ const p = x.payload, n = p.mode==='opnote' ? E4(((p.opnote||{}).op||'επέμβαση') + ((p.opnote||{}).date ? ' · ' + p.opnote.date : '')) : p.mode==='ref' ? (p.exams||[]).length + ' εξετάσεις' : (p.meds||[]).length + ' φάρμακα';
+          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #EEF1F4"><div style="flex:1;min-width:0"><b style="font-size:16px">'+(p.mode==='opnote'?'📝 Πρακτικό':p.mode==='ref'?'🧾 Παραπεμπτικό':'💊 Συνταγή')+'</b><div style="font-size:13px;color:#64748B">ΑΜΚΑ '+E4(p.amka||'—')+(p.amka_sure===false?' <b style="color:#B26A00">(έλεγξέ το)</b>':'')+' · '+n+'</div></div>'
             + '<button data-no="'+x.id+'" style="border:0;background:#EEF2F6;border-radius:11px;padding:10px 12px;font-size:14.5px">🗑</button><button data-go="'+x.id+'" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:11px;padding:10px 14px;font-size:14.5px;font-weight:600">Άνοιγμα</button></div>'; }).join('') + '</div>'; };
       draw(); document.body.appendChild(ov);
       ov.addEventListener('click', async e=>{ if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
         const no = e.target.closest('[data-no]'), go = e.target.closest('[data-go]'), id = +((no||go)||{dataset:{}}).dataset[no?'no':'go'];
         if(!id) return; const x = L.find(y=>y.id===id); L.splice(L.indexOf(x), 1);
         await sb6.from('oncall_jobs').update({status: no ? 'dismissed' : 'done', updated_at:new Date().toISOString()}).eq('id', id).eq('status','scanrx');
+        if(go && x && x.payload.mode==='opnote'){ ov.remove(); window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:x.payload.patient||{}, opnote:x.payload.opnote||{}}); return; }   // 📝 14/11: φόρμα πρακτικού για έλεγχο
         if(go && x){ ov.remove(); const p = x.payload; window.pdxRxStudio({amka:p.amka, mode:p.mode==='ref'?'ref':'rx', lines:(p.meds||[]).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).map(n=>({n})), icd:p.icd||[]}); return; }
         if(!L.length) ov.remove(); else draw(); });
     }catch(e){} };
