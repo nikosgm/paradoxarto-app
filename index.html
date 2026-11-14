@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v402';
+const APP_VER = '2026-11-14-v403';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -23096,6 +23096,10 @@ window.histUploadOpen = function(){
     await refresh(); return {code, botMsg};
   }
   async function requestApproval(){ if(S.me) return S.me.id; const id = await insertDevice(null); await refresh(); return id; }
+  // 🔐 14/11 (χρήστης: «λείπει μια έγκριση στη συσκευή του christos»): το αίτημα έγκρισης γινόταν ΜΟΝΟ με το χέρι (Ρυθμίσεις → Κρυπτογράφηση → Αίτημα)·
+  // όποιος δεν το πατούσε δεν εμφανιζόταν ποτέ στη λίστα. Τώρα: νέα συσκευή με ρόλο → αίτημα ΑΥΤΟΜΑΤΑ μία φορά, ~8″ μετά τη σύνδεση.
+  setTimeout(async function ckAutoReq(){ try{ if(!window.authRole || typeof sb6==='undefined'){ if(!ckAutoReq.n || ckAutoReq.n++ < 20) { ckAutoReq.n = ckAutoReq.n || 1; setTimeout(ckAutoReq, 15000); } return; }
+      if(!S.loaded) await refresh(); if(S.cfg && !S.me && !S.key){ await requestApproval(); try{ toast('🔐 Η συσκευή στάλθηκε για έγκριση κρυπτογράφησης'); }catch(e){} } }catch(e){} }, 8000);
   async function approve(id){
     if(!S.raw) throw new Error('αυτή η συσκευή δεν έχει το κλειδί');
     const r = S.rows.find(x=>x.id===id); if(!r || !r.pub) throw new Error('δεν βρέθηκε η συσκευή');
