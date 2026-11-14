@@ -101,6 +101,7 @@ async function aiSum(i) {
   r.ai = { lines: (res.json.lines || []).map(String).filter(Boolean).slice(0, 6), reg: res.json.reg || {} }; draw();
 }
 function aiHtml(r) {
+  return "";   // 14/11 21:59 (χρήστης: «σβήσε τη σύνοψη AI»)
   if (!AIP()) return "";
   if (!r.ai) return '<button class="aib" data-ai>✨ Σύνοψη (AI)</button>';
   if (r.ai.busy) return '<div class="ai">✨ Γράφω σύνοψη…</div>';
@@ -173,8 +174,7 @@ function briefHtml(b, labs) {
     + sec("🔬 Ιστολογικές", (b.histo || []).map((h) => it(h.date, "<b>" + E(h.title) + "</b>" + (h.text ? ": " + E(h.text) : ""))))
     + sec("🧪 Εργαστηριακά", labs2)
     + sec("🩻 Απεικονίσεις", (b.imaging || []).map((h) => it(h.date, "<b>" + E(h.title) + "</b>" + (h.text ? ": " + E(h.text) : ""))).concat((b.studies || []).map((s) => it(s.date, "💿 " + E([s.modality, s.descr, s.institution].filter(Boolean).join(" · "))))))
-    + sec("🔪 Επεμβάσεις", (b.surg || []).map((h) => it(h.date, E(h.title) + (h.text ? ' <span class="d">' + E(h.text) + "</span>" : ""))))
-    + sec("🛏 Νοσηλείες", (b.adm || []).map((h) => it(h.date, E(String(h.title).replace(/^Νοσηλεία:\s*/, "")))))
+    // 14/11 21:59 (χρήστης): ΟΧΙ επεμβάσεις/εντολές επέμβασης, ΟΧΙ νοσηλείες στο Ογκολογικό
     + sec("🎗 Προηγούμενα συμβούλια", (b.prev || []).map((m) => it(m.meeting, "<b>" + E(m.decision || "—") + "</b>" + (m.text ? ": " + E(m.text) : ""))))
     + (!(b.histo || []).length && !(b.imaging || []).length && !(b.studies || []).length && !labs2.length ? '<div class="sv">Δεν υπάρχουν ακόμα ιστολογικές/απεικονίσεις στο Αρχείο Ασθενών για αυτόν τον ασθενή.</div>' : "")
     + "</div>";
