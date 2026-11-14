@@ -2412,7 +2412,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v419';
+const APP_VER = '2026-11-14-v420';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -4378,7 +4378,7 @@ function showDischarge(kOpt){
   const rxb = document.createElement('button'); rxb.className='btn btn-secondary'; rxb.style.cssText='width:100%;margin-top:6px;font-weight:700';
   rxb.textContent='💊 Συνταγή στο e-prescription από αυτές τις οδηγίες (bot)';
   rxb.onclick = ()=>{ if(!window.pdxRxSheet) return; const t = ta.value; ov.remove(); window.pdxRxSheet(dKey, t); };
-  const barWrap = document.createElement('div'); barWrap.appendChild(bar); if((window.pdxIsBotUser&&window.pdxIsBotUser())){ barWrap.appendChild(bot); barWrap.appendChild(rxAfter); barWrap.appendChild(refAfter); barWrap.appendChild(rxb); barWrap.appendChild(dcw); }
+  // (14/11: το παλιό barWrap αντικαταστάθηκε από τη σταθερή μπάρα .dcx-ft πιο κάτω)
   // 🩺 Συννοσηρότητες του ασθενή → «Επιπλέον διαγνώσεις» του εξιτηρίου (το ef-bot τις διαβάζει από το data-comorb)
   const cmb = document.createElement('div'); cmb.style.cssText='font-size:13.5px;color:#334155;background:#EEF4FA;border-radius:10px;padding:8px 10px;cursor:pointer';
   const cmbDraw = ()=>{ const c = window.pdxComorbForDischarge ? pdxComorbForDischarge(dKey) : [];
@@ -4390,7 +4390,45 @@ function showDischarge(kOpt){
   cmbDraw();
   cmb.onclick = ()=>{ if(!window.pdxComorbOpen) return; pdxComorbOpen(dKey);
     const t = setInterval(()=>{ if(!document.getElementById('comorbOverlay')){ clearInterval(t); if(document.body.contains(ov)) cmbDraw(); } }, 400); };
-  box.appendChild(warn); box.appendChild(ctl); box.appendChild(ta); box.appendChild(cmb); box.appendChild(barWrap); ov.appendChild(box);
+  // 🎨 14/11 (χρήστης: «βελτίωσε το UI της ενότητας εξιτηρίου»): φύλλο iOS — κεφαλίδα με ασθενή, κάρτες ανά ενότητα, σταθερή μπάρα ενεργειών κάτω
+  if(!document.getElementById('dcxCss')){ const cs = document.createElement('style'); cs.id = 'dcxCss'; cs.textContent =
+     '#dischOverlay.dcx{align-items:flex-end!important;padding:0!important;color-scheme:light}@media(min-width:700px){#dischOverlay.dcx{align-items:center!important;padding:16px!important}}'
+    +'.dcx-box{background:#F2F2F7!important;border-radius:22px 22px 0 0!important;padding:0!important;gap:0!important;width:min(760px,100vw)!important;max-height:94vh!important;overflow:hidden!important;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}'
+    +'@media(min-width:700px){.dcx-box{border-radius:18px!important;max-height:90vh!important}}'
+    +'.dcx-hd{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;background:#F2F2F7}.dcx-hd h2{margin:0;font-size:20px;font-weight:800;flex:1;min-width:0}.dcx-hd h2 small{display:block;font-size:13.5px;font-weight:500;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}'
+    +'.dcx-x{border:0;background:rgba(118,118,128,.14);width:32px;height:32px;border-radius:50%;font-size:16px;color:#3C3C43;flex:none;cursor:pointer}'
+    +'.dcx-sc{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}'
+    +'.dcx-h{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7686;margin:6px 4px -4px;display:flex;align-items:center;justify-content:space-between}'
+    +'.dcx-h button{border:0;background:none;color:#0A84FF;font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;padding:4px 2px;cursor:pointer}'
+    +'.dcx-c{background:#fff;border-radius:14px;padding:12px}'
+    +'.dcx-c textarea{border:0!important;padding:0!important;min-height:40vh!important;font-size:15.5px!important;outline:none;background:transparent;color:inherit}'
+    +'.dcx-c label{margin-top:0!important;padding:8px 0;border-top:.5px solid rgba(60,60,67,.18)}.dcx-c label:first-child{border-top:0;padding-top:0}'
+    +'.dcx-ft{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(242,242,247,.96);border-top:.5px solid rgba(60,60,67,.2);display:flex;flex-direction:column;gap:8px}'
+    +'.dcx-ft .btn{margin:0!important;border-radius:12px!important;min-height:48px;font-size:15.5px!important}'
+    +'.dcx-pri{background:#0A84FF!important;color:#fff!important;border:0!important;font-weight:800!important}.dcx-row{display:flex;gap:8px}.dcx-row .btn{flex:1;background:#fff!important;color:#1C1C1E!important;border:0!important;font-weight:700!important}'
+    +'html.pdx-night .dcx-box,html.pdx-night .dcx-hd{background:#000!important;color:#fff}html.pdx-night .dcx-c,html.pdx-night .dcx-row .btn{background:#1C1C1E!important;color:#fff!important}html.pdx-night .dcx-ft{background:rgba(0,0,0,.94);border-top-color:#38383A}'
+    +'html.pdx-night #dischOverlay.dcx{color-scheme:dark}html.pdx-night .dcx-c [style*="238, 244, 250"]{background:#0F2236!important;color:#DCE7F3!important}html.pdx-night .dcx-c label,html.pdx-night .dcx-c b,html.pdx-night .dcx-c div{color:inherit}html.pdx-night .dcx-x{color:#EBEBF5}'
+    +'html.pdx-night .dcx-c textarea{background:transparent!important;color:#fff!important}html.pdx-night .dcx-c button[style*="background: rgb(255, 255, 255)"],html.pdx-night .dcx-c button[style*="background:#fff"]{background:#2C2C2E!important;color:#64D2FF!important;border-color:#3A3A3C!important}'
+    +'html.pdx-night .dcx-c input[type=date]{background:#2C2C2E!important;color:#fff!important;border-color:#3A3A3C!important;color-scheme:dark}html.pdx-night .dcx-c b[style*="94, 107, 120"]{color:#98989F!important}';
+    document.head.appendChild(cs); }
+  ov.classList.add('dcx'); box.classList.add('dcx-box');
+  const isBotU = !!(window.pdxIsBotUser && window.pdxIsBotUser());
+  const hd = document.createElement('div'); hd.className = 'dcx-hd';
+  hd.innerHTML = '<h2>📄 Εξιτήριο<small>'+esc([rec.name, rec.surgery].filter(Boolean).join(' · ') || 'χωρίς στοιχεία ασθενή')+'</small></h2><button class="dcx-x" aria-label="Κλείσιμο">✕</button>';
+  hd.querySelector('.dcx-x').onclick = ()=>ov.remove();
+  const sc = document.createElement('div'); sc.className = 'dcx-sc';
+  const card = (title, els, act)=>{ const vis = els.filter(Boolean); if(!vis.length) return; if(title){ const h = document.createElement('div'); h.className = 'dcx-h'; h.textContent = title; if(act) h.appendChild(act); sc.appendChild(h); } const c = document.createElement('div'); c.className = 'dcx-c'; vis.forEach(e=>c.appendChild(e)); sc.appendChild(c); return c; };
+  sc.appendChild(warn);
+  if(ctl.children.length) card('Αφαιρέσεις', [ctl]);
+  const cpl = document.createElement('button'); cpl.type = 'button'; cpl.textContent = 'Αντιγραφή'; cpl.onclick = ()=>{ cp.onclick(); cpl.textContent = '✓ Αντιγράφηκε'; setTimeout(()=>{ cpl.textContent = 'Αντιγραφή'; }, 1200); };
+  card('Οδηγίες εξιτηρίου', [ta]);   // η «Αντιγραφή» είναι στη μπάρα κάτω (όχι διπλή)
+  card('Επιπλέον διαγνώσεις', [cmb]);
+  if(isBotU) card('Μετά την έγκριση', [rxAfter, refAfter, dcw]);
+  const ft = document.createElement('div'); ft.className = 'dcx-ft';
+  if(isBotU){ bot.classList.add('dcx-pri'); bot.style.cssText = 'width:100%'; bot.textContent = bot.textContent.replace('🤖 Στείλε στον ιατρικό φάκελο (συμπλήρωση από το bot)', '🤖 Στείλε στον ιατρικό φάκελο'); ft.appendChild(bot);
+    const row = document.createElement('div'); row.className = 'dcx-row'; rxb.style.cssText = ''; rxb.textContent = '💊 Συνταγή'; cp.style.flex = ''; row.appendChild(rxb); row.appendChild(cp); ft.appendChild(row); }
+  else { const row = document.createElement('div'); row.className = 'dcx-row'; cp.classList.add('dcx-pri'); row.appendChild(cp); row.appendChild(cl); ft.appendChild(row); }
+  box.appendChild(hd); box.appendChild(sc); box.appendChild(ft); ov.appendChild(box);
   ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
 }
