@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v397';
+const APP_VER = '2026-11-14-v398';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14570,17 +14570,23 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const nz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
     const inL = (rows, p)=>{ const n = nz(p.d.name), w = n.split(' ').filter(x=>x.length>=3); if(!w.length) return false;
       return (rows||[]).some(r=>{ if(p.d.am && r.am && String(p.d.am)===String(r.am)) return true; const rn = nz(r.name); return rn===n || w.slice(0,2).every(x=>rn.split(' ').includes(x)); }); };
-    return (pts||[]).filter(p=>p.d && String(p.d.name||'').trim() && !p.d._npsTemp && inL(prevRows, p) && !inL(lastRows, p));
+    // 14/11: prevRows μπορεί να είναι ΛΙΣΤΑ λιστών (όλες οι πρόσφατες) — «ήταν σε οποιαδήποτε από αυτές»
+    const P = Array.isArray(prevRows) && prevRows.length && Array.isArray(prevRows[0]) ? prevRows : [prevRows];
+    return (pts||[]).filter(p=>p.d && String(p.d.name||'').trim() && !p.d._npsTemp && P.some(rows=>inL(rows, p)) && !inL(lastRows, p));
   };
   window.pdxNpsGoneCheck = async function(force){
     try{ if(typeof sb6==='undefined' || ['resident','attending','admin'].indexOf(window.authRole)<0) return [];
-      const r = await sb6.from('oncall_jobs').select('id,payload,updated_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(8);
-      const L = (r.data||[]).filter(x=>x.payload && x.payload.result && Array.isArray(x.payload.result.rows) && String(x.payload.result.dpt||'3449')==='3449' && x.payload.result.rows.length >= 3);
-      if(L.length < 2) return []; const last = L[0], prev = L[1];
+      // 🚪 14/11 (χρήστης: «έφυγε ο Δούκας και δεν μου έστειλε ειδοποίηση»): σύγκριση ΜΟΝΟ των 2 τελευταίων λιστών → αν η εφαρμογή δεν ήταν
+      // ανοιχτή όταν ήρθε η «επόμενη» λίστα, η έξοδος χανόταν για πάντα (12/11: υπήρχε 11:24, έλειπε 17:04, κανείς δεν ρωτήθηκε).
+      // Τώρα: λείπει από την ΤΕΛΕΥΤΑΙΑ πλήρη λίστα αλλά ήταν σε ΟΠΟΙΑΔΗΠΟΤΕ λίστα των τελευταίων 7 ημερών → ερώτηση (μία φορά).
+      const r = await sb6.from('oncall_jobs').select('id,payload->result->rows,payload->result->dpt,updated_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-7*864e5).toISOString()).order('id',{ascending:false}).limit(40);
+      const L = (r.data||[]).map(x=>({updated_at:x.updated_at, rows:x.rows, dpt:x.dpt})).filter(x=>Array.isArray(x.rows) && String(x.dpt||'3449')==='3449' && x.rows.length >= 3);
+      if(L.length < 2) return []; const last = L[0];
+      const big = Math.max(...L.map(x=>x.rows.length)); if(last.rows.length < Math.max(3, big*0.5)) return [];   // μισή/λάθος ανάγνωση → καμία ερώτηση
       if(!force && Date.now() - Date.parse(last.updated_at) > 18*3600e3) return [];
       const pts = []; Object.keys(data||{}).forEach(k=>pts.push({k, isExtra:false, d:data[k]})); Object.keys(extraPatients||{}).forEach(k=>pts.push({k, isExtra:true, d:extraPatients[k]}));
       let asked = {}; try{ asked = JSON.parse(localStorage.getItem('pdx_npsgone')||'{}'); }catch(e){}
-      const gone = pdxNpsGoneCalc(prev.payload.result.rows, last.payload.result.rows, pts).filter(p=>force || !asked[p.k+'|'+p.d.name]);
+      const gone = pdxNpsGoneCalc(L.slice(1).map(x=>x.rows), last.rows, pts).filter(p=>force || !asked[p.k+'|'+p.d.name]);
       if(!gone.length) return [];
       gone.forEach(p=>{ asked[p.k+'|'+p.d.name] = Date.now(); }); const now = Date.now(); Object.keys(asked).forEach(k=>{ if(now - asked[k] > 30*864e5) delete asked[k]; });
       try{ localStorage.setItem('pdx_npsgone', JSON.stringify(asked)); }catch(e){}
@@ -14605,6 +14611,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         p.done = true; draw(); } });
   };
   // έλεγχος: 40″ μετά την είσοδο και κάθε 10′ (νέα λίστα ΝΠΣ → νέα ερώτηση μόνο για όσους δεν ρωτήθηκαν)
+  document.addEventListener('visibilitychange', ()=>{ try{ if(!document.hidden && window.authRole && !document.getElementById('pdxGoneOv') && Date.now() - (window.__pdxGoneAt||0) > 120000){ window.__pdxGoneAt = Date.now(); pdxNpsGoneCheck(); } }catch(e){} });   // 14/11: και μόλις ανοίξει το κινητό
   setTimeout(function npsGoneTick(){ try{ if(!document.hidden && window.authRole && !document.getElementById('pdxGoneOv')) pdxNpsGoneCheck(); }catch(e){} setTimeout(npsGoneTick, 10*60000); }, 40000);
   window.pdxNpsPatients = async function(){
     const E3 = x=>esc(String(x==null?'':x));
@@ -15148,14 +15155,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
             await sb6.from('oncall_jobs').insert({name_key:nk, name:d.name, room:k, kind:'orderprep', payload:{printAt:pat}}); try{ sessionStorage.setItem('pdx_oprep_'+nk, String(Date.now())); }catch(x){} }catch(x){} }, 1500); }
         return draw(); }
       if(t.closest('[data-go]')){
-        if(!st.sel.length && !st.pks.length){ st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
-        if(st.addTo && st.pks.length){ st.msg = '➕ Στην τελευταία παραγγελία μπαίνουν μόνο μεμονωμένες εξετάσεις — βγάλε τα πακέτα.'; return draw(); }
+        // 🛡 14/11 (17:00: η ίδια παραγγελία στάλθηκε 10 φορές σε 1″ — πολλά πατήματα όσο γινόταν ο έλεγχος διπλών): ένα πάτημα ανά 5″
+        if(Date.now() - (st.goAt||0) < 5000) return; st.goAt = Date.now();
+        if(!st.sel.length && !st.pks.length){ st.goAt = 0; st.msg = 'Διάλεξε τουλάχιστον μία εξέταση ή πακέτο.'; return draw(); }
+        if(st.addTo && st.pks.length){ st.goAt = 0; st.msg = '➕ Στην τελευταία παραγγελία μπαίνουν μόνο μεμονωμένες εξετάσεις — βγάλε τα πακέτα.'; return draw(); }
         const pks = st.pks.map(i=>P.packs[i]).filter(Boolean);
         // 🛡 προστασία από διπλή παραγγελία: ίδια εξέταση για τον ίδιο ασθενή τις τελευταίες 12 ώρες (σταλμένη ή καταχωρημένη)
         if(!MULTI) try{ const since = new Date(Date.now()-12*3600e3).toISOString();
           const r = await sb6.from('oncall_jobs').select('id,status,payload,created_at').eq('kind','order').eq('name_key', nrm(d.name)).gte('created_at', since).in('status',['new','seen','running','review','approve','approved','done']).order('id',{ascending:false}).limit(10);
           const dup = []; (r.data||[]).forEach(j=>((j.payload||{}).tests||[]).forEach(t=>{ if(st.sel.indexOf(t)>=0 && !dup.some(x=>x.t===t)) dup.push({t, at:new Date(j.created_at), st:j.status}); }));
-          if(dup.length && !st.dupOk){ st.dupOk = true; st.msg = '⚠ Ήδη παραγγέλθηκαν τις τελευταίες 12 ώρες: '+dup.map(x=>x.t+' ('+String(x.at.getHours()).padStart(2,'0')+':'+String(x.at.getMinutes()).padStart(2,'0')+(x.st==='approved'?', καταχωρημένη':'')+')').join(', ')+'. Πάτα ξανά «Αποστολή» αν τις θέλεις πάλι.'; return draw(); }
+          if(dup.length && !st.dupOk){ st.dupOk = true; st.goAt = 0; st.msg = '⚠ Ήδη παραγγέλθηκαν τις τελευταίες 12 ώρες: '+dup.map(x=>x.t+' ('+String(x.at.getHours()).padStart(2,'0')+':'+String(x.at.getMinutes()).padStart(2,'0')+(x.st==='approved'?', καταχωρημένη':'')+')').join(', ')+'. Πάτα ξανά «Αποστολή» αν τις θέλεις πάλι.'; return draw(); }
         }catch(e){}
         const PL = Object.assign({tests:st.sel.slice(), packs:pks.map(x=>({name:x.name, medilabi:x.medilabi||'', tests:x.tests||[]})), when:st.when, urgency:st.urg, note:(st.note||'').trim()}, st.pat ? {printAt:st.pat, printName:BN[st.pat]||''} : {});
         // ⚡ 7/11: «Τυχαία» → στον υπολογιστή που έχει ΗΔΗ ανοιχτή τη φόρμα (προετοιμασία), όχι σε άλλον που θα την ξανανοίξει (13″ αντί 30″+)
