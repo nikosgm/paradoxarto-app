@@ -2413,7 +2413,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v412';
+const APP_VER = '2026-11-14-v413';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17283,7 +17283,7 @@ Z99.2:C|αιμοκάθαρση
       const a = d.comorbAuto;
       if(a && (a.status==='ok' || a.status==='fail')) return;              // μία φορά ανά ασθενή· «fail» = χρειάζεται άνθρωπο
       if(a && a.status==='retry' && ((a.tries||0)>=3 || now-(a.at||0) < 30*60000)) return;   // ξαναδοκιμή ανά 30', έως 3 φορές
-      out.push({k, name: String(d.name).trim(), amka: pdxAmkaOk(d.amka) ? String(d.amka) : ''}); });
+      out.push({k, name: String(d.name).trim(), amka: pdxAmkaOk(d.amka) ? String(d.amka) : '', fresh: !a}); });   // fresh: ΠΟΤΕ από ΑΗΦΥ (για τον ήπιο κύκλο της μέρας)
     return out;
   };
   // ΑΜΚΑ: 11 ψηφία με ψηφίο ελέγχου (Luhn) — πιάνει λάθος ψηφίο ή ψηφία που άλλαξαν θέση
