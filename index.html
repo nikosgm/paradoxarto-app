@@ -2413,7 +2413,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v414';
+const APP_VER = '2026-11-14-v415';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10769,17 +10769,21 @@ document.head.appendChild(st);
     const all = entries(true).filter(x=>x.d && x.d.name).concat(window.pdxNpsBulkList ? pdxNpsBulkList() : []), sel = new Set();
     let ov = document.getElementById('obOv'); if(ov) ov.remove(); ov = document.createElement('div'); ov.id = 'obOv';
     ov.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(15,25,35,.4);display:flex;align-items:flex-end;justify-content:center;color-scheme:light';
+    // 14/11 22:01 (χρήστης): ΟΧΙ κουμπιά επιλογής (δεν ξε-επιλέγονταν) — μόνο ταξινόμηση αλφαβητικά ή κατά ημερομηνία εισαγωγής στο ΝΠΣ
+    let srt = (()=>{ try{ return localStorage.getItem('pdx_ob_sort') || 'az'; }catch(e){ return 'az'; } })();
+    const nm = x=>String(x.d.name||'').trim(), adT = x=>window.pdxNpsAdmT ? pdxNpsAdmT(nm(x), x.d.am) : 0;
+    const sorted = ()=>all.slice().sort((a,b)=> srt==='adm' ? ((adT(b)-adT(a)) || nm(a).localeCompare(nm(b),'el')) : nm(a).localeCompare(nm(b),'el'));
     const pill = (attr, t)=>'<button '+attr+' style="border:0;border-radius:10px;padding:8px 10px;font-size:14px;font-weight:700;margin:0 6px 7px 0;background:#EEF2F6;color:#334155">'+t+'</button>';
     const draw = ()=>{ ov.innerHTML = '<div style="background:#fff;color:#1F2933;width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92vh;overflow:auto">'
       +'<div style="display:flex;align-items:center"><b style="font-size:18px;flex:1">🧾 Μαζική παραγγελία</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:7px 12px">Κλείσιμο</button></div>'
-      +'<div class="mtp-h" style="font-size:13px;font-weight:700;color:#6B7686;margin:14px 0 8px">Σε ποιους · '+sel.size+'</div>'+pill('data-p="post"','Χειρουργημένοι (0–1 ΜΤΧ)')+pill('data-p="mine"','Οι θάλαμοί μου')+pill('data-p="all"','Όλοι')+pill('data-p="none"','Κανένας')
-      +'<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">'+all.map(x=>{ const on = sel.has(String(x.k)), bed = x.nps ? 'ΝΠΣ' : String(x.k).indexOf('extra')===0 ? 'Εκτός' : x.k;
+      +'<div class="mtp-h" style="font-size:13px;font-weight:700;color:#6B7686;margin:14px 0 8px">Σε ποιους · '+sel.size+'</div>'+'<div style="display:flex;background:#EEF2F6;border-radius:10px;padding:3px;margin:0 0 8px">'+[['az','Α–Ω'],['adm','Εισαγωγή ΝΠΣ']].map(o=>'<button data-srt="'+o[0]+'" style="flex:1;border:0;border-radius:8px;padding:8px;font-size:14px;font-weight:700;background:'+(srt===o[0]?'#fff':'transparent')+';color:'+(srt===o[0]?'#1F2933':'#6B7686')+';box-shadow:'+(srt===o[0]?'0 1px 3px rgba(0,0,0,.12)':'none')+'">'+o[1]+'</button>').join('')+'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">'+sorted().map(x=>{ const on = sel.has(String(x.k)), bed = x.nps ? 'ΝΠΣ' : String(x.k).indexOf('extra')===0 ? 'Εκτός' : x.k;
         return '<button data-k="'+esc(x.k)+'" style="display:flex;gap:10px;align-items:center;text-align:left;border-radius:12px;padding:10px 12px;font-size:15px;border:1.5px solid '+(on?'var(--mp,#1D4E80)':'#DCE2E8')+';background:'+(on?'#EAF1F8':'#fff')+';color:#1F2933"><span style="width:22px;height:22px;border-radius:6px;flex:none;display:grid;place-items:center;font-weight:800;color:#fff;background:'+(on?'var(--mp,#1D4E80)':'#fff')+';border:2px solid '+(on?'var(--mp,#1D4E80)':'#A9B6C4')+'">'+(on?'✓':'')+'</span><b style="min-width:52px">'+esc(bed)+'</b><span style="flex:1">'+esc(x.d.name)+'</span><small style="color:#64748B">'+esc(x.d.pod?'ΜΤΧ '+x.d.pod:'')+'</small></button>'; }).join('')+'</div>'
       +'<button data-ok style="width:100%;border:0;background:'+(sel.size?'var(--mp,#1D4E80)':'#A9B6C4')+';color:#fff;border-radius:14px;padding:14px;font-size:16px;font-weight:800;margin-top:12px">Συνέχεια: εξετάσεις για '+sel.size+' ασθενείς ›</button></div>'; };
     draw(); document.body.appendChild(ov);
     ov.addEventListener('click', e=>{
       if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
-      const pp = e.target.closest('[data-p]'); if(pp){ const v = pp.dataset.p; sel.clear(); all.forEach(x=>{ const ok = v==='all' || (v==='post' && /^\d+$/.test(String(x.d.pod||'').trim()) && +x.d.pod<=1) || (v==='mine' && !x.nps && (!(window.pdxMine && pdxMine.on) || (window.pdxMineKeep ? pdxMineKeep(x) : true))); if(ok) sel.add(String(x.k)); }); return draw(); }
+      const so = e.target.closest('[data-srt]'); if(so){ srt = so.dataset.srt; try{ localStorage.setItem('pdx_ob_sort', srt); }catch(er){} return draw(); }
       const kb = e.target.closest('[data-k]'); if(kb){ const v = kb.dataset.k; if(sel.has(v)) sel.delete(v); else sel.add(v); return draw(); }
       if(e.target.closest('[data-ok]')){ if(!sel.size) return; const ks = [...sel].map(kk=>/^nps:/.test(kk) && window.pdxNpsKey ? pdxNpsKey(kk) : kk); ov.remove(); if(ks.length===1) return pdxOrderSheet(ks[0]); return pdxOrderSheet(ks[0], {multi: ks}); }
     });
@@ -14414,6 +14418,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 8/11: η λίστα του ΝΠΣ ΔΕΝ έχει ημ. εισαγωγής (admit κενό) → από τα στοιχεία ΝΠΣ του ασθενή (adm.from) ή από το Παραδόχαρτο (admitDate)
   const nAdmS = r=>{ if(r.admit) return String(r.admit); try{ const x = NB.enr[nbNz(r.name)] || {}; if(x.adm && x.adm.from) return String(x.adm.from); }catch(e){} try{ const t = nbNz(r.name); for(const st of [data, extraPatients]) for(const k in (st||{})){ const d = st[k]; if(d && d.admitDate && (r.am && String(d.am)===String(r.am) || nbNz(d.name)===t)) return String(d.admitDate); } }catch(e){} return ''; };
   const nAdm = r=>{ const s = nAdmS(r); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],+m[2]-1,+m[3]).getTime(); m = s.match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return new Date(y,+m[2]-1,+m[1]).getTime(); };
+  // 14/11 22:01: ημερομηνία εισαγωγής ΝΠΣ για όποιον ασθενή (ταξινόμηση στη Μαζική παραγγελία)
+  window.pdxNpsAdmT = (name, am)=>{ try{ const t = nbNz(name), r = (NB.rows||[]).find(z=>nbNz(z.name)===t || (am && String(z.am||'')===String(am))) || {name, am}; return nAdm(r) || 0; }catch(e){ return 0; } };
   const nAdmTxt = r=>{ const t = nAdm(r); if(!t) return ''; const d = new Date(t); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
   const npsSort = (A)=>{ const m = NSO(), C = new Intl.Collator('el',{sensitivity:'base'}); if(m==='abc') A.sort((a,b)=>C.compare(String(a.name||''),String(b.name||''))); else if(m==='adm') A.sort((a,b)=>nAdm(b)-nAdm(a) || C.compare(String(a.name||''),String(b.name||''))); return A; };
   const npsSortBar = (cls)=>'<span style="display:inline-flex;gap:4px">'+[['abc','Α-Ω'],['adm','ΗΜ/ΝΙΑ']].map(([v,t])=>'<button data-nsort="'+v+'" style="border:0;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;background:'+(NSO()===v?'#1D4E80;color:#fff':'var(--card,#fff);color:#475569;border:1px solid #E5E9EF')+'">'+t+'</button>').join('')+'</span>';
@@ -20209,8 +20215,14 @@ window.pdxEpsineOpen = function(){
   const ruleOf = a=>st.hs[a] ? st.rules[st.hs[a]] : null;
   const setRules = async (amkas, act, note)=>{ await loadRules(); const R = Object.assign({}, st.rules); for(const a of amkas){ const h = await hOf(a); if(act) R[h] = {act, note:note||'', at:Date.now()}; else delete R[h]; }
     const u = await sb6.from('oncall_labs').upsert({name_key:'eps|rules', name:'ΕΨΙΝΕ οδηγίες', pid:null, data:{rules:R}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); if(u && u.error) throw new Error(u.error.message); st.rules = R; };
-  const poll = async (id, onNote)=>{ for(let i=0;i<150;i++){ await new Promise(r=>setTimeout(r, 2000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const x = q.data; if(!x) continue;
-      if(/^(done|failed|review|approved|dismissed|cancelled)$/.test(x.status)) return x; if(x.note && onNote) onNote(x.note); } return null; };
+  // 14/11 22:00 (χρήστης: «το ΕΨΙΝΕ του ασθενή δεν μου έχει ανοίξει ποτέ»): το bot απαντούσε σε <1′ αλλά στο iPhone η αναμονή χανόταν σιωπηλά
+  // (σφάλμα/ληγμένη σύνδεση μετά από «πάγωμα» → q.data null → συνέχιζε μέχρι τέλους). Τώρα: ανανέωση σύνδεσης στα σφάλματα, άμεσος έλεγχος στην επιστροφή, 10′ αντί για 5′, επιστροφή χρόνου (όχι πλήθους γύρων).
+  const poll = async (id, onNote)=>{ const t0 = Date.now(); let bad = 0, wake = null; const onVis = ()=>{ if(document.visibilityState==='visible' && wake) wake(); }; document.addEventListener('visibilitychange', onVis);
+    try{ while(Date.now()-t0 < 600000){ await new Promise(r=>{ wake = r; setTimeout(r, 2000); }); wake = null;
+      let q; try{ q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); }catch(e){ q = {error:e}; }
+      if(q.error || !q.data){ if(++bad % 3 === 0) try{ await sb6.auth.refreshSession(); }catch(e){} continue; } bad = 0; const x = q.data;
+      if(/^(done|failed|review|approved|dismissed|cancelled)$/.test(x.status)) return x; if(x.note && onNote) onNote(x.note); } return null; }
+    finally{ document.removeEventListener('visibilitychange', onVis); } };
   const pend = r=>!/Οριστικοποι|Υποβλήθηκ|Επιτυχ/i.test((r.st||'')+' '+(r.sub||''));
   const pg = iosPage('ΕΨΙΝΕ', 'Εργαλεία', ()=>{
     let h = '';
@@ -20284,7 +20296,8 @@ window.pdxEpsineOpen = function(){
   const toList = ()=>{ const c = st.cur; if(c && c.job && c.job.status==='review') sb6.from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε (ΕΨΙΝΕ)'}).eq('id', c.job.id).eq('status','review').then(()=>{},()=>{}); st.cur = null; pg.sub(null); pg.redraw(); };
   const openPt = async (amka)=>{ if(st.selOn){ st.sel.has(amka) ? st.sel.delete(amka) : st.sel.add(amka); return pg.redraw(); }
     const r = (st.rows||[]).find(x=>x.amka===amka); if(!r || st.busy) return; st.cur = {r, job:null}; pg.sub('ΕΨΙΝΕ', toList); st.busy = 'Το bot ανοίγει το ΕΨΙΝΕ του ασθενή (μόνο ανάγνωση)…'; st.msg=''; pg.redraw();
-    try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_eps', name:r.name, room:null, kind:'epsine', payload:Object.assign({amka, quiet:true}, await duP()), status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+    try{ let ins = null; try{ const q0 = await sb6.from('oncall_jobs').select('id').eq('kind','epsine').eq('name_key','zzz_eps').eq('status','review').eq('payload->>amka', amka).gte('created_at', new Date(Date.now()-18*60000).toISOString()).order('id',{ascending:false}).limit(1); if(q0.data && q0.data[0]) ins = {data:{id:q0.data[0].id}}; }catch(e){}   // 14/11: ήδη ανοιγμένο από το bot → κατευθείαν
+      if(!ins){ ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_eps', name:r.name, room:null, kind:'epsine', payload:Object.assign({amka, quiet:true}, await duP()), status:'new'}).select('id').single(); if(ins.error) throw ins.error; }
       const x = await poll(ins.data.id, n=>{ st.busy = n.slice(0,100); pg.redraw(); }); st.busy='';
       if(!x){ st.msg='⚠ το bot δεν απάντησε'; st.cur=null; } else { st.cur.job = Object.assign({id:ins.data.id}, x); const cb = (x.payload && x.payload.result && x.payload.result.cbs)||[]; st.cur.ticks = {}; cb.forEach((c,i)=>{ if(!c.on) st.cur.ticks[i] = true; });
         st.cur.night = (st.night||{})[amka] || ''; st.cur.sg = await epsSugg(r); } }
