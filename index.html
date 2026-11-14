@@ -1552,8 +1552,10 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
       const r = await sb6.from('oncall_labs').select('data').eq('name_key','pushpref|'+h).maybeSingle();
       const d = Object.assign({}, (r && r.data && r.data.data) || {}), want = M.rooms.map(String);
       const bx0 = !d.cats || d.cats.bx===undefined;   // 🔬 10/11: βιοψίες = ρητά κλειστές μέχρι να τις ανοίξει ο χρήστης
-      if(JSON.stringify(d.rooms||[]) === JSON.stringify(want) && !bx0) return;
+      const op0 = !d.cats || d.cats.opnote===undefined;   // 📝 14/11 22:33 (χρήστης): «πρακτικό εκκρεμεί» ΚΛΕΙΣΤΟ μέχρι να το ανοίξει ο χρήστης
+      if(JSON.stringify(d.rooms||[]) === JSON.stringify(want) && !bx0 && !op0) return;
       if(bx0) d.cats = Object.assign({}, d.cats||{}, {bx:false});
+      if(op0) d.cats = Object.assign({}, d.cats||{}, {opnote:false});
       d.rooms = want; d.at = Date.now();
       await sb6.from('oncall_labs').upsert({name_key:'pushpref|'+h, name:'ειδοποιήσεις', pid:null, data:d, updated_at:new Date().toISOString()}, {onConflict:'name_key'});
     }catch(e){}
@@ -2412,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v422';
+const APP_VER = '2026-11-14-v423';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8310,8 +8312,8 @@ document.head.appendChild(st);
   };
   // 🔔 Ειδοποιήσεις: σελίδα με διακόπτη ενεργοποίησης και από κάτω τι ειδοποιήσεις δέχομαι (αποθηκεύονται αμέσως)
   window.pdxNotifPage = function(){
-    const L = [['labsBad','🧪','Εργαστηριακά εκτός ορίων','Νέες τιμές εκτός ορίων από το Medilabi'],['review','👀','Για έλεγχο / έγκριση','Συνταγή, παραπεμπτικό, παραγγελία που περιμένει εσάς — το πάτημα ανοίγει τον έλεγχο'],['botDone','🤖','Εργασίες bot που ολοκληρώθηκαν','Κλήση, παραγγελία, συνταγή, εξιτήριο'],['botFail','⚠','Εργασίες bot που απέτυχαν',''],['system','🔑','Κωδικοί / σύνδεση του bot','Π.χ. κωδικός που δεν δουλεύει']];
-    let h = '', cats = {review:true, labsBad:true, botDone:true, botFail:true, system:true, bx:false}, quiet = [23,7], qOn = false, allow = ['labsBad','review'], busy = false, msg = '', saveT = 0;
+    const L = [['labsBad','🧪','Εργαστηριακά εκτός ορίων','Νέες τιμές εκτός ορίων από το Medilabi'],['review','👀','Για έλεγχο / έγκριση','Συνταγή, παραπεμπτικό, παραγγελία που περιμένει εσάς — το πάτημα ανοίγει τον έλεγχο'],['botDone','🤖','Εργασίες bot που ολοκληρώθηκαν','Κλήση, παραγγελία, συνταγή, εξιτήριο'],['botFail','⚠','Εργασίες bot που απέτυχαν',''],['system','🔑','Κωδικοί / σύνδεση του bot','Π.χ. κωδικός που δεν δουλεύει'],['opnote','📝','Πρακτικό χειρουργείου εκκρεμεί','20:00 — όσοι χειρουργήθηκαν σήμερα χωρίς πρακτικό στο ΝΠΣ (κλειστό αρχικά)']];
+    let h = '', cats = {review:true, labsBad:true, botDone:true, botFail:true, system:true, bx:false, opnote:false}, quiet = [23,7], qOn = false, allow = ['labsBad','review'], busy = false, msg = '', saveT = 0;
     // 🔬 10/11 βράδυ (χρήστης): βιοψίες = ρύθμιση που ΕΝΕΡΓΟΠΟΙΕΙ όποιος θέλει · (α) κάθε νέα βιοψία (β) εβδομαδιαία σύνοψη σε μέρα/ώρα επιλογής
     let bxW = {on:false, d:1, h:9}, cur0 = {};
     const DAYS = ['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'];
@@ -8320,7 +8322,7 @@ document.head.appendChild(st);
     const load = async ()=>{ const ep = pdxPushOn(); if(!ep) return; h = await hashOf(ep);
       try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','pushpref|'+h).maybeSingle(); const c = (r.data && r.data.data) || {};
         cur0 = c; cats = Object.assign(cats, c.cats||{}); if(c.bxWeek && typeof c.bxWeek==='object') bxW = Object.assign(bxW, c.bxWeek);
-        if(!c.cats || c.cats.bx===undefined) save();   // πρώτη φορά: «βιοψίες» ρητά ΚΛΕΙΣΤΕΣ (ο server στέλνει όσα δεν είναι κλειστά)
+        if(!c.cats || c.cats.bx===undefined || c.cats.opnote===undefined) save();   // πρώτη φορά: «βιοψίες» ρητά ΚΛΕΙΣΤΕΣ (ο server στέλνει όσα δεν είναι κλειστά)
         if(Array.isArray(c.quiet)){ quiet = c.quiet[0]!==c.quiet[1] ? c.quiet.slice() : [23,7]; qOn = c.quiet[0]!==c.quiet[1]; } if(Array.isArray(c.quietAllow)) allow = c.quietAllow; }catch(e){}
       pg.redraw(); };
     const save = ()=>{ clearTimeout(saveT); saveT = setTimeout(async ()=>{ if(!h) return;
