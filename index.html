@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v425';
+const APP_VER = '2026-11-14-v426';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19742,7 +19742,9 @@ window.pdxVoice = function(seed){
     if(a.type==='ref' || a.type==='rxe'){ const k1 = a.pt && !/^nps:/.test(a.pt.k) ? a.pt.k : ''; const am = String((a.pt && a.pt.amka) || a.amka || '').replace(/\D/g,'');
       pg.close(); setTimeout(()=>window.pdxRxStudio(Object.assign(k1 ? {k:k1, text:''} : {amka:am}, a.type==='ref' ? {mode:'ref', ex:(a.exL||[]).map(x=>({n:x.n, k:x.k, ep:true}))} : {mode:'rx', lines:(a.medL||[]).map(x=>x.line)})), 420);
       return '↪ άνοιξε η «Συνταγή» με ό,τι αντιστοιχίστηκε στον κατάλογο — έλεγξε και στείλε'; }
-    const k0 = a.pt.k; let k = k0; if(/^nps:/.test(k) && window.pdxNpsKey) k = pdxNpsKey(k, true); const d = recK(k);
+    // 14/11 22:58 (χρήστης: «υπαγόρευσα καλλιέργεια ούρων και ξεκίνησε να ψάχνει συννοσηρότητες»): ΜΟΝΙΜΗ καρτέλα ενεργοποιεί την αυτόματη καταχώριση συννοσηροτήτων ΑΗΦΥ →
+    // παραγγελία/εκτίμηση με ΠΡΟΣΩΡΙΝΗ (όπως η Μαζική παραγγελία)· μόνιμη μόνο όταν γράφεται κάτι στην καρτέλα (παροχέτευση/τιμή/εκκρεμότητα)
+    const k0 = a.pt.k; let k = k0; if(/^nps:/.test(k) && window.pdxNpsKey) k = pdxNpsKey(k, /^(drain|lab|todo)$/.test(a.type)); const d = recK(k);
     if(a.type==='order'){ const T0 = [].concat(a.tests||[], ...(a.packObjs||[]).map(x=>x.tests||[])).filter((t,i,A)=>t && A.indexOf(t)===i); const ok = await pdxBotSend(k, 'order', {tests:T0, packs:[], when:a.when==='Αύριο πρωί'?'Αύριο πρωί':'Τώρα', urgency:a.urgency==='Επείγον'?'Επείγον':'Ρουτίνας', note:''}); return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Καταχώρηση»)' : '⚠ δεν στάλθηκε'; }
     if(a.type==='consult'){ const M = window.pdxConsultMap ? await pdxConsultMap() : {map:{}}; const dp = (M.map||{})[a.spec]; if(!dp){ setTimeout(()=>mobAct(k,'consult'), 300); return '↪ άνοιξε η «Κλήση για εκτίμηση» (δεν έχει οριστεί υποτμήμα για «'+a.spec+'»)'; }
       const rf = ((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''; const ok = await pdxBotSend(k, 'consult', {spec:a.spec, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited:false, text: window.pdxConsultText ? pdxConsultText(d, a.reason||'') : (a.reason||''), reason:a.reason||''});
@@ -19800,7 +19802,9 @@ window.pdxVoice = function(seed){
       if(st.sr || st.rec){ try{ st.sr && st.sr.stop(); }catch(x){} try{ st.rec && st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} return; }
       // 🎧 14/11 22:46 (χρήστης: «η αναγνώριση φωνής δεν είναι τόσο καλή — θέλω τόσο καλή όσο τη δική σου»): ΚΑΙ ηχογράφηση → μεταγραφή στον υπολογιστή
       // του νοσοκομείου (Whisper, ήχος κρυπτογραφημένος με το κλειδί της κλινικής) με λεξιλόγιο: επώνυμα ασθενών, πακέτα, εξετάσεις. Η άμεση αναγνώριση του iPhone μένει ως εφεδρεία.
-      try{ if(navigator.mediaDevices && window.MediaRecorder && window.pdxCK){ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
+      // 14/11 22:58 (χρήστης: «όσο μιλάω να γράφει, όπως εδώ»): ΖΩΝΤΑΝΗ αναγνώριση iPhone ΠΡΩΤΑ· η ηχογράφηση έπιανε το μικρόφωνο και τη σταματούσε → ΜΟΝΟ αν δεν υπάρχει ζωντανή
+      const SR0 = window.SpeechRecognition || window.webkitSpeechRecognition;
+      try{ if(!SR0 && navigator.mediaDevices && window.MediaRecorder && window.pdxCK){ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
         rec.ondataavailable = ev=>{ if(ev.data && ev.data.size) ch.push(ev.data); };
         rec.onstop = ()=>{ try{ ms.getTracks().forEach(x=>x.stop()); }catch(x){} st.rec = null; const blob = new Blob(ch, {type: rec.mimeType || 'audio/mp4'}); if(blob.size > 3000) sttSend(blob); else pg.redraw(); };
         rec.start(); st.rec = rec; } }catch(er){ st.rec = null; }
@@ -19809,8 +19813,12 @@ window.pdxVoice = function(seed){
       if(!SR){ if(st.rec){ st.recUsed = true; return pg.redraw(); } return kb(); }
       st.hint = ''; st.err = ''; const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; const base = String(st.text||'').trim(); let fin = '';
       r.onresult = ev=>{ let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'')+x[0].transcript.trim(); else inter += x[0].transcript; }
-        st.text = (base?base+' ':'') + fin + (inter?(fin?' ':'')+inter:''); const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.value = st.text; };
-      r.onerror = ev=>{ st.sr = null; const c = ev && ev.error; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')) kb(); else pg.redraw(); };
+        st.text = (base?base+' ':'') + fin + (inter?(fin?' ':'')+inter:''); const ta = pg.el.querySelector('[data-vtx]'); if(ta){ ta.value = st.text; ta.scrollTop = ta.scrollHeight; } };
+      r.onerror = async ev=>{ st.sr = null; const c = ev && ev.error;
+        if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ try{ if(navigator.mediaDevices && window.MediaRecorder && window.pdxCK){ const ms = await navigator.mediaDevices.getUserMedia({audio:true}); const ch = []; const rec = new MediaRecorder(ms);
+            rec.ondataavailable = e2=>{ if(e2.data && e2.data.size) ch.push(e2.data); }; rec.onstop = ()=>{ try{ ms.getTracks().forEach(x=>x.stop()); }catch(x){} st.rec = null; const blob = new Blob(ch, {type: rec.mimeType || 'audio/mp4'}); if(blob.size > 3000) sttSend(blob); else pg.redraw(); };
+            rec.start(); st.rec = rec; st.recUsed = true; st.hint = '🎧 Η ζωντανή γραφή δεν επιτρέπεται εδώ — ηχογραφώ· πάτα «Σταμάτα» όταν τελειώσεις.'; return pg.redraw(); } }catch(x){} kb(); }
+        else pg.redraw(); };
       r.onend = ()=>{ st.sr = null; st.text = ((base?base+' ':'') + fin).trim() || st.text; if(st.rec){ try{ st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} } pg.redraw(); if(!st.recUsed && String(st.text).trim().length > 5 && !st.acts) run(); };
       st.recUsed = !!st.rec; try{ r.start(); st.sr = r; pg.redraw(); }catch(er){ st.sr = null; if(!st.rec) kb(); else pg.redraw(); }
     } });
