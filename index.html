@@ -2407,7 +2407,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v385';
+const APP_VER = '2026-11-14-v386';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8148,6 +8148,19 @@ document.head.appendChild(st);
       return Object.assign({ ok:true }, j);
     }catch(e){ return { error: String(e && e.message || e) }; }
   };
+  // 🤖 απάντηση ΜΟΝΟ JSON (αφαιρεί ```, κρατά από το 1ο { ως το τελευταίο }). → {json} ή {off|error}
+  window.pdxAiJSON = async function(task, system, user, max, model){
+    const r = await window.pdxAI(task, { system, max_tokens:max||1200, model:model||undefined, temperature:0, messages:[{ role:'user', content:user }] });
+    if(!r.ok) return r;
+    const t = String(r.text||''), a = t.indexOf('{'), z = t.lastIndexOf('}');
+    try{ return { ok:true, json: JSON.parse(t.slice(a, z+1)), usage:r.usage }; }catch(e){ return { error:'η απάντηση δεν ήταν JSON' }; }
+  };
+  // λίστα λειτουργιών AI (κλειδί = task του pdxAI) — κάθε νέα προστίθεται ΕΔΩ (κανόνας 13)
+  const AI_USES = [['ιστορικό','📷','Ανάγνωση ιστορικού από φωτογραφία','σελίδα «Ανέβασμα ιστορικού» (όπως πριν)'],
+    ['πορεία νόσου','📈','Πορεία νόσου: υπαγόρευση → SOAP','όλο το κείμενο στο S, μοιράζεις με το χέρι'],
+    ['πρακτικό','📝','Πρακτικό χειρουργείου από υπαγόρευση','φόρμα + επιλογή προτύπου (όπως πριν)'],
+    ['ογκολογικό','🎗','Σύνοψη ογκολογικού + μητρώο','συμπληρώνεις με το χέρι'],
+    ['επισκευή bot','🛠','Bot: επισκευή αλλαγμένων σελίδων','το bot σταματά και αναφέρει το σφάλμα (όπως πριν)']];
   window.pdxAiPage = async function(){
     let st = null, msg = '';
     const ping = async ()=>{ try{ const ss = (await sb6.auth.getSession()).data.session; const r = await fetch(SB6_URL + '/functions/v1/pdx-ai', { method:'POST', headers:{ 'content-type':'application/json', apikey:SB6_KEY, Authorization:'Bearer ' + (ss ? ss.access_token : SB6_KEY) }, body:'{"ping":1}' }); st = await r.json().catch(()=>null); }catch(e){ st = { error:String(e.message||e) }; }
@@ -8165,7 +8178,7 @@ document.head.appendChild(st);
             {ic:'💶', t:'Αυτόν τον μήνα', v:'$' + (+st.month||0).toFixed(2) + ' / $' + st.cap, sub:(st.n||0) + ' κλήσεις · εκτίμηση — ακριβές ποσό στο console.anthropic.com'},
             adm && {ic:'⛔', t:'Μηνιαίο όριο', v:'$' + st.cap, on:'', data:'data-ai="cap"'}
           ].filter(Boolean))
-        + iosGroup('Τι χρησιμοποιεί AI', [{t:'Καμία λειτουργία ακόμα', sub:'Κάθε νέα λειτουργία μπαίνει εδώ και έχει πάντα χειροκίνητο δρόμο.'}]);
+        + iosGroup('Τι χρησιμοποιεί AI', AI_USES.map(([k,ic,t,off])=>({ic, t, v: st.by && st.by[k] ? '$' + (+st.by[k]).toFixed(2) : '', sub:'Κλειστό: ' + off})), 'Ποσά αυτού του μήνα (εκτίμηση). Κάθε νέα λειτουργία μπαίνει εδώ και έχει πάντα χειροκίνητο δρόμο.');
     });
     pg.el.addEventListener('click', async e=>{ const r = e.target.closest('[data-ai]'); if(!r) return; const a = r.getAttribute('data-ai');
       if(!adm){ msg = 'Μόνο επιμελητής/διαχειριστής.'; pg.redraw(); return; }
@@ -19282,9 +19295,26 @@ window.pdxDictate = function(k){
     if(n.form==='SOAP') h += '<div style="margin:10px 16px 3px;font-size:13px;font-weight:700;color:#374151">Ζωτικά (προαιρετικά)</div><div style="margin:0 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">'+VIT.map(([key,lab])=>'<input data-npsf="'+key+'" inputmode="decimal" placeholder="'+lab+'" value="'+E4(n.f[key]||'')+'" style="min-width:0;min-height:40px;font-size:15px;padding:6px 8px;border:1px solid '+(n.noVit?'#B42318':'#C7CDD4')+';border-radius:9px">').join('')+'</div>'
       + (n.noVit ? '<button data-npsisbar style="display:block;width:calc(100% - 32px);margin:8px 16px 0;min-height:42px;border:1.5px solid #0A84FF;border-radius:12px;background:#fff;color:#0A84FF;font-weight:700">→ ISBAR (S→Situation, Σχόλια→Background, A→Assessment, P→Recommendation)</button>' : '');
     if(n.msg) h += '<div style="margin:10px 16px;font-size:14px;color:'+(n.ok?'#1A7F37':n.bad?'#B42318':'#6B7280')+'">'+E4(n.msg)+'</div>';
+    if(String(st.text||'').trim().length >= 12) h += '<button data-npsai class="pb pb-sm ai-only" style="margin:4px 16px 0"'+(n.ai==='busy'?' disabled':'')+'>✨ '+(n.ai==='ok'?'Ξανά χωρισμός σε SOAP':'Χωρισμός σε SOAP')+' (AI)</button>';
     h += '<div style="display:flex;gap:8px;margin:12px 16px"><button data-npsx style="flex:1;min-height:46px;border:0;border-radius:12px;background:#EEF2F6;color:#374151;font-weight:700">Άκυρο</button><button data-npsgo '+(n.busy?'disabled':'')+' style="flex:2;min-height:46px;border:0;border-radius:12px;background:'+(n.busy?'#9CA3AF':'#1A7F37')+';color:#fff;font-weight:700">'+(n.busy?'⏳ Στέλνεται…':'✅ Αποστολή στο ΝΠΣ')+'</button></div>'
       + '<div style="margin:0 16px;font-size:12px;color:#8E8E93">Το bot ανοίγει τον ασθενή (έλεγχος ΑΜΚΑ), γράφει ακριβώς τα παραπάνω, τα ξαναδιαβάζει και μετά πατά «Υποβολή καταχώρησης».</div>';
     return h; };
+  // ✨ 14/11 (χρήστης: «με υπαγόρευση και πορεία νόσου»): το υπαγορευμένο κείμενο → S/A/P/Σχόλια + ζωτικά με AI (μόνο αν είναι ανοιχτό).
+  // Ποτέ δεν προσθέτει κάτι που δεν ειπώθηκε· ο γιατρός βλέπει/διορθώνει ΠΡΙΝ την αποστολή. Κλειστό AI → όλο το κείμενο στο S (όπως πριν).
+  const SOAP_SYS = 'Είσαι βοηθός ουρολογικής κλινικής. Σου δίνεται υπαγορευμένη ημερήσια πορεία νόσου (μπορεί να έχει λάθη αναγνώρισης φωνής). '
+    + 'Μοίρασέ τη στα πεδία του ΝΠΣ (SOAP χωρίς πεδίο O). ΚΑΝΟΝΕΣ: γράψε ΜΟΝΟ ό,τι ειπώθηκε — καμία προσθήκη, καμία διάγνωση/οδηγία που δεν ειπώθηκε· διόρθωσε μόνο φανερά λάθη φωνής και ιατρικούς όρους· σύντομες ιατρικές φράσεις στα ελληνικά. '
+    + 'S = υποκειμενικά ΚΑΙ αντικειμενικά ευρήματα (κλινική εικόνα, εξέταση, παροχετεύσεις/καθετήρας, διούρηση, εργαστηριακά) · A = εκτίμηση · P = σχέδιο/οδηγίες · rem = ό,τι άλλο. '
+    + 'Ζωτικά ΜΟΝΟ αν ειπώθηκαν αριθμοί (αλλιώς null): bpH, bpL (ΑΠ π.χ. 130/80), hr, temp, sao2, rr. Αν λείπει A ή P γράψε "". '
+    + 'Απάντησε ΜΟΝΟ JSON: {"S":"","A":"","P":"","rem":"","vit":{"bpH":null,"bpL":null,"hr":null,"temp":null,"sao2":null,"rr":null}}';
+  const aiSoap = async (force)=>{ const o = st.nps; if(!o || !(window.pdxAiOn && window.pdxAiOn())) return; const txt = String(st.text||'').trim(); if(txt.length < 12 || (o.ai === 'busy')) return;
+    if(!force && o.ai === 'ok') return; o.ai = 'busy'; o.msg = '✨ Χωρίζω σε SOAP…'; o.bad = false; pg.redraw();
+    const r = await window.pdxAiJSON('πορεία νόσου', SOAP_SYS, txt, 900);
+    if(st.nps !== o) return;
+    if(r.ok && r.json){ const j = r.json; o.form = 'SOAP'; o.f = {S:String(j.S||'').trim()||txt, A:String(j.A||'').trim(), P:String(j.P||'').trim(), rem:String(j.rem||'').trim()};
+      const v = j.vit||{}; VIT.forEach(([key])=>{ if(v[key]!=null && String(v[key]).trim()!=='') o.f[key] = String(v[key]).replace(/[^0-9.,]/g,'').replace(',', '.'); });
+      o.ai = 'ok'; o.miss = null; o.noVit = false; o.msg = '✨ Χωρίστηκε σε SOAP — έλεγξε πριν την αποστολή'; }
+    else { o.ai = 'err'; o.msg = (r.off ? '' : 'AI: ' + (r.error||'χωρίς απάντηση') + ' — '); o.msg += 'συμπλήρωσε χειροκίνητα'; }
+    pg.redraw(); };
   const npsSend = async ()=>{ const n = st.nps; const F = NPSF[n.form]; const f = {};
     F.concat(n.form==='SOAP'?VIT.map(v=>[v[0],v[1],0]):[]).forEach(([key])=>{ const v = String(n.f[key]||'').trim(); if(v) f[key] = v; });
     n.miss = F.filter(x=>x[2] && !f[x[0]]).map(x=>x[0]); if(n.miss.length){ n.msg = 'Συμπλήρωσε τα υποχρεωτικά (*)'; n.bad = true; pg.redraw(); return; }
@@ -19358,7 +19388,8 @@ window.pdxDictate = function(k){
         st.rec = mr; st.t0 = Date.now(); mr.start(); st.tick = setInterval(()=>{ if(pg.el.isConnected) pg.redraw(); else { try{ mr.stop(); }catch(x){} } }, 1000); pg.redraw();
       }catch(er){ st.err = 'Μικρόφωνο: '+(er.message||er); pg.redraw(); }
       return; }
-    if(t.closest('[data-nps]')){ st.nps = {form:'SOAP', f:{S:String(st.text||'').trim()}, msg:'', busy:false}; pg.redraw(); return; }
+    if(t.closest('[data-nps]')){ st.nps = {form:'SOAP', f:{S:String(st.text||'').trim()}, msg:'', busy:false}; pg.redraw(); aiSoap(); return; }
+    if(t.closest('[data-npsai]')){ aiSoap(true); return; }
     if(t.closest('[data-npsform]')){ const fm = t.closest('[data-npsform]').dataset.npsform; const o = st.nps; if(o.busy) return; const S = o.f.S; o.form = fm; o.f = {S}; o.miss = null; o.noVit = false; o.msg=''; pg.redraw(); return; }
     if(t.closest('[data-npsisbar]')){ const o = st.nps; if(!o || o.busy) return; const g = o.f; o.form = 'ISBAR'; o.f = {S:g.S||'', B:String(g.rem||'').trim()||'—', A:g.A||'', R:g.P||''}; o.noVit = false; o.miss = null; o.bad = false; o.msg = 'Μετατράπηκε σε ISBAR — έλεγξε και πάτα «Αποστολή».'; pg.redraw(); return; }
     if(t.closest('[data-npsx]')){ if(st.nps && st.nps.busy) return; st.nps = null; pg.redraw(); return; }
@@ -19560,6 +19591,11 @@ window.pdxOpNotesOpen = async function(k, pre){
     let h = '<div style="margin:6px 16px 0;font-size:14px;color:#6B7280">'+E6(rec.name||'')+'</div>';
     if(st.f){ const f = st.f;
       if(st.msg) h += '<div style="margin:8px 16px 0;font-size:13.5px;color:#0A5BB5">'+E6(st.msg)+'</div>';
+      // 🎙✨ 14/11 (χρήστης: «πρακτικό από υπαγόρευση»): μιλάς ελεύθερα → AI συμπληρώνει φόρμα + κείμενο στο ύφος της κλινικής (μόνο με ανοιχτό AI)
+      h += '<div class="ai-only" style="margin:8px 16px 0;padding:10px 12px;border-radius:12px;background:rgba(10,132,255,.08)">'+H('🎙 Υπαγόρευση πρακτικού')
+        + '<textarea data-of="dict" placeholder="π.χ. «TURBT, Θεοδωρολέας και Μάνος, ραχιαία, όγκος 3 εκ. στο αριστερό πλάγιο τοίχωμα, εκτομή μέχρι τον μυ, Foley 3-way 20 με πλύσεις»" style="'+IN+';min-height:96px;display:block">'+E6(f.dict||'')+'</textarea>'
+        + '<div style="display:flex;gap:8px;margin-top:8px"><button class="pb" data-odmic style="flex:1">'+(st.mic?'■ Σταμάτα':'🎤 Μίλα')+'</button><button class="pb pb-pri" data-odai style="flex:2"'+(st.ai==='busy'?' disabled':'')+'>'+(st.ai==='busy'?'✨ Γράφω…':'✨ Συμπλήρωση από υπαγόρευση')+'</button></div>'
+        + '<div style="font-size:12px;color:#8E8E93;margin-top:6px">Συμπληρώνει επέμβαση, χειρουργούς, αναισθησία, καθετήρες, παροχετεύσεις και γράφει το κείμενο στο ύφος των πρακτικών της κλινικής. Ελέγχεις πριν την αποθήκευση. Δεν στέλνεται όνομα ασθενή.</div></div>';
       h += '<div style="margin:6px 16px">'+H('Ημερομηνία')+'<input data-of="date" type="date" value="'+E6(f.date)+'" style="'+IN+'">'
         + H('Επέμβαση')+'<input data-of="op" value="'+E6(f.op)+'" placeholder="π.χ. TURBT" style="'+IN+'">';
       // χειρουργοί με σειρά
@@ -19613,10 +19649,45 @@ window.pdxOpNotesOpen = async function(k, pre){
       if(g('data-ocfree')){ const v = String(f.cathFree||'').trim(); if(v){ f.cath.push({t:v}); f.cathFree = ''; pg.redraw(); } return; }
       if((b = g('data-odr'))){ const x = b.dataset.odr, i = f.drains.indexOf(x); if(i>=0) f.drains.splice(i,1); else f.drains.push(x); pg.redraw(); return; }
       if(g('data-odfree')){ const v = String(f.drFree||'').trim(); if(v){ f.drains.push(v); f.drFree = ''; pg.redraw(); } return; }
+      if(g('data-odmic')){ if(st.mic){ try{ st.mic.stop(); }catch(e2){} st.mic = null; pg.redraw(); return; }
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if(!SR){ toast && toast('Πάτα μέσα στο κουτί και το 🎤 του πληκτρολογίου'); const ta = pg.el.querySelector('[data-of="dict"]'); if(ta) ta.focus(); return; }
+        const r = new SR(); r.lang = 'el-GR'; r.continuous = true; r.interimResults = true; const base = String(f.dict||'').trim(); let fin = '';
+        r.onresult = ev=>{ let inter = ''; for(let i = ev.resultIndex; i < ev.results.length; i++){ const x = ev.results[i]; if(x.isFinal) fin += (fin?' ':'') + x[0].transcript.trim(); else inter += x[0].transcript; }
+          f.dict = (base ? base+' ' : '') + fin + (inter ? ' '+inter : ''); const ta = pg.el.querySelector('[data-of="dict"]'); if(ta) ta.value = f.dict; };
+        r.onend = ()=>{ st.mic = null; f.dict = ((base ? base+' ' : '') + fin).trim() || f.dict; pg.redraw(); };
+        r.onerror = ()=>{ st.mic = null; pg.redraw(); };
+        try{ r.start(); st.mic = r; }catch(e2){ st.mic = null; } pg.redraw(); return; }
+      if(g('data-odai')){ const d = String(f.dict||'').trim(); if(d.length < 10){ toast && toast('Γράψε ή υπαγόρευσε πρώτα'); return; } if(st.ai === 'busy') return;
+        if(st.mic){ try{ st.mic.stop(); }catch(e2){} st.mic = null; }
+        st.ai = 'busy'; st.msg = '✨ Γράφω το πρακτικό…'; pg.redraw();
+        const tpl = (window.pdxOpNoteRank ? window.pdxOpNoteRank(d + ' ' + (f.op||''), '') : [])[0];
+        const names = [...new Set(THER().concat(RES))];
+        const SYS = 'Είσαι βοηθός ουρολογικής κλινικής και γράφεις ΠΡΑΚΤΙΚΟ ΧΕΙΡΟΥΡΓΕΙΟΥ από υπαγόρευση του χειρουργού (μπορεί να έχει λάθη φωνής). '
+          + 'ΚΑΝΟΝΕΣ: γράψε ΜΟΝΟ ό,τι ειπώθηκε ή είναι αυτονόητο βήμα της ίδιας επέμβασης όπως στο δείγμα· ΠΟΤΕ ευρήματα, μεγέθη, πλευρά ή επιπλοκές που δεν ειπώθηκαν· αν λείπει κάτι σημαντικό άφησε «[;]». '
+          + 'Ύφος: όπως το ΔΕΙΓΜΑ της κλινικής (σύντομες προτάσεις, κόμματα, ελληνικοί ιατρικοί όροι). '
+          + 'Χειρουργοί: ΜΟΝΟ από τη λίστα, με τη σειρά που ειπώθηκαν (αλλιώς γράψε το όνομα όπως ειπώθηκε): ' + names.join(', ') + '. '
+          + 'Αναισθησία: Γενική | Ραχιαία | Τοπική | Μέθη. Καθετήρες t: Df | Foley | open-end | Couvelaire | 3-way Foley | ΝΦΣ | Ουρητηρικός | pigtail (size σε Fr για Foley/3-way/open-end/Df, side ΑΡ|ΔΕ|ΑΜΦ για ΝΦΣ/Ουρητηρικός/pigtail). '
+          + 'Παροχετεύσεις: ΠΡΧ | J-P | Redon | Penrose (ή όπως ειπώθηκε). '
+          + 'Απάντησε ΜΟΝΟ JSON: {"op":"","side":"","surgeons":[],"anesth":"","cath":[{"t":"","size":null,"side":""}],"drains":[],"text":""}';
+        const U = 'ΥΠΑΓΟΡΕΥΣΗ:\n' + d + (tpl ? '\n\nΔΕΙΓΜΑ ΥΦΟΥΣ ΚΛΙΝΙΚΗΣ («' + tpl.op + '»):\n' + String(tpl.t||'').slice(0, 2500) : '');
+        const r = await window.pdxAiJSON('πρακτικό', SYS, U, 2500);
+        st.ai = '';
+        if(!(r.ok && r.json)){ st.msg = '⚠ ' + (r.error || 'χωρίς απάντηση') + ' — συμπλήρωσε χειροκίνητα'; pg.redraw(); return; }
+        const j = r.json, nz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+        if(String(j.op||'').trim()) f.op = String(j.op).trim() + (j.side && !new RegExp('\\b'+j.side+'\\b').test(j.op) ? ' ' + j.side : '');
+        const sg = (Array.isArray(j.surgeons) ? j.surgeons : []).map(x=>{ const m = names.find(y=>nz(y)===nz(x) || nz(y).split(' ').pop()===nz(x).split(' ').pop()); return m || String(x||'').trim(); }).filter(Boolean);
+        if(sg.length) f.surgs = [...new Set(sg)];
+        if(['Γενική','Ραχιαία','Τοπική','Μέθη'].indexOf(j.anesth) >= 0) f.anesth = j.anesth;
+        if(Array.isArray(j.cath)) f.cath = j.cath.filter(c=>c && c.t).map(c=>{ const def = CATH.find(x=>nz(x[0])===nz(c.t)); const o = {t: def ? def[0] : String(c.t)}; const z = +c.size; if(z && def && SZ[def[1]] && SZ[def[1]].indexOf(z) >= 0) o.size = z; if(c.side && SIDES.indexOf(c.side) >= 0) o.side = c.side; return o; });
+        if(Array.isArray(j.drains)) f.drains = j.drains.map(x=>{ const m = DRAINS.find(y=>nz(y)===nz(x)); return m || String(x||'').trim(); }).filter(Boolean);
+        if(String(j.text||'').trim()){ f.preText = String(j.text).trim(); f.aiText = f.preText; }
+        st.msg = '✨ Συμπληρώθηκε από την υπαγόρευση' + (tpl ? ' (ύφος: «' + tpl.op + '»)' : '') + ' — έλεγξε τα πεδία και πάτα «📝» για το κείμενο'; pg.redraw(); return; }
       if(g('data-ogo')){ if(!String(f.op||'').trim()){ toast && toast('Γράψε την επέμβαση'); return; }
         // ό,τι έμεινε γραμμένο στα «άλλο» χωρίς ＋ → προστίθεται
         [['surgFree','surgs'],['drFree','drains']].forEach(([a,l])=>{ const v = String(f[a]||'').trim(); if(v){ f[l].push(v); f[a] = ''; } }); { const v = String(f.cathFree||'').trim(); if(v){ f.cath.push({t:v}); f.cathFree = ''; } }
         const n = f.id ? L().find(x=>x.id===f.id) : {id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), text: f.preText || ''};
+        if(f.aiText){ n.text = f.aiText; f.aiText = ''; }   // ✨ κείμενο από υπαγόρευση (και σε υπάρχον πρακτικό)
         n.date = f.date || today(); n.op = f.op.trim(); n.anesth = f.anesth||''; n.surgs = f.surgs.slice(); n.surg = surgStr(f.surgs); n.cath = f.cath.map(c=>Object.assign({}, c)); n.tubes = f.cath.map(cathStr).join(', '); n.drainsL = f.drains.slice(); n.drains = f.drains.join(', ');
         edit(n); return; }
     }
@@ -21345,39 +21416,29 @@ function repairJson(t){
   }
   return null;
 }
-function callClaude(b64list, extra){
-  // Καμία κλήση σε API με χρέωση: η ανάγνωση ιστορικού γίνεται μόνο από τη σελίδα του Claude (artifact)
-  try{ window.histUploadOpen(); }catch(e){}
-  return Promise.reject(new Error('Η ανάγνωση γίνεται πλέον από τη σελίδα «Ανέβασμα ιστορικού».'));
-  var key = lsGet(CH_KEY_LS);
-  var content = b64list.map(function(u){ return { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:u.split(',')[1] } }; });
+function callClaude(b64list, extra, lo){
+  // 🤖 14/11 (χρήστης: «ανάγνωση ιστορικού με ένα κλικ»): με ΑΝΟΙΧΤΟ AI → απευθείας μέσω pdxAI (κλειδί μόνο στον διακομιστή).
+  // Κλειστό AI → όπως πριν: σελίδα «Ανέβασμα ιστορικού» (χωρίς χρέωση). Τίποτα δεν αποθηκεύεται πριν την επιβεβαίωση του γιατρού.
+  if(!(window.pdxAiOn && window.pdxAiOn())){
+    try{ window.histUploadOpen(); }catch(e){}
+    return Promise.reject(new Error('Η ανάγνωση γίνεται από τη σελίδα «Ανέβασμα ιστορικού» (οι λειτουργίες AI είναι κλειστές).'));
+  }
+  var L = b64list, sz = L.reduce(function(a, u){ return a + String(u).length; }, 0);
+  if(sz > 9e6 && lo && lo.length) L = lo;   // μικρότερες εικόνες αν το σύνολο είναι πολύ μεγάλο για ένα αίτημα
+  var content = L.map(function(u){ return { type:'image', source:{ type:'base64', media_type:'image/jpeg', data:String(u).split(',')[1] } }; });
   content.push({ type:'text', text: PROMPT + (extra||'') });
-  return fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
-    headers:{
-      'content-type':'application/json',
-      'x-api-key': key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body: JSON.stringify({ model: CH_MODEL, max_tokens: 10000, messages:[{ role:'user', content: content }] })
-  }).then(function(r){
-    return r.json().catch(function(){ return {}; }).then(function(j){
-      if(!r.ok){
-        var m = (j && j.error && j.error.message) ? j.error.message : ('HTTP '+r.status);
-        if(r.status===401) m = 'Το κλειδί API δεν είναι έγκυρο. ' + m;
-        throw new Error(m);
-      }
-      var txt = (j.content||[]).filter(function(c){ return c.type==='text'; }).map(function(c){ return c.text; }).join('');
-      var a = txt.indexOf('{'), z = txt.lastIndexOf('}');
-      if(a<0) throw new Error('Η απάντηση δεν είχε αναγνώσιμη μορφή. Δοκίμασε ξανά με πιο καθαρή φωτογραφία.');
-      var body = txt.slice(a, z>a ? z+1 : undefined);
-      try{ return JSON.parse(body); }catch(e1){
-        var fixed = repairJson(txt.slice(a));
-        if(fixed) return fixed;
-        throw new Error('Η απάντηση κόπηκε ή δεν ήταν έγκυρη ('+(j.stop_reason||'?')+'). Δοκίμασε ξανά.');
-      }
-    });
+  return window.pdxAI('ιστορικό', { model: CH_MODEL, max_tokens: 8000, messages:[{ role:'user', content: content }] }).then(function(r){
+    if(r.off){ try{ window.histUploadOpen(); }catch(e){} throw new Error((r.error||'AI κλειστό') + ' — άνοιξε η σελίδα «Ανέβασμα ιστορικού».'); }
+    if(!r.ok) throw new Error(r.error || 'χωρίς απάντηση');
+    var txt = String(r.text||'');
+    var a = txt.indexOf('{'), z = txt.lastIndexOf('}');
+    if(a<0) throw new Error('Η απάντηση δεν είχε αναγνώσιμη μορφή. Δοκίμασε ξανά με πιο καθαρή φωτογραφία.');
+    var body = txt.slice(a, z>a ? z+1 : undefined);
+    try{ return JSON.parse(body); }catch(e1){
+      var fixed = repairJson(txt.slice(a));
+      if(fixed) return fixed;
+      throw new Error('Η απάντηση κόπηκε ή δεν ήταν έγκυρη. Δοκίμασε ξανά.');
+    }
   });
 }
 
@@ -21394,7 +21455,7 @@ function onFiles(files){
     });
   })).then(function(imgs){
     renderBusy('Διαβάζω το χειρόγραφο…', imgs);
-    return lexFetch().then(function(){ return callClaude(hiList, lexPrompt()); }).then(function(parsed){
+    return lexFetch().then(function(){ return callClaude(hiList, lexPrompt(), imgs); }).then(function(parsed){
       rulesApply(parsed);
       var raw = JSON.parse(JSON.stringify(parsed));
       var applied = lexApply(parsed);

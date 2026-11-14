@@ -39,6 +39,16 @@ textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11
 .hit .mut{color:var(--mut);font-size:13.5px;margin-left:auto}
 .row2{display:flex;gap:8px;margin-top:8px}.row2 input{flex:1}
 .x{border:0;background:none;color:var(--mut);font-size:15px;padding:4px 8px;margin-left:auto}
+.brief{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;font-size:14.5px}
+.brief h4{margin:10px 0 4px;font-size:13px;letter-spacing:.3px;text-transform:uppercase;color:var(--mut)}
+.brief .it{padding:3px 0}.brief .d{color:var(--mut);font-size:13px;margin-right:6px;white-space:nowrap}
+.brief .tag{display:inline-block;background:#FDECEC;color:#9B1C1C;border-radius:8px;padding:2px 8px;font-size:13px;font-weight:700;margin-right:6px}
+.brief .tag.s{background:#E8EFF8;color:var(--pri)}
+.ai{margin-top:10px;padding:10px 12px;border-radius:12px;background:#EEF4FF;font-size:14.5px}.ai b{color:var(--pri)}.ai .reg{margin-top:8px;font-size:13.5px;color:var(--mut)}
+.aib{border:0;border-radius:10px;padding:9px 12px;font-size:14.5px;font-weight:700;background:#E8EFF8;color:var(--pri);margin-top:10px}.aib.pri{background:var(--pri);color:#fff}
+.qa{border-color:#C9D8EC;background:#F5F9FF;min-height:48px}
+.spark{vertical-align:middle;margin-left:6px}
+@media print{.card{break-after:page;page-break-after:always}.card:last-child{break-after:auto;page-break-after:auto}.qa:placeholder-shown{display:none}}
 @media print{header,.add,.x,.sv{display:none}.card{break-inside:avoid;border-color:#999}body{background:#fff}.opts button:not(.on){display:none}.opts button.on{border:0;background:none;padding:0;color:#000}textarea{border:0;padding:0;min-height:0}}
 </style>
 </head>
@@ -49,7 +59,7 @@ textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11
   <div class="st" id="net">…</div>
 </header>
 <main id="list"></main>
-<div class="add"><button class="b-pri" id="addBtn">＋ Ασθενής</button><button class="b-sec" id="printBtn">🖨 Πρακτικό</button></div>
+<div class="add"><button class="b-pri" id="addBtn">＋ Ασθενής</button><button class="b-sec" id="foldBtn">📁 Φάκελος</button><button class="b-sec" id="printBtn">🖨 Εκτύπωση</button></div>
 <script>
 "use strict";
 const OPTS = ["Παρακολούθηση", "Χειρουργείο", "Ακτινοθεραπεία", "Συστηματική θεραπεία", "Επανεκτίμηση", "Άλλο"];
@@ -67,6 +77,46 @@ async function api(p, o = {}) {
   if (VIA) return VIA(o.method || "GET", p, o.body);
   const r = await fetch(BASE + p, { method: o.method || "GET", headers: { "content-type": "application/json", "x-pdx-key": KEY(), "x-pdx-user": "tablet" }, body: o.body ? JSON.stringify(o.body) : undefined });
   const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.err || ("HTTP " + r.status)); return j;
+}
+// ✨ 14/11 (χρήστης: «σύνοψη ογκολογικού + αυτόματο μητρώο»): ΜΟΝΟ μέσα στο Παραδόχαρτο με ανοιχτό AI (κλειδί ποτέ στο tablet).
+// Στέλνεται ΜΟΝΟ ο φάκελος χωρίς ταυτότητα (ηλικία, όχι όνομα/ΑΜΚΑ). Το μητρώο γράφεται ΜΟΝΟ με «💾» του γιατρού.
+const AIP = () => { try { return window.parent !== window && window.parent.pdxAiOn && window.parent.pdxAiOn() && window.parent.pdxAiJSON ? window.parent : null; } catch (e) { return null; } };
+const SITE_K = { "προστάτ": "prostate", "κύστ": "bladder", "ουροδόχ": "bladder", "νεφρ": "kidney", "πύελ": "upper_tract", "ουρητήρ": "upper_tract", "όρχ": "testis", "πέος": "penis", "επινεφρ": "adrenal", "ουρήθρ": "urethra" };
+async function aiSum(i) {
+  const P = AIP(), r = rows[i]; if (!P || !r) return; const b = r.brief || {}, p = r.patient || {};
+  const age = p.birth ? Math.floor((Date.now() - Date.parse(p.birth)) / 31557600000) : null;
+  const L = r.labs || {}, lab = (k) => (L[k] || []).slice(-6).map((o) => o.d + " " + o.v).join(", ");
+  const doc = ["Ηλικία: " + (age || "—") + (p.sex ? " · " + p.sex : ""), "Ερώτημα: " + (r.question || "—"), b.onc && b.onc.site ? "Εντόπιση: " + b.onc.site : "", b.dxCodes ? "ICD: " + b.dxCodes : "",
+    "Ιστολογικές:\n" + (b.histo || []).map((h) => "- " + h.date + " " + h.title + (h.text ? ": " + h.text : "")).join("\n"),
+    "Απεικονίσεις:\n" + (b.imaging || []).map((h) => "- " + h.date + " " + h.title + (h.text ? ": " + h.text : "")).join("\n"),
+    "Επεμβάσεις:\n" + (b.surg || []).map((h) => "- " + h.date + " " + h.title).join("\n"),
+    "PSA: " + (lab("psa") || "—") + " · Κρεατινίνη: " + (lab("cr") || "—") + " · Hb: " + (lab("hb") || "—"),
+    "Προηγούμενα συμβούλια:\n" + (b.prev || []).map((m) => "- " + m.meeting + " " + (m.decision || "") + (m.text ? ": " + m.text : "")).join("\n")].filter(Boolean).join("\n");
+  r.ai = { busy: true }; draw();
+  const SYS = "Είσαι ουρολόγος που προετοιμάζει ογκολογικό συμβούλιο. Από τον φάκελο γράψε ΣΥΝΟΨΗ έως 5 σύντομες γραμμές (διάγνωση/ιστολογία με ημ/νία, στάδιο/βαθμός, απεικονίσεις, δείκτες, θεραπείες ως τώρα, ανοιχτό ερώτημα). "
+    + "ΜΟΝΟ ό,τι γράφει ο φάκελος — ΠΟΤΕ υποθέσεις ή πρόταση θεραπείας. Βγάλε και πεδία ΜΗΤΡΩΟΥ μόνο αν γράφονται ρητά (αλλιώς null): site (προστάτης|κύστη|νεφρός|ανώτερο ουροποιητικό|όρχις|πέος|επινεφρίδιο|ουρήθρα), date (ΕΕΕΕ-ΜΜ-ΗΗ της διάγνωσης), histology, t (π.χ. T2c, Ta, Tis), n, m, grade, gleason_p, gleason_s, isup, psa. "
+    + 'Απάντησε ΜΟΝΟ JSON: {"lines":["",""],"reg":{"site":null,"date":null,"histology":null,"t":null,"n":null,"m":null,"grade":null,"gleason_p":null,"gleason_s":null,"isup":null,"psa":null}}';
+  const res = await P.pdxAiJSON("ογκολογικό", SYS, doc, 1200);
+  if (!(res.ok && res.json)) { r.ai = { err: res.error || "χωρίς απάντηση" }; draw(); return; }
+  r.ai = { lines: (res.json.lines || []).map(String).filter(Boolean).slice(0, 6), reg: res.json.reg || {} }; draw();
+}
+function aiHtml(r) {
+  if (!AIP()) return "";
+  if (!r.ai) return '<button class="aib" data-ai>✨ Σύνοψη (AI)</button>';
+  if (r.ai.busy) return '<div class="ai">✨ Γράφω σύνοψη…</div>';
+  if (r.ai.err) return '<div class="ai">⚠ ' + E(r.ai.err) + ' <button class="aib" data-ai>Ξανά</button></div>';
+  const g = r.ai.reg || {}, have = ["t", "n", "m", "gleason_p", "isup", "psa", "histology", "grade"].some((k) => g[k] != null && g[k] !== "");
+  const regTxt = [g.site, g.histology, [g.t, g.n, g.m].filter(Boolean).join(""), g.gleason_p ? "Gleason " + g.gleason_p + "+" + g.gleason_s : "", g.isup ? "ISUP " + g.isup : "", g.psa ? "PSA " + g.psa : "", g.date].filter(Boolean).join(" · ");
+  return '<div class="ai"><b>✨ Σύνοψη</b>' + r.ai.lines.map((l) => "<div>• " + E(l) + "</div>").join("")
+    + (have ? '<div class="reg">Για το μητρώο: ' + E(regTxt) + (r.ai.saved ? ' — <b>✓ αποθηκεύτηκε</b>' : '') + "</div>" + (r.ai.saved ? "" : '<button class="aib pri" data-aireg>💾 Στο μητρώο όγκων</button>') : "")
+    + '<div class="reg">Έλεγξε πριν τη χρήση — γράφει μόνο ό,τι υπάρχει στον φάκελο.</div></div>';
+}
+async function aiReg(i) {
+  const r = rows[i], g = (r.ai && r.ai.reg) || {}; const pid = r.patient_id || (r.patient && r.patient.id); if (!pid) { alert("Ο ασθενής δεν έχει αποθηκευτεί ακόμα στη βάση."); return; }
+  const sk = Object.keys(SITE_K).find((k) => String(g.site || "").toLowerCase().includes(k)); if (!sk) { alert("Άγνωστη εντόπιση: " + (g.site || "—")); return; }
+  if (!confirm("Αποθήκευση στο μητρώο όγκων;\n" + [g.site, g.histology, [g.t, g.n, g.m].filter(Boolean).join(""), g.gleason_p ? "Gleason " + g.gleason_p + "+" + g.gleason_s : "", g.psa ? "PSA " + g.psa : ""].filter(Boolean).join(" · "))) return;
+  try { await api("/api/registry/tumor", { method: "POST", body: { patient_id: pid, site: SITE_K[sk], date: g.date, histology: g.histology, t: g.t, n: g.n, m: g.m, grade: g.grade, gleason_p: g.gleason_p, gleason_s: g.gleason_s, isup: g.isup, psa: g.psa, src: "ai-mdt", ext_id: "ai-mdt|" + pid + "|" + (g.date || day) } });
+    r.ai.saved = true; draw(); } catch (e) { alert("Δεν αποθηκεύτηκε: " + e.message); }
 }
 // ημερομηνίες: επόμενη Τρίτη/Πέμπτη (ή σήμερα αν είναι)
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -88,12 +138,46 @@ async function load() {
     for (const m of r.rows) {
       const k = m.ext_id || ("srv-" + m.id); const loc = byExt.get(k);
       if (loc && loc.dirty) continue;   // αλλαγή του tablet που δεν έχει σταλεί ακόμα: κρατιέται
-      const v = { ext_id: k, id: m.id, patient_id: m.patient_id, patient: { surname: m.surname, firstname: m.firstname, amka: m.amka, am: m.am, birth: m.birth }, decision: m.decision || "", text: m.text || "" };
+      const v = { ext_id: k, id: m.id, patient_id: m.patient_id, patient: { surname: m.surname, firstname: m.firstname, amka: m.amka, am: m.am, birth: m.birth }, decision: m.decision || "", text: m.text || "", question: m.summary || "" };
       if (loc) Object.assign(loc, v); else rows.push(v);
     }
     net(true); store(); draw();
+    loadBrief();
   } catch (e) { net(false, e.message); }
   flush();
+}
+// 📁 9/11 (χρήστης: «φάκελος για ογκολογικό»): ΜΙΑ σελίδα ανά ασθενή — εντόπιση, ιστολογικές, απεικονίσεις, επεμβάσεις, νοσηλείες,
+// PSA (καμπύλη από το Medilabi μέσω του Παραδόχαρτου), κρεατινίνη/Hb, προηγούμενες αποφάσεις. Εκτύπωση = μία σελίδα ανά ασθενή.
+let BRIEF_BUSY = false;
+const dmy = (d) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || "")); return m ? m[3] + "/" + m[2] + "/" + m[1].slice(2) : String(d || ""); };
+async function loadBrief(force) {
+  if (BRIEF_BUSY || !rows.length) return; const d0 = day; BRIEF_BUSY = true; if (force) draw();
+  try { const r = await api("/api/mdt/brief?date=" + d0); if (d0 !== day) return;
+    for (const x of r.rows || []) { const b = x.brief; if (!b) continue; const row = rows.find((y) => (y.id && y.id === x.mdt_id) || (y.patient_id && y.patient_id === b.id)); if (!row) continue;
+      row.brief = b; if (!row.question && x.question) row.question = x.question;
+      try { const P = window.parent; if (VIA && P && typeof P.pdxLabSeries === "function") row.labs = await P.pdxLabSeries(((b.surname || "") + " " + (b.firstname || "")).trim()); } catch (e) {} }
+    net(true);
+  } catch (e) { net(false, "φάκελος: " + e.message); }
+  finally { BRIEF_BUSY = false; draw(); }
+}
+function spark(L) { if (!L || L.length < 2) return ""; const W = 120, H = 28, xs = L.map((_, i) => i * (W - 4) / (L.length - 1) + 2), mx = Math.max(...L.map((o) => o.v)), mn = Math.min(...L.map((o) => o.v)), rg = mx - mn || 1;
+  const ys = L.map((o) => H - 3 - (o.v - mn) / rg * (H - 6)); return '<svg class="spark" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '"><polyline fill="none" stroke="#1D5FA8" stroke-width="2" points="' + xs.map((x, i) => x.toFixed(1) + "," + ys[i].toFixed(1)).join(" ") + '"/><circle cx="' + xs[xs.length - 1].toFixed(1) + '" cy="' + ys[ys.length - 1].toFixed(1) + '" r="3" fill="#1D5FA8"/></svg>'; }
+function briefHtml(b, labs) {
+  const sec = (t, items) => items && items.length ? "<h4>" + t + "</h4>" + items.join("") : "";
+  const it = (d, t) => '<div class="it">' + (d ? '<span class="d">' + E(dmy(d)) + "</span>" : "") + t + "</div>";
+  const L = labs || {}, ser = (k) => (L[k] || []).slice(-8);
+  const labLine = (lbl, k) => { const s = ser(k); if (!s.length) return ""; return '<div class="it"><b>' + lbl + "</b> " + s.map((o) => '<span class="d">' + E(o.d) + "</span>" + E(String(o.v).replace(".", ","))).join(" · ") + (k === "psa" ? spark(s) : "") + "</div>"; };
+  const labs2 = [labLine("PSA", "psa"), labLine("f-PSA", "fpsa"), labLine("Κρεατινίνη", "cr"), labLine("Hb", "hb")].filter(Boolean);
+  return '<div class="brief">'
+    + '<div>' + (b.onc && b.onc.site ? '<span class="tag">' + E(b.onc.site) + "</span>" : "") + (b.onc && b.onc.why ? '<span class="tag s">' + E(b.onc.why) + "</span>" : "") + (b.dxCodes ? '<span class="d">' + E(b.dxCodes) + "</span>" : "") + "</div>"
+    + sec("🔬 Ιστολογικές", (b.histo || []).map((h) => it(h.date, "<b>" + E(h.title) + "</b>" + (h.text ? ": " + E(h.text) : ""))))
+    + sec("🧪 Εργαστηριακά", labs2)
+    + sec("🩻 Απεικονίσεις", (b.imaging || []).map((h) => it(h.date, "<b>" + E(h.title) + "</b>" + (h.text ? ": " + E(h.text) : ""))).concat((b.studies || []).map((s) => it(s.date, "💿 " + E([s.modality, s.descr, s.institution].filter(Boolean).join(" · "))))))
+    + sec("🔪 Επεμβάσεις", (b.surg || []).map((h) => it(h.date, E(h.title) + (h.text ? ' <span class="d">' + E(h.text) + "</span>" : ""))))
+    + sec("🛏 Νοσηλείες", (b.adm || []).map((h) => it(h.date, E(String(h.title).replace(/^Νοσηλεία:\s*/, "")))))
+    + sec("🎗 Προηγούμενα συμβούλια", (b.prev || []).map((m) => it(m.meeting, "<b>" + E(m.decision || "—") + "</b>" + (m.text ? ": " + E(m.text) : ""))))
+    + (!(b.histo || []).length && !(b.imaging || []).length && !(b.studies || []).length && !labs2.length ? '<div class="sv">Δεν υπάρχουν ακόμα ιστολογικές/απεικονίσεις στο Αρχείο Ασθενών για αυτόν τον ασθενή.</div>' : "")
+    + "</div>";
 }
 function net(on, msg) { $("#net").textContent = on ? "● συνδεδεμένο" : "○ χωρίς σύνδεση" + (msg ? " · " + msg : ""); $("#net").style.color = on ? "#9FE2BC" : "#FFB4A8"; }
 function draw() {
@@ -103,6 +187,9 @@ function draw() {
     const p = r.patient || {};
     return '<div class="card" data-i="' + i + '"><div class="ph"><span class="num">' + (i + 1) + '</span><div><b>' + E(p.surname + " " + (p.firstname || "")) + '</b><div class="mut">' + E([p.amka ? "ΑΜΚΑ " + p.amka : "", p.am ? "ΑΜ " + p.am : "", p.birth ? "γ. " + p.birth.split("-").reverse().join("/") : ""].filter(Boolean).join(" · ") || "χωρίς ΑΜΚΑ") + '</div></div>'
       + '<button class="x" data-del>✕</button></div>'
+      + '<textarea class="qa" data-q placeholder="❓ Ερώτημα προς το συμβούλιο (π.χ. ριζική προστατεκτομή ή ακτινοθεραπεία;)">' + E(r.question || "") + '</textarea>'
+      + (r.brief ? briefHtml(r.brief, r.labs) : (BRIEF_BUSY ? '<div class="sv">📁 φόρτωση φακέλου…</div>' : ""))
+      + aiHtml(r)
       + '<div class="opts">' + OPTS.map((o) => '<button data-o="' + E(o) + '" class="' + (r.decision === o ? "on" : "") + '">' + (r.decision === o ? "✓ " : "") + E(o) + '</button>').join("") + '</div>'
       + '<textarea data-t placeholder="Απόφαση / σχόλιο (π.χ. re-TURBT σε 4–6 εβδ., μετά BCG)">' + E(r.text) + '</textarea>'
       + '<div class="sv ' + (r.err ? "err" : r.dirty ? "" : "ok") + '">' + (r.err ? "⚠ δεν στάλθηκε: " + E(r.err) + " — θα ξαναδοκιμάσει" : r.dirty ? "αποθήκευση…" : "✓ στη βάση") + '</div></div>';
@@ -115,7 +202,7 @@ async function flush() {
   if (flushing) return; flushing = true; try {
   // όλες μαζί (μέσω bot = ΜΙΑ εντολή)· «αποθηκεύτηκε» μόνο αν δεν άλλαξε ξανά όσο περιμέναμε
   await Promise.all(rows.filter((x) => x.dirty).map(async (r) => { const v = r.v || 0;
-    try { const out = await api("/api/mdt", { method: "POST", body: { meeting: day, patient_id: r.patient_id, patient: r.patient, decision: r.decision, text: r.text, ext_id: r.ext_id, src: "tablet" } });
+    try { const out = await api("/api/mdt", { method: "POST", body: { meeting: day, patient_id: r.patient_id, patient: r.patient, decision: r.decision, text: r.text, summary: r.question || "", ext_id: r.ext_id, src: "tablet" } });
       r.patient_id = out.patient_id; if ((r.v || 0) === v) r.dirty = false; r.err = ""; net(true); }
     catch (e) { r.err = e.message; net(false); }
   }));
@@ -125,13 +212,15 @@ async function flush() {
 setInterval(() => { if (rows.some((r) => r.dirty)) flush(); }, 15000);
 $("#list").addEventListener("click", (e) => {
   const c = e.target.closest(".card"); if (!c) return; const i = +c.dataset.i;
+  if (e.target.closest("[data-ai]")) { aiSum(i); return; } if (e.target.closest("[data-aireg]")) { aiReg(i); return; }
   const o = e.target.closest("[data-o]"); if (o) { rows[i].decision = rows[i].decision === o.dataset.o ? "" : o.dataset.o; changed(i); draw(); return; }
   if (e.target.closest("[data-del]") && confirm("Αφαίρεση του ασθενή από αυτό το συμβούλιο;")) { const r = rows[i]; api("/api/mdt/" + encodeURIComponent(r.ext_id.startsWith("srv-") ? r.ext_id.slice(4) : r.ext_id), { method: "DELETE" }).then(() => net(true)).catch((er) => alert("Δεν αφαιρέθηκε από τη βάση: " + er.message)); rows.splice(i, 1); store(); draw(); }
 });
-$("#list").addEventListener("input", (e) => { const t = e.target.closest("[data-t]"); if (!t) return; const i = +t.closest(".card").dataset.i; rows[i].text = t.value; changed(i); });
+$("#list").addEventListener("input", (e) => { const qa = e.target.closest("[data-q]"); if (qa) { const i = +qa.closest(".card").dataset.i; rows[i].question = qa.value; changed(i); return; } const t = e.target.closest("[data-t]"); if (!t) return; const i = +t.closest(".card").dataset.i; rows[i].text = t.value; changed(i); });
 $("#prev").onclick = () => { day = meetingDays(day, -1); load(); };
 $("#next").onclick = () => { day = meetingDays(day, 1); load(); };
 $("#printBtn").onclick = () => window.print();
+$("#foldBtn").onclick = () => loadBrief(true);
 // ＋ ασθενής: αναζήτηση στη βάση (επώνυμο / ΑΜΚΑ / ΑΜ) ή νέος
 $("#addBtn").onclick = () => {
   const ov = document.createElement("div"); ov.className = "ov";
