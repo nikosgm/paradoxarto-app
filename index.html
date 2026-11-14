@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-14-v428';
+const APP_VER = '2026-11-14-v429';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15410,7 +15410,19 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   html.pdx-night .rxs .g{background:#1C1C1E}html.pdx-night .rxs input.big,html.pdx-night .rxs input.t,html.pdx-night .rxs select,html.pdx-night .rxs .who b{color:#fff}
   html.pdx-night .rxs .ch{background:#2C2C2E;color:#fff}html.pdx-night .rxs .ch.on{background:#0A84FF}html.pdx-night .rxs .stp{background:#2C2C2E}html.pdx-night .rxs .bar{background:rgba(0,0,0,.9);border-top-color:#38383A}
   html.pdx-night .rxs .r+.r:before,html.pdx-night .rxs .med+.med:before{border-top-color:#38383A}
-  .rxs .rxq{margin:12px 12px 4px;background:#fff;border:2px solid #0A84FF;border-radius:18px;padding:12px}
+  .rxs .g{margin:0 12px;border-radius:16px}.rxs .h{font-size:12.5px;font-weight:700;color:#8E8E93;letter-spacing:.05em;margin:16px 18px 6px}
+  .rxs .rxa-top{display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:flex-end;margin:4px 16px 6px}.rxs .rxa-top button{border:0;background:none;color:#0A84FF;font-size:14.5px;font-weight:600;min-height:36px;font-family:inherit}
+  .rxs .ptc{display:flex;align-items:center;gap:12px;padding:12px 14px}.rxs .ptc .av{width:44px;height:44px;border-radius:50%;background:#E8F0FE;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none}
+  .rxs .ptc .ptb{flex:1;min-width:0;display:flex;flex-direction:column-reverse}.rxs .ptc .r{padding:0!important;min-height:0!important}.rxs .ptc .r:before{display:none!important}
+  .rxs .ptc input.big{font-size:20px;padding:2px 0}.rxs .ptc .who{padding:0!important;margin:0!important;font-size:14px}
+  .rxs .ptc:has(.who.ok) input.big{font-size:14.5px;color:#8E8E93;letter-spacing:.02em}.rxs .ptc:has(.who.ok) .who{font-size:17px}.rxs .ptc:has(.who.ok) .who b{color:#1C1C1E}
+  .rxs .aic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}.rxs .aic.rx{background:#FFF1E6}.rxs .aic.ref{background:#E8F7EE}
+  .rxs .aok{color:#1F8A4C;font-weight:800;font-size:16px;flex:none}.rxs .aok.warn{color:#B26A00}
+  .rxs .med .del{width:28px!important;height:28px!important;border-radius:50%!important;background:#F2F2F7!important;color:#8E8E93!important;font-size:13px!important;border:0;flex:none}
+  .rxs .aadd{padding:13px 16px;color:#0A84FF;font-weight:600;font-size:15.5px;cursor:pointer;border-top:.5px solid #E5E5EA}.rxs .aadd:first-child{border-top:0}
+  .rxs .bar .sum select.acc{border:0;background:transparent;color:#0A84FF;font:inherit;font-weight:600;padding:0;max-width:46%;-webkit-appearance:none;appearance:none}
+  html.pdx-night .rxs .ptc .av{background:#2C2C2E}html.pdx-night .rxs .ptc:has(.who.ok) .who b{color:#fff}html.pdx-night .rxs .aic.rx{background:#3A2A1A}html.pdx-night .rxs .aic.ref{background:#163222}html.pdx-night .rxs .aadd{border-top-color:#38383A}html.pdx-night .rxs .med .del{background:#2C2C2E!important}
+  .rxs .rxq{margin:12px 12px 4px;background:#fff;border:1px solid #E5E5EA;border-radius:16px;padding:12px}
   .rxs .rxq textarea{display:block;width:100%;border:0;outline:0;resize:none;font:inherit;font-size:17px;line-height:1.4;background:transparent;color:inherit;min-height:76px}
   .rxs .rxq-b{display:flex;gap:8px;margin-top:8px}.rxs .rxq-b button{flex:1;min-height:44px;border-radius:12px;border:1px solid #E5E5EA;background:#F2F2F7;font-size:15px;font-weight:700;color:#1C1C1E;font-family:inherit}
   .rxs .rxq-b button.pri{background:#0A84FF;border-color:#0A84FF;color:#fff}.rxs .rxq-b button:disabled{opacity:.6}
@@ -15638,22 +15650,23 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const d = S.k ? recOf(S.k) : null;
       // 10/11 βράδυ (χρήστης): ΠΡΩΤΑ ο ΑΜΚΑ (ασθενής) και από κάτω επιλογή Συνταγή / Παραπεμπτικό — ΜΙΑ κοινή επίσκεψη (χωρίς διακόπτη «μαζί με τη συνταγή»)
       // 1) Ασθενής
-      let h = '<div class="h">Ασθενής<span style="display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:flex-end"><button data-a="ephist" style="min-height:44px">🗂 Ιστορικό</button><button data-a="vclose" class="pb-okc" style="min-height:44px;font-weight:700">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</span></div><div class="g">';
+      // 🎨 14/11 23:29 (χρήστης: «θέλω ακριβώς το UI του Α»)
+      let h = '<div class="rxa-top"><button data-a="ephist">🗂 Ιστορικό</button><button data-a="vclose" class="pb-okc">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
       if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
       else h += '<div class="r"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'"></div><div class="who" data-who></div>';
-      h += '</div>';
+      h += '</div></div>';
       if(!d) h += '<div data-recent></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
       // 2) Λογαριασμός
-      h += '<div class="h">Λογαριασμός e-prescription</div><div class="g"><div class="r"><select data-epsel2><option value="">⏳ φόρτωση…</option></select><span style="color:#C7C7CC">⌄</span></div></div>';
+
       // 🎨 14/11 23:20 (χρήστης: «Α + Β + Δ» — πανεύκολο, λιγότερα κλικ): ΜΙΑ σελίδα (φάρμακα + εξετάσεις μαζί, όχι καρτέλες) + ΜΙΑ γραμμή «γράψε ή πες»
       // → Claude: ανάλυση + αντιστοίχιση ΜΟΝΟ με τον κατάλογο e-prescription → μπαίνουν ως ✓· ΕΝΑ κουμπί «Ετοίμασε συνταγή + παραπεμπτικό».
       h += '<div class="rxq"><textarea data-rxq rows="2" placeholder="Γράψε ή πες, π.χ. «algofren 1x2 7 μέρες + γενική και καλλιέργεια ούρων»">'+E(S.q||'')+'</textarea>'
         + '<div class="rxq-b"><button type="button" data-a="rxqmic">🎙 Υπαγόρευση</button><button type="button" data-a="rxqgo" class="pri"'+(S.qBusy?' disabled':'')+'>'+(S.qBusy?'⏳ Καταλαβαίνω…':'✨ Πρόσθεσε')+'</button></div>'
         + (S.qMsg ? '<div class="rxq-m">'+E(S.qMsg)+'</div>' : '') + '</div>';
       // 3) Φάρμακα
-      h += '<div class="h">Φάρμακα'+(S.meds.length?' · '+S.meds.length:'')+'<span style="display:flex;gap:16px"><button data-a="again" style="display:none">Ίδια με την προηγούμενη</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:32px">📦 Πακέτα</button>':'')+'</span></div><div class="g" data-meds></div>';
+      h += '<div class="h">💊 Φάρμακα'+(S.meds.length?' · '+S.meds.length:'')+'<span style="display:flex;gap:16px"><button data-a="again" style="display:none">Ίδια με την προηγούμενη</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:32px">📦 Πακέτα</button>':'')+'</span></div><div class="g" data-meds></div>';
       const opt = (L, v)=>L.map(x=>'<option value="'+E(x[0])+'"'+(String(x[0])===String(v)?' selected':'')+'>'+E(x[1])+'</option>').join('');
-      h += '<div class="h" style="margin-top:14px">Νέο φάρμακο</div><div class="g mf"><div class="r"><input class="t" data-medq type="search" autocomplete="off" placeholder="🔎 Φάρμακο (π.χ. Ciproxin)" enterkeyhint="done"></div><div data-mres class="exl"></div>'
+      h += '<div class="h" style="margin-top:14px'+(S.addMed?'':';display:none')+'" data-nmh>Νέο φάρμακο</div><div class="g mf"'+(S.addMed?'':' style="display:none"')+'><div class="r"><input class="t" data-medq type="search" autocomplete="off" placeholder="🔎 Φάρμακο (π.χ. Ciproxin)" enterkeyhint="done"></div><div data-mres class="exl"></div>'
         + '<div class="r"><span class="l">Περιεκτικότητα</span><input data-mf="strength" class="t v" placeholder="π.χ. 500mg" autocomplete="off"></div>'
         + '<div style="display:none">'
         + '<div class="r cs"><span class="l">Δόση</span><div class="chs2" data-cs="dose"></div><select data-mf="dose" style="display:none">'+opt([['0.5','½ δισκίο'],['1','1 δισκίο'],['1.5','1½ δισκίο'],['2','2 δισκία'],['3','3 δισκία']])+'</select></div>'
@@ -15663,8 +15676,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div class="r cs"><span class="l">Συμμετοχή<small data-ptxt style="display:none">τώρα 25%</small></span><div class="chs2"><button type="button" data-cspart="25%">25%</button><button type="button" data-cspart="0%">0%</button></div><button class="tg" data-tg0 aria-label="Συμμετοχή 0%" style="display:none"></button></div>'
         + '</div><div class="r" style="flex-wrap:wrap" data-edn></div>'
         + '<div class="r"><div class="pv" data-medpv style="flex:1;padding:0"></div><button class="addb" data-a="add" style="height:44px">Προσθήκη</button></div></div>';
-      h += '<div class="h">Εξετάσεις'+(S.ex.length?' · '+S.ex.length:'')+'</div><div class="g" data-exl></div>'
-        + '<div class="g" style="margin-top:8px"><div class="r"><input class="t" data-exq type="search" autocomplete="off" placeholder="🔎 Εξέταση (π.χ. υπέρηχος κοιλίας, PSA)…" enterkeyhint="search"></div><div data-exres></div></div>';
+      h += '<div class="h">🧾 Εξετάσεις'+(S.ex.length?' · '+S.ex.length:'')+'</div><div class="g" data-exl></div>'
+        + '<div class="g" data-exbox style="margin-top:8px'+(S.addEx?'':';display:none')+'"><div class="r"><input class="t" data-exq type="search" autocomplete="off" placeholder="🔎 Εξέταση (π.χ. υπέρηχος κοιλίας, PSA)…" enterkeyhint="search"></div><div data-exres></div></div>';
       h += '<details class="rxmore"><summary>Επανάληψη συνταγής</summary>';
       h += '<div class="h">Επανάληψη συνταγής</div><div class="g"><div class="r"><span class="l">Επαναλαμβανόμενη</span><select data-rep>'+opt([['0','Όχι'],['2','Δίμηνη'],['3','Τρίμηνη'],['6','Εξάμηνη']], S.rep)+'</select></div>'
         + (S.rep ? '<div class="r"><span class="l">Κάθε</span><select data-every>'+opt([['28','28 ημέρες'],['30','30 ημέρες']], S.every)+'</select></div>' : '')+'</div>'
@@ -15678,7 +15691,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '<div class="g" data-jobs style="margin-top:22px;display:none"></div>';
       h += '<div class="h" style="display:flex;justify-content:space-between;align-items:center">Πρόσφατες συνταγές<button class="pb pb-lnk pb-dngc pb-sm" data-hclr>Καθαρισμός</button></div><div class="g hist" data-hist><div class="r" style="color:#8E8E93">Φόρτωση…</div></div>';
       h += '<div class="f">Το bot ανοίγει επίσκεψη στο e-prescription, γράφει τη συνταγή και <b>σταματά πριν την «Καταχώριση»</b>· την ελέγχεις και την καταχωρίζεις εσύ.</div>';
-      h += '<div class="bar"><button class="go" data-a="goall">Ετοίμασε</button><button data-a="go" style="display:none"></button><button data-a="goref" style="display:none"></button><div class="sum" data-sum></div></div>';
+      h += '<div class="bar"><button class="go" data-a="goall">Ετοίμασε</button><button data-a="go" style="display:none"></button><button data-a="goref" style="display:none"></button><div class="sum"><select data-epsel2 class="acc" aria-label="Λογαριασμός e-prescription"><option value="">⏳ λογαριασμός…</option></select> · <span data-sum></span></div></div>';
       root.innerHTML = h;
       window.pdxEpAccFill && pdxEpAccFill();
       window.pdxIcdAttach && pdxIcdAttach(root);
@@ -15690,10 +15703,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       syncForm();
     }
     function drawEx(){
-      const box = root.querySelector('[data-exl]'); if(box){ box.style.display = S.ex.length ? '' : 'none';
-        box.innerHTML = S.ex.map((x,i)=>'<div class="med"><div class="m"><b style="white-space:normal">'+E(x.n)+'</b><span>'+(x.src && x.src.toLowerCase()!==x.n.toLowerCase() ? 'γράφτηκε «'+E(x.src)+'» · ' : '')+(x.ep?'<b style="display:inline;font-size:14px;color:#1F6F43">✓ κατάλογος</b> · ':'')+E(x.k||'Εξέταση')+'</span></div><button class="del" data-exdel="'+i+'" aria-label="Αφαίρεση">✕</button></div>').join(''); }
+      const box = root.querySelector('[data-exl]'); if(box){ box.style.display = '';
+        box.innerHTML = S.ex.map((x,i)=>'<div class="med"><div class="aic ref">'+(/καλλιέργ/i.test(x.n)?'🧫':/υπερηχ|u\/s|αξονικ|ct|mri|μαγνητ|ακτινογρ/i.test(x.n)?'🩻':'🧪')+'</div><div class="m"><b style="white-space:normal">'+E(x.n)+'</b><span>'+(x.src && x.src.toLowerCase()!==x.n.toLowerCase() ? 'γράφτηκε «'+E(x.src)+'»' : E(((String(x.k||'').match(/\(([^)]+)\)/)||[])[1]) || String(x.k||'Εξέταση').split(' ').slice(0,3).join(' ')))+'</span></div>'+(x.ep?'<span class="aok">✓</span>':'<span class="aok warn" title="όχι από τον κατάλογο">⚠</span>')+'<button class="del" data-exdel="'+i+'" aria-label="Αφαίρεση">✕</button></div>').join('') + '<div class="aadd" data-a="addex">＋ Εξέταση</div>'; }
       const fb = root.querySelector('[data-exfavs]'); if(fb) fb.innerHTML = REF_FAV.map(f=>'<button class="ch'+(S.ex.some(x=>x.n.toLowerCase()===f[0].toLowerCase())?' on':'')+'" data-exf="'+E(f[0])+'" style="min-height:40px">'+(f[2]?'✓ ':'⭐ ')+E(f[0])+'</button>').join('');
-      const hh = root.querySelectorAll('.h'); hh.forEach(x=>{ if(/^Εξετάσεις/.test(x.textContent)) x.textContent = 'Εξετάσεις'+(S.ex.length?' · '+S.ex.length:''); });
+      const hh = root.querySelectorAll('.h'); hh.forEach(x=>{ if(/Εξετάσεις/.test(x.textContent) && !x.querySelector('button')) x.textContent = '🧾 Εξετάσεις'+(S.ex.length?' · '+S.ex.length:''); });
       refresh();
     }
     function exAdd(v){ v = String(v||'').trim(); if(!v) return; if(!S.ex.some(x=>x.n.toLowerCase()===v.toLowerCase())) S.ex.push({n:v, k:exKind(v)}); const q = root.querySelector('[data-exq]'); if(q) q.value=''; drawEx(); }
@@ -15738,11 +15751,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const medSum = m=>{ const bx = edBox(m); return (m.dose==='1'?'1':fmtD(m.dose))+'×'+m.freq+' · '+m.days+' ημ. · '+(bx ? bx+(bx===1?' κουτί':' κουτιά') : 'κουτιά αυτ.')+(m.part==='0%'?' · 0%':''); };
     function drawMeds(){
       const box = root.querySelector('[data-meds]'); if(!box) return;
-      box.style.display = S.meds.length ? '' : 'none';
+      box.style.display = '';
       box.innerHTML = S.meds.map((m,i)=>{ const op = S.open===i;
-        return '<div class="med'+(op?' op':'')+'" style="flex-wrap:wrap" data-mi="'+i+'"><div class="m" data-mopen="'+i+'" style="cursor:pointer"><b>'+E(m.name)+' '+E(m.strength)+'</b><span>'+E(medSum(m))+'</span></div>'
-        +'<span class="chev" data-mopen="'+i+'">'+(op?'▲':'▼')+'</span><button class="del" data-del="'+i+'" aria-label="Αφαίρεση" style="width:36px;height:36px;border-radius:18px">✕</button>'
-        +(op ? edH(m, i) : '')+'</div>'; }).join('');
+        return '<div class="med'+(op?' op':'')+'" style="flex-wrap:wrap" data-mi="'+i+'"><div class="aic rx">💊</div><div class="m" data-mopen="'+i+'" style="cursor:pointer"><b>'+E(m.name)+' '+E(m.strength)+'</b><span>'+E(medSum(m))+'</span></div>'
+        +'<span class="aok">✓</span><button class="del" data-del="'+i+'" aria-label="Αφαίρεση">✕</button>'
+        +(op ? edH(m, i) : '')+'</div>'; }).join('') + '<div class="aadd" data-a="addmed">＋ Φάρμακο</div>';
       edWire(box); refresh(); try{ drawFavs(); }catch(e){}
     }
     // ⭐ 13/11 22:49 (χρήστης: «δε μπορώ να τα ξεεπιλέξω, δε μπορώ να προσθέσω/αφαιρέσω αγαπημένα»):
@@ -16051,6 +16064,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const a = t.closest('[data-a]'); if(!a) return;
       if(a.dataset.a==='add') addFromInput();
       else if(a.dataset.a==='goall') goAll();
+      else if(a.dataset.a==='addmed'){ S.addMed = true; draw(); setTimeout(()=>{ const q = root.querySelector('[data-medq]'); if(q){ q.focus(); q.scrollIntoView({block:'center', behavior:'smooth'}); } }, 60); }
+      else if(a.dataset.a==='addex'){ S.addEx = true; const b = root.querySelector('[data-exbox]'); if(b) b.style.display = ''; const q = root.querySelector('[data-exq]'); if(q){ q.focus(); q.scrollIntoView({block:'center', behavior:'smooth'}); } }
       else if(a.dataset.a==='rxqgo') rxQuick();
       else if(a.dataset.a==='rxqmic') rxMic();
       else if(a.dataset.a==='go') go();
