@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v442';
+const APP_VER = '2026-11-15-v443';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15347,9 +15347,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // oncall_config «order_am» = {time:"HH:MM"} για όλη την κλινική· η εργασία στέλνεται ΤΩΡΑ με payload.notBefore = επόμενη φορά που έρχεται αυτή η ώρα
   // (στις 01:00 → σήμερα 06:30 · στις 22:00 → αύριο 06:30). Ο φύλακας server μετρά από το notBefore (migration watchdog_respect_notbefore).
   window.__ordAm = window.__ordAm || null;
+  // 15/11 01:34 (χρήστης: «να κρατάει την ώρα που βάζω για τις επόμενες φορές που ΑΥΤΟΣ ο χρήστης πατά αύριο πρωί»): ΑΝΑ ΧΡΗΣΤΗ —
+  // συσκευή (pdx_order_am, αμέσως) + λογαριασμός (oncall_labs «uprefs|<χρήστης>», για άλλη συσκευή)· πριν: ρύθμιση κλινικής που επιτρεπόταν μόνο σε ειδικευμένους → δεν αποθηκευόταν
+  const amUid = async ()=>{ try{ const ss = (await sb6.auth.getSession()).data.session; return ss && ss.user && ss.user.id || ''; }catch(e){ return ''; } };
+  const amOk = t=>/^\d{2}:\d{2}$/.test(t||'');
   window.pdxOrderAmLoad = async function(force){ if(window.__ordAm && !force) return window.__ordAm;
-    try{ const r = await sb6.from('oncall_config').select('value').eq('key','order_am').maybeSingle(); const v = r && r.data && r.data.value; window.__ordAm = (v && /^\d{2}:\d{2}$/.test(v.time||'')) ? v : {time:'06:30'}; }catch(e){ window.__ordAm = {time:'06:30'}; }
-    return window.__ordAm; };
+    let t = ''; try{ t = localStorage.getItem('pdx_order_am')||''; }catch(e){}
+    if(amOk(t)){ window.__ordAm = {time:t}; if(!force) return window.__ordAm; }
+    try{ const u = await amUid(); if(u){ const r = await sb6.from('oncall_labs').select('data').eq('name_key','uprefs|'+u).maybeSingle(); const v = r && r.data && r.data.data && r.data.data.order_am;
+      if(amOk(v)){ t = v; try{ localStorage.setItem('pdx_order_am', v); }catch(e){} } } }catch(e){}
+    window.__ordAm = {time: amOk(t) ? t : '06:30'}; return window.__ordAm; };
   window.pdxOrderAmAt = function(time, now){ const [h, m] = String(time || (window.__ordAm && window.__ordAm.time) || '06:30').split(':').map(Number); const n = now ? new Date(now) : new Date();
     const d = new Date(n); d.setHours(h||0, m||0, 0, 0); if(d.getTime() <= n.getTime() + 10*60000) d.setDate(d.getDate()+1); return d.getTime(); };
   window.pdxOrderAmTxt = function(ts){ const d = new Date(ts), t = new Date(), tm = new Date(t); tm.setDate(t.getDate()+1);
@@ -15357,9 +15364,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return day+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
   // 15/11 01:25 (χρήστης: «αλλάζω την ώρα, πατάω αποθήκευση και δεν αποθηκεύεται» — το κλικ ήταν δεμένο σε pg αντί για pg.el· «μην ξοδεύεις ολόκληρη ενότητα»)
   // → η ώρα αλλάζει ΜΕΣΑ στην παραγγελία (δίπλα στο «⏰»), αποθηκεύεται για όλη την κλινική
-  window.pdxOrderAmSave = async function(t){ if(!/^\d{2}:\d{2}$/.test(t||'')) return {error:'χωρίς ώρα'};
-    const r = await sb6.from('oncall_config').upsert({key:'order_am', value:{time:t}, updated_at:new Date().toISOString()}, {onConflict:'key'});
-    if(r.error) return {error:r.error.message}; window.__ordAm = {time:t}; return {ok:true}; };
+  window.pdxOrderAmSave = async function(t){ if(!amOk(t)) return {error:'χωρίς ώρα'};
+    try{ localStorage.setItem('pdx_order_am', t); }catch(e){} window.__ordAm = {time:t};
+    try{ const u = await amUid(); if(u){ const r0 = await sb6.from('oncall_labs').select('data').eq('name_key','uprefs|'+u).maybeSingle(); const d = Object.assign({}, (r0 && r0.data && r0.data.data) || {}, {order_am:t});
+      const r = await sb6.from('oncall_labs').upsert({name_key:'uprefs|'+u, name:'προσωπικές ρυθμίσεις', pid:null, data:d, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); if(r.error) return {ok:true, local:true}; } }catch(e){ return {ok:true, local:true}; }
+    return {ok:true}; };
   window.pdxPcShort = nm=>({'Γωνιακός':'Γων.','Μεσαίος':'Μεσ.','Παράθυρο':'Παράθ.','Εξωτερικά':'Εξωτ.','Πόρτα':'Πόρτα'})[String(nm||'').trim()] || (String(nm||'').length > 6 ? String(nm).slice(0,5)+'.' : String(nm||''));
   window.pdxOrderSheet = async function(k, pre){
     const d = recOf(k); if(!d) return;
@@ -15469,7 +15478,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const toggle = t=>{ st.dupOk = false; st.msg = ''; const i = st.sel.indexOf(t); if(i>=0) st.sel.splice(i,1); else st.sel.push(t); };
     draw(); document.body.appendChild(ov);
     ov.addEventListener('change', async e=>{ const ti = e.target.closest && e.target.closest('[data-amt]'); if(!ti) return;   // ⏰ 15/11: ώρα «Αύριο πρωί» επιτόπου
-      const r = await pdxOrderAmSave(ti.value); toast(r.ok ? '⏰ «Αύριο πρωί» = '+ti.value+' (για όλη την κλινική)' : '⚠ Δεν αποθηκεύτηκε: '+(r.error||'')); if(r.ok) draw(); });
+      const r = await pdxOrderAmSave(ti.value); toast(r.ok ? '⏰ «Αύριο πρωί» = '+ti.value+' — κρατιέται για τις επόμενες φορές' : '⚠ Δεν αποθηκεύτηκε: '+(r.error||'')); if(r.ok) draw(); });
     ov.addEventListener('input', e=>{
       if(e.target.matches('[data-note]')){ st.note = e.target.value; return; }
       if(e.target.matches('[data-clin]')){ st.clin = e.target.value; return; }
