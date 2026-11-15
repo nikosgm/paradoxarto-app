@@ -2531,7 +2531,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v483';
+const APP_VER = '2026-11-15-v484';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -23516,9 +23516,48 @@ st.textContent = '#arOv{position:fixed;inset:0;z-index:9500;background:var(--bg,
  + '#arOv .ar-del{position:absolute;right:0;top:0;bottom:0;width:110px;border:0;background:#D63A3A;color:#fff;font-size:15px;font-weight:700;border-radius:0 10px 10px 0}'
  + '#arOv .ar-hd{display:flex;align-items:center;gap:8px}#arOv .ar-hd b{flex:1;min-width:0}#arOv .ar-hist{flex:none;min-height:36px;padding:0 12px;border:0;border-radius:10px;background:rgba(29,78,128,.1);color:var(--primary,#1d4f6e);font-size:13.5px;font-weight:600;font-family:inherit}'
  + '#arOv h3{margin:14px 0 4px;font-size:13px;opacity:.7;text-transform:uppercase}#arOv .ar-kv{font-size:14px;line-height:1.45;margin:2px 0}#arOv .ar-kv span{opacity:.65}';
+// 🎨 15/11 19:08 (χρήστης: «το αρχείο εξιτηρίων έχει μείνει παλιό — βελτίωσε το UI»): εμφάνιση iOS όπως οι υπόλοιπες σελίδες (γκρι φόντο, ομαδοποιημένες κάρτες, μεγάλος τίτλος)
+st.textContent += '#arOv{background:#F2F2F7;font-family:-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif}'
+ + '#arOv .ar-top{background:rgba(249,249,249,.94);color:#000;border-bottom:.5px solid #C6C6C8;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}'
+ + '#arOv .ar-top b{font-size:17px;font-weight:600;text-align:center}#arOv .ar-top button{background:none;color:#0A84FF;font-size:17px;padding:6px 4px;font-weight:400}'
+ + '#arOv .ar-body{padding:8px 16px 40px;max-width:760px}#arOv .ar-h1{font-size:30px;font-weight:700;letter-spacing:.3px;margin:4px 2px 10px;color:#000}'
+ + '#arOv input:focus{outline:none;box-shadow:0 0 0 2px rgba(10,132,255,.35)}' + '#arOv input{background:rgba(118,118,128,.12);border:0 !important;border-radius:10px;padding:9px 12px;font-size:17px;color:#000}'
+ + '#arOv .ar-list{background:#fff;border-radius:12px;overflow:hidden}'
+ + '#arOv .ar-list .ar-row,#arOv .ar-list .ar-sw{border:0;border-radius:0;margin:0;background:#fff}#arOv .ar-list .ar-row{padding:11px 14px 11px 16px;position:relative}'
+ + '#arOv .ar-list .ar-row:after{content:"";position:absolute;left:16px;right:0;bottom:0;border-bottom:.5px solid #C6C6C8}#arOv .ar-list > :last-child .ar-row:after,#arOv .ar-list > .ar-row:last-child:after{display:none}'
+ + '#arOv .ar-row b{font-size:17px;font-weight:600;color:#000}#arOv .ar-row .ar-sub{font-size:14px;color:#3C3C43;opacity:1;margin-top:3px;line-height:1.35}#arOv .ar-row .ar-sub2{font-size:13px;color:#8E8E93;opacity:1;margin-top:2px}'
+ + '#arOv .ar-hist{min-height:30px;padding:0 10px;border-radius:15px;background:rgba(10,132,255,.12);color:#0A84FF;font-size:13px}'
+ + '#arOv h3{font-size:13px;font-weight:400;color:#6D6D72;opacity:1;margin:22px 16px 6px}#arOv .ar-card{background:#fff;border-radius:12px;padding:4px 16px}'
+ + '#arOv .ar-kv{display:flex;gap:10px;padding:11px 0;border-bottom:.5px solid #C6C6C8;font-size:16px;margin:0}#arOv .ar-card .ar-kv:last-child{border-bottom:0}#arOv .ar-kv span{flex:none;min-width:38%;color:#8E8E93;opacity:1}'
+ + 'html.pdx-night #arOv{background:#000}html.pdx-night #arOv .ar-top{background:rgba(22,22,24,.94);border-color:#38383A}html.pdx-night #arOv .ar-top b,html.pdx-night #arOv .ar-h1,html.pdx-night #arOv .ar-row b,html.pdx-night #arOv input{color:#fff}'
+ + 'html.pdx-night #arOv .ar-list,html.pdx-night #arOv .ar-list .ar-row,html.pdx-night #arOv .ar-card{background:#1C1C1E}html.pdx-night #arOv .ar-row .ar-sub{color:#EBEBF5}html.pdx-night #arOv .ar-kv{color:#fff;border-color:#38383A}html.pdx-night #arOv .ar-list .ar-row:after{border-color:#38383A}';
 document.head.appendChild(st);
 document.body.appendChild(box);
 var rows = [];
+// 🏥 15/11 19:08 (χρήστης: «ημερομηνία εισαγωγής/εξόδου ΟΧΙ από το Παραδόχαρτο — από τον ΝΠΣ· και η ημέρα επέμβασης από τον ΝΠΣ, εκτός αν βάλουμε εμείς Χ0»)
+// Νοσηλείες του ΝΠΣ (εισαγωγή → έξοδος) από ΟΛΕΣ τις αναγνώσεις λίστας ΕΨΙΝΕ (κλινική + Ημέρας, κρυπτογραφημένες) — μία φορά ανά άνοιγμα (10′ μνήμη)
+var NS = {at:0, map:null, busy:null};
+function nzk(s){ return norm(s).replace(/[^a-zα-ω ]/g,' ').replace(/\s+/g,' ').trim(); }
+function dmyT(x){ var m = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(String(x||'')); if(m) return new Date(+(m[3].length===2?'20'+m[3]:m[3]), +m[2]-1, +m[1], 12).getTime(); var i = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(x||'')); return i ? new Date(+i[1], +i[2]-1, +i[3], 12).getTime() : 0; }
+function dd2(t){ var d = new Date(t); return pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+window.pdxNpsStaysLoad = function(){
+  if(NS.map && Date.now()-NS.at < 600000) return Promise.resolve(NS.map); if(NS.busy) return NS.busy;
+  NS.busy = (async function(){ var M = {};
+    try{ if(typeof sb6==='undefined' || !window.pdxCK || !(await pdxCK.ready())) return M;
+      var r = await sb6.from('oncall_jobs').select('payload').eq('kind','epsinelist').in('status',['done','dismissed']).not('payload->result','is',null).order('id',{ascending:false}).limit(40);
+      for(var j of (r.data||[])){ var e = j.payload && j.payload.result && j.payload.result.enc; if(!e) continue; var D = null; try{ D = await pdxCK.decrypt(e); }catch(x){}
+        ((D && D.rows) || []).forEach(function(x){ var k = nzk(x.name), a = dmyT(x.adm), c = dmyT(x.dc); if(!k || !a) return; var L = (M[k] = M[k] || []); var ex = L.find(function(y){ return y.a===a; }); if(ex){ if(!ex.c && c) ex.c = c; } else L.push({a:a, c:c}); }); } }catch(x){}
+    NS.map = M; NS.at = Date.now(); NS.busy = null; return M; })();
+  return NS.busy; };
+// νοσηλεία ΝΠΣ για μια εγγραφή του αρχείου: ίδιο όνομα + εισαγωγή κοντά (±4 ημέρες) στη δική μας πρώτη καταγραφή / στο πρώτο κρεβάτι
+function npsStayOf(x){ var L = NS.map && NS.map[nzk(x.name)]; if(!L || !L.length) return null;
+  var R = Array.isArray(x.rooms) ? x.rooms : [], ours = dmyT(x.adm) || dmyT((R[0]||{}).from), end = dmyT((R[R.length-1]||{}).to) || dmyT(x.archived_at);
+  var best = null, bd = 1e15; L.forEach(function(s){ var d = ours ? Math.abs(s.a - ours) : (end ? Math.abs((s.c||s.a) - end) : 0); if(d < bd){ bd = d; best = s; } });
+  return best && bd <= 4*864e5 ? best : (L.length===1 && !ours ? L[0] : null); }
+function stayLine(x){ var s = npsStayOf(x), R = Array.isArray(x.rooms) ? x.rooms : [];
+  var a = s ? s.a : (dmyT(x.adm) || dmyT((R[0]||{}).from)), c = s ? s.c : (dmyT((R[R.length-1]||{}).to) || dmyT(x.archived_at));
+  return (a ? 'Εισαγωγή '+dd2(a) : '') + (c ? ' → Έξοδος '+dd2(c) : (s ? ' → νοσηλεύεται' : '')); }
 
 function roomsText(rooms){
   if(!Array.isArray(rooms) || !rooms.length) return '';
@@ -23552,20 +23591,22 @@ function listHtml(q){
   var note = r.length!==all.length ? '<div class="psf-n" style="margin:0 0 8px">Εμφανίζονται '+r.length+' από '+all.length+(String(arF.amka||arF.am||'').trim() ? ' · ΑΜΚΑ/ΑΜ ταιριάζουν μόνο όπου έχουν καταγραφεί' : '')+'</div>' : '';
   if(!r.length) return note + '<p style="opacity:.7">Δεν βρέθηκε ασθενής.</p>';
   var canDel = ['attending','admin'].indexOf(window.authRole)>=0;
-  return note + r.slice(0,100).map(function(x){
-    var row = '<div class="ar-row" onclick="archiveShow(\''+esc(x.uid)+'\')"><div class="ar-hd"><b>'+esc(x.name||'(χωρίς όνομα)')+'</b>'+(window.pdxPatientHistory ? '<button type="button" class="ar-hist" onclick="event.stopPropagation();archiveHistory(\''+esc(x.uid)+'\')">📋 Ιστορικό</button>' : '')+'</div><div>'+roomsText(x.rooms)+'</div><div>Διαγράφηκε '+esc(dmy(String(x.archived_at||'').slice(0,10)))+'</div></div>';
+  return note + '<div class="ar-list">' + r.slice(0,100).map(function(x){
+    var row = '<div class="ar-row" onclick="archiveShow(\''+esc(x.uid)+'\')"><div class="ar-hd"><b>'+esc(x.name||'(χωρίς όνομα)')+'</b>'+(window.pdxPatientHistory ? '<button type="button" class="ar-hist" onclick="event.stopPropagation();archiveHistory(\''+esc(x.uid)+'\')">📋 Ιστορικό</button>' : '')+'</div><div class="ar-sub">'+esc(stayLine(x))+'</div><div class="ar-sub2">'+esc((Array.isArray(x.rooms)?x.rooms:[]).map(function(r){ return roomName(r.k); }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' · '))+'</div></div>';
     return canDel ? '<div class="ar-sw"><button class="ar-del" onclick="archiveDeleteForever(\''+esc(x.uid)+'\')">🗑 Διαγραφή</button>'+row+'</div>' : row;
-  }).join('');
+  }).join('') + '</div>';
 }
 window.archiveOpen = function(){
   box.classList.add('on');
-  shell('<p>Φόρτωση…</p>');
+  shell('<p>Φόρτωση…</p>', ' ');
   rpc('oncall_archive_list', {p_code:LOCK_CODE}).then(function(list){
     rows = Array.isArray(list) ? list : [];
-    shell('<input id="arQ" type="search" placeholder="Αναζήτηση με όνομα…" autocomplete="off"><div id="arFlt" style="--psf-m:0;margin-bottom:6px">'+arFiltHtml()+'</div><div id="arList">'+listHtml('')+'</div>');
+    shell('<div class="ar-h1">Αρχείο ασθενών</div><input id="arQ" type="search" placeholder="Αναζήτηση με όνομα…" autocomplete="off"><div id="arFlt" style="--psf-m:0;margin-bottom:6px">'+arFiltHtml()+'</div><div id="arList">'+listHtml('')+'</div>', ' ');
     var q = document.getElementById('arQ');
     arSwipe(document.getElementById('arList'));
     q.oninput = function(){ document.getElementById('arList').innerHTML = listHtml(q.value); };
+    // 🏥 15/11: ημερομηνίες του ΝΠΣ μόλις φορτωθούν (μέχρι τότε δείχνει τις δικές μας)
+    window.pdxNpsStaysLoad().then(function(){ var l = document.getElementById('arList'); if(l && box.classList.contains('on')) l.innerHTML = listHtml(q.value); });
     q.focus();
   }).catch(function(){ shell('<p style="color:#B23A3A">Δεν έγινε σύνδεση με τη βάση.</p>'); });
 };
@@ -23652,17 +23693,25 @@ window.archiveShow = function(uid){
   shell('<p>Φόρτωση…</p>', meta.name, true);
   rpc('oncall_archive_get', {p_code:LOCK_CODE, p_uid:uid}).then(function(d){
     d = d || {};
-    var h = '<h3>Παραμονή</h3>' + '<div class="ar-kv">'+roomsText(meta.rooms)+'</div>' + kv('Πρώτη καταγραφή', meta.adm?dmy(meta.adm):'');
-    h += '<h3>Στοιχεία</h3>' + kv('Θεράπων', d.therapist) + kv('Επέμβαση', [d.surgery, d.side, d.pod?('ΜΕ'+d.pod):''].filter(Boolean).join(' ')) + kv('Διάγνωση', d.dx) + kv('Αλλεργία', d.allergy)
+    // 🏥 15/11: εισαγωγή/έξοδος από τον ΝΠΣ · ημέρα επέμβασης: η δική μας ΜΟΝΟ αν βάλαμε Χ στο Παραδόχαρτο (pod + podDate), αλλιώς από τον ΝΠΣ (πράξη/πρόγραμμα)
+    var s0 = npsStayOf(meta), R0 = Array.isArray(meta.rooms) ? meta.rooms : [];
+    var aT = s0 ? s0.a : (dmyT(meta.adm) || dmyT((R0[0]||{}).from)), cT = s0 ? s0.c : (dmyT((R0[R0.length-1]||{}).to) || dmyT(meta.archived_at));
+    var podN = parseInt(d.pod, 10), ownOp = !isNaN(podN) && dmyT(d.podDate) ? dmyT(d.podDate) - podN*864e5 : 0;
+    var sk = 'ar:'+uid, sg = window.pdxSurgGuessCached && pdxSurgGuessCached(sk), npsOp = sg && sg.t && sg.t <= Date.now() ? sg.t : 0, opT = ownOp || npsOp;
+    var surgTxt = [d.surgery, d.side].filter(Boolean).join(' ') || (sg && sg.txt ? String(sg.txt).replace(/^(Χ\d+|Προς)\s+/, '') : '');
+    var h = '<h3>ΝΟΣΗΛΕΙΑ</h3><div class="ar-card">' + kv('Εισαγωγή', aT ? dd2(aT) : '') + kv('Έξοδος', cT ? dd2(cT) : (s0 ? 'νοσηλεύεται' : '')) + kv('Επέμβαση', surgTxt) + kv('Ημέρα επέμβασης', opT ? dd2(opT) : '')
+      + kv('Κρεβάτια', (R0.length ? R0.map(function(r){ return roomName(r.k)+' ('+(r.from?dmy(r.from):'?')+' → '+(r.to?dmy(r.to):'?')+')'; }).join(' · ') : '')) + '</div>';
+    if(!ownOp && !(sg && sg.at) && window.pdxSurgGuess){ window.pdxSurgGuess(sk, {name: meta.name, admitDate: aT ? dd2(aT).replace(/\/(\d{2})$/, '/20$1') : ''}).then(function(ch){ if(ch && box.classList.contains('on') && String(box.textContent).indexOf(meta.name||'') >= 0) archiveShow(uid); }); }
+    h += '<h3>ΣΤΟΙΧΕΙΑ</h3><div class="ar-card">' + kv('Θεράπων', d.therapist) + kv('Διάγνωση', d.dx) + kv('Αλλεργία', d.allergy)
       + kv('Ιστορικό', [].concat(d.historySelected||[], d.historyCustom?[d.historyCustom]:[])) + kv('Ευρήματα', [].concat(d.findingsSelected||[], d.findingsCustom?[d.findingsCustom]:[]))
-      + kv('Αντιβίωση', [].concat(d.antibioticsSelected||[], d.antibioticsCustom?[d.antibioticsCustom]:[])) + kv('Αντιπηκτικά', d.anticoagList) + kv('Οδηγίες', d.instructions) + kv('Λοιπά', d.restExtra);
+      + kv('Αντιβίωση', [].concat(d.antibioticsSelected||[], d.antibioticsCustom?[d.antibioticsCustom]:[])) + kv('Αντιπηκτικά', d.anticoagList) + kv('Οδηγίες', d.instructions) + kv('Λοιπά', d.restExtra) + '</div>';
     // (τα εργαστηριακά ΔΕΝ εμφανίζονται στο αρχείο — βλ. «Ιστορικό» ασθενή / Εργαστηριακά)
     var ch = d.caseHist && d.caseHist.d;
     if(ch){
-      h += '<h3>Ιστορικό εισαγωγής</h3>' + kv('Ηλικία', ch.age) + kv('Αιτία', ch.admission_reason) + kv('Παρούσα νόσος', ch.present_illness)
+      h += '<h3>ΙΣΤΟΡΙΚΟ ΕΙΣΑΓΩΓΗΣ</h3><div class="ar-card">' + kv('Ηλικία', ch.age) + kv('Αιτία', ch.admission_reason) + kv('Παρούσα νόσος', ch.present_illness)
         + (Array.isArray(ch.workup)?ch.workup.map(function(w){ return kv(w.label||'Έλεγχος', String(w.text==null?'':w.text).replace(/\n?\+\+\+\n?/g,'\n').replace(/\*\*/g,'')); }).join(''):'')
         + kv('Προηγούμενα χειρουργεία', ch.past_surgeries)
-        + (Array.isArray(ch.medications)?kv('Φάρμακα', ch.medications.map(function(m){ return [m.name,m.dose,m.schedule,m.note].filter(Boolean).join(' '); })):'');
+        + (Array.isArray(ch.medications)?kv('Φάρμακα', ch.medications.map(function(m){ return [m.name,m.dose,m.schedule,m.note].filter(Boolean).join(' '); })):'') + '</div>';
     }
     var hiN = (d.histImgs||[]).length; window.__arPayload = window.__arPayload||{}; window.__arPayload[uid] = d;
     if(hiN) h = '<button onclick="histImg.viewList(window.__arPayload[\''+esc(uid)+'\'].histImgs, \''+esc(meta.name||'')+'\')" style="width:100%;padding:12px;font-size:15px;font-weight:700;border:0;border-radius:10px;background:#1B4B66;color:#fff;margin-bottom:6px">🖼 Πρωτότυπο ιστορικό ('+hiN+')</button>' + h;
