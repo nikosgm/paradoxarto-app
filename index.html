@@ -2528,7 +2528,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v480';
+const APP_VER = '2026-11-15-v481';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -9054,7 +9054,7 @@ document.head.appendChild(st);
       const dl = await sb6.storage.from('img-enc').download(r.id+'/0.bin'); if(dl.error) throw new Error(dl.error.message);
       const u = await pdxCK.openBytes(new Uint8Array(await dl.data.arrayBuffer())); sb6.storage.from('img-enc').remove([r.id+'/0.bin']).then(()=>{}, ()=>{});
       const f = new File([u], a.name || 'συνημμένο', {type: a.type || 'application/octet-stream'});
-      if(navigator.canShare && navigator.canShare({files:[f]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)){ try{ await navigator.share({files:[f], title:a.name}); return; }catch(e){ if(e && e.name==='AbortError') return; } }
+      if(window.pdxFileView){ await window.pdxFileView(f); return; }   // 👁 15/11: προεπισκόπηση μέσα στην εφαρμογή (κοινοποίηση/αποθήκευση από εκεί)
       const url = URL.createObjectURL(f); const w = window.open(url, '_blank'); if(!w){ const l = document.createElement('a'); l.href = url; l.download = a.name || 'file'; document.body.appendChild(l); l.click(); l.remove(); } setTimeout(()=>URL.revokeObjectURL(url), 120000); });
     // οι επαφές φορτώνουν στο παρασκήνιο· ΧΩΡΙΣ ξαναζωγράφισμα της σύνταξης (θα έσβηνε ό,τι γράφεται εκείνη τη στιγμή) — μόνο η ένδειξη + προτάσεις στο ενεργό πεδίο
     const loadCon = async ()=>{ if(st.con || st.conBusy) return; st.conBusy = true;
@@ -21122,6 +21122,42 @@ window.pdxOpNoteFromScan = function(p){
       if(e.target.closest('[data-abxs]') && st.p){ const p = st.p; return job('bxscan', {pts:[{name:(p.surname+' '+(p.firstname||'')).trim(), amka:p.amka||'', am:p.am||''}], quiet:true}, '🔬 Βιοψίες'); }
     });
     load(); return pg;
+  };
+  // 👁 15/11 18:52 (χρήστης: «στο mail, άνοιγμα συνημμένου → προεπισκόπηση μέσα στην εφαρμογή, όχι μόνο επιλογή για εγκατάσταση/αποθήκευση»)
+  // Πλήρης οθόνη: PDF (pdf.js → εικόνες) · εικόνες · Word .docx (mammoth) · Excel .xlsx/.xls/.csv (SheetJS) · κείμενο · HTML (sandbox).
+  // Πάνω δεξιά «⬆︎ Αποθήκευση» (κοινοποίηση/αποθήκευση του αρχείου) και ✕. Ό,τι δεν προβάλλεται → μήνυμα + το ίδιο κουμπί.
+  window.pdxFileView = async function(f){
+    const name = f.name || 'αρχείο', type = String(f.type||'').toLowerCase(), ext = (name.match(/\.([a-z0-9]{1,5})$/i)||[])[1] || '';
+    const E2 = v=>String(v==null?'':v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const night = document.documentElement.classList.contains('pdx-night'), bg = night ? '#000' : '#F2F2F7', fg = night ? '#fff' : '#1C1C1E', card = night ? '#1C1C1E' : '#fff';
+    const ov = document.createElement('div'); ov.className = 'pdx-fv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9800;background:'+bg+';color:'+fg+';display:flex;flex-direction:column;font-family:-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif';
+    ov.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;border-bottom:.5px solid '+(night?'#38383A':'#D1D1D6')+';background:'+card+'">'
+      + '<button data-fvx aria-label="Κλείσιμο" style="border:0;background:none;color:#0A84FF;font-size:17px;font-weight:600;padding:6px 4px">✕</button>'
+      + '<b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px">'+E2(name)+'</b>'
+      + '<button data-fvs style="border:0;background:#0A84FF;color:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px">⬆︎ Αποθήκευση</button></div>'
+      + '<div data-fvb style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px"><div style="padding:30px;text-align:center;opacity:.7">⏳ Προεπισκόπηση…</div></div>';
+    document.body.appendChild(ov);
+    const body = ov.querySelector('[data-fvb]'); let url = '';
+    const close = ()=>{ ov.remove(); if(url) URL.revokeObjectURL(url); };
+    const save = async ()=>{ try{ if(navigator.canShare && navigator.canShare({files:[f]})){ await navigator.share({files:[f], title:name}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+      const u = URL.createObjectURL(f), l = document.createElement('a'); l.href = u; l.download = name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(()=>URL.revokeObjectURL(u), 60000); };
+    ov.addEventListener('click', e=>{ if(e.target.closest('[data-fvx]')) close(); else if(e.target.closest('[data-fvs]')) save(); });
+    const lib = (src, test)=>new Promise((ok,no)=>{ if(test()) return ok(); const sc = document.createElement('script'); sc.src = src; sc.onload = ()=>test() ? ok() : no(new Error('δεν φορτώθηκε ο viewer')); sc.onerror = ()=>no(new Error('δεν φορτώθηκε ο viewer')); document.head.appendChild(sc); });
+    const box = h=>'<div style="background:#fff;color:#1C1C1E;border-radius:10px;padding:14px;overflow:auto">'+h+'</div>';
+    try{
+      if(/pdf/.test(type) || /^pdf$/i.test(ext)) body.innerHTML = await window.pdxPdfImgs(f);
+      else if(/^image\//.test(type) || /^(jpe?g|png|gif|webp|heic|bmp)$/i.test(ext)){ url = URL.createObjectURL(f); body.innerHTML = '<img src="'+url+'" alt="" style="max-width:100%;display:block;margin:0 auto;border-radius:6px">'; }
+      else if(/^docx$/i.test(ext) || /wordprocessingml/.test(type)){ await lib('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js', ()=>window.mammoth);
+        const r = await mammoth.convertToHtml({arrayBuffer: await f.arrayBuffer()}); body.innerHTML = box(String(r.value||'').replace(/<script[\s\S]*?<\/script>/gi,'') || '<i>κενό έγγραφο</i>'); }
+      else if(/^(xlsx|xls|csv|ods)$/i.test(ext) || /spreadsheet|ms-excel|text\/csv/.test(type)){ await lib('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', ()=>window.XLSX);
+        const wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), {type:'array'});
+        body.innerHTML = wb.SheetNames.slice(0,10).map(n=>'<div style="font-weight:700;margin:8px 2px">'+E2(n)+'</div>'+box(XLSX.utils.sheet_to_html(wb.Sheets[n], {header:'', footer:''}).replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<table/,'<table style="border-collapse:collapse;font-size:13px" border="1" cellpadding="4"'))).join(''); }
+      else if(/^text\/html/.test(type) || /^html?$/i.test(ext)){ const t = await f.text(); body.innerHTML = '<iframe sandbox="" style="width:100%;height:100%;min-height:70vh;border:0;background:#fff;border-radius:10px"></iframe>'; body.querySelector('iframe').srcdoc = t; }
+      else if(/^text\//.test(type) || /^(txt|log|xml|json|eml|ics|vcf)$/i.test(ext)){ const t = await f.text(); body.innerHTML = box('<pre style="white-space:pre-wrap;word-break:break-word;margin:0;font:13px/1.45 ui-monospace,Menlo,monospace">'+E2(t.slice(0, 400000))+'</pre>'); }
+      else body.innerHTML = '<div style="padding:30px 18px;text-align:center;line-height:1.5">Δεν γίνεται προεπισκόπηση για αρχεία «.'+E2(ext||'?')+'».<br>Πάτα <b>⬆︎ Αποθήκευση</b> για να το ανοίξεις σε άλλη εφαρμογή.</div>';
+    }catch(e){ body.innerHTML = '<div style="padding:30px 18px;text-align:center;line-height:1.5">⚠ Η προεπισκόπηση δεν έγινε ('+E2(e.message||e)+').<br>Πάτα <b>⬆︎ Αποθήκευση</b> για να το ανοίξεις σε άλλη εφαρμογή.</div>'; }
+    return ov;
   };
   // PDF → εικόνες (pdf.js) — κοινό για βιοψίες/εξιτήρια
   window.pdxPdfImgs = async function(blob){
