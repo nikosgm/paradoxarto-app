@@ -1,1 +1,1 @@
-{"version": "0.21.409", "zip": "ef-bot-0.21.409.zip", "sha256": "bcef0f3e54e5dbe4ef6cad76d29ba7fc1f7a8be168536adce96c8f73ba4fbb84", "notes": "κλήσεις εκτίμησης: αναζήτηση 1 έτους + μέτρηση ανά τμήμα"}
+{"version": "0.21.410", "zip": "ef-bot-0.21.410.zip", "sha256": "51f32aaab95816756153ef1f5150ceb3354a9da09768f50389a7a3cb1d8d104e", "notes": "e-prescription: καρτέλα με σελίδα σφάλματος Chrome → νέα φόρτωση (GET) πριν από κάθε χρήση · live: ωράριο from:0 σωστά (νυχτερινός 15/11)"}
