@@ -2495,7 +2495,7 @@ window.pdxSurgGuess = async function(k, d){
   return ((out && out.txt) || '') !== (prev || '');
 };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v468';
+const APP_VER = '2026-11-15-v469';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14817,8 +14817,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return '<div id="npsBlk" style="margin:18px 0 8px"><div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 16px 6px"><b style="font-size:12.5px;letter-spacing:.3px;color:var(--t2,#6B7280);text-transform:uppercase">🏥 Στον ΝΠΣ · όχι στο Παραδόχαρτο · '+M.length+'</b><button data-nball style="border:0;background:none;font-size:13px;color:var(--mp,#1D4E80);font-weight:700">Όλοι ›</button></div>'
       + '<div style="padding:0 16px 6px">'+npsSortBar()+'</div>'
       + '<div style="background:var(--card,#fff);border-radius:14px;margin:0 10px;overflow:hidden">' + M.map((r,i)=>{ const x = NB.enr[nbNz(r.name)] || {}, am = x.am || r.am || '', n = nbDxN(x);
-        const sub = [am ? 'ΑΜ '+am : (x.err ? '⚠ '+String(x.err).slice(0,40) : 'ΑΜ: έρχεται…'), r.admit ? 'εισ. '+r.admit : (x.adm && x.adm.from ? 'εισ. '+x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7) : ''), x.dx ? '🩺 '+n+(n===1?' συννοσηρότητα':' συννοσηρότητες') : ''].filter(Boolean).join(' · ');
-        return '<div data-nbo="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;'+(i?'border-top:1px solid var(--sep,#EEF1F4)':'')+'"><span style="width:8px;height:8px;border-radius:4px;background:#E08A00;flex:none"></span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+E5(r.name)+'</div><div style="font-size:12px;color:var(--t2,#6B7280)">'+E5(sub)+'</div></div><button data-nbp="'+i+'" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:6px 10px;font-size:13px;flex:none">＋ Κρεβάτι</button></div>'; }).join('')
+        // 15/11 17:08 (χρήστης: «όχι ΑΜ, όχι πόσες συννοσηρότητες — μόνο ημ. εισαγωγής, το χειρουργείο (προς/έγινε) και τις συννοσηρότητες ως ΑΥ, ΔΛΔ…»)
+        const adm = r.admit ? String(r.admit).replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/,'$1') : (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7) : '');
+        const sk = 'nps:'+r.name, sg = window.pdxSurgGuessCached ? pdxSurgGuessCached(sk) : null;
+        if(window.pdxSurgGuess && !(sg && (sg.busy || sg.at))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} } }).catch(()=>{});
+        const ab = x.dx && window.pdxComorbAbbr ? pdxComorbAbbr(x.dx) : '';
+        const sub = [adm ? 'εισ. '+adm : '', sg && sg.txt ? '<b style="color:var(--mp,#1D4E80)">'+E5(sg.txt)+'</b>' : '', ab ? E5(ab) : ''].filter(Boolean).join(' · ');
+        return '<div data-nbo="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;'+(i?'border-top:1px solid var(--sep,#EEF1F4)':'')+'"><span style="width:8px;height:8px;border-radius:4px;background:#E08A00;flex:none"></span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+E5(r.name)+'</div><div style="font-size:12px;color:var(--t2,#6B7280)">'+sub+'</div></div><button data-nbp="'+i+'" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:6px 10px;font-size:13px;flex:none">＋ Κρεβάτι</button></div>'; }).join('')
       + '</div><div style="font-size:12px;color:var(--t3,#8E8E93);padding:6px 16px">Πάτα για καρτέλα με όλες τις ενέργειες'+(hm?' · λίστα ΝΠΣ '+hm:'')+'</div></div>';
   }
   function nbPaint(){
@@ -17946,6 +17951,12 @@ Z99.2:C|αιμοκάθαρση
   // 🩺 15/11 15:45 (χρήστης: «βρήκες τα χρόνια φάρμακα, αλλά δεν έβαλες συννοσηρότητες»): ασθενείς ΜΟΝΟ της λίστας ΝΠΣ («Εκτός θαλάμου»)
   // είχαν τις διαγνώσεις ΑΗΦΥ (_npsDx) αλλά ΔΕΝ μπαίναν στις Συννοσηρότητες ώσπου να μπουν σε κρεβάτι → ίδιος κανόνας με pdxComorbAutoApply:
   // τα χρόνια μπαίνουν μόνα τους, τα αμφίβολα «για απόφαση» (χωρίς αποστολή στον ΝΠΣ — αυτό γίνεται όταν μπει σε κρεβάτι)
+  // 🏷 15/11 17:08: συννοσηρότητες σύντομα, όπως στο ατομικό ιστορικό (ΑΥ, ΣΔ, ΔΛΔ…) — από τους κωδικούς ICD (μόνο τα χρόνια)
+  const PDX_ABBR = [[/^I1[0-35]/,'ΑΥ'],[/^E1[0-4]/,'ΣΔ'],[/^E78/,'ΔΛΔ'],[/^I48/,'ΚΜ'],[/^(I50|I11\.0|I13\.[02])/,'ΚΑ'],[/^I2[0-5]/,'ΣΝ'],[/^(I6[0-46]|I69|Z86\.73)/,'ΑΕΕ'],
+    [/^J44/,'ΧΑΠ'],[/^J45/,'Άσθμα'],[/^N18/,'ΧΝΝ'],[/^E03/,'ΥΠΟΘ'],[/^E05/,'ΥΠΕΡΘ'],[/^N40/,'ΚΥΠ'],[/^K21/,'ΓΟΠ'],[/^G20/,'Parkinson'],[/^(G30|F00|F03)/,'Άνοια'],
+    [/^M81/,'Οστεοπόρωση'],[/^Z95\.0/,'Βηματοδότης'],[/^(Z95\.[15]|Z95\.1)/,'Bypass/stent'],[/^C61/,'Ca προστάτη'],[/^C67/,'Ca κύστης'],[/^C64/,'Ca νεφρού'],[/^G47\.3/,'OSAS'],[/^F3[23]/,'Κατάθλιψη']];
+  window.pdxComorbAbbr = function(dx){ try{ const L = Array.isArray(dx) ? dx.join('\n') : String(dx||''); const C = window.pdxComorbClassify ? pdxComorbClassify(L).filter(i=>i.cls==='C').map(i=>i.code) : [];
+      const out = []; C.forEach(c=>{ const i = PDX_ABBR.findIndex(([re])=>re.test(c)); if(i>=0 && !out.some(o=>o.i===i)) out.push({i, t:PDX_ABBR[i][1]}); }); return out.sort((a,b)=>a.i-b.i).map(o=>o.t).join(', ');   /* σειρά όπως λέμε: ΑΥ, ΣΔ, ΔΛΔ… */ }catch(e){ return ''; } };
   window.pdxComorbTempFill = function(rec){ try{ if(!rec || !Array.isArray(rec._npsDx) || !rec._npsDx.length || !window.pdxComorbClassify) return;
       const text = rec._npsDx.map(String).join('\n').slice(0, 20000), items = pdxComorbClassify(text), C = items.filter(i=>i.cls==='C'), U = items.filter(i=>i.cls==='U');
       const cur = (rec.comorb && Array.isArray(rec.comorb.codes)) ? rec.comorb.codes.slice() : [], have = new Set(cur.map(x=>x.code)), n0 = cur.length;
