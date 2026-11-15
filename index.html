@@ -2428,6 +2428,8 @@ const PDX_ACT_MAP = [
   [/ΔΙΟΥΡΗΘΡ.*ΠΡΟΣΤΑΤ|ΠΡΟΣΤΑΤ.*ΔΙΟΥΡΗΘΡ|\bTURP\b|HOLEP|ΕΝΟΥΚΛΕΑΣ.*ΠΡΟΣΤΑΤ/, "TURP"],
   [/ΔΙΟΥΡΗΘΡ.*(ΚΥΣΤ|ΟΓΚ)|(ΚΥΣΤ|ΟΓΚ).*ΔΙΟΥΡΗΘΡ|\bTURB\w*/, "TURB"],
   [/ΟΥΡΗΘΡΟΤΟΜ|DVIU|SACHSE/, "DVIU"],
+  // 15/11 18:39 (χρήστης: «δεν είναι RC Bricker, είναι RC pouch»): ορθότοπη νεοκύστη / αντικατάσταση κύστης με έντερο → «RC pouch»
+  [/POUCH|STUDER|ΝΕΟΚΥΣΤ|ΟΡΘΟΤΟΠ.*ΚΥΣΤ|ΑΝΤΙΚΑΤΑΣΤ\S*.*ΟΥΡΟΔΟΧ\S*\s+ΚΥΣΤ|ΑΝΑΚΑΤΑΣΚΕΥ.*(ΕΙΛΕ|ΕΝΤΕΡ)/, "RC pouch"],
   [/ΚΥΣΤΕΚΤΟΜ|\bRC\b/, (t) => (/ΟΥΡΗΤΗΡΟΔΕΡΜ|ΣΤΟΜΙ/.test(t) ? "RC στομίες" : "RC Bricker")],
   [/ΡΙΖΙΚ.*ΠΡΟΣΤΑΤΕΚΤΟΜ|ΠΡΟΣΤΑΤΕΚΤΟΜ.*ΡΙΖΙΚ|\bRRP\b|\bRARP\b/, "RRP"],
   [/ΝΕΦΡΟΟ?ΥΡΗΤΗΡΕΚΤΟΜ|\bNUT\b/, (t) => (/ΛΑΠΑΡΟΣΚΟΠ|\bLAP/.test(t) ? "Lap NUT" : "NUT")],
@@ -2442,7 +2444,7 @@ window.pdxActShort = function(x, hint) {   // hint: άλλο κείμενο (γ�
   for (const [re, lab] of PDX_ACT_MAP) if (re.test(t)) {
     let L = typeof lab === "function" ? lab(t) : lab;
     // 15/11 15:34 (χρήστης: «όπως το λέμε κι εμείς — Προς NUT ΑΡ χαμηλή, Προς TurP, Προς TurB, Προς RRP»): πλευρά + «χαμηλή» · TurP/TurB
-    const NS = (typeof NO_SIDE_SURGERIES !== "undefined" ? NO_SIDE_SURGERIES : []).concat(["RC στομίες", "κυστεοσκόπηση"]);
+    const NS = (typeof NO_SIDE_SURGERIES !== "undefined" ? NO_SIDE_SURGERIES : []).concat(["RC στομίες", "RC pouch", "κυστεοσκόπηση"]);
     if (NS.indexOf(L) < 0) { const B = (w) => new RegExp("(^|[^Α-Ω])(" + w + ")([^Α-Ω]|$)").test(t);
       const sideOf = (u) => { const B2 = (w) => new RegExp("(^|[^Α-Ω])(" + w + ")([^Α-Ω]|$)").test(u); return B2("ΑΜΦΟΤΕΡΟΠΛ\\S*|ΑΜΦ") ? "ΑΜΦ" : B2("ΑΡ|ΑΡΙΣΤΕΡ\\S*") ? "ΑΡ" : B2("ΔΕ|ΔΕΞΙ\\S*") ? "ΔΕ" : ""; };
       const side = sideOf(t) || (hint ? sideOf(String(hint).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()) : ""); if (side) L += " " + side; }
@@ -2451,7 +2453,13 @@ window.pdxActShort = function(x, hint) {   // hint: άλλο κείμενο (γ�
   }
   return /[a-zα-ω]/.test(raw) ? raw : raw.toLowerCase();   // ΚΕΦΑΛΑΙΑ καταλόγου → πεζά
 }
-window.pdxActsJoin = function(L, hint) { return [...new Set((L || []).map((x) => window.pdxActShort(x, hint)).filter(Boolean))].join(" + "); }
+// 15/11 18:39 (χρήστης: «όχι όλο αυτό… σκέτο RC, τελείωσε»): όταν υπάρχει πράξη που αντιστοιχεί σε δικό μας όνομα, ΔΕΝ προστίθενται οι υπόλοιπες ακατέργαστες
+// ονομασίες του ΝΠΣ (είναι συνήθως σκέλη της ίδιας επέμβασης) · RC pouch > RC Bricker / RC στομίες (ίδια κυστεκτομή)
+window.pdxActIsMapped = function(x) { const t = String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase(); return PDX_ACT_MAP.some(([re]) => re.test(t)); };
+window.pdxActsJoin = function(L, hint) { L = (L || []).filter(Boolean); const M = L.filter(window.pdxActIsMapped); if (M.length) L = M;
+  let R = [...new Set(L.map((x) => window.pdxActShort(x, hint)).filter(Boolean))];
+  if (R.includes("RC pouch")) R = R.filter((x) => !/^RC (Bricker|στομίες)/.test(x));
+  return R.join(" + "); }
 
 // 🔪 15/11 13:22 (χρήστης: «αν δεν έχουμε βάλει εμείς το χειρουργείο, κάτω από το όνομα γράψε το — από την ιατρική πράξη του ΝΠΣ ή το πρόγραμμα χειρουργείου»)
 // Πηγές (μόνο ανάγνωση, ό,τι υπάρχει ήδη): (1) Φάκελος ΝΠΣ (npsdossier, κρυπτογραφημένος) › «Ιατρικές Πράξεις» μέσα στη νοσηλεία → έγινε
@@ -2520,7 +2528,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v479';
+const APP_VER = '2026-11-15-v480';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
