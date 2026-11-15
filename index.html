@@ -2538,7 +2538,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v488';
+const APP_VER = '2026-11-15-v489';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25101,11 +25101,12 @@ window.CLS_MODE='A';
   window.pdxCultTxt = function(c){ if(!c) return {t:'—', cls:''}; if(c.none) return {t:'καμία ουροκαλλιέργεια', cls:'mut'};
     if(c.err && !c.st) return {t:'⚠ δεν διαβάστηκε', cls:'mut'};
     const dd = String(c.sampled || c.date || '').replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/, '$1');
-    if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγέλθηκε':'εκκρεμεί')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · δείγμα '+dd : ''), cls:'pend'};
+    // 15/11 20:55 (χρήστης: «μόνο το σήμα της καλλιέργειας: (-) ή (+) ή εκκρ — χωρίς "Uroquattro"»)
+    if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγ.':'εκκρ.')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · '+dd : ''), cls:'pend'};
     const r = [c.res, c.desc].filter(Boolean).join(' · ').replace(/\s+/g,' ').trim();
     if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};
     // 15/11 20:30 (χάρτης cultsrc: ΑΝΑΛΥΤΗΣ «Uroquatro» στις 23/28, ΑΠΟΤΕΛΕΣΜΑ «OK»): «OK» = ένδειξη του ταχέος αναλυτή, ΟΧΙ μικρόβιο — ουδέτερο ως να επιβεβαιωθεί η σημασία του
-    if(/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim()) return {t:'Uroquattro: OK'+(dd?' · '+dd:''), cls:'mut'};
+    if(/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim()) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};   // «OK» του αναλυτή = χωρίς σήμα ανάπτυξης
     return {t:(r ? '(+) '+r.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
@@ -25148,11 +25149,18 @@ window.CLS_MODE='A';
       return h2 + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
     // ανανέωση κάθε 20′ όσο είναι ανοιχτή η σελίδα του προγράμματος
     const cuTimer = setInterval(()=>{ if(!document.body.contains(pg.el)) return clearInterval(cuTimer); if(st.cu && Date.now() - (st.cuAt||0) > 20*60000) cultLoad(); }, 60000);
-    async function cultLoad(force){ if(st.cubusy) return; const sched = st.o && st.o.pts ? st.o : await pdxOrSchedGet(st.iso).catch(()=>null);
+    // 💾 15/11 20:55 (χρήστης: «γιατί οι καλλιέργειες, ενώ είχαν φορτωθεί, χάθηκαν όταν ξαναμπήκα; cache παντού»): η τελευταία λίστα ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΗ στη συσκευή
+    // ανά ημέρα → εμφανίζεται ΠΡΙΝ από οποιαδήποτε κλήση· η νέα ανάγνωση την αντικαθιστά χωρίς να σβήσει ό,τι φαίνεται
+    const CUK = 'pdx_orcult|';
+    async function cultLocalGet(){ try{ const e = localStorage.getItem(CUK+st.iso); if(!e) return null; return await pdxCK.decrypt(JSON.parse(e)); }catch(x){ return null; } }
+    async function cultLocalPut(o){ try{ localStorage.setItem(CUK+st.iso, JSON.stringify(await pdxCK.encrypt(o))); }catch(x){} }
+    (async ()=>{ if(st.cu) return; const L0 = await cultLocalGet(); if(L0 && L0.list && !st.cu){ st.cu = {list:L0.list}; st.cuAt = L0.at||0; pg.redraw(); } })();
+    async function cultLoad(force){ if(st.cubusy) return; if(!st.cu){ const L0 = await cultLocalGet(); if(L0 && L0.list && !st.cu){ st.cu = {list:L0.list}; st.cuAt = L0.at||0; pg.redraw(); } } const sched = st.o && st.o.pts ? st.o : await pdxOrSchedGet(st.iso).catch(()=>null);
       const pts = ((sched && sched.pts) || []).filter(p=>p && p.name); if(!pts.length){ st.cu = {list:[]}; pg.redraw(); return; }
       st.cubusy = 'Εργαστηριακά της κλινικής…'; pg.redraw();
       let L = []; try{ const r = await sb6.from('oncall_labs').select('name,pid,data').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%'); L = r.data || []; }catch(e){}
-      const list = pts.map(p=>{ const m = orLabsMatch(L, p.name); return {name:p.name, room:p.room||'', pid: m ? String(m.pid) : '', ua: m ? window.pdxUaBrief(m.data) : null, c:null}; });
+      const old = {}; ((st.cu && st.cu.list) || []).forEach(x=>{ if(x.pid && x.c) old[x.pid] = x.c; });
+      const list = pts.map(p=>{ const m = orLabsMatch(L, p.name); const pid = m ? String(m.pid) : ''; return {name:p.name, room:p.room||'', pid, ua: m ? window.pdxUaBrief(m.data) : null, c: pid && old[pid] || null}; });
       st.cu = {list}; const pids = [...new Set(list.map(x=>x.pid).filter(Boolean))];
       // 🔄 15/11 20:37 (χρήστης: «αν στείλουμε νέα καλλιέργεια για το χειρουργείο, ανανέωνε — και όταν βγει η νέα αρνητική, γράψ' την»):
       // κοινή κρυπτογραφημένη μνήμη «orcult|ΗΜΕΡΑ» → εμφάνιση ΑΜΕΣΑ, μετά νέα ανάγνωση· σύγκριση με την προηγούμενη → «🆕» σε όποιον άλλαξε
@@ -25167,7 +25175,7 @@ window.CLS_MODE='A';
         const D = await pdxCK.decrypt(j.payload.result.enc); const by = {}; (D.pts||[]).forEach(c=>{ by[c.pid] = c; });
         const sig = c=>c ? [c.st||'', c.aa||'', c.date||'', c.res||''].join('|') : '';
         list.forEach(x=>{ if(!x.pid) return; const nw = by[x.pid] || {err:1}, old = prevBy[x.pid]; if(old && sig(old) !== sig(nw) && !nw.err) nw.isNew = 1; else if(old && old.isNew && sig(old) === sig(nw) && Date.now() - (old.newAt||0) < 12*3600e3){ nw.isNew = 1; nw.newAt = old.newAt; } if(nw.isNew && !nw.newAt) nw.newAt = Date.now(); x.c = nw; });
-        st.cuAt = Date.now(); st.cuerr = '';
+        st.cuAt = Date.now(); st.cuerr = ''; cultLocalPut({at:st.cuAt, list});
         try{ const enc = await pdxCK.encrypt({at:st.cuAt, pts:list.filter(x=>x.pid && x.c && !x.c.err).map(x=>x.c)}); await sb6.from('oncall_labs').upsert({name_key:'orcult|'+st.iso, name:'καλλιέργειες χειρουργείου', pid:null, data:{enc, at:st.cuAt}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){}
         sb6.from('oncall_jobs').update({payload:{pids, quiet:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται μόλις διαβαστεί
       }catch(e){ st.cuerr = e.message || String(e); }
