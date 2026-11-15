@@ -1,1 +1,1 @@
-{"version": "0.21.439", "zip": "ef-bot-0.21.439.zip", "sha256": "82cc17c6e97d9d16eeffb3e07ebb158d8252f4f07dcb5573b93dc999379b22db", "notes": "devfind: έλεγχος θυρών ενός host (χρόνος/σιωπή) για Uroquattro"}
+{"version": "0.21.440", "zip": "ef-bot-0.21.440.zip", "sha256": "0b442970f710b9ef4ca3f4a4c7cbed007d5da60612b9a3104d7b37fa4a1f8b3c", "notes": "uqfs: ανάγνωση \\\\172.16.3.59 (μόνο ανάγνωση, κρυπτογραφημένα)"}
