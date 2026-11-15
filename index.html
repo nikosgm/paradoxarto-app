@@ -2520,7 +2520,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v477';
+const APP_VER = '2026-11-15-v478';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15958,8 +15958,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(q.length<3 && !(st && st.items)) h += '<div class="exl-st">Γράψε τουλάχιστον 3 γράμματα…</div>';
       else if(!st || st.busy) h += '<div class="exl-st">⏳ Αναζήτηση στο e-prescription…</div>';
       else if(st.err) h += '<div class="exl-st bad">⚠ '+E(st.err)+'</div>';
-      else { const L = (st.items||[]).filter(x=>x && x.name && !have.some(n=>rfN(n)===rfN(x.name))).slice(0,15); h += L.length ? L.map(x=>it({n:x.name, k:x.group||rfKind(x.name)}, true)).join('') : '<div class="exl-st">Δεν βρέθηκε στον κατάλογο — δοκίμασε άλλη λέξη (π.χ. «υπερηχογράφημα»).</div>'; }
+      else { const isH = n=>have.some(h0=>rfN(h0)===rfN(n)); const L = (st.items||[]).filter(x=>x && x.name && (opt.multi || !isH(x.name))).slice(0,15); h += L.length ? L.map(x=>{ const on = opt.multi && isH(x.name); const b = it({n:x.name, k:x.group||rfKind(x.name)}, true, on ? '✓ μπήκε — πάτα ξανά για αφαίρεση' : ''); return on ? b.replace('class="exl-it"', 'class="exl-it on" style="background:#E8F3EC"') : b; }).join('') : '<div class="exl-st">Δεν βρέθηκε στον κατάλογο — δοκίμασε άλλη λέξη (π.χ. «υπερηχογράφημα»).</div>'; }
       if(opt.free !== false) h += it({n:q, k:''}, false, '⚠ όπως γράφτηκε').replace('class="exl-it"', 'class="exl-it" style="color:#8A4B00"');
+      // ☑ 15/11 18:24 (χρήστης: «πολλαπλή επιλογή — χοληστερίνη → και LDL και HDL μαζί»): η λίστα ΜΕΝΕΙ ανοιχτή, κάθε πάτημα προσθέτει/αφαιρεί · «Τέλος» κλείνει
+      if(opt.multi && have.length) h = '<div class="exl-h" style="display:flex;align-items:center;justify-content:space-between"><span>Πάτα όσες θέλεις</span><button type="button" data-exdone style="border:0;background:#0A84FF;color:#fff;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px">✓ Τέλος</button></div>' + h;
       box.innerHTML = h;
     };
     inp.addEventListener('input', ()=>{ clearTimeout(tm); const q = inp.value.replace(/\s+/g,' ').trim(); const my = ++seq; if(!q){ box.innerHTML = ''; return; }
@@ -15967,7 +15969,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(loc && loc.length){ last = {items:loc}; render(q, last); return; }
       render(q, q.length>=3 ? {busy:true} : null); if(q.length<3) return;
       tm = setTimeout(async ()=>{ const r = await window.pdxEpSearch('exam', q, {stale:()=>my!==seq}); if(my!==seq || r.stale) return; last = r; render(q, r); }, 600); });
-    box.addEventListener('click', e=>{ const b = e.target.closest('[data-exn]'); if(!b) return; e.stopPropagation(); e.preventDefault();
+    box.addEventListener('click', e=>{ if(e.target.closest('[data-exdone]')){ e.preventDefault(); e.stopPropagation(); seq++; clearTimeout(tm); inp.value = ''; box.innerHTML = ''; return; }
+      const b = e.target.closest('[data-exn]'); if(!b) return; e.stopPropagation(); e.preventDefault();
+      if(opt.multi && b.dataset.exep==='1'){ const q = inp.value.replace(/\s+/g,' ').trim(), had = (opt.have ? opt.have() : []).some(n=>rfN(n)===rfN(b.dataset.exn));
+        if(had){ if(opt.onUnpick) opt.onUnpick(b.dataset.exn); } else onPick({n:b.dataset.exn, k:b.dataset.exk||rfKind(b.dataset.exn), ep:true});
+        render(q, last); return; }
       seq++; clearTimeout(tm); onPick({n:b.dataset.exn, k:b.dataset.exk||rfKind(b.dataset.exn), ep:b.dataset.exep==='1'}); inp.value = ''; box.innerHTML = ''; });
     return {render, last:()=>last};
   };
@@ -16188,7 +16194,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       window.pdxRxLearnLoad && pdxRxLearnLoad();   // 🧠 μνήμη δοσολογίας (μία φορά)
       { const tq = root.querySelector('[data-rxq]'); if(tq) tq.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); rxQuick(); } }); }   // γραπτά: Enter = μέσα
       { const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
-        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true}); }
+        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true, multi:true, onUnpick:n=>{ S.ex = S.ex.filter(y=>y.n.toLowerCase()!==String(n).toLowerCase()); drawEx(); }}); }
       const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); else pdxFocusNow(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
       const mq = root.querySelector('[data-medq]'); mq.value = S.f.q||''; mq.addEventListener('input', medPreview); mq.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFromInput(); } });
       syncForm();
