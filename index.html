@@ -2502,7 +2502,13 @@ window.__abx = window.__abx || {at:0, busy:false, pts:null};
 const PDX_ABX_RE = /CILLIN|PENEM|CEF|CEPH|FLOXACIN|MYCIN|MICIN|CYCLINE|AZOLE(?!PRAZ)|SULFAMETH|TRIMETHOPR|NITROFURANT|FOSFOMYC|LINEZOLID|COLISTIN|TEICOPLANIN|VANCOMYC|DAPTOMYC|TAZOBACT|CLAVULAN|AVIBACTAM|AZTREONAM|METRONIDAZ|RIFAMPIC|AMIKAC|GENTAMIC|TOBRAMYC|TIGECYCL/i;
 window.pdxAbxLoad = async function(){ const A = window.__abx; if(A.busy || (A.pts && Date.now()-A.at < 10*60000)) return false; A.busy = true;
   try{ if(typeof sb6!=='undefined' && window.pdxCK && await pdxCK.ready()){ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','npsmedsall').eq('status','done').not('payload->result','is',null).order('id',{ascending:false}).limit(1);
-      const j = (r.data||[])[0]; const D = j && j.payload && j.payload.result && j.payload.result.enc ? await pdxCK.decrypt(j.payload.result.enc) : null; A.pts = (D && D.pts) || []; A.at = Date.now(); A.busy = false; return true; } }catch(e){}
+      const j = (r.data||[])[0]; const D = j && j.payload && j.payload.result && j.payload.result.enc ? await pdxCK.decrypt(j.payload.result.enc) : null; const pts = ((D && D.pts) || []).map(x=>Object.assign({at: (D && D.at) || 0}, x));
+      // 15/11 17:51: και οι αναγνώσεις ανά ασθενή (npsmeds, 2 ημέρες) — η νεότερη ανά ασθενή κερδίζει
+      try{ const q = await sb6.from('oncall_jobs').select('payload').eq('kind','npsmeds').eq('status','done').not('payload->result','is',null).gte('created_at', new Date(Date.now()-2*864e5).toISOString()).order('id',{ascending:false}).limit(80);
+        const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+        for(const x of (q.data||[])){ const e = x.payload && x.payload.result && x.payload.result.enc; if(!e) continue; let o = null; try{ o = await pdxCK.decrypt(e); }catch(er){} if(!o || !o.name || !Array.isArray(o.meds)) continue;
+          const i = pts.findIndex(z=>nz(z.name)===nz(o.name)); if(i < 0) pts.push({name:o.name, meds:o.meds, at:o.at||0}); else if((o.at||0) > (pts[i].at||0)) pts[i] = {name:o.name, meds:o.meds, at:o.at||0}; } }catch(e){}
+      A.pts = pts; A.at = Date.now(); A.busy = false; return true; } }catch(e){}
   A.busy = false; A.at = Date.now(); A.pts = A.pts || []; return false; };
 window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null;
   const nz = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim(), w = nz(name);
@@ -2514,7 +2520,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v474';
+const APP_VER = '2026-11-15-v475';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
