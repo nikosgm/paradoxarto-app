@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v449';
+const APP_VER = '2026-11-15-v450';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14504,11 +14504,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       } else toast('Δεν υπάρχει ακόμα κατάλογος ειδικοτήτων του ΝΠΣ.');
       return;
     }
-    const specs = cat.filter(x=>x.deps&&x.deps.length).map(x=>x.spec).sort((a,b)=>(M.fav.indexOf(b)>=0)-(M.fav.indexOf(a)>=0) || (!!M.map[b])-(!!M.map[a]) || a.localeCompare(b,'el'));
+    // 📞 15/11 02:25 (χρήστης: «δες τι υποτμήμα πατούσαμε στις παλιές κλήσεις — να είναι έτοιμα»): συχνότητα ανά τμήμα από την ανάγνωση του ΝΠΣ (oncall_labs «consult|hist», χωρίς ονόματα)
+    // → ειδικότητες και υποτμήματα με σειρά συχνότητας· προεπιλογή = το συχνότερο (αν δεν έχει οριστεί από την κλινική)
+    const H = {}, hk = x=>(String(x||'').match(/^\s*(\d{3,6})\b/)||[])[1] || nrm(x);
+    try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','consult|hist').maybeSingle(); ((r && r.data && r.data.data && r.data.data.clinics) || []).forEach(([c,n])=>{ H[hk(c)] = (H[hk(c)]||0) + (+n||0); }); }catch(e){}
+    const fq = x=>H[hk(x)]||0, spF = sp=>((cat.find(x=>x.spec===sp)||{deps:[]}).deps||[]).reduce((a,x)=>a+fq(x), 0);
+    const specs = cat.filter(x=>x.deps&&x.deps.length).map(x=>x.spec).sort((a,b)=>(M.fav.indexOf(b)>=0)-(M.fav.indexOf(a)>=0) || (!!M.map[b])-(!!M.map[a]) || spF(b)-spF(a) || a.localeCompare(b,'el'));
     const inp = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1.5px solid #D5DCE3;border-radius:12px;background:#fff;color:#1F2933;font-family:inherit';
     const opt = (v,cur,txt)=>'<option value="'+E(v)+'"'+(v===cur?' selected':'')+'>'+E(txt||v)+'</option>';
     const s0 = specs[0];
-    const depOpts = sp=>{ const c = cat.find(x=>x.spec===sp) || {deps:[]}; const cur = M.map[sp]||''; return opt('',cur,'— διάλεξε υποτμήμα —')+c.deps.map(x=>opt(x,cur)).join(''); };
+    const depOpts = sp=>{ const c = cat.find(x=>x.spec===sp) || {deps:[]}; const D = c.deps.slice().sort((a,b)=>fq(b)-fq(a)); const cur = M.map[sp] || (D[0] && fq(D[0]) ? D[0] : ''); return opt('',cur,'— διάλεξε υποτμήμα —')+D.map(x=>opt(x,cur,x+(fq(x)?' · ×'+fq(x):''))).join(''); };
     sheet('📞 Κλήση για εκτίμηση · '+d.name,
       lbl('Ειδικότητα (⭐ = αγαπημένες)')+'<select data-sp style="'+inp+'">'+specs.map(x=>opt(x,s0,(M.fav.indexOf(x)>=0?'⭐ ':'')+x)).join('')+'</select>'
       +lbl('Υποτμήμα')+'<select data-dp style="'+inp+'">'+depOpts(s0)+'</select>'
