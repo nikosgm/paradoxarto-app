@@ -2495,7 +2495,7 @@ window.pdxSurgGuess = async function(k, d){
   return ((out && out.txt) || '') !== (prev || '');
 };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v469';
+const APP_VER = '2026-11-15-v470';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14752,8 +14752,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const e = await sb6.from('oncall_jobs').select('payload,updated_at').eq('kind','npsenrich').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-3*864e5).toISOString()).order('id',{ascending:true}).limit(20);
       (e.data||[]).forEach(x=>{ const P = x.payload && x.payload.result && x.payload.result.pts || {}; Object.keys(P).forEach(n=>{ NB.enr[nbNz(n)] = P[n]; }); });
       // 🔪 14/11: επεμβάσεις ΝΠΣ (εντολές/πρακτικά) — η τελευταία ανάγνωση των 2 ημερών
-      try{ const o = await sb6.from('oncall_jobs').select('payload').eq('kind','npsops').eq('status','done').not('payload->result','is',null).gte('created_at', new Date(Date.now()-2*864e5).toISOString()).order('id',{ascending:false}).limit(1);
-        const P = (((o.data||[])[0]||{}).payload||{}).result; if(P && P.pts) window.pdxNbOpsSet(P); }catch(e){}
+      try{ const o = await sb6.from('oncall_jobs').select('payload').eq('kind','npsops').eq('status','done').not('payload->result','is',null).gte('created_at', new Date(Date.now()-2*864e5).toISOString()).order('id',{ascending:false}).limit(20);
+        // 15/11 17:03: κομμάτια των 5 → ένωση (το νεότερο αποτέλεσμα ανά ασθενή κερδίζει)
+        const R = (o.data||[]).map(x=>((x.payload||{}).result)).filter(P=>P && P.pts); if(R.length){ const M = Object.assign({}, R[0], {pts:{}}); R.slice().reverse().forEach(P=>Object.assign(M.pts, P.pts)); window.pdxNbOpsSet(M); } }catch(e){}
       await nbAuto(); }catch(e){}
     NB.busy = false; try{ nbPaint(); }catch(e){} try{ const sg = (NB.rows ? NB.rows.length : -1)+'|'+NB.listAt; if(sg !== NB.vsig){ NB.vsig = sg; if(window.__npsView && window.mobRefresh) mobRefresh(); } }catch(e){}   // φίλτρο ΝΠΣ: μόνο όταν άλλαξε η λίστα (όχι άλμα στο scroll κάθε λεπτό)
   }
@@ -14770,7 +14771,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // 🔪 14/11 (χρήστης: «επεμβάσεις ΝΠΣ → τη μέρα της επέμβασης + ειδοποίηση πρακτικού»): 13:00 ανάγνωση, 20:00 ανάγνωση + 🔔 όσοι χειρουργήθηκαν σήμερα χωρίς πρακτικό
     try{ const hh = new Date().getHours(); if(hh >= 13 && Array.isArray(NB.rows) && NB.rows.length){ const s0 = new Date(); s0.setHours(hh >= 20 ? 20 : 13, 0, 0, 0);
       const q = await sb6.from('oncall_jobs').select('id,status').eq('kind','npsops').gte('created_at', s0.toISOString()).limit(3);
-      if(!(q.data||[]).length) await sb6.from('oncall_jobs').insert({name_key:'zzz_npsops', name:'🔪 Επεμβάσεις ΝΠΣ ('+NB.rows.length+')', room:null, kind:'npsops', payload:{names:NB.rows.map(r=>r.name).slice(0,45), remind: hh >= 20, quiet:true}, status:'new'}); } }catch(e){}
+      if(!(q.data||[]).length){ const N = NB.rows.map(r=>r.name).slice(0,45), CH = [];   // 🔪 15/11 17:03: ΟΧΙ 31 ασθενείς σε μία εργασία (κόλλησε >240″ σε ΟΛΑ τα bots) → κομμάτια των 5
+        for(let i = 0; i < N.length; i += 5) CH.push({name_key:'zzz_npsops', name:'🔪 Επεμβάσεις ΝΠΣ ('+(i+1)+'–'+Math.min(N.length, i+5)+'/'+N.length+')', room:null, kind:'npsops', payload:{names:N.slice(i, i+5), remind: hh >= 20, quiet:true}, status:'new'});
+        if(CH.length) await sb6.from('oncall_jobs').insert(CH); } } }catch(e){}
     if(L.some(x=>x.kind==='npsenrich' && /^(new|seen|running)$/.test(x.status))) return;
     if(L.filter(x=>x.kind==='npsenrich').length >= 3) return;   // όχι ατέρμονα
     const miss = (NB.rows||[]).filter(r=>!nbHere(r)).map(r=>r.name).filter(n=>{ const x = NB.enr[nbNz(n)]; return !x || (!x.amka && !x.am && !x.err) || (x.amka && !x.pid && !x.medErr && !x.dx); });
