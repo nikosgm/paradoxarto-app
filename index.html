@@ -2495,7 +2495,7 @@ window.pdxSurgGuess = async function(k, d){
   return ((out && out.txt) || '') !== (prev || '');
 };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v467';
+const APP_VER = '2026-11-15-v468';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14807,7 +14807,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     let key = Object.keys(extraPatients).find(k=>extraPatients[k] && extraPatients[k]._npsTemp && extraPatients[k].name===r.name);
     if(!key){ key = 'extra-nps'+Date.now().toString(36); extraPatients[key] = {name:r.name, _npsTemp:true, _npsAt:Date.now()}; }
     const rec = extraPatients[key], x = NB.enr[nbNz(r.name)] || {};
-    if(/^\d{8}$/.test(x.am||r.am||'')) rec.am = x.am || r.am; if(/^\d{11}$/.test(x.amka||r.amka||'')) rec.amka = x.amka || r.amka; if(Array.isArray(x.dx)) rec._npsDx = x.dx;
+    if(/^\d{8}$/.test(x.am||r.am||'')) rec.am = x.am || r.am; if(/^\d{11}$/.test(x.amka||r.amka||'')) rec.amka = x.amka || r.amka; if(Array.isArray(x.dx)) { rec._npsDx = x.dx; pdxComorbTempFill(rec); }
     return key;
   }
   function nbHtml(){
@@ -14916,7 +14916,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const rec = {name}; const am = x.am || r.am, amka = x.amka || r.amka; if(/^\d{8}$/.test(am||'')) rec.am = am; if(/^\d{11}$/.test(amka||'')) rec.amka = amka;
     if(permanent){ extraCounter++; const nk = 'extra-'+extraCounter; extraPatients[nk] = rec; saveEntryToStorage(nk, true, rec, true); try{ if(Array.isArray(x.dx) && x.dx.length && window.pdxComorbAutoApply) setTimeout(()=>pdxComorbAutoApply(nk, name, x.dx), 400); }catch(e){} return nk; }
     const old = Object.keys(extraPatients).find(q=>extraPatients[q] && extraPatients[q]._npsTemp && extraPatients[q].name===name); if(old) return old;
-    const key = 'extra-nps'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); rec._npsTemp = true; rec._npsAt = Date.now(); if(Array.isArray(x.dx)) rec._npsDx = x.dx; extraPatients[key] = rec; return key;
+    const key = 'extra-nps'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); rec._npsTemp = true; rec._npsAt = Date.now(); if(Array.isArray(x.dx)){ rec._npsDx = x.dx; pdxComorbTempFill(rec); } extraPatients[key] = rec; return key;
   };
   // ===== 📋 10/11 βράδυ (χρήστης): «στο ιστορικό του κάθε ασθενή κουμπί που κάνει συνοπτικό ιστορικό, όπως αυτό που ανεβάζουμε στο PowerPoint
   // για το ογκολογικό, ώστε να το κάνουμε copy-paste» — ΙΔΙΟΙ κανόνες: bot/pdxcur.js histOf (Α/α, GFR, απεικονίσεις, αιτία) + dbapp/server/pptgen.js (histoShort/opShort/slideText).
@@ -17943,6 +17943,17 @@ Z99.2:C|αιμοκάθαρση
     d.comorbAuto = {status: st.status==='retry' ? ((prev.tries||0)+1>=3 ? 'fail' : 'retry') : (st.status||'fail'), note: String(st.note||'').slice(0,200), at: Date.now(), tries: (prev.tries||0)+1};
     saveRec(k, d); return {ok:true};
   };
+  // 🩺 15/11 15:45 (χρήστης: «βρήκες τα χρόνια φάρμακα, αλλά δεν έβαλες συννοσηρότητες»): ασθενείς ΜΟΝΟ της λίστας ΝΠΣ («Εκτός θαλάμου»)
+  // είχαν τις διαγνώσεις ΑΗΦΥ (_npsDx) αλλά ΔΕΝ μπαίναν στις Συννοσηρότητες ώσπου να μπουν σε κρεβάτι → ίδιος κανόνας με pdxComorbAutoApply:
+  // τα χρόνια μπαίνουν μόνα τους, τα αμφίβολα «για απόφαση» (χωρίς αποστολή στον ΝΠΣ — αυτό γίνεται όταν μπει σε κρεβάτι)
+  window.pdxComorbTempFill = function(rec){ try{ if(!rec || !Array.isArray(rec._npsDx) || !rec._npsDx.length || !window.pdxComorbClassify) return;
+      const text = rec._npsDx.map(String).join('\n').slice(0, 20000), items = pdxComorbClassify(text), C = items.filter(i=>i.cls==='C'), U = items.filter(i=>i.cls==='U');
+      const cur = (rec.comorb && Array.isArray(rec.comorb.codes)) ? rec.comorb.codes.slice() : [], have = new Set(cur.map(x=>x.code)), n0 = cur.length;
+      C.forEach(i=>{ if(!have.has(i.code)){ cur.push({code:i.code, desc:i.desc||''}); have.add(i.code); } });
+      if(cur.length !== n0) rec.comorb = {codes: cur, dcx: rec.comorb ? rec.comorb.dcx!==false : true, at: Date.now(), auto: true};
+      if(U.length && !(rec.comorbSuggest && rec.comorbSuggest.text)) rec.comorbSuggest = {text, at: Date.now(), src: 'ΑΗΦΥ (λίστα ΝΠΣ)'};
+      if(!rec.comorbAuto) rec.comorbAuto = {status:'ok', at: Date.now(), n: items.length, c: C.length, u: U.length};
+    }catch(e){} };
   window.pdxComorbAutoApply = function(k, name, lines){
     const f = pdxRecFind(k, name); if(!f) return {err:'ο ασθενής άλλαξε θέση ή όνομα — θα ξαναδοκιμάσει · '+pdxRecWhy(k, name)}; k = f.k; const d = f.d;
     const text = (lines||[]).map(String).join('\n').slice(0, 20000);
