@@ -2538,7 +2538,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v487';
+const APP_VER = '2026-11-15-v488';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25142,16 +25142,22 @@ window.CLS_MODE='A';
       const col = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#8E8E93'};
       h2 += iosGroup(st.cubusy ? '⏳ '+st.cubusy : (st.cuAt ? 'ενημέρωση '+new Date(st.cuAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''), P.map(p=>{ const c = window.pdxCultTxt(p.c), u = p.ua;
         return {t:'<b>'+esc(p.name)+'</b>'+(p.room?' <span style="color:#8E8E93;font-size:13px">'+esc(p.room)+'</span>':''),
-          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+esc(p.pid ? c.t : 'δεν βρέθηκε στο Medilabi της κλινικής')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
+          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+esc(p.pid ? c.t : 'δεν βρέθηκε στο Medilabi της κλινικής')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
             + (u ? '<div style="margin-top:2px">🔬 '+(u.fun?'<b style="color:#C62828">🍄 Μύκητες '+esc(u.fun)+'</b> · ':'')+esc(u.txt)+(u.d?' <span style="color:#8E8E93">('+esc(u.d)+')</span>':'')+'</div>' : (p.pid ? '<div style="color:#8E8E93">🔬 χωρίς γενική ούρων</div>' : ''))};
       }));
       return h2 + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
+    // ανανέωση κάθε 20′ όσο είναι ανοιχτή η σελίδα του προγράμματος
+    const cuTimer = setInterval(()=>{ if(!document.body.contains(pg.el)) return clearInterval(cuTimer); if(st.cu && Date.now() - (st.cuAt||0) > 20*60000) cultLoad(); }, 60000);
     async function cultLoad(force){ if(st.cubusy) return; const sched = st.o && st.o.pts ? st.o : await pdxOrSchedGet(st.iso).catch(()=>null);
       const pts = ((sched && sched.pts) || []).filter(p=>p && p.name); if(!pts.length){ st.cu = {list:[]}; pg.redraw(); return; }
       st.cubusy = 'Εργαστηριακά της κλινικής…'; pg.redraw();
       let L = []; try{ const r = await sb6.from('oncall_labs').select('name,pid,data').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%'); L = r.data || []; }catch(e){}
       const list = pts.map(p=>{ const m = orLabsMatch(L, p.name); return {name:p.name, room:p.room||'', pid: m ? String(m.pid) : '', ua: m ? window.pdxUaBrief(m.data) : null, c:null}; });
       st.cu = {list}; const pids = [...new Set(list.map(x=>x.pid).filter(Boolean))];
+      // 🔄 15/11 20:37 (χρήστης: «αν στείλουμε νέα καλλιέργεια για το χειρουργείο, ανανέωνε — και όταν βγει η νέα αρνητική, γράψ' την»):
+      // κοινή κρυπτογραφημένη μνήμη «orcult|ΗΜΕΡΑ» → εμφάνιση ΑΜΕΣΑ, μετά νέα ανάγνωση· σύγκριση με την προηγούμενη → «🆕» σε όποιον άλλαξε
+      let prevBy = {}; try{ const r0 = await sb6.from('oncall_labs').select('data').eq('name_key','orcult|'+st.iso).maybeSingle(); const e0 = r0 && r0.data && r0.data.data && r0.data.data.enc;
+        if(e0){ const P0 = await pdxCK.decrypt(e0); (P0.pts||[]).forEach(c=>{ prevBy[c.pid] = c; }); list.forEach(x=>{ if(x.pid && prevBy[x.pid] && !x.c) x.c = prevBy[x.pid]; }); st.cuAt = P0.at || 0; pg.redraw(); } }catch(e){}
       if(!pids.length){ st.cubusy = ''; pg.redraw(); return; }
       st.cubusy = 'Καλλιέργειες από το Medilabi ('+pids.length+')…'; pg.redraw();
       try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες χειρουργείου', name_key:'zzz_orcult', status:'new', payload:{pids, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
@@ -25159,7 +25165,10 @@ window.CLS_MODE='A';
         while(Date.now()-t0 < 180000){ await new Promise(r=>setTimeout(r, 3000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); j = q.data; if(j && /^(done|failed|dismissed)$/.test(j.status)) break; }
         if(!j || j.status!=='done') throw new Error((j && j.note) || 'το bot δεν απάντησε σε 3′');
         const D = await pdxCK.decrypt(j.payload.result.enc); const by = {}; (D.pts||[]).forEach(c=>{ by[c.pid] = c; });
-        list.forEach(x=>{ if(x.pid) x.c = by[x.pid] || {err:1}; }); st.cuAt = Date.now(); st.cuerr = '';
+        const sig = c=>c ? [c.st||'', c.aa||'', c.date||'', c.res||''].join('|') : '';
+        list.forEach(x=>{ if(!x.pid) return; const nw = by[x.pid] || {err:1}, old = prevBy[x.pid]; if(old && sig(old) !== sig(nw) && !nw.err) nw.isNew = 1; else if(old && old.isNew && sig(old) === sig(nw) && Date.now() - (old.newAt||0) < 12*3600e3){ nw.isNew = 1; nw.newAt = old.newAt; } if(nw.isNew && !nw.newAt) nw.newAt = Date.now(); x.c = nw; });
+        st.cuAt = Date.now(); st.cuerr = '';
+        try{ const enc = await pdxCK.encrypt({at:st.cuAt, pts:list.filter(x=>x.pid && x.c && !x.c.err).map(x=>x.c)}); await sb6.from('oncall_labs').upsert({name_key:'orcult|'+st.iso, name:'καλλιέργειες χειρουργείου', pid:null, data:{enc, at:st.cuAt}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){}
         sb6.from('oncall_jobs').update({payload:{pids, quiet:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται μόλις διαβαστεί
       }catch(e){ st.cuerr = e.message || String(e); }
       st.cubusy = ''; pg.redraw(); }
