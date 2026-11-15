@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v458';
+const APP_VER = '2026-11-15-v459';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10336,9 +10336,9 @@ document.head.appendChild(st);
       const row = (ic, t, v, act, o)=>'<button class="ptr" onclick="'+act+'"><span class="t">'+ic+' '+t+'</span>'+(v?'<em'+(o?' class="o"':'')+'>'+v+'</em>':'')+'</button>';
       const warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0, cc = (d.comorb && Array.isArray(d.comorb.codes)) ? d.comorb.codes.length : 0;
       // 15/11 10:54 (χρήστης): χωρίς «Πρακτικά χειρουργείου» (υπάρχει κουμπί), «Χρόνια φάρμακα» (→ Ηλ. φάκελος), «Φάκελος ΝΠΣ» (→ κουμπί) · μόνο ιστορικό + «Συνοπτικό (copy)»
-      h += '<div class="ptg">'
-        + ((hpd || !(d.caseHist && d.caseHist.d)) ? row('📄', hpd ? 'Νέο ιστορικό εισαγωγής' : 'Ιστορικό εισαγωγής', hpd ? 'νέο ●' : '', "__histOpenPending('"+xk+"',"+_x+")", hpd) : '')
-        + row('📋','Συνοπτικό ιστορικό', 'copy', "pdxHistSummary('"+xk+"')") + '</div>';
+      // 15/11 11:54 (χρήστης: «να ανοίγει κατευθείαν το ιστορικό εισαγωγής — και ξεχωριστό κουμπί "Συνοπτικό ιστορικό" για copy»)
+      h += '<div style="display:flex;justify-content:flex-end;margin:10px 4px 2px"><button data-hsum onclick="pdxHistSummary(\''+xk+'\')" style="border:1.5px solid var(--mp,#1D4E80);background:none;color:var(--mp,#1D4E80);border-radius:99px;padding:7px 14px;font-weight:700;font-size:14px">📋 Συνοπτικό ιστορικό</button></div>';
+      if(hpd || !(d.caseHist && d.caseHist.d)) h += '<div class="ptg">' + row('📄', hpd ? 'Νέο ιστορικό εισαγωγής' : '＋ Ιστορικό εισαγωγής', hpd ? 'νέο ●' : '', "__histOpenPending('"+xk+"',"+_x+")", hpd) + '</div>';
       // 📄 10/11 (χρήστης): το αναλυτικό ιστορικό εισαγωγής ΜΕΣΑ στην ενότητα «Ιστορικό» (όχι μόνο σύνδεσμος)
       { const ch = d.caseHist && d.caseHist.d; if(ch){ const kv = (l, v)=>{ v = Array.isArray(v) ? v.filter(Boolean).join(', ') : String(v==null?'':v).trim(); return v ? '<div class="chk"><span>'+esc(l)+'</span><div>'+esc(v).replace(/\n/g,'<br>')+'</div></div>' : ''; };
         let b = kv('Αιτία εισαγωγής', ch.admission_reason) + kv('Παρούσα νόσος', ch.present_illness)
