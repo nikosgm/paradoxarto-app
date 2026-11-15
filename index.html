@@ -2538,7 +2538,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v489';
+const APP_VER = '2026-11-15-v490';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25102,7 +25102,11 @@ window.CLS_MODE='A';
     if(c.err && !c.st) return {t:'⚠ δεν διαβάστηκε', cls:'mut'};
     const dd = String(c.sampled || c.date || '').replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/, '$1');
     // 15/11 20:55 (χρήστης: «μόνο το σήμα της καλλιέργειας: (-) ή (+) ή εκκρ — χωρίς "Uroquattro"»)
-    if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγ.':'εκκρ.')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · '+dd : ''), cls:'pend'};
+    // 15/11 21:40 (χρήστης: «να βλέπουμε την πορεία… αν πάει να χτυπήσει»): ο αναλυτής στέλνει ΑΠΟΤΕΛΕΣΜΑ στο Medilabi ~4–5 ώρες μετά την παραλαβή, πριν την έγκριση (14–22 ώρες)
+    //   → σε «[Εκκρ.]» με ήδη γραμμένο αποτέλεσμα δείχνουμε «πρώιμο (-)/(+)» (μη εγκεκριμένο)
+    if(c.st==='pend' || c.st==='ord'){ const er = [c.res, c.desc].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+      const early = c.st==='pend' && er ? (/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim() || /αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(er) ? '(-)' : '(+)') : '';
+      return {t:(c.st==='ord'?'παραγγ.':'εκκρ.')+(early ? ' · πρώιμο '+early : '')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · '+dd : ''), cls: early==='(+)' ? 'pos' : 'pend'}; }
     const r = [c.res, c.desc].filter(Boolean).join(' · ').replace(/\s+/g,' ').trim();
     if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};
     // 15/11 20:30 (χάρτης cultsrc: ΑΝΑΛΥΤΗΣ «Uroquatro» στις 23/28, ΑΠΟΤΕΛΕΣΜΑ «OK»): «OK» = ένδειξη του ταχέος αναλυτή, ΟΧΙ μικρόβιο — ουδέτερο ως να επιβεβαιωθεί η σημασία του
