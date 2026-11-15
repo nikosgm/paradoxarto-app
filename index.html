@@ -2531,7 +2531,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v482';
+const APP_VER = '2026-11-15-v483';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -4466,9 +4466,12 @@ function showDischarge(kOpt){
     // 🩺 15/11 18:56 (χρήστης: «σε ΟΛΑ τα εξιτήρια της κλινικής ξαναμπαίνει η ιατρική πράξη που πέρασε η γραμματεία του χειρουργείου στον ΝΠΣ — με πλευρά και ☑, όπως στο Ημέρας»)
     // το bot διαβάζει τις πράξεις της νοσηλείας (κωδικός ΚΕΤΕΚΝΥ + ημερομηνία) και τις προσθέτει· πλευρά: δικό μας χειρουργείο › χειρουργείο από ΝΠΣ/πρόγραμμα
     if(/^\d{11}$/.test(String(rec.amka||''))) pl.npsActs = {amka:String(rec.amka), adm:String(rec.admitDate||''), side: window.pdxSideWord ? pdxSideWord(rec.surgery || ((window.pdxSurgGuessCached && pdxSurgGuessCached(dKey)) || {}).txt || '') : ''};
-    { const rf = (refAfter.querySelector('input')||{}).checked && window.pdxRefParse ? pdxRefParse(ta.value) : [];
+    { const rf = RS.on && window.pdxRefParse ? pdxRefParse(ta.value, refOpt()) : [];
       const jf = [rec.dx, rec.surgery].map(x=>String(x||'').trim()).filter(Boolean).join(' · ') || 'Ουρολογικός έλεγχος';
-      if(rf.length) pl.refAfter = rf.map(g=>({cat:g.cat, exams:g.exams, icd:['N39'], just:jf, mode:'review', urgent:false, general:true, therapist: thName || rec.therapist || ''})); }
+      // 🩻 15/11: σημείωση → «Αιτιολογία» + «Παρατηρήσεις» (στο παραπεμπτικό απεικόνισης· αν δεν υπάρχει απεικόνιση, σε όλα)
+      const note = String(refNoteOf(rf)||'').trim(), hasImg = rf.some(g=>/Αξονική|Μαγνητικ|Υπέρηχ/.test(g.cat));
+      if(rf.length) pl.refAfter = rf.map(g=>{ const nn = note && (!hasImg || /Αξονική|Μαγνητικ|Υπέρηχ/.test(g.cat)) ? note : '';
+        return Object.assign({cat:g.cat, exams:g.exams, icd:['N39'], just: jf + (nn ? ' — '+nn : ''), mode:'review', urgent:false, general:true, therapist: thName || rec.therapist || ''}, nn ? {remarks: nn.slice(0,200)} : {}); }); }
     try{ window.pdxDcWord && pdxDcWord(rec, txt); }catch(e){}   // 📄 14/11: και στο Word «Εξιτήρια <ΣΥΝΤΑΚΤΗΣ>» (βάση κλινικής)
     window.pdxBotSend(dKey, 'discharge', pl).then(ok=>{
       bot.textContent = ok ? ('✓ Στάλθηκε — θα έρθει σύνοψη για έγκριση' + (rxMeds.length ? ' · μετά την έγκριση: 💊 συνταγή' : '') + (pl.refAfter ? ' · 📋 παραπεμπτικ'+(pl.refAfter.length===1?'ό':'ά') : '')) : '🤖 Στείλε στον ιατρικό φάκελο (συμπλήρωση από το bot)'; bot.disabled = !!ok;
@@ -4486,10 +4489,20 @@ function showDischarge(kOpt){
       if(st && +st>0){ try{ await pdxDbCall('POST', '/api/dcnotes/cfg', {by: pdxDcBy(), start: +st}); }catch(e){ alert('⚠ '+(e.message||e)); } } dcwDraw(); }; };
   setTimeout(dcwDraw, 50);
   // κουτάκι «📋 παραπεμπτικό μετά το εξιτήριο» (εξετάσεις των οδηγιών)
-  const refAfter = document.createElement('label'); refAfter.style.cssText='display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;color:#334155';
-  const refAfterDraw = ()=>{ const G = window.pdxRefParse ? pdxRefParse(ta.value) : [], ex = [].concat(...G.map(g=>g.exams.map(e=>e.name))); const was = refAfter.querySelector('input'); const on = was ? was.checked : true;
-    refAfter.style.display = ex.length ? 'flex' : 'none';
-    refAfter.innerHTML = '<input type="checkbox" '+(on?'checked':'')+' style="width:19px;height:19px"> 📋 Μετά την έγκριση του εξιτηρίου, παραπεμπτικ'+(G.length===1?'ό':'ά')+': '+ex.map(x=>String(x).replace(/[<>&]/g,'')).join(', ')+' — σταματά πριν την «Καταχώριση»'; };
+  // 🩻 15/11 19:01: + checklist αξονικής (σκέτο «αξονική») + σημείωση (Αιτιολογία + Παρατηρήσεις του παραπεμπτικού απεικόνισης)
+  const refAfter = document.createElement('div'); refAfter.style.cssText='font-size:14px;margin-top:6px;color:#334155';
+  const RS = {on:true, ct:['rp'], note:null};   // note:null = όσο δεν την άλλαξε ο χρήστης, ακολουθεί την αυτόματη (π.χ. πυελογραφία)
+  const refOpt = ()=>({ct:RS.ct.slice()});
+  const refNoteOf = G=>RS.note != null ? RS.note : (G.note || '');
+  const refAfterDraw = ()=>{ const G = window.pdxRefParse ? pdxRefParse(ta.value, refOpt()) : [], ex = [].concat(...G.map(g=>g.exams.map(e=>e.name)));
+    refAfter.style.display = (ex.length || G.ctAsk) ? 'block' : 'none'; const E3 = x=>String(x).replace(/[<>&"]/g,'');
+    const short = n=>{ const k = Object.keys(window.pdxCtRegions||{}).find(k=>pdxCtRegions[k][1]===n); return k ? 'Αξονική '+pdxCtRegions[k][0] : n; };
+    refAfter.innerHTML = '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-rfon '+(RS.on?'checked':'')+' style="width:19px;height:19px"> 📋 Μετά την έγκριση του εξιτηρίου, παραπεμπτικ'+(G.length===1?'ό':'ά')+': '+ex.map(x=>E3(short(x))).join(', ')+' — σταματά πριν την «Καταχώριση»</label>'
+      + (G.ctAsk ? '<div style="margin:6px 0 0 27px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center"><b style="font-size:13px">Αξονική — ποιες;</b>'+['rp','up','lo','th'].map(k=>'<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" data-rfct="'+k+'" '+(RS.ct.indexOf(k)>=0?'checked':'')+' style="width:18px;height:18px">'+pdxCtRegions[k][0]+'</label>').join('')+'</div>' : '')
+      + '<div style="margin:6px 0 0 27px"><input data-rfnote placeholder="📝 Σημείωση στο παραπεμπτικό (προαιρετική)" value="'+E3(refNoteOf(G))+'" style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:8px;padding:7px 9px;font-size:14px;background:#fff;color:#111"><div style="font-size:12px;color:#64748B;margin-top:2px">Μπαίνει στην «Αιτιολογία» και στις «Παρατηρήσεις»'+(G.some(g=>/Αξονική|Μαγνητικ|Υπέρηχ/.test(g.cat)) ? ' του παραπεμπτικού απεικόνισης' : '')+'.</div></div>'; };
+  refAfter.addEventListener('change', e=>{ const t = e.target; if(t.matches('[data-rfon]')) RS.on = t.checked;
+    else if(t.matches('[data-rfct]')){ const k = t.dataset.rfct; RS.ct = RS.ct.filter(x=>x!==k); if(t.checked) RS.ct.push(k); refAfterDraw(); } });
+  refAfter.addEventListener('input', e=>{ if(e.target.matches('[data-rfnote]')) RS.note = e.target.value; });
   refAfterDraw(); ta.addEventListener('input', ()=>{ clearTimeout(refAfter.t); refAfter.t = setTimeout(refAfterDraw, 400); });
   // κουτάκι «💊 συνταγή μετά το εξιτήριο» (ενημερώνεται όταν αλλάζει το κείμενο)
   const rxAfter = document.createElement('label'); rxAfter.style.cssText='display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;color:#334155';
@@ -12484,11 +12497,31 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const BIO1 = 'Εξετάσεις Βιολογικών Υλικών 1 (Βιοπαθολογίας) (Αιματολογικές, Βιοχημικές, Μικροβιολογικές)', BIO2 = 'Εξετάσεις Βιολογικών Υλικών 2 (Βιοπαθολογίας & Πυρηνικής Ιατρικής) (Ανοσολογικές, Ορμονολογικές)';
   const REF_DICT = [[/γενικ[ηή]\s+(εξέταση\s+)?ο[υύ]ρων/i, 'Γενική εξέταση ούρων', BIO1, true], [/καλλι[εέ]ργεια\s+ο[υύ]ρων/i, 'Καλλιέργεια ούρων', BIO1], [/γενικ[ηή]\s+α[ιί]ματος/i, 'Γενική αίματος', BIO1],
     [/κρεατινίνη/i, 'Κρεατινίνη', BIO1], [/ουρία/i, 'Ουρία', BIO1], [/\bPSA\b/i, 'PSA ολικό', BIO2], [/(u\/?s|υπερηχογράφημα|υπέρηχο)\s+(νεφρ|κύστ|ουροποι)/i, 'Υπερηχογράφημα (u/s) νεφρών, ουρητήρων', 'Υπέρηχοι', true]];
-  window.pdxRefParse = function(text){ const t = String(text||''), by = {};
+  // 🩻 15/11 19:01 (χρήστης: «στο εξιτήριο να περνάνε και οι εξετάσεις — π.χ. αξονική σε ένα μήνα = παραπεμπτικό αξονικής»): ονόματα ΑΚΡΙΒΩΣ από τον κατάλογο e-prescription
+  // · περιοχή γραμμένη → αυτή · «πυελογραφία» → Οπισθοπεριτόναιο + σημείωση «ΜΕ IV ΣΚΙΑΓΡΑΦΙΚΟ (ΠΥΕΛΟΓΡΑΦΙΑ)» · σκέτο «αξονική» → σύντομο checklist (προεπιλογή: Οπισθοπεριτόναιο)
+  const CTC = 'Αξονική Τομογραφία', CT = {
+    up:['Άνω κοιλία', 'Αξονική Τομογραφία: Ανω κοιλία (περιλαμβάνονται: ήπαρ, χολεοφόρο σύστημα, πάγκρεας, σπλήνας) (C/T)'],
+    lo:['Κάτω κοιλία', 'Αξονική Τομογραφία: Κάτω κοιλία (περιλαμβάνονται: εικόνες του εντέρου, έσω γεννητικά όργανα γυναίκας, προστάτης, ουροδόχος κύστη) (C/T)'],
+    rp:['Οπισθοπεριτόναιο', 'Αξονική Τομογραφία: Οπισθοπεριτόναιο (περιλαμβάνονται: νεφροί, ουρητήρες, μεγάλα αγγεία κοιλίας, οπισθοπεριτοναϊκοί λεμφαδένες) (C/T)'],
+    th:['Θώρακας', 'Αξονική Τομογραφία: Θώρακας (περιλαμβάνονται: πνεύμονες, καρδιαγγειακός σχηματισμός, πύλες, μεσοθωράκιο, υπεζωκός και οστά θωρακικού κήτους) (C/T)'] };
+  window.pdxCtRegions = CT;
+  const PYELO_NOTE = 'ΜΕ IV ΣΚΙΑΓΡΑΦΙΚΟ (ΠΥΕΛΟΓΡΑΦΙΑ)';
+  const IMG_DICT = [[/(αξονικ\S*|ct)\s+πυελογραφ/i, ['rp'], PYELO_NOTE], [/(αξονικ\S*|ct)\s+ουρογραφ/i, null, '', 'ΑΞΟΝΙΚΗ ΟΥΡΟΓΡΑΦΙΑ'],
+    [/(αξονικ\S*|ct)[^\n.;]*οπισθοπεριτον/i, ['rp']], [/(αξονικ\S*|ct)[^\n.;]*(άνω|ανω)\s+κοιλ/i, ['up']], [/(αξονικ\S*|ct)[^\n.;]*(κάτω|κατω)\s+κοιλ/i, ['lo']],
+    [/(αξονικ\S*|ct)[^\n.;]*(άνω\s*[-–\/]\s*κάτω|ανω\s*[-–\/]\s*κατω|κοιλίας?\s*[-–\/]\s*πυέλου|κοιλιας?\s*[-–\/]\s*πυελου)/i, ['up','lo']], [/(αξονικ\S*|ct)[^\n.;]*θώρα|(αξονικ\S*|ct)[^\n.;]*θωρα/i, ['th']]];
+  const MRI_MP = 'ΠΟΛΥΠΑΡΑΜΕΤΡΙΚΗ ΜΑΓΝΗΤΙΚΗ ΤΟΜΟΓΡΑΦΙΑ ΠΡΟΣΤΑΤΗ';
+  // opt.ct: επιλογές του checklist για σκέτο «αξονική» (π.χ. ['rp','lo']) · το αποτέλεσμα έχει και .ctAsk (υπάρχει σκέτο «αξονική») και .note (αυτόματη σημείωση)
+  window.pdxRefParse = function(text, opt){ opt = opt || {}; const t = String(text||''), by = {};
     // μόνο στις οδηγίες/επανέλεγχο (όχι στο ιστορικό της νοσηλείας)
-    const m = t.search(/οδηγ[ιί]ες|επανέλεγχ|επανεκτίμηση|σε\s+\d+\s*(ημέρ|εβδομ|μήν)/i); const tail = m >= 0 ? t.slice(m) : '';
-    for(const [re, name, cat, ep] of REF_DICT) if(re.test(tail)) (by[cat] = by[cat] || []).push(Object.assign({name, kind:cat}, ep?{ep:true}:{}));
-    return Object.keys(by).map(cat=>({cat, exams:by[cat]})); };
+    const m = t.search(/οδηγ[ιί]ες|επανέλεγχ|επανεκτίμηση|σε\s+(\d+|ένα|ενα|δύο|δυο|τρεις|έξι|εξι)\s*(ημέρ|εβδομ|μήν|μην)/i); const tail = m >= 0 ? t.slice(m) : '';
+    const add = (cat, name, ep)=>{ const L = (by[cat] = by[cat] || []); if(!L.some(x=>x.name===name)) L.push(Object.assign({name, kind:cat}, ep?{ep:true}:{})); };
+    for(const [re, name, cat, ep] of REF_DICT) if(re.test(tail)) add(cat, name, ep);
+    let ctAsk = false, note = '';
+    tail.split(/\n/).forEach(ln=>{ if(!/(^|[^α-ωά-ώ])(αξονικ|ct\b)/i.test(ln)) return; let hit = false;
+      for(const [re, keys, nt, exact] of IMG_DICT) if(re.test(ln)){ hit = true; if(exact) add(CTC, exact, true); (keys||[]).forEach(k=>add(CTC, CT[k][1], true)); if(nt && note.indexOf(nt) < 0) note = (note ? note+' · ' : '') + nt; }
+      if(!hit){ ctAsk = true; (Array.isArray(opt.ct) ? opt.ct : ['rp']).forEach(k=>CT[k] && add(CTC, CT[k][1], true)); } });
+    if(/(μαγνητικ\S*|mri|mpmri)[^\n.;]*προστ|πολυπαραμετρικ|mpmri/i.test(tail)) add('Μαγνητικές Τομογραφίες', MRI_MP, true);
+    const G = Object.keys(by).map(cat=>({cat, exams:by[cat]})); G.ctAsk = ctAsk; G.note = note; return G; };
   window.pdxRxParse = function(text){
     const out = [], bad = [], info = [];
     String(text||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{
