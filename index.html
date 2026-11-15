@@ -2520,7 +2520,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v475';
+const APP_VER = '2026-11-15-v476';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14933,6 +14933,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const u = nbNz(d.name).split(' '); const [a, b] = u.length <= t.length ? [u, t] : [t, u];
       if(a.length && a.every((w, i)=>b[i] && (b[i]===w || (w.length>=4 && b[i].startsWith(w)) || (b[i].length>=4 && w.startsWith(b[i]))))) hit = k; }));
     return hit; };
+  function nbRowInfo(r, x, d){ const E5 = v=>String(v==null?'':v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const adm = r.admit ? String(r.admit).replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/,'$1') : (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7) : (d && d.admitDate ? String(d.admitDate).replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/,'$1') : ''));
+    let sgT = d && d.surgery ? String(d.surgery) : '';
+    if(!sgT){ const sk = 'nps:'+r.name, sg = window.pdxSurgGuessCached ? pdxSurgGuessCached(sk) : null; if(sg && sg.txt) sgT = sg.txt;
+      else if(window.pdxSurgGuess && !(sg && (sg.busy || sg.at))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} try{ if(window.__npsView && window.mobRefresh) mobRefresh(); }catch(e){} } }).catch(()=>{}); }
+    const own = d ? [].concat(d.historySelected||[]).concat(d.historyCustom ? [d.historyCustom] : []).join(', ') : '';
+    const ab = own || (window.pdxComorbAbbr ? pdxComorbAbbr(Array.isArray(x.dx) ? x.dx : (d && Array.isArray(d._npsDx) ? d._npsDx : []), d && d.comorb && Array.isArray(d.comorb.codes) ? d.comorb.codes : []) : '');
+    return {adm, sub: [sgT ? '<b style="color:var(--mp,#1D4E80)">'+E5(sgT)+'</b>' : '', ab ? E5(ab) : ''].filter(Boolean).join(' · ')}; }
   window.pdxNpsViewHtml = function(){
     if(!NB.rows){ nbLoad(false); return '<div class="msec">Φόρτωση λίστας ΝΠΣ…</div>'; }
     const C = new Intl.Collator('el', {sensitivity:'base'}), L = NB.rows.slice().sort((a, b)=>C.compare(String(a.name||''), String(b.name||'')));
@@ -14940,7 +14948,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const t = NB.listAt ? new Date(NB.listAt) : null, when = t ? (t.toDateString()===new Date().toDateString() ? 'σήμερα ' : t.getDate()+'/'+(t.getMonth()+1)+' ')+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0') : '';
     let h = '<div class="msec" style="display:flex;align-items:center;gap:8px"><span style="flex:1">'+L.length+' νοσηλευόμενοι στον ΝΠΣ'+(when?' · λίστα '+esc(when):'')+'</span><button data-npsfull style="border:0;background:none;color:#0A84FF;font-weight:700;font-size:14px">Λεπτομέρειες ›</button></div><div class="nv-npsl">';
     L.forEach((r, i)=>{ const k = nbKey(r), x = NB.enr[nbNz(r.name)] || {}, am = x.am || r.am || '';
-      h += '<div class="mcard mrow" data-npsv="'+i+'" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin:6px 12px;cursor:pointer"><span style="flex:1;min-width:0"><b>'+esc(r.name||'')+'</b></span>'
+      // 15/11 17:56 (χρήστης: «την ίδια λίστα και στους ασθενείς ΝΠΣ, με τον ίδιο τρόπο»): (ημ. εισαγωγής) δίπλα στο όνομα · χειρουργείο · ΑΥ, ΣΔ, ΔΛΔ — τα δικά μας υπερισχύουν
+      const d = k ? (/^extra/.test(k) ? extraPatients[k] : data[k]) : null, ri = nbRowInfo(r, x, d);
+      h += '<div class="mcard mrow" data-npsv="'+i+'" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin:6px 12px;cursor:pointer"><span style="flex:1;min-width:0"><b>'+esc(r.name||'')+'</b>'+(ri.adm?' <span style="font-weight:400;color:var(--t3,#8E8E93)">('+esc(ri.adm)+')</span>':'')+(ri.sub?'<div style="font-size:12.5px;color:var(--t3,#8E8E93);margin-top:2px">'+ri.sub+'</div>':'')+'</span>'
         + (k ? '<span style="font-size:12.5px;font-weight:700;color:#34C759;white-space:nowrap">'+esc(/^extra/.test(k)?'εκτός θαλάμου':k.replace('-', '.'))+'</span>' : '<span style="font-size:12.5px;font-weight:700;color:#FF9500;white-space:nowrap">μόνο ΝΠΣ</span>')+'</div>'; });
     return h + (L.length ? '' : '<div class="msec">Η λίστα ΝΠΣ είναι άδεια.</div>') + '</div>';
   };
