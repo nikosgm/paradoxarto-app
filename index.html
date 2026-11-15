@@ -2486,8 +2486,10 @@ window.pdxSurgGuess = async function(k, d){
       const ordTxt = ordRows.map(rw=>rw.join(' ')).join(' · ');
       const vTxt = ['orOrder','opNote'].map(sk=>((S[sk]||{}).views||[]).map(v=>(v.fields||[]).filter(f=>/πλευρ|επέμβασ|επεμβασ|πράξ|πραξ|διάγν|διαγν/i.test(f.l||'')).map(f=>(f.l||'')+': '+(f.v||'')).join(' · ')).join(' · ')).join(' · ');   // προβολή εντολής/πρακτικού: πεδίο «Πλευρά» κ.λπ.
       const hint = [done.map(x=>x.all).join(' · '), ordTxt, vTxt, orH ? orH.op : ''].join(' · ');
-      if(done.length){ const L = window.pdxActsJoin(done.map(x=>x.n), hint); if(L) out = {txt:L, src:'ΝΠΣ '+dd(Math.max(...done.map(x=>x.t)))}; }
-      if(!out && orH){ const L = window.pdxActShort(orH.op, hint); if(L) out = {txt:(orH.t > today ? 'Προς ' : '')+L, src:'πρόγραμμα '+dd(orH.t)}; }
+      // 15/11 17:39 (χρήστης: «όταν έχει χειρουργηθεί, βρες πότε — να βάζεις και τη μετεγχειρητική ημέρα»): POD από την ημερομηνία της πράξης / του προγράμματος
+      const pod = t=>{ const n = Math.round((today - new Date(t).setHours(12,0,0,0))/864e5); return n >= 0 && n < 60 ? ' · POD '+n : ''; };
+      if(done.length){ const L = window.pdxActsJoin(done.map(x=>x.n), hint), t = Math.max(...done.map(x=>x.t)); if(L) out = {txt:L+pod(t), src:'ΝΠΣ '+dd(t), t}; }
+      if(!out && orH){ const L = window.pdxActShort(orH.op, hint); if(L) out = {txt:(orH.t > today ? 'Προς '+L : L+pod(orH.t)), src:'πρόγραμμα '+dd(orH.t), t: orH.t}; }
       if(!out && ordRows.length){ const rw = ordRows[0]; const L = window.pdxActShort(rw.filter(x=>x && !/^\d[\d\s./:-]*$/.test(x)).sort((a,b)=>b.length-a.length)[0] || '', hint); if(L && !/^(ναι|οχι|όχι)$/i.test(L)) out = {txt:'Προς '+L, src:'εντολή ΝΠΣ'}; }
     }
   }catch(e){}
@@ -2512,7 +2514,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v471';
+const APP_VER = '2026-11-15-v472';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14846,8 +14848,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const sk = 'nps:'+r.name, sg = window.pdxSurgGuessCached ? pdxSurgGuessCached(sk) : null;
         if(window.pdxSurgGuess && !(sg && (sg.busy || sg.at))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} } }).catch(()=>{});
         const ab = x.dx && window.pdxComorbAbbr ? pdxComorbAbbr(x.dx) : '';
-        const sub = [adm ? 'εισ. '+adm : '', sg && sg.txt ? '<b style="color:var(--mp,#1D4E80)">'+E5(sg.txt)+'</b>' : '', ab ? E5(ab) : ''].filter(Boolean).join(' · ');
-        return '<div data-nbo="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;'+(i?'border-top:1px solid var(--sep,#EEF1F4)':'')+'"><span style="width:8px;height:8px;border-radius:4px;background:#E08A00;flex:none"></span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+E5(r.name)+'</div><div style="font-size:12px;color:var(--t2,#6B7280)">'+sub+'</div></div><button data-nbp="'+i+'" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:6px 10px;font-size:13px;flex:none">＋ Κρεβάτι</button></div>'; }).join('')
+        const sub = [sg && sg.txt ? '<b style="color:var(--mp,#1D4E80)">'+E5(sg.txt)+'</b>' : '', ab ? E5(ab) : ''].filter(Boolean).join(' · ');
+        return '<div data-nbo="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;'+(i?'border-top:1px solid var(--sep,#EEF1F4)':'')+'"><span style="width:8px;height:8px;border-radius:4px;background:#E08A00;flex:none"></span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+E5(r.name)+(adm?' <span style="font-weight:400;color:var(--t3,#8E8E93)">('+E5(adm)+')</span>':'')+'</div><div style="font-size:12px;color:var(--t2,#6B7280)">'+sub+'</div></div><button data-nbp="'+i+'" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:6px 10px;font-size:13px;flex:none">＋ Κρεβάτι</button></div>'; }).join('')
       + '</div><div style="font-size:12px;color:var(--t3,#8E8E93);padding:6px 16px">Πάτα για καρτέλα με όλες τις ενέργειες'+(hm?' · λίστα ΝΠΣ '+hm:'')+'</div></div>';
   }
   function nbPaint(){
