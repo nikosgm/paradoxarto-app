@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v456';
+const APP_VER = '2026-11-15-v457';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17666,6 +17666,8 @@ Z99.2:C|αιμοκάθαρση
       if(to && (to===c || codes.includes(to))) to=''; // υπάρχει ήδη ο κωδικός-στόχος
       out.push({ code:c, desc: found.get(c) || descOf(c), cls: r.cls, to, toDesc: to ? descOf(to) : '', why: r.why });
     }
+    // ❤️ 15/11 11:00 (χρήστης: «I10, I11.0, I11.9 → βγάζουμε πίεση και καρδιακή ανεπάρκεια»): υπερτασική καρδιοπάθεια ΜΕ ανεπάρκεια → + Καρδιακή ανεπάρκεια
+    { const hf = codes.find(c=>/^I(11\.0|13\.0|13\.2)$/.test(c)); if(hf && !codes.some(c=>/^I50/.test(c))) out.push({ code:'I50.9', desc:'Καρδιακή ανεπάρκεια', cls:'C', to:'', toDesc:'', why:'καρδιακή ανεπάρκεια (από '+hf+')', derived:hf }); }
     // αν δύο οξέα δίνουν τον ίδιο κωδικό-στόχο (π.χ. I80 και I26 → Z86.7), κρατάμε τη μετατροπή μόνο στο πρώτο
     const seenTo = new Set();
     for(const o of out){ if(o.to){ if(seenTo.has(o.to)) o.dupTo = true; seenTo.add(o.to); } }
@@ -17945,6 +17947,17 @@ Z99.2:C|αιμοκάθαρση
         +'<button data-to="'+E(it.code)+'" data-v="0" style="border:1.5px solid #1D4E80;border-radius:99px;padding:4px 10px;font-size:13px;font-weight:700;background:'+(!p.useTo?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">ως '+E(it.code)+'</button></span>';
       return h+'</span></label>';
     }
+    // 🧩 15/11 11:00 (χρήστης: «παρεμφερείς διαγνώσεις να τις ομαδοποιούμε»): ίδια πάθηση (ίδιο «why» του κανόνα, π.χ. «υπέρταση») = ΜΙΑ γραμμή · ✓ = όλοι οι κωδικοί της
+    const gkey = it=>it.to ? '' : String(it.why||'').replace(/\s*\(από [^)]*\)\s*$/,'').replace(/\s*→.*$/,'').trim().toLowerCase();
+    function units(L){ const m = new Map(), out = []; L.forEach(it=>{ const g = gkey(it); if(!g){ out.push([it]); return; } if(!m.has(g)){ const u = []; m.set(g, u); out.push(u); } m.get(g).push(it); }); return out; }
+    function grow(u){
+      const on = u.some(it=>(pick.get(it.code)||{}).on), q = u.some(it=>it.cls==='U'), g = gkey(u[0]);
+      const col = q ? '#B26A00' : '#0F7B4A';
+      return '<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-bottom:1px solid #EEF1F4;cursor:pointer">'
+        +'<input type="checkbox" data-c="'+E(u.map(it=>it.code).join('|'))+'"'+(on?' checked':'')+' style="width:20px;height:20px;margin-top:2px;flex:0 0 auto">'
+        +'<span style="flex:1;min-width:0"><b style="color:'+col+'">'+E(g.charAt(0).toUpperCase()+g.slice(1))+'</b> <span style="color:#8A94A3;font-size:12.5px">· '+u.length+' κωδικοί</span>'
+        +u.map(it=>'<br><span style="color:#6B7686;font-size:12.5px"><b>'+E(it.code)+'</b> '+E(it.desc||'')+'</span>').join('')+'</span></label>';
+    }
     const chOf = code=>{ try{ return (window.pdxDxGroups(null, [code])[0]||{}).cat || 'Άλλα'; }catch(e){ return 'Άλλα'; } };
     const chOpen = new Set(), chShut = new Set();
     function draw(){
@@ -17956,14 +17969,14 @@ Z99.2:C|αιμοκάθαρση
       const CU = C.concat(U), by = new Map(); CU.forEach(it=>{ const c = chOf(it.code); if(!by.has(c)) by.set(c, []); by.get(c).push(it); });
       const ORD = ['Κυκλοφορικό','Ενδοκρινικά · μεταβολικά','Αναπνευστικό','Νεοπλάσματα','Ουροποιογεννητικό','Πεπτικό','Νευρικό σύστημα','Ψυχικά','Αίμα'];
       [...by.entries()].sort((a,b)=>{ const i=ORD.indexOf(a[0]), j=ORD.indexOf(b[0]); return (i<0?99:i)-(j<0?99:j); }).forEach(([cat, L])=>{
-        const on = L.filter(it=>(pick.get(it.code)||{}).on).length, q = L.filter(it=>it.cls==='U').length;
+        const UL = units(L), on = UL.filter(u=>u.some(it=>(pick.get(it.code)||{}).on)).length, q = L.filter(it=>it.cls==='U').length; L = UL;
         // 14/11 (χρήστης: «ακόμα και τα πορτοκαλί μην τα έχεις expand — όλα κλειστά· στα πορτοκαλί μόνο το πορτοκαλί νούμερο»): ΟΛΑ κλειστά, ανοίγει μόνο με πάτημα
         const open = chOpen.has(cat);
         h += '<details data-ch="'+E(cat)+'"'+(open?' open':'')+' style="border:1px solid #E5E9EE;border-radius:14px;margin:8px 0;overflow:hidden;background:#FBFCFD">'
           + '<summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;font-weight:700;font-size:15px"><span style="flex:1">'+E(cat)+'</span>'
           + (q?'<span style="background:#FFF3DF;color:#B26A00;border-radius:99px;padding:2px 9px;font-size:12.5px;font-weight:700" title="'+q+' αμφίβολα — περιμένουν εσένα">'+q+'</span>':'')
           + '<span style="background:#E8F5EE;color:#0F7B4A;border-radius:99px;padding:2px 9px;font-size:12.5px">'+on+'/'+L.length+'</span><span style="color:#8A94A3">'+(open?'▾':'▸')+'</span></summary>'
-          + '<div style="padding:0 12px 4px;background:#fff">'+L.map(row).join('')+'</div></details>';
+          + '<div style="padding:0 12px 4px;background:#fff">'+L.map(u=>u.length>1 ? grow(u) : row(u[0])).join('')+'</div></details>';
       });
       if(A.length) h += '<button data-ac style="margin-top:10px;border:0;background:none;padding:4px 0;font-size:13px;font-weight:800;color:#8A94A3;cursor:pointer">'+(showAcute?'▾':'▸')+' ✕ Οξέα / συμπτώματα / έλεγχοι — δεν μπαίνουν ('+A.length+')</button>'
         + (showAcute ? A.map(row).join('') : '');
@@ -17981,7 +17994,7 @@ Z99.2:C|αιμοκάθαρση
     if(!(d.comorbSuggest && d.comorbSuggest.text) && !saved.length && Array.isArray(d._npsDx) && d._npsDx.length) d.comorbSuggest = {text: d._npsDx.map(String).join('\n'), at: Date.now(), src: 'ΑΗΦΥ (λίστα ΝΠΣ)'};
     const sug = d.comorbSuggest && d.comorbSuggest.text ? String(d.comorbSuggest.text).split('\n').filter(l=>{ const m=/^\s*([A-Z]\d\d(?:\.\d{1,2})?)/.exec(l); return !m || !savedSet.has(m[1]); }).join('\n') : '';
     if(saved.length || sug){ ta.value = saved.map(x=>x.code+(x.desc?' '+x.desc:'')).concat(sug ? [sug] : []).join('\n'); }
-    if(!savedSet.size && sug) savedSet.add('__none__');   // αν δεν υπάρχει τίποτα αποθηκευμένο, τα αμφίβολα μένουν χωρίς ✓
+    // 15/11 11:00 (χρήστης: «γιατί δεν τα έχεις τικ;»): ΔΕΝ βάζουμε '__none__' — χωρίς αποθηκευμένα, τα χρόνια (πράσινα) ✓, τα αμφίβολα χωρίς ✓
     const au = d.comorbAuto;
     if(au){ const note = $('[data-note]'); note.style.display='block';
       const when = au.at ? new Date(au.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
@@ -18031,7 +18044,7 @@ Z99.2:C|αιμοκάθαρση
       if(e.target.closest('[data-go]')) return go();
     });
     ov.addEventListener('change', e=>{
-      const c = e.target.closest('[data-c]'); if(c){ const p=pick.get(c.dataset.c); if(p) p.on=c.checked; return draw(); }
+      const c = e.target.closest('[data-c]'); if(c){ c.dataset.c.split('|').forEach(x=>{ const p=pick.get(x); if(p) p.on=c.checked; }); return draw(); }
       if(e.target.closest('[data-d]')){ D = {dcx:$('[data-d="dcx"]').checked, hist:$('[data-d="hist"]').checked}; setDest(D); draw(); }
     });
     // 🤖 Τράβηγμα από ΑΗΦΥ: εργασία στην ουρά → το bot του υπολογιστή βρίσκει ΑΜΚΑ και διαγνώσεις.
