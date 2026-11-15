@@ -2531,7 +2531,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v485';
+const APP_VER = '2026-11-15-v486';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25079,18 +25079,21 @@ window.CLS_MODE='A';
     for(const r of R){ if(r.g){ inG = /ΓΕΝΙΚΗ ΕΞΕΤΑΣΗ ΟΥΡΩΝ/i.test(r.g); continue; } if(!inG || !r.t) continue;
       const w = W.find(x=>x[1].test(r.t)); if(!w || out[w[0]]) continue;
       const ks = Object.keys(r.v||{}).map(Number).filter(i=>{ const v = String(r.v[i]||'').trim(); return v && !/^\[(Παραγγ|Εκκρ)/i.test(v); }).sort((a,b)=>a-b);
-      if(ks.length) out[w[0]] = {lab:w[2], v:String(r.v[ks[0]]).trim(), d:String(D[ks[0]]||'').slice(0,5)}; }
+      if(ks.length){ let v = String(r.v[ks[0]]).trim();
+        // 15/11 20:15 (χρήστης: «μη γράφεις "αρνητικά" — (-) για αρνητικά, (+) για θετικά»)
+        if(/^(αρνητ|negat|neg\b|απουσ|ουδεν|ουδέν)/i.test(v.normalize('NFD').replace(/[\u0300-\u036f]/g,''))) v = '(-)'; else if(/^(θετικ|positiv|pos\b|παρουσ)/i.test(v.normalize('NFD').replace(/[\u0300-\u036f]/g,''))) v = '(+)';
+        out[w[0]] = {lab:w[2], v, d:String(D[ks[0]]||'').slice(0,5)}; } }
     const L = ['pyo','nit','rbc','fun'].filter(k=>out[k]); if(!L.length) return null;
     const d = (out.pyo||out.nit||out.rbc||out.fun).d;
-    return {d, fun: out.fun && !/^(αρνητ|απουσ|ουδεν|neg|0|-|—)/i.test(out.fun.v) ? out.fun.v : '', txt: L.map(k=>out[k].lab+' '+out[k].v).join(' · ')}; };
+    return {d, fun: out.fun && !/^(αρνητ|απουσ|ουδεν|neg|0|-|—|\(-\))/i.test(out.fun.v) ? out.fun.v : '', txt: L.map(k=>out[k].lab+' '+out[k].v).join(' · ')}; };
   // ερμηνεία αποτελέσματος καλλιέργειας
   window.pdxCultTxt = function(c){ if(!c) return {t:'—', cls:''}; if(c.none) return {t:'καμία ουροκαλλιέργεια', cls:'mut'};
     if(c.err && !c.st) return {t:'⚠ δεν διαβάστηκε', cls:'mut'};
     const dd = String(c.sampled || c.date || '').replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/, '$1');
     if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγέλθηκε':'εκκρεμεί')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · δείγμα '+dd : ''), cls:'pend'};
     const r = [c.res, c.desc].filter(Boolean).join(' · ').replace(/\s+/g,' ').trim();
-    if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'αρνητική'+(dd?' · '+dd:''), cls:'ok'};
-    return {t:(r ? r.slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
+    if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};
+    return {t:(r ? '(+) '+r.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
     const st = {o:null, busy:'', err:'', iso, m:null, mbusy:'', merr:'', cu:null, cubusy:'', cuerr:'', cuAt:0};
