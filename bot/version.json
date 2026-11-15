@@ -1,1 +1,1 @@
-{"version": "0.21.440", "zip": "ef-bot-0.21.440.zip", "sha256": "0b442970f710b9ef4ca3f4a4c7cbed007d5da60612b9a3104d7b37fa4a1f8b3c", "notes": "uqfs: ανάγνωση \\\\172.16.3.59 (μόνο ανάγνωση, κρυπτογραφημένα)"}
+{"version": "0.21.441", "zip": "ef-bot-0.21.441.zip", "sha256": "a0cd58bd3116d6a55537f57de7c9ce1a3988af5641aed96c09f3bd1dc039eaf2", "notes": "netname: όνομα υπολογιστή/χρήστη μέσω NetBIOS/DNS (μόνο ανάγνωση)"}
