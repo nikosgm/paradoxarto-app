@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v452';
+const APP_VER = '2026-11-15-v453';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14513,7 +14513,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // 15/11 05:27: η λίστα του ΝΠΣ δείχνει τις κλήσεις ΠΡΟΣ την κλινική (όχι τις δικές μας) → μετράμε ΚΑΙ τις πραγματικές κλήσεις που στέλνει η εφαρμογή (όχι δοκιμές)
     try{ const r = await sb6.from('oncall_jobs').select('payload,status').eq('kind','consult').in('status',['done','approved','review']).order('id',{ascending:false}).limit(500);
       (r.data||[]).forEach(j=>{ const p = j.payload||{}; if(p.test || !p.dept) return; H[hk(p.dept)] = (H[hk(p.dept)]||0) + 1; }); }catch(e){}
-    const fq = x=>H[hk(x)]||0, spF = sp=>((cat.find(x=>x.spec===sp)||{deps:[]}).deps||[]).reduce((a,x)=>a+fq(x), 0);
+    const fq = x=>H[hk(x)]||0, spF = sp=>fq(sp) + ((cat.find(x=>x.spec===sp)||{deps:[]}).deps||[]).reduce((a,x)=>a+fq(x), 0);   // 15/11: και ανά ΕΙΔΙΚΟΤΗΤΑ (ο πίνακας του ασθενή στο ΝΠΣ έχει μόνο ειδικότητα)
     const specs = cat.filter(x=>x.deps&&x.deps.length).map(x=>x.spec).sort((a,b)=>(M.fav.indexOf(b)>=0)-(M.fav.indexOf(a)>=0) || (!!M.map[b])-(!!M.map[a]) || spF(b)-spF(a) || a.localeCompare(b,'el'));
     const inp = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1.5px solid #D5DCE3;border-radius:12px;background:#fff;color:#1F2933;font-family:inherit';
     const opt = (v,cur,txt)=>'<option value="'+E(v)+'"'+(v===cur?' selected':'')+'>'+E(txt||v)+'</option>';
