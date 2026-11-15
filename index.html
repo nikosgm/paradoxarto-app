@@ -2520,7 +2520,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v478';
+const APP_VER = '2026-11-15-v479';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15936,14 +15936,19 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxEpExamLoad = async function(){ if(EXC.items && Date.now()-EXC.at < 6*3600e3) return EXC.items; EXC.at = Date.now();
     try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key','epcat|exam').maybeSingle(); const d = r && r.data && r.data.data; if(d && Array.isArray(d.items) && d.items.length){ EXC.items = d.items; EXC.idx = null; try{ localStorage.setItem('pdx_epexam', JSON.stringify({items:d.items})); }catch(e){} } }catch(e){}
     return EXC.items; };
+  // 🚫 15/11 (χρήστης: «μην μπλέκεις τη λίστα του Medilab»): ο κατάλογος e-prescription έχει και παλιά ΚΕΦΑΛΑΙΑ διπλότυπα (π.χ. «ΧΟΛΗΣΤΕΡΙΝΗ (CHOL)» δίπλα
+  // στο «Χοληστερόλη (CHOL)») που ΔΕΝ βγαίνουν στην αναζήτηση του παραπεμπτικού → κρύβονται όταν υπάρχει κανονική εγγραφή με τον ίδιο κωδικό στην παρένθεση
+  const exDead = L=>{ const cd = n=>{ const m = /\(([^()]+)\)\s*$/.exec(String(n||'')); return m ? m[1].trim().toUpperCase() : ''; }, up = n=>n===n.toUpperCase() && /[Α-Ω]{3}/.test(n);
+    const okC = new Set(); L.forEach(x=>{ const n = String(x[0]||''); if(!up(n) && !/^ΠΡΟΛΗΠΤΙΚΗ/i.test(n) && cd(n)) okC.add(cd(n)); });
+    return new Set(L.filter(x=>{ const n = String(x[0]||''); return up(n) && cd(n) && okC.has(cd(n)); }).map(x=>x[0])); };
   window.pdxEpExamFind = function(q, n){ if(!EXC.items) return null; const W = rfN(q).split(' ').filter(Boolean); if(!W.length) return [];
-    if(!EXC.idx) EXC.idx = EXC.items.map(x=>rfN(x[0]));
+    if(!EXC.idx){ const D = exDead(EXC.items); EXC.idx = EXC.items.map(x=>D.has(x[0]) ? '\u0000' : rfN(x[0])); }
     const out = []; for(let i=0;i<EXC.items.length && out.length<300;i++){ const nm = EXC.idx[i]; if(W.every(w=>nm.includes(w))) out.push(i); }
     out.sort((a,b)=>(EXC.idx[b].indexOf(W[0])===0)-(EXC.idx[a].indexOf(W[0])===0) || EXC.idx[a].length-EXC.idx[b].length);
     return out.slice(0, n||15).map(i=>({name:EXC.items[i][0], id:EXC.items[i][1], group:EXC.items[i][2]||''})); };
   setTimeout(()=>{ try{ window.pdxEpExamLoad(); }catch(e){} }, 9500);
   // 🗂 10/11: κατηγορία e-prescription μιας εξέτασης (ακριβές όνομα στον κατάλογο) — για «ένα παραπεμπτικό ανά κατηγορία»
-  window.pdxEpExamGroup = function(name){ if(!EXC.items) return ''; const k = rfN(name); if(!EXC.idx) EXC.idx = EXC.items.map(x=>rfN(x[0]));
+  window.pdxEpExamGroup = function(name){ if(!EXC.items) return ''; const k = rfN(name); if(!EXC.idx){ const D = exDead(EXC.items); EXC.idx = EXC.items.map(x=>D.has(x[0]) ? '\u0000' : rfN(x[0])); }
     const G = new Set(); for(let i=0;i<EXC.items.length;i++) if(EXC.idx[i]===k && EXC.items[i][2]) G.add(EXC.items[i][2]);
     return G.size===1 ? [...G][0] : ''; };
   window.pdxExamLive = function(inp, box, onPick, opt){
@@ -16194,7 +16199,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       window.pdxRxLearnLoad && pdxRxLearnLoad();   // 🧠 μνήμη δοσολογίας (μία φορά)
       { const tq = root.querySelector('[data-rxq]'); if(tq) tq.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); rxQuick(); } }); }   // γραπτά: Enter = μέσα
       { const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
-        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true, multi:true, onUnpick:n=>{ S.ex = S.ex.filter(y=>y.n.toLowerCase()!==String(n).toLowerCase()); drawEx(); }}); }
+        window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true, free:false, multi:true, onUnpick:n=>{ S.ex = S.ex.filter(y=>y.n.toLowerCase()!==String(n).toLowerCase()); drawEx(); }}); }
       const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); else pdxFocusNow(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
       const mq = root.querySelector('[data-medq]'); mq.value = S.f.q||''; mq.addEventListener('input', medPreview); mq.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFromInput(); } });
       syncForm();
