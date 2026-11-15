@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v457';
+const APP_VER = '2026-11-15-v458';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21035,7 +21035,7 @@ window.pdxEpsineOpen = function(){
           const act = (F0.inv && String(F0.inv).trim() && String(F0.inv).trim()!=='—') ? String(F0.inv).trim() : ((cb0.find(c=>/πρ[αά]ξ|χειρουργ/i.test(c.sect||'') && c.row && !/πρακτικ/i.test(c.row))||{}).row || '');
           if(F0.surg!=null && !N1(F0.surg) && act) ed.surg = 'Υποβλήθηκε σε '+String(act).replace(/\s+/g,' ').trim().replace(/[.\s]+$/,'')+'.';
           if(F0.instr!=null && !N1(F0.instr) && nj.payload.du) ed.instr = 'Παρακολούθηση.';
-          if(F0.surg!=null && !N1(ed.surg) && !act && !nj.payload.du) st.cur.missOk = true;   // κλινική χωρίς ιατρική πράξη: το κενό Χειρουργείο είναι σωστό (στο Ημέρας πάντα υπάρχει πράξη)
+          if(F0.surg!=null && !N1(ed.surg) && !act) st.cur.missOk = true;   // χωρίς ιατρική πράξη (κλινική ή εισιτήριο-εξιτήριο Ημέρας, 15/11 11:53): το κενό Χειρουργείο είναι σωστό
           st.cur.ed = ed; }
         const cb = nj.payload.result.cbs || []; st.cur.ticks = {}; cb.forEach((c,i)=>{ if(!c.on) st.cur.ticks[i] = true; }); pg.sub('ΕΨΙΝΕ', toList); st.msg = ''; pg.redraw();
         epsSugg(r).then(sg=>{ if(st.cur && st.cur.r===r){ st.cur.sg = sg; pg.redraw(); } }); return; } }
