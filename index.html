@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v460';
+const APP_VER = '2026-11-15-v461';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15878,7 +15878,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 15/11 00:46 (χρήστης: «πάλι πατάω υπαγόρευση, το σβήνω και όταν ξαναπατάω δεν ακούει»): το iPhone ανοίγει το μικρόφωνο ΜΟΝΟ μέσα στο ίδιο το πάτημα —
   // η αναμονή 350ms πριν το start() το έχανε. Τώρα: start() ΑΜΕΣΩΣ (συγχρονικά), η παλιά κλείνει (abort) ακριβώς πριν· «κουφή» αναγνώριση (4″ χωρίς ήχο/αποτέλεσμα)
   // → μήνυμα + 🎤 πληκτρολογίου· ημερολόγιο γεγονότων ΧΩΡΙΣ κείμενο (pdx_miclog + oncall_labs «micdiag|…») για διάγνωση στο πραγματικό κινητό.
-  const micLog = (ev, x)=>{ try{ const L = JSON.parse(localStorage.getItem('pdx_miclog')||'[]'); L.push(Object.assign({t:Date.now(), ev}, x||{})); const L2 = L.slice(-40); localStorage.setItem('pdx_miclog', JSON.stringify(L2)); window.__micLogDirty = 1;
+  const micLog = (ev, x)=>{ try{ const L = JSON.parse(localStorage.getItem('pdx_miclog')||'[]'); L.push(Object.assign({t:Date.now(), ev}, x||{})); const L2 = L.slice(-120); localStorage.setItem('pdx_miclog', JSON.stringify(L2)); window.__micLogDirty = 1;
     clearTimeout(window.__micLogT); window.__micLogT = setTimeout(()=>{ try{ if(typeof sb6==='undefined' || !window.__micLogDirty) return; window.__micLogDirty = 0; const u = (window.__pdxUser && window.__pdxUser.id || 'anon').slice(0,8);
       sb6.from('oncall_labs').upsert({name_key:'micdiag|'+u, name:'🎙 διάγνωση υπαγόρευσης', data:{ua:navigator.userAgent.slice(0,140), standalone:!!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)), ver:(typeof APP_VER!=='undefined'?APP_VER:''), L:L2}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }catch(e){} }, 4000); }catch(e){} };
   window.pdxMicLog = micLog;
@@ -15890,6 +15890,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent||'') || (navigator.platform==='MacIntel' && navigator.maxTouchPoints > 1);
     const finish = (sess, why)=>{ if(!sess || sess.done) return; sess.done = true; clearTimeout(sess.deaf); clearTimeout(sess.stopT); if(cur===sess) cur = null; try{ sess.r.abort(); }catch(e){} if(IOS && IFR){ const f0 = IFR; IFR = null; setTimeout(()=>{ try{ f0.remove(); }catch(e){} }, 400); }
       if(sess.onInp) document.removeEventListener('input', sess.onInp, true);
+      setTimeout(warm, 300);   // επόμενη υπαγόρευση = νέα φόρτωση σελίδας
       micLog('end', {id:sess.id, why, got:sess.fin.length, heard:!!sess.heard, ms:Date.now()-sess.t0, n:sess.runs});
       const all = ((sess.base ? sess.base+' ' : '') + sess.fin).trim(); opt.onState && opt.onState(false); if(why!=='abort') opt.onEnd && opt.onEnd(all, sess.fin); };
     const emit = (sess, inter)=>{ opt.onText && opt.onText(((sess.base ? sess.base+' ' : '') + sess.fin + (inter ? (sess.fin?' ':'')+inter : '')).replace(/\s+/g,' ').trimStart(), inter); };
@@ -15897,8 +15898,18 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // ΕΝΑ αντικείμενο για όλη τη σελίδα (window.__pdxSR) που ξαναξεκινά· αλλού νέο κάθε φορά
     // 🎙 15/11 10:50 (micdiag v453: ΚΑΙ με κοινή μηχανή η 2η φορά κουφή): στην εφαρμογή αρχικής οθόνης του iPhone η αναγνώριση δουλεύει ΜΙΑ φορά ανά σελίδα →
     // κάθε υπαγόρευση σε ΝΕΟ αόρατο iframe (ίδια προέλευση = «φρέσκια σελίδα»)· σβήνεται στο τέλος. Αν δεν υπάρχει εκεί → όπως πριν.
-    let IFR = null;
+    let IFR = null, WARM = null;
+    // 🎙 15/11 12:05 (micdiag v459: και με about:blank iframe η 2η φορά «audio» χωρίς λέξη· η 1η μετά από ΚΑΘΕ φόρτωση σελίδας δουλεύει) →
+    // ζεστό iframe με ΠΡΑΓΜΑΤΙΚΗ φόρτωση σελίδας (mic.html) έτοιμο πριν το πάτημα· μετά από κάθε υπαγόρευση φορτώνεται νέο
+    const STAND = !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+    const warm = ()=>{ if(!IOS || WARM) return; try{ const f = document.createElement('iframe'); f.setAttribute('aria-hidden','true'); f.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;left:-9px;top:-9px';
+      f.__ready = false; f.onload = ()=>{ f.__ready = true; }; f.src = 'mic.html?'+Date.now(); document.body.appendChild(f); WARM = f; }catch(e){} };
+    if(IOS) setTimeout(warm, 800);
     const mkR = ()=>{ const SR = SRC(); if(!IOS) return new SR();
+      try{ if(IFR){ IFR.remove(); IFR = null; }
+        if(WARM && WARM.__ready){ const f = WARM; WARM = null; const W = f.contentWindow, S2 = W && (W.SpeechRecognition || W.webkitSpeechRecognition); if(S2){ IFR = f; micLog('ifr', {src:1}); return new S2(); } f.remove(); micLog('ifr-nosr', {}); }
+        else micLog('ifr-cold', {w:!!WARM});
+      }catch(e){ micLog('ifr-fail', {e:String(e && e.name || e).slice(0,30)}); }
       try{ if(IFR){ IFR.remove(); IFR = null; } const f = document.createElement('iframe'); f.setAttribute('aria-hidden','true'); f.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;left:-9px;top:-9px'; document.body.appendChild(f);
         const W = f.contentWindow, S2 = W && (W.SpeechRecognition || W.webkitSpeechRecognition); if(S2){ IFR = f; micLog('ifr', {}); return new S2(); } f.remove(); }catch(e){ micLog('ifr-fail', {e:String(e && e.name || e).slice(0,30)}); }
       if(!window.__pdxSR) window.__pdxSR = new SR(); return window.__pdxSR; };
@@ -15906,6 +15917,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       r.lang = 'el-GR'; r.continuous = !IOS; r.interimResults = true; try{ r.maxAlternatives = 1; }catch(e){}
       const hear = ()=>{ if(!sess.heard){ sess.heard = true; clearTimeout(sess.deaf); micLog('heard', {id:my, ms:Date.now()-sess.t0}); } };
       r.onaudiostart = ()=>{ micLog('audio', {id:my, ms:Date.now()-sess.t0}); }; r.onspeechstart = hear;
+      r.onsoundstart = ()=>micLog('sound', {id:my, ms:Date.now()-sess.t0}); r.onspeechend = ()=>micLog('spend', {id:my, ms:Date.now()-sess.t0}); r.onaudioend = ()=>micLog('audend', {id:my, ms:Date.now()-sess.t0}); r.onnomatch = ()=>micLog('nomatch', {id:my});
       r.onresult = ev=>{ if(sess.done || sess.r!==r) return; hear(); let inter = ''; for(let i=ev.resultIndex;i<ev.results.length;i++){ const x = ev.results[i]; if(x.isFinal){ sess.fin += (sess.fin?' ':'')+String(x[0].transcript||'').trim(); } else inter += x[0].transcript; }
         sess.inter = inter; micLog('res', {id:my, f:sess.fin.length, i:inter.length}); emit(sess, inter); };
         r.onerror = ev=>{ const c = ev && ev.error; micLog('err', {id:my, c:String(c||''), ms:Date.now()-sess.t0}); if(sess.done || sess.r!==r) return; if(sess.stopping && c==='aborted'){ return; } if(IOS && c==='no-speech' && !sess.stopping) return; if(/not-allowed|service-not-allowed|audio-capture/.test(c||'')){ finish(sess, 'abort'); opt.onFail && opt.onFail(c); } else if(c==='no-speech' || c==='aborted' || c==='network'){ finish(sess, 'end'); } };
@@ -15923,12 +15935,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(pend && !pend.done) finish(pend, 'stop');   // η προηγούμενη «σταματημένη» γράφει ΠΡΩΤΑ ό,τι πρόλαβε → μετά διαβάζεται η βάση
         const sess = {id:++seq, base:String(opt.base ? opt.base() : '').trim(), fin:'', done:false, heard:false, t0:Date.now(), runs:0}; cur = sess;
         try{ run(sess); }catch(e){ cur = null; micLog('startfail', {id:sess.id, e:String(e && e.name || e).slice(0,40)}); opt.onFail && opt.onFail('start'); return false; }
-        micLog('start', {id:sess.id, ios:IOS});
+        window.__pdxMicN = (window.__pdxMicN||0) + 1; micLog('start', {id:sess.id, ios:IOS, sa:STAND, pn:window.__pdxMicN, vis:document.visibilityState});
         // 🧹 15/11 10:50 (χρήστης: «αν διαγράψω το κείμενο να σταματάς να προσπαθείς — reset»): άδειασε το πεδίο → τέλος αυτής της υπαγόρευσης
         sess.onInp = ()=>{ try{ if(!sess.done && opt.base && !String(opt.base()||'').trim()){ micLog('cleared', {id:sess.id}); sess.fin = ''; sess.inter = ''; sess.base = ''; finish(sess, 'abort'); } }catch(e){} };
         document.addEventListener('input', sess.onInp, true);
         // 6″ χωρίς ομιλία → «κουφή»: κλείνει και προτείνει το 🎤 του πληκτρολογίου
-        sess.deaf = setTimeout(()=>{ if(sess.done || sess.heard || cur!==sess) return; micLog('deaf', {id:sess.id}); finish(sess, 'abort'); opt.onFail && opt.onFail('deaf'); }, 6000);
+        sess.deaf = setTimeout(()=>{ if(sess.done || sess.heard || cur!==sess) return; micLog('deaf', {id:sess.id}); finish(sess, 'abort');
+          // ⌨️ 15/11 12:05: κουφή → ανοίγει ΑΜΕΣΑ το πληκτρολόγιο στο κουτί (το 🎤 του πληκτρολογίου του iPhone δουλεύει πάντα)
+          try{ const el = opt.field && opt.field(); if(el){ el.focus(); const n = String(el.value||'').length; try{ el.setSelectionRange(n, n); }catch(e){} } }catch(e){}
+          opt.onFail && opt.onFail('deaf'); }, (IOS && window.__pdxMicN > 1) ? 4000 : 6000);
         opt.onState && opt.onState(true); return true; } };
     return api; };
   window.pdxRxStudio = function(opt){
@@ -16329,7 +16344,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     let MIC = null;
     const micLbl = ()=>{ const b = root.querySelector('[data-a="rxqmic"]'); if(b) b.textContent = S.sr ? '⏹ Σταμάτα' : '🎙 Υπαγόρευση'; };
     function rxMic(){ const ta = root.querySelector('[data-rxq]');
-      MIC = MIC || window.pdxMic({ base:()=>{ const a = root.querySelector('[data-rxq]'); return a ? a.value : (S.q||''); },
+      MIC = MIC || window.pdxMic({ field:()=>root.querySelector('[data-rxq]'), base:()=>{ const a = root.querySelector('[data-rxq]'); return a ? a.value : (S.q||''); },
         onText:t=>{ S.q = t; const a2 = root.querySelector('[data-rxq]'); if(a2){ a2.value = t; a2.scrollTop = a2.scrollHeight; } },
         onState:on=>{ S.sr = on; micLbl(); },
         onEnd:t=>{ S.q = t; if(String(t||'').trim().length > 3) rxQuick(); },
@@ -20253,7 +20268,7 @@ window.pdxVoice = function(seed){
       // (ίδια λάθη με πριν: iPhone στέλνει τις λέξεις μετά το «σταμάτα», 2ο πάτημα κουφό) → τώρα το ΚΟΙΝΟ pdxMic, όπως συνταγή/πορεία/πρακτικό.
       if(st.rec){ try{ st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} return; }
       const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν άκουσε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; st.sr = null; pg.redraw(); setTimeout(()=>{ const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.focus(); }, 60); };
-      st.vmic = st.vmic || window.pdxMic({ base:()=>{ const ta = pg.el.querySelector('[data-vtx]'); return ta ? ta.value : String(st.text||''); },
+      st.vmic = st.vmic || window.pdxMic({ field:()=>pg.el.querySelector('[data-vtx]'), base:()=>{ const ta = pg.el.querySelector('[data-vtx]'); return ta ? ta.value : String(st.text||''); },
         onText:(txt)=>{ st.text = txt; const ta = pg.el.querySelector('[data-vtx]'); if(ta){ ta.value = txt; ta.scrollTop = ta.scrollHeight; } },
         onState:(on)=>{ st.sr = on ? 1 : null; if(on){ st.hint = ''; st.err = ''; } pg.redraw(); },
         onEnd:(all)=>{ st.text = all || st.text; pg.redraw(); if(String(st.text).trim().length > 5 && !st.acts) run(); },
@@ -20374,7 +20389,7 @@ window.pdxDictate = function(k){
     if(t.closest('[data-sr]')){
       // 🎙 15/11 00:09 (χρήστης: «πατάω σταμάτα και μετά άμα ξαναπατήσω δεν καταλαβαίνει τίποτα»): κοινό σταθερό μικρόφωνο (pdxMic)
       const kbHint = ()=>{ st.srHint = 'Η υπαγόρευση δεν ξεκίνησε εδώ. Πάτα μέσα στο «Κείμενο» και μετά το <b>🎤 του πληκτρολογίου</b> (κάτω δεξιά).'; pg.redraw(); const ta = pg.el.querySelector('[data-tx]'); if(ta) ta.focus(); };
-      st.mic = st.mic || window.pdxMic({ base:()=>{ const ta = pg.el.querySelector('[data-tx]'); return ta ? ta.value : (st.text||''); },
+      st.mic = st.mic || window.pdxMic({ field:()=>pg.el.querySelector('[data-tx]'), base:()=>{ const ta = pg.el.querySelector('[data-tx]'); return ta ? ta.value : (st.text||''); },
         onText:t2=>{ st.text = t2; const ta = pg.el.querySelector('[data-tx]'); if(ta){ ta.value = t2; ta.scrollTop = ta.scrollHeight; } },
         onState:on=>{ st.sr = on; pg.redraw(); }, onEnd:t2=>{ st.text = t2 || st.text; pg.redraw(); }, onFail:()=>{ st.sr = false; kbHint(); } });
       st.err = ''; st.srHint = ''; if(st.mic.on) st.mic.stop(); else st.mic.start();
@@ -20689,7 +20704,7 @@ window.pdxOpNotesOpen = async function(k, pre){
       if((b = g('data-odr'))){ const x = b.dataset.odr, i = f.drains.indexOf(x); if(i>=0) f.drains.splice(i,1); else f.drains.push(x); pg.redraw(); return; }
       if(g('data-odfree')){ const v = String(f.drFree||'').trim(); if(v){ f.drains.push(v); f.drFree = ''; pg.redraw(); } return; }
       if(g('data-odmic')){   // 🎙 15/11: κοινό σταθερό μικρόφωνο (pdxMic)
-        st.micx = st.micx || window.pdxMic({ base:()=>{ const ta = pg.el.querySelector('[data-of="dict"]'); return ta ? ta.value : (f.dict||''); },
+        st.micx = st.micx || window.pdxMic({ field:()=>pg.el.querySelector('[data-of="dict"]'), base:()=>{ const ta = pg.el.querySelector('[data-of="dict"]'); return ta ? ta.value : (f.dict||''); },
           onText:t2=>{ f.dict = t2; const ta = pg.el.querySelector('[data-of="dict"]'); if(ta){ ta.value = t2; ta.scrollTop = ta.scrollHeight; } },
           onState:on=>{ st.mic = on ? st.micx : null; pg.redraw(); }, onEnd:t2=>{ f.dict = t2 || f.dict; pg.redraw(); },
           onFail:()=>{ st.mic = null; toast && toast('Πάτα μέσα στο κουτί και το 🎤 του πληκτρολογίου'); const ta = pg.el.querySelector('[data-of="dict"]'); if(ta) ta.focus(); } });
