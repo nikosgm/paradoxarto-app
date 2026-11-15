@@ -2414,7 +2414,7 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v455';
+const APP_VER = '2026-11-15-v456';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10126,19 +10126,20 @@ document.head.appendChild(st);
   // (+ ό,τι άλλο υπάρχει, π.χ. Συννοσηρότητες/Παραπεμπτικό, και στο τέλος Εκκρεμότητα · Όλες). Ίδιο σε κινητό & υπολογιστή.
   // 12/11 21:44 (χρήστης): Συνταγή & Παραπεμπτικό ΔΕΝ γράφονται σε νοσηλευόμενους — μόνο μετά το εξιτήριο, από τις οδηγίες του → όχι στο πλέγμα
   const PTA_ORDER = ['order','labs','npsmed','course','consult','ct','scan','opnote','dcx','comorb'];   // 14/11 21:54: χωρίς «ΑΗΦΥ» — είναι καρτέλα μέσα στα Εργαστηριακά
-  const PTA_GRID = {order:['🧾','Παραγγελία'], labs:['🧪','Εργαστηρ.'], rx:['💊','Συνταγή'], npsmed:['💉','Φάρμακα ΝΠΣ'], course:['📝','Πορεία νόσου'], ahfylabs:['🏛','ΑΗΦΥ'], consult:['📞','Εκτίμηση'], ct:['🩻','Απεικονίσεις'], scan:['📷','Σάρωση'], opnote:['✂️','Πρακτικό'], dcx:['📄','Εξιτήριο'], comorb:['🩺','Συννοσηρ.'], ref:['📋','Παραπεμπτ.']};
+  const PTA_GRID = {order:['🧾','Παραγγελία'], labs:['🧪','Εργαστηρ.'], rx:['💊','Συνταγή'], npsmed:['💉','Φάρμακα ΝΠΣ'], course:['📝','Πορεία νόσου'], ahfylabs:['🏛','ΑΗΦΥ'], consult:['📞','Εκτίμηση'], ct:['🩻','Απεικονίσεις'], scan:['📷','Σάρωση'], opnote:['✂️','Πρακτικό'], dcx:['📄','Εξιτήριο'], comorb:['🗂','Ηλ. φάκελος'], ref:['📋','Παραπεμπτ.']};
   function ptActBar(k, d){
     if(MOB_CFG.actionRow===false) return '';
     const xk = esc(k), bot = window.pdxIsBotUser && window.pdxIsBotUser();
     const have = {}; (window.pdxBotActions ? pdxBotActions() : []).forEach(a=>{ if(a && a.id && (bot || a.id==='ct' || a.id==='labs')) have[a.id] = true; });
     have.labs = true; have.course = true; if(bot) have.npsmed = true; if(window.pdxScanOpen) have.scan = true; if(window.pdxOpNotesOpen) have.opnote = true; if(window.pdxCtOpen) have.ct = true;
-    const go = {ct:"pdxCtOpen('"+xk+"')", course:"pdxDictate('"+xk+"')", npsmed:"pdxMedOrder('"+xk+"')", scan:"pdxScanOpen()", opnote:"pdxOpNotesOpen('"+xk+"')"};
+    const go = {ct:"pdxCtOpen('"+xk+"')", course:"pdxDictate('"+xk+"')", npsmed:"pdxMedOrder('"+xk+"')", scan:"pdxScanOpen()", opnote:"pdxOpNotesOpen('"+xk+"')", comorb:"pdxEFolder('"+xk+"')"};   // 🗂 15/11 10:54: Συννοσηρότητες + Χρόνια φάρμακα = «Ηλ. φάκελος»
     const cell = (ic, t, act, dot)=>'<button class="ptg-b" onclick="'+act+'"><span class="ptg-i">'+ic+(dot?'<b class="ptg-d"></b>':'')+'</span><span class="ptg-t">'+t+'</span></button>';
     let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>' : '');
     const warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
     let g = '';
     PTA_ORDER.forEach(id=>{ if(!have[id]) return; const m = PTA_GRID[id]; g += cell(m[0], m[1], go[id] || "mobAct('"+xk+"','"+id+"')", id==='labs' && warn); });
-    g += cell('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + cell('⋯', 'Όλες', "mobActions('"+xk+"')");
+    // 📂 15/11 10:54 (χρήστης: «το κουμπάκι "Όλες" βγάλ' το τελείως — να μπει ο φάκελος ΝΠΣ νοσηλείας»)
+    g += cell('☑', 'Εκκρεμότητα', "mobTodoPage('"+xk+"')") + cell('📂', 'Φάκελος ΝΠΣ', "pdxDossierOpen('"+esc(String(d.name||'').replace(/'/g,''))+"','"+esc(String(d.amka||''))+"')");
     return h + '<div class="pacts">'+g+'</div>';
   }
   // κρίσιμα στοιχεία κάτω από το όνομα: αλλεργία, αντιπηκτικά, συννοσηρότητες (πάτημα → η αντίστοιχη ενότητα)
@@ -10323,7 +10324,7 @@ document.head.appendChild(st);
     const tab = (window.__ptTab && window.__ptTab.k===k) ? window.__ptTab.t : 'today', nT = todos(d).length, hpd = !!(window.HIST_PEND && window.HIST_PEND[k]);
     const tb = (id, full, short)=>'<button role="tab" aria-selected="'+(tab===id)+'" data-pttab="'+id+'" class="'+(tab===id?'on':'')+'" onclick="mobPtTab(\''+xk+'\',\''+id+'\')"><span class="lf">'+full+'</span><span class="ls">'+(short||full)+'</span></button>';
     h += '<div class="ptseg" role="tablist">'+tb('today','Σήμερα')+tb('todo','Εκκρεμότητες'+(nT?' ('+nT+')':''),'Εκκρεμότ.'+(nT?' ('+nT+')':''))+tb('hist','Ιστορικό'+(hpd?' ●':''))+'</div>';
-    h += ptActBar(k, d);
+    if(tab!=='hist') h += ptActBar(k, d);   // 15/11 10:54 (χρήστης: «πατάω Ιστορικό → να φεύγει όλη η καρτέλα και να δείχνει το πλήρες ιστορικό»)
     const HIST = ['history','allergy','anticoag','onc','misc'], SKIP = ['surgery','catheters','todos'];
     let todayBox = '';
     const secs = (pick)=>{ addC.length = 0; todayBox = ''; let o = ''; (MOB_CFG.sections||[]).forEach(k2=>{ if(!S[k2] || SKIP.indexOf(k2)>=0 || !pick(k2)) return; if(OPT.indexOf(k2)>=0 && EMP[k2] && EMP[k2]() && CH[k2]){ addC.push(CH[k2]); return; } if(k2==='today'){ todayBox = S[k2]().replace('Σήμερα (πάτα για αλλαγή)','Καταχώριση σήμερα'); return; } o += S[k2](); });   // 8/11: η χειροκίνητη καταχώριση τιμών πάει «κρυμμένη» στο τέλος
@@ -10334,13 +10335,10 @@ document.head.appendChild(st);
     else if(tab==='hist'){
       const row = (ic, t, v, act, o)=>'<button class="ptr" onclick="'+act+'"><span class="t">'+ic+' '+t+'</span>'+(v?'<em'+(o?' class="o"':'')+'>'+v+'</em>':'')+'</button>';
       const warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0, cc = (d.comorb && Array.isArray(d.comorb.codes)) ? d.comorb.codes.length : 0;
-      h += '<div class="ptgh"><span>Φάκελος</span></div><div class="ptg">'
-        + row('📄','Ιστορικό εισαγωγής', hpd ? 'νέο ●' : d.caseHist ? '✓' : '', "__histOpenPending('"+xk+"',"+_x+")", hpd)
-        // 15/11 00:13 (χρήστης: «συννοσηρότητες, απεικονιστικά κ.λπ. τα έχουμε ήδη στα κεντρικά κουμπιά»): Εξετάσεις · Απεικονίσεις · Συννοσηρότητες → μόνο στα κουτιά
-        + row('💊','Χρόνια φάρμακα (ΑΗΦΥ)', Array.isArray(d.chronicMeds) && d.chronicMeds.length ? String(d.chronicMeds.length) : '', "pdxChronicMeds('"+xk+"')")
-        + row('📝','Πρακτικά χειρουργείου', Array.isArray(d.opnotes) && d.opnotes.length ? String(d.opnotes.length) : '', "pdxOpNotesOpen('"+xk+"')")
-        + row('📂','Φάκελος νοσηλείας (ΝΠΣ)', '', "pdxDossierOpen('"+esc(String(d.name||'').replace(/'/g,''))+"','"+esc(String(d.amka||''))+"')")
-        + row('📋','Συνοπτικό ιστορικό', 'copy', "pdxHistSummary('"+xk+"')") + '</div>';   // 10/11 βράδυ (χρήστης): όπως στο PowerPoint του ογκολογικού
+      // 15/11 10:54 (χρήστης): χωρίς «Πρακτικά χειρουργείου» (υπάρχει κουμπί), «Χρόνια φάρμακα» (→ Ηλ. φάκελος), «Φάκελος ΝΠΣ» (→ κουμπί) · μόνο ιστορικό + «Συνοπτικό (copy)»
+      h += '<div class="ptg">'
+        + ((hpd || !(d.caseHist && d.caseHist.d)) ? row('📄', hpd ? 'Νέο ιστορικό εισαγωγής' : 'Ιστορικό εισαγωγής', hpd ? 'νέο ●' : '', "__histOpenPending('"+xk+"',"+_x+")", hpd) : '')
+        + row('📋','Συνοπτικό ιστορικό', 'copy', "pdxHistSummary('"+xk+"')") + '</div>';
       // 📄 10/11 (χρήστης): το αναλυτικό ιστορικό εισαγωγής ΜΕΣΑ στην ενότητα «Ιστορικό» (όχι μόνο σύνδεσμος)
       { const ch = d.caseHist && d.caseHist.d; if(ch){ const kv = (l, v)=>{ v = Array.isArray(v) ? v.filter(Boolean).join(', ') : String(v==null?'':v).trim(); return v ? '<div class="chk"><span>'+esc(l)+'</span><div>'+esc(v).replace(/\n/g,'<br>')+'</div></div>' : ''; };
         let b = kv('Αιτία εισαγωγής', ch.admission_reason) + kv('Παρούσα νόσος', ch.present_illness)
@@ -20460,6 +20458,13 @@ window.pdxMedOrder = function(k){
 };
 // 💊 12/11 20:31 (χρήστης: «από τον φάκελο χρόνια νοσήματα και φάρμακα — ξεχωριστή κατηγορία τα μόνιμα (τρίμηνες/εξάμηνες), όχι αντιβιώσεις ή 5–10 μέρες»):
 // τελευταία εργασία ehrmeds του ασθενή (συνταγές ΑΗΦΥ) → «Χρόνια» (κανονικά τον τελευταίο χρόνο ή μακράς διάρκειας) + «Άλλα» (σύντομα/παλιά/αντιβιώσεις)
+// 🗂 15/11 10:54 (χρήστης: «τα χρόνια φάρμακα μαζί με τις συννοσηρότητες στο κουμπάκι — να λέει ηλεκτρονικός φάκελος»)
+window.pdxEFolder = function(k){ const isX = String(k).indexOf('extra')===0, d = (isX ? extraPatients : data)[k]; if(!d) return;
+  const cc = (d.comorb && Array.isArray(d.comorb.codes)) ? d.comorb.codes.length : 0, cm = Array.isArray(d.chronicMeds) ? d.chronicMeds.length : 0, ks = String(k).replace(/'/g,'');
+  const pg = iosPage('🗂 Ηλ. φάκελος', '', ()=>iosGroup('', [
+      {ic:'🩺', t:'Συννοσηρότητες', v: cc ? String(cc) : '', on:"mobAct('"+ks+"','comorb')"},
+      {ic:'💊', t:'Χρόνια φάρμακα (ΑΗΦΥ)', v: cm ? String(cm) : '', on:"pdxChronicMeds('"+ks+"')"} ]));
+  return pg; };
 window.pdxChronicMeds = function(k){
   const isX = String(k).indexOf('extra')===0, rec = (isX ? extraPatients : data)[k]; if(!rec || !String(rec.name||'').trim()) return;
   const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
