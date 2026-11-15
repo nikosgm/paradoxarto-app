@@ -2414,7 +2414,10 @@ setTimeout(()=>{ if(typeof podRolloverRun==='function') podRolloverRun(); }, 250
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && typeof podRolloverRun==='function') podRolloverRun(); });
 
 // ===== Συγχρονισμός από άλλες συσκευές: όταν επιστρέφεις στην εφαρμογή (ή κάθε 2 λεπτά) ξαναδιαβάζει τους ασθενείς =====
-const APP_VER = '2026-11-15-v462';
+// ⌨️ 15/11 12:56 (χρήστης: «πατάω ＋ Φάρμακο → να ανοίγει κατευθείαν κέρσορας και πληκτρολόγιο, όπως στο παραπεμπτικό»): στο iPhone το focus()
+// ανοίγει πληκτρολόγιο ΜΟΝΟ μέσα στο ίδιο το πάτημα — όχι από setTimeout → εδώ: ΑΜΕΣΑ + (αν δεν πιάσει) ξανά αργότερα
+window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
+const APP_VER = '2026-11-15-v463';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7708,7 +7711,7 @@ document.head.appendChild(st);
     ov.innerHTML = '<div class="pn"><div class="ttl">'+title+'</div><div class="gp">'+items.map((x,i)=>x.input!=null ? '<div style="padding:8px 12px"><input data-tli="'+i+'" value="'+String(x.input).replace(/"/g,'&quot;')+'" placeholder="'+(x.ph||'')+'"><button class="it on" data-tlp="'+i+'" style="justify-content:center">'+x.t+'</button></div>' : '<button class="it'+(x.red?' red':'')+(x.on?' on':'')+'" data-tlp="'+i+'">'+x.t+'</button>').join('')+'</div><div class="gp"><button class="it" data-tlx style="justify-content:center;font-weight:600">Άκυρο</button></div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', e=>{ if(e.target===ov || e.target.closest('[data-tlx]')){ ov.remove(); return; } const b = e.target.closest('[data-tlp]'); if(!b) return; const i = +b.dataset.tlp, inp = ov.querySelector('[data-tli="'+i+'"]'); ov.remove(); onPick(items[i], inp ? inp.value : null); });
-    const f = ov.querySelector('input'); if(f) setTimeout(()=>{ try{ f.focus(); f.select(); }catch(e){} }, 60);
+    const f = ov.querySelector('input'); if(f) pdxFocusNow(()=>{ try{ f.focus(); f.select(); }catch(e){} }, 60);
     return ov; };
   window.__tlSheet = tlSheet;
   const tlMenu = (id, sec)=>{ const B = window.__pdxToolById||{}, x = B[id]; if(!x) return; const fav = tlFav().indexOf(id)>=0, SECS = window.__pdxToolSecs||[], cur = (window.pdxToolLay().mv||{})[id] || x.home;
@@ -9813,7 +9816,7 @@ document.head.appendChild(st);
         close(); openKey=k; render(); try{ view.scrollTop=0; }catch(err){}
       }
     });
-    setTimeout(()=>{ const n=ov.querySelector('#mnName'); if(n) n.focus(); },300);
+    pdxFocusNow(()=>{ const n=ov.querySelector('#mnName'); if(n) n.focus(); },300);
   };
   
   
@@ -10515,7 +10518,7 @@ document.head.appendChild(st);
        +'<button class="rm" data-r=""><span>Όλα</span><small>'+all.length+'</small></button>'
        +Object.keys(cnt).map(r=>'<button class="rm" data-r="'+esc(r)+'"><span>'+esc(r==='extra:__clin'?'Άλλες κλινικές':r.indexOf('extra:')===0?((r.slice(6)&&r.slice(6)!=='Έξτρα')?r.slice(6):'Εκτός θαλάμου'):r)+'</span><small>'+cnt[r]+' ασθ.</small></button>').join('');
     }
-    function open(foc){ if(openKey) return; build(); isOpen=true; view.style.overflow='hidden'; setX(W,true); if(foc===true) setTimeout(()=>{ const i=document.getElementById('mobDrSrch'); if(i){ i.focus(); try{ i.select(); }catch(e){} } },60); }
+    function open(foc){ if(openKey) return; build(); isOpen=true; view.style.overflow='hidden'; setX(W,true); if(foc===true) pdxFocusNow(()=>{ const i=document.getElementById('mobDrSrch'); if(i){ i.focus(); try{ i.select(); }catch(e){} } },60); }
     function close(){ isOpen=false; { const had=!!view.querySelector('.mbar button[onclick^="mobDrawerOpen"]'); if((window.__mq||had) && window.buildMobileView){ const y=view.scrollTop; window.buildMobileView(); view.scrollTop=y; } } setX(0,true); setTimeout(()=>{ if(!isOpen) view.style.overflow=''; },320); }
     window.mobDrawerOpen=open; window.mobDrawerClose=close;
     bg.addEventListener('click',close);
@@ -12836,7 +12839,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // κλειδί κλινικής σε αυτή τη συσκευή
     try{ const key = window.pdxCK && await pdxCK.ready(); if(!key) throw new Error('Αυτή η συσκευή δεν έχει ακόμα το κλειδί της κλινικής'+(pdxCK.why&&pdxCK.why()?' ('+pdxCK.why()+')':'')+'.'); }
     catch(e){ st.err = e.message||String(e); redraw(); return; }
-    if(free && !d.name){ st.phase='ask'; redraw(); setTimeout(()=>{ const i = pg.el.querySelector('[data-imgq] input'); i && i.focus(); }, 400); return; }
+    if(free && !d.name){ st.phase='ask'; redraw(); pdxFocusNow(()=>{ const i = pg.el.querySelector('[data-imgq] input'); i && i.focus(); }, 400); return; }
     // 🗺 ήδη ταυτοποιημένος φάκελος (αυτόματη ταυτοποίηση στο παρασκήνιο) → ανοίγει κατευθείαν
     if(!free){ try{ const m = await window.pdxImgMapFor(k); if(m && m.sure && m.n > 0){ st.msg = 'Βρέθηκε ο φάκελος: '+String(m.rel).split('\\').slice(-2).join(' / ')+' ('+m.n+' εικόνες)'; return get(m.ri, m.rel); } }catch(e){} }
     search(d.name);
@@ -14021,7 +14024,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const ak = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
         const img = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(r.enc.iv)}, ak, b64d(r.enc.ct));
         // σβήσιμο του κρυπτογραφημένου αντιγράφου από τη βάση (κρατιέται μόνο η περιγραφή)
-        sb6.from('oncall_jobs').update({status:'dismissed', payload:{name:d.name, shown:Date.now(), meta:r.meta||null}, updated_at:new Date().toISOString()}).eq('id',id).then(()=>{});
+        (window.pdxApvDrop&&pdxApvDrop(id), sb6).from('oncall_jobs').update({status:'dismissed', payload:{name:d.name, shown:Date.now(), meta:r.meta||null}, updated_at:new Date().toISOString()}).eq('id',id).then(()=>{});
         const url = URL.createObjectURL(new Blob([img], {type: r.mime || 'image/jpeg'}));
         const m = r.meta || {}, ok = m.verify || {};
         const o = document.getElementById('mobSubPop'); if(o) o.remove();
@@ -14107,9 +14110,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       + (!isRef && !dlg ? '<button data-rxmod style="margin-top:12px;width:100%;border:1.5px solid #1D4E80;background:#fff;color:#1D4E80;border-radius:14px;height:50px;font-size:17px;font-weight:600">✏️ Τροποποίηση</button>' : '')
       + '<button data-cancel style="margin-top:10px;width:100%;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:14px;height:50px;font-size:17px;font-weight:600">'+(dlg?'Ακύρωση — ΔΕΝ πατάω «'+E(f.dlgBtn||'OK')+'» (ελέγξτε στον υπολογιστή αν καταχωρίστηκε)':'Ακύρωση (δεν καταχωρίζεται)')+'</button>';
     // έγκριση ΜΟΝΟ της έκδοσης που είδε ο γιατρός (updated_at): αν το bot την άλλαξε στο μεταξύ (νέα σύνοψη/μήνυμα) ή την ενέκρινε άλλη συσκευή → τίποτα
-    sheet((dlg?'⚠ 2η έγκριση · ':isRef?'📋 ':'💊 ')+j.name, body, ()=>sb6.from('oncall_jobs').update({status:'approve', note:'καταχώριση από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').eq('updated_at', j.updated_at).select('id').then(x=>{ if(x.error){ toast('Σφάλμα: '+x.error.message); return false; } if(!(x.data||[]).length){ toast('⚠ '+W.It+' άλλαξε ή δεν περιμένει πια — ξανανοίγει'); setTimeout(()=>pdxBotReview(j.id), 400); return true; } toast(isRef ? '✅ Το bot καταχωρίζει το παραπεμπτικό…' : '✅ Το bot καταχωρίζει τη συνταγή…'); refreshPill(); return true; }), dlg ? '✅ Έγκριση «'+(f.dlgBtn||'OK')+'»' : isRef ? '✅ Καταχώριση' : '✅ Επιβεβαίωση');
+    sheet((dlg?'⚠ 2η έγκριση · ':isRef?'📋 ':'💊 ')+j.name, body, ()=>(window.pdxApvDrop&&pdxApvDrop(j.id), sb6).from('oncall_jobs').update({status:'approve', note:'καταχώριση από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').eq('updated_at', j.updated_at).select('id').then(x=>{ if(x.error){ toast('Σφάλμα: '+x.error.message); return false; } if(!(x.data||[]).length){ toast('⚠ '+W.It+' άλλαξε ή δεν περιμένει πια — ξανανοίγει'); setTimeout(()=>pdxBotReview(j.id), 400); return true; } toast(isRef ? '✅ Το bot καταχωρίζει το παραπεμπτικό…' : '✅ Το bot καταχωρίζει τη συνταγή…'); refreshPill(); return true; }), dlg ? '✅ Έγκριση «'+(f.dlgBtn||'OK')+'»' : isRef ? '✅ Καταχώριση' : '✅ Επιβεβαίωση');
     const ov = document.getElementById('mobSubPop'); if(!ov) return;
-    ov.querySelector('[data-cancel]').addEventListener('click', ()=>{ sb6.from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε από το κινητό (δεν καταχωρίστηκε)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id').then((x)=>{ if(x.error || !(x.data||[]).length){ toast('⚠ ΔΕΝ ακυρώθηκε — '+W.it+' δεν περιμένει πια έλεγχο (ίσως εγκρίθηκε)'); refreshPill(); ov.remove(); return; } toast('Ακυρώθηκε'); refreshPill(); ov.remove(); }); });
+    ov.querySelector('[data-cancel]').addEventListener('click', ()=>{ (window.pdxApvDrop&&pdxApvDrop(j.id), sb6).from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε από το κινητό (δεν καταχωρίστηκε)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id').then((x)=>{ if(x.error || !(x.data||[]).length){ toast('⚠ ΔΕΝ ακυρώθηκε — '+W.it+' δεν περιμένει πια έλεγχο (ίσως εγκρίθηκε)'); refreshPill(); ov.remove(); return; } toast('Ακυρώθηκε'); refreshPill(); ov.remove(); }); });
     // ✏️ μόλις αλλάξει κάτι στα φάρμακα/ICD, το μεγάλο «Καταχώριση» κλειδώνει (θα καταχώριζε την ΠΑΛΙΑ συνταγή)
     const okB = ov.querySelector('[data-ok]'), ed = [ov.querySelector('[data-rxe]'), ov.querySelector('[data-rxi]')].filter(Boolean), ed0 = ed.map(x=>x.value);
     // χωρίς σύνοψη της σελίδας ο γιατρός δεν βλέπει τι θα καταχωριστεί → κλειδωμένο
@@ -14130,7 +14133,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       }
       const icd = ov.querySelector('[data-rxi]').value.split(/[,\s]+/).map(x=>x.trim().toUpperCase()).filter(Boolean); if(!icd.length) return say('Γράψτε τουλάχιστον μία διάγνωση.');
       rd.disabled = true;
-      const c = await sb6.from('oncall_jobs').update({status:'cancelled', note:'✏️ αλλαγή από το κινητό — νέα εντολή (δεν καταχωρίστηκε)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
+      const c = await (window.pdxApvDrop&&pdxApvDrop(j.id), sb6).from('oncall_jobs').update({status:'cancelled', note:'✏️ αλλαγή από το κινητό — νέα εντολή (δεν καταχωρίστηκε)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
       if(c.error || !(c.data||[]).length){ rd.disabled=false; return say('Δεν περιμένει πλέον έλεγχο — δεν στάλθηκε τίποτα.'); }
       const keep = {}; ['amka','mode','general','epUser','therapist','afterDischarge','cat','just','remarks','reason','repeat'].forEach(k=>{ if(P[k]!=null) keep[k]=P[k]; });
       // 💊 κρατά % συμμετοχής / συσκευασία ανά φάρμακο· κουτιά μόνο αν δεν άλλαξε η δοσολογία (αλλιώς τα ξαναϋπολογίζει το bot)
@@ -14212,9 +14215,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div style="margin:6px 0"><div style="font-size:12px;color:#6B7686;font-weight:700">Ιατρική γνωμάτευση</div><div style="font-size:14.5px;white-space:pre-wrap;background:#F7F9FB;border-radius:10px;padding:8px;max-height:38vh;overflow:auto">'+E(f.opinion||'')+'</div></div>'
         + '<button data-cancel style="margin-top:10px;width:100%;border:1.5px solid #B23A3A;background:#fff;color:#B23A3A;border-radius:14px;padding:11px;font-size:15px;font-weight:700">✕ Ακύρωση (δεν αποθηκεύεται)</button>';
       const vrdStage = j.kind==='order' && f.stage==='vrd' && !!f.vrd;
-      sheet((vrdStage?'⚠ 2η έγκριση · ':'👀 ')+(KIND[j.kind]||j.kind)+' · '+j.name, body, ()=>sb6.from('oncall_jobs').update({status:'approve', note:'εγκρίθηκε από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').eq('updated_at', j.updated_at).select('id').then(x=>{ if(x.error){ toast('Σφάλμα: '+x.error.message); return false; } if(!(x.data||[]).length){ toast('⚠ Η εργασία άλλαξε ή δεν περιμένει πια — ξανανοίγει'); setTimeout(()=>pdxBotReview(j.id), 400); return true; } toast('✅ Εγκρίθηκε'); refreshPill(); return true; }), vrdStage ? '✅ Έγκριση «'+((f.vrd.cont&&f.vrd.cont.v)||'OK')+'»' : '✅ Έγκριση');
+      sheet((vrdStage?'⚠ 2η έγκριση · ':'👀 ')+(KIND[j.kind]||j.kind)+' · '+j.name, body, ()=>(window.pdxApvDrop&&pdxApvDrop(j.id), sb6).from('oncall_jobs').update({status:'approve', note:'εγκρίθηκε από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').eq('updated_at', j.updated_at).select('id').then(x=>{ if(x.error){ toast('Σφάλμα: '+x.error.message); return false; } if(!(x.data||[]).length){ toast('⚠ Η εργασία άλλαξε ή δεν περιμένει πια — ξανανοίγει'); setTimeout(()=>pdxBotReview(j.id), 400); return true; } toast('✅ Εγκρίθηκε'); refreshPill(); return true; }), vrdStage ? '✅ Έγκριση «'+((f.vrd.cont&&f.vrd.cont.v)||'OK')+'»' : '✅ Έγκριση');
       const ov = document.getElementById('mobSubPop');
-      ov && ov.querySelector('[data-cancel]').addEventListener('click', ()=>{ sb6.from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id').then((x)=>{ if(x.error || !(x.data||[]).length){ toast('⚠ ΔΕΝ ακυρώθηκε — δεν περιμένει πια έλεγχο (ίσως εγκρίθηκε)'); refreshPill(); ov.remove(); return; } toast('Ακυρώθηκε'); refreshPill(); ov.remove(); }); });
+      ov && ov.querySelector('[data-cancel]').addEventListener('click', ()=>{ (window.pdxApvDrop&&pdxApvDrop(j.id), sb6).from('oncall_jobs').update({status:'cancelled', note:'ακυρώθηκε από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id').then((x)=>{ if(x.error || !(x.data||[]).length){ toast('⚠ ΔΕΝ ακυρώθηκε — δεν περιμένει πια έλεγχο (ίσως εγκρίθηκε)'); refreshPill(); ov.remove(); return; } toast('Ακυρώθηκε'); refreshPill(); ov.remove(); }); });
     });
   };
   // ===== 🏝 Πρόοδος εργασιών bot στο «νησί» (κάτω από το Dynamic Island, σαν ένδειξη κλήσης) =====
@@ -14327,7 +14330,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     window.pdxIslandPoke = ()=>{ setTimeout(tick, 400); };
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) tick(); });
     // κάθε νέα εργασία από αυτή τη συσκευή → αμέσως έλεγχος (όχι σε 6″)
-    try{ const ins0 = sb6.from.bind(sb6); sb6.from = function(t){ const q = ins0(t); if(t==='oncall_jobs'){ const i0 = q.insert.bind(q); q.insert = function(){ window.pdxIslandPoke(); return i0.apply(null, arguments); }; } return q; }; }catch(e){}
+    try{ const ins0 = sb6.from.bind(sb6); sb6.from = function(t){ const q = ins0(t); if(t==='oncall_jobs'){ const i0 = q.insert.bind(q); q.insert = function(){ window.pdxIslandPoke(); return i0.apply(null, arguments); };
+        // 🧹 15/11 13:00: ΚΑΘΕ αλλαγή κατάστασης εργασίας (έγκριση/ακύρωση/απόρριψη, από οπουδήποτε) → φεύγει αμέσως από «Για έγκριση» και το νησί
+        const u0 = q.update.bind(q); q.update = function(o){ const b = u0.apply(null, arguments); try{ if(o && o.status && o.status!=='review' && b && b.eq){ const e0 = b.eq.bind(b); b.eq = function(c, v){ if(c==='id'){ try{ window.pdxApvDrop && pdxApvDrop(v); window.pdxIslandPoke(); }catch(x){} } return e0.apply(null, arguments); }; } }catch(x){} return b; }; } return q; }; }catch(e){}
     // «Εργασίες bot»: από τη μπάρα (πάτημα) ή από «Σήμερα»/🔎 (window.pdxBotJobs). Η σελίδα μπαίνει ΠΑΝΩ από όποια είναι ανοιχτή
     // (στοίβα iosPage) — τίποτα δεν χάνεται, «‹ πίσω» γυρίζει εκεί.
     window.pdxBotJobs = ()=>openJobs(true);
@@ -14454,18 +14459,23 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     }
     window.pdxApvOpen = function(id){ const pg = document.getElementById('iosPg'); if(pg) pg.remove(); window.pdxBotReview && pdxBotReview(id); };
     
+    // 🧹 15/11 13:00 (χρήστης: «ακύρωσα την έγκριση, αλλά για λίγη ώρα κολλάει και τη δείχνει για έλεγχο»): η λωρίδα ανανεωνόταν ανά ≥10″ →
+    // κάθε έγκριση/ακύρωση/απόρριψη τη βγάζει ΑΜΕΣΑ (και αγνοείται 2′ αν η βάση αργήσει να το δείξει)
+    const GONE = new Map();
+    window.pdxApvCount = ()=>L.length;
+    window.pdxApvDrop = function(id){ id = +id; if(!id) return; GONE.set(id, Date.now()); L = L.filter(j=>+j.id!==id); paint(); };
     // force: αμέσως (π.χ. μετά από έγκριση)· αλλιώς το πολύ μία φορά / 10″ και μόνο όταν η σελίδα φαίνεται
     window.pdxApvSync = async function(force){
       if(busy || (!force && (document.hidden || Date.now()-at < 10000))) return;
       if(typeof sb6==='undefined') return;
       busy = true; at = Date.now();
       try{
-        if(!uid){ const s = (await sb6.auth.getSession()).data.session; uid = s && s.user && s.user.id; }
+        if(!uid){ const s = (await sb6.auth.getSession()).data.session; uid = (s && s.user && s.user.id) || window.__apvUidTest || null; }
         if(uid){
           let q = sb6.from('oncall_jobs').select('id,kind,name,room,status,created_at,updated_at,created_by,quiet:payload->quiet').eq('status','review').order('id',{ascending:false}).limit(30);
           if(window.authRole !== 'admin') q = q.or('created_by.eq.'+uid+',created_by.is.null');
           const r = await q;
-          if(!r.error){ L = (r.data||[]).filter(j=>j && j.status==='review' && !j.quiet).sort((a,b)=>a.id-b.id); }
+          if(!r.error){ for(const [g,t] of GONE) if(Date.now()-t > 120000) GONE.delete(g); L = (r.data||[]).filter(j=>j && j.status==='review' && !j.quiet && !GONE.has(+j.id)).sort((a,b)=>a.id-b.id); }
         } else L = [];
       }catch(e){}
       busy = false;
@@ -15983,7 +15993,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const rHide = list=>{ const h = rHid(), t = Date.now(); list.forEach(a=>{ h[a] = t; }); try{ localStorage.setItem(rKey(), JSON.stringify(h)); }catch(e){} };
     const recentAmka = ()=>{ const out = [], seen = new Set(), hid = rHid(); S.hist.forEach(j=>{ const a = String((j.payload||{}).amka||''); if(/^\d{11}$/.test(a) && !seen.has(a)){ seen.add(a); if(!(hid[a] && new Date(j.created_at).getTime() <= hid[a])) out.push({amka:a, name:j.name||''}); } }); return out.slice(0,6); };
     function drawRecent(){ const box = root.querySelector('[data-recent]'); if(!box) return; const R = S.k ? [] : recentAmka();
-      box.innerHTML = R.length ? '<div class="h" style="margin-top:12px">Πρόσφατοι<button data-rclr class="pb-dngc" style="min-height:44px">Καθαρισμός</button></div><div class="g">'+R.map(x=>'<div class="med" style="padding-top:4px;padding-bottom:4px"><div class="m" data-ra="'+E(x.amka)+'" style="cursor:pointer;min-height:44px;display:flex;flex-direction:column;justify-content:center"><b style="font-size:16px">'+E(/^Α\.Μ\.Κ\.Α\./.test(x.name)?'Ασθενής':x.name)+'</b><span>ΑΜΚΑ ··'+E(x.amka.slice(-4))+'</span></div><button class="del" data-rdel="'+E(x.amka)+'" aria-label="Αφαίρεση από τους πρόσφατους" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('')+'</div>' : ''; }
+      box.innerHTML = R.length ? '<div class="h" style="margin-top:12px">Πρόσφατοι<button data-rclr class="pb-dngc" style="min-height:44px">Καθαρισμός</button></div><div class="g">'+R.map(x=>'<div class="med" style="padding-top:4px;padding-bottom:4px"><div class="m" data-ra="'+E(x.amka)+'" style="cursor:pointer;min-height:44px;display:flex;flex-direction:column;justify-content:center"><b style="font-size:16px">'+E(/^Α\.Μ\.Κ\.Α\./.test(x.name)?'Ασθενής':(window.pdxNameClean?pdxNameClean(x.name):x.name))   /* 15/11 12:56: χωρίς «GR » και στους πρόσφατους */+'</b><span>ΑΜΚΑ ··'+E(x.amka.slice(-4))+'</span></div><button class="del" data-rdel="'+E(x.amka)+'" aria-label="Αφαίρεση από τους πρόσφατους" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('')+'</div>' : ''; }
     // 📲 15/11 01:43 (χρήστης: «όταν ο ασθενής έχει άυλη, δίπλα στον ΑΜΚΑ να γράφει άυλη με μπλε κεφαλαία» → «ΑΥΛΗ», χωρίς διαλυτικά): από την προετοιμασία (rxname → ayli) ή την πρόσφατη αναζήτηση
     const aylOf = a=>{ a = String(a||''); if(S.ayl && a in S.ayl) return S.ayl[a]; try{ const c = JSON.parse(localStorage.getItem('pdx_amka_names')||'{}'); return !!(c[a] && c[a].y); }catch(e){ return false; } };
     const aylB = a=>aylOf(a) ? ' <b data-ayl style="color:#0A84FF;font-weight:800;letter-spacing:.3px">ΑΥΛΗ</b>' : '';
@@ -16046,7 +16056,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       { const tq = root.querySelector('[data-rxq]'); if(tq) tq.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); rxQuick(); } }); }   // γραπτά: Enter = μέσα
       { const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
         window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true}); }
-      const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); else setTimeout(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
+      const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); else pdxFocusNow(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
       const mq = root.querySelector('[data-medq]'); mq.value = S.f.q||''; mq.addEventListener('input', medPreview); mq.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFromInput(); } });
       syncForm();
     }
@@ -16445,7 +16455,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const a = t.closest('[data-a]'); if(!a) return;
       if(a.dataset.a==='add') addFromInput();
       else if(a.dataset.a==='goall') goAll();
-      else if(a.dataset.a==='addmed'){ S.addMed = true; draw(); setTimeout(()=>{ const q = root.querySelector('[data-medq]'); if(q){ q.focus(); q.scrollIntoView({block:'center', behavior:'smooth'}); } }, 60); }
+      else if(a.dataset.a==='addmed'){ S.addMed = true; draw(); const q = root.querySelector('[data-medq]'); if(q){ q.focus(); setTimeout(()=>q.scrollIntoView({block:'center', behavior:'smooth'}), 60); } }   // 15/11 12:56 (χρήστης): focus ΜΕΣΑ στο πάτημα — αλλιώς το iPhone δεν ανοίγει πληκτρολόγιο (όπως το «＋ Εξέταση»)
       else if(a.dataset.a==='addex'){ S.addEx = true; const b = root.querySelector('[data-exbox]'); if(b) b.style.display = ''; const q = root.querySelector('[data-exq]'); if(q){ q.focus(); q.scrollIntoView({block:'center', behavior:'smooth'}); } }
       else if(a.dataset.a==='rxqgo') rxQuick();
       else if(a.dataset.a==='rxqmic') rxMic();
@@ -17175,7 +17185,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       ov.querySelector('[data-ok]').textContent = 'Προσθήκη'+(sel.length?' ('+sel.length+')':''); };
     draw();
     ov.querySelector('[data-pq]').addEventListener('input', e=>{ q = e.target.value; draw(); });
-    setTimeout(()=>{ try{ ov.querySelector('[data-pq]').focus(); }catch(e){} }, 350);
+    pdxFocusNow(()=>{ try{ ov.querySelector('[data-pq]').focus(); }catch(e){} }, 350);
     ov.addEventListener('click', e=>{ const t = e.target;
       if(t===ov || t.closest('[data-x]')){ ov.remove(); return; }
       const it = t.closest('[data-t]'); if(it){ const v = it.dataset.t; if(have.indexOf(v)>=0) return; const i = sel.indexOf(v); if(i>=0) sel.splice(i,1); else sel.push(v); draw(); return; }
@@ -17206,7 +17216,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         epOk = !!((st.items||[]).length); if(cur){ pv.textContent = pv.textContent.replace(/ · (⏳ κατάλογος e-prescription…|✓ στο e-prescription|⚠ δεν βρέθηκε στο e-prescription)$/, '') + (epOk ? ' · ✓ στο e-prescription' : ' · ⚠ δεν βρέθηκε στο e-prescription'); pv.className = 'medpv '+(epOk?'ok':'bad'); ok.disabled = !epOk; } }, 400); }
     mq.addEventListener('input', upd);
     mq.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(cur && epOk) ok.click(); } });
-    setTimeout(()=>{ try{ mq.focus(); }catch(e){} }, 350);
+    pdxFocusNow(()=>{ try{ mq.focus(); }catch(e){} }, 350);
     ov.addEventListener('click', e=>{ const t = e.target;
       if(t===ov || t.closest('[data-x]')){ ov.remove(); return; }
       const dr = t.closest('[data-dr]'); if(dr){ mq.value = dr.dataset.dr; upd(); ov.querySelector('.body').scrollTop = 0; return; }
@@ -18112,7 +18122,7 @@ Z99.2:C|αιμοκάθαρση
       const b = $('[data-go]'); b.disabled = true; b.textContent = 'Αποστολή…';
       window.pdxBotSend(k, 'comorb', {codes: nw, targets: ['hist']}).then(ok=>{ if(ok){ const r2 = recOf(k); if(r2){ r2.comorbNps2 = {codes: (((r2.comorbNps2||{}).codes)||[]).concat(nw.map(x=>x.code)), at: Date.now()}; saveRec(k, r2); } close(); } else { b.disabled=false; draw(); } });   // μόνο τα ΝΕΑ
     }
-    setTimeout(()=>{ if(!saved.length) ta.focus(); }, 50);
+    pdxFocusNow(()=>{ if(!saved.length) ta.focus(); }, 50);
   };
 })();
 
@@ -20267,7 +20277,7 @@ window.pdxVoice = function(seed){
       // 🎙 15/11 01:50 (χρήστης: «η υπαγόρευση πάλι δεν δουλεύει — γράφω, σβήνω, ξαναπατάω και δεν με ακούει»): ο Βοηθός είχε ΔΙΚΟ του παλιό μικρόφωνο
       // (ίδια λάθη με πριν: iPhone στέλνει τις λέξεις μετά το «σταμάτα», 2ο πάτημα κουφό) → τώρα το ΚΟΙΝΟ pdxMic, όπως συνταγή/πορεία/πρακτικό.
       if(st.rec){ try{ st.rec.state!=='inactive' && st.rec.stop(); }catch(x){} return; }
-      const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν άκουσε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; st.sr = null; pg.redraw(); setTimeout(()=>{ const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.focus(); }, 60); };
+      const kb = ()=>{ st.hint = 'Η αναγνώριση φωνής δεν άκουσε εδώ — πάτα μέσα στο κουτί και μετά το <b>🎤 του πληκτρολογίου</b>.'; st.sr = null; pg.redraw(); pdxFocusNow(()=>{ const ta = pg.el.querySelector('[data-vtx]'); if(ta) ta.focus(); }, 60); };
       st.vmic = st.vmic || window.pdxMic({ field:()=>pg.el.querySelector('[data-vtx]'), base:()=>{ const ta = pg.el.querySelector('[data-vtx]'); return ta ? ta.value : String(st.text||''); },
         onText:(txt)=>{ st.text = txt; const ta = pg.el.querySelector('[data-vtx]'); if(ta){ ta.value = txt; ta.scrollTop = ta.scrollHeight; } },
         onState:(on)=>{ st.sr = on ? 1 : null; if(on){ st.hint = ''; st.err = ''; } pg.redraw(); },
@@ -23096,7 +23106,7 @@ function fSheet(kind){
   ov = document.createElement('div'); ov.id = 'ptxSheet';
   ov.innerHTML = '<div class="sb" role="dialog" aria-label="'+E(T)+'"><div class="hd"><b>'+E(T)+'</b><button data-x>Άκυρο</button></div>'+b+'<div class="err" data-err></div><button class="ok" data-ok>Εφαρμογή</button></div>';
   document.body.appendChild(ov);
-  setTimeout(()=>{ const i = ov.querySelector('input'); if(i && i.type!=='date') try{ i.focus(); }catch(e){} }, 80);
+  pdxFocusNow(()=>{ const i = ov.querySelector('input'); if(i && i.type!=='date') try{ i.focus(); }catch(e){} }, 80);
   ov.addEventListener('input', e=>{ const i = e.target.closest('[data-k]'); if(i && (i.dataset.k==='amka' || i.dataset.k==='am')){ const d = i.value.replace(/\D/g,''); if(d!==i.value) i.value = d; } });
   const ok = ()=>{ const old = JSON.stringify(FL ? FL.botF() || {} : {}), keep = {}; ov.querySelectorAll('[data-k]').forEach(i=>{ keep[i.dataset.k] = f[i.dataset.k]; f[i.dataset.k] = i.value.trim(); });
     const er = FL ? FL.validate() : ''; if(er){ Object.assign(f, keep); ov.querySelector('[data-err]').textContent = er; return; }
@@ -25153,7 +25163,7 @@ window.pdxLabelPrint = function(){
     return h; });
   { const _rd = pg.redraw; let had = lblBmp(); pg.redraw = function(){ _rd.apply(pg, arguments); had = lblBmp(); setTimeout(lblPrev, 0); }; setTimeout(lblPrev, 0);
     pg.el.addEventListener('input', e=>{ const f = e.target.getAttribute('data-f'); if(!f) return; st[f] = e.target.value;
-      if(lblBmp() !== had){ const pos = e.target.selectionStart; pg.redraw(); setTimeout(()=>{ const i = document.querySelector('#iosPg [data-f='+f+']'); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(x){} } }, 0); } else lblPrev(); }); }
+      if(lblBmp() !== had){ const pos = e.target.selectionStart; pg.redraw(); pdxFocusNow(()=>{ const i = document.querySelector('#iosPg [data-f='+f+']'); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(x){} } }, 0); } else lblPrev(); }); }
   // ✋ μετακίνηση εικόνας με σύρσιμο πάνω στην προεπισκόπηση
   { let dr = null; pg.el.addEventListener('pointerdown', e=>{ const c = e.target.closest('[data-prev]'); if(!c || !st.img) return; const r = c.getBoundingClientRect(); dr = {x:e.clientX, y:e.clientY, ox:st.ox, oy:st.oy, w:r.width, h:r.height}; try{ c.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); });
     pg.el.addEventListener('pointermove', e=>{ if(!dr) return; st.ox = Math.max(-1.5, Math.min(1.5, dr.ox + (e.clientX-dr.x)/dr.w)); st.oy = Math.max(-1.5, Math.min(1.5, dr.oy + (e.clientY-dr.y)/dr.h)); lblPrev(); });
@@ -25164,7 +25174,7 @@ window.pdxLabelPrint = function(){
     if(t.matches('[data-fb]')){ fmt.bold = t.checked; fmtSet(fmt); return pg.redraw(); }
     if(t.matches('[data-fh]')){ fmt.setH = t.checked; fmtSet(fmt); return pg.redraw(); } });
   pg.el.addEventListener('click', async e=>{
-    const kb = e.target.closest('[data-kb]'); if(kb){ st.kb = kb.dataset.kb; try{ localStorage.setItem('pdx_label_kb', st.kb); }catch(x){} pg.redraw(); setTimeout(()=>{ const i = document.querySelector('#iosPg [data-f=code]'); if(i) i.focus(); }, 50); return; }
+    const kb = e.target.closest('[data-kb]'); if(kb){ st.kb = kb.dataset.kb; try{ localStorage.setItem('pdx_label_kb', st.kb); }catch(x){} pg.redraw(); pdxFocusNow(()=>{ const i = document.querySelector('#iosPg [data-f=code]'); if(i) i.focus(); }, 50); return; }
     const cp = e.target.closest('[data-caps]'); if(cp){ st.caps = cp.dataset.caps==='1'; try{ localStorage.setItem('pdx_label_caps', st.caps?'1':'0'); }catch(x){} return pg.redraw(); }
     const ie = e.target.closest('[data-ie]'); if(ie){ const k = ie.dataset.ie;
       if(k==='rot') st.rot = (st.rot + 90) % 360; else if(k==='zi') st.zoom = Math.min(6, +(st.zoom*1.25).toFixed(3)); else if(k==='zo') st.zoom = Math.max(0.3, +(st.zoom/1.25).toFixed(3));
