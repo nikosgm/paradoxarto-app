@@ -2456,6 +2456,9 @@ window.pdxActShort = function(x, hint) {   // hint: άλλο κείμενο (γ�
 // 15/11 18:39 (χρήστης: «όχι όλο αυτό… σκέτο RC, τελείωσε»): όταν υπάρχει πράξη που αντιστοιχεί σε δικό μας όνομα, ΔΕΝ προστίθενται οι υπόλοιπες ακατέργαστες
 // ονομασίες του ΝΠΣ (είναι συνήθως σκέλη της ίδιας επέμβασης) · RC pouch > RC Bricker / RC στομίες (ίδια κυστεκτομή)
 window.pdxActIsMapped = function(x) { const t = String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase(); return PDX_ACT_MAP.some(([re]) => re.test(t)); };
+// 15/11 18:56: πλευρά για το ΝΠΣ από το κείμενο χειρουργείου («NUT ΑΡ», «ΟΛΨ ΔΕ», «… ΑΜΦ») → «Αριστερά» / «Δεξιά» / «Άμφω» ('' αν δεν φαίνεται)
+window.pdxSideWord = function(t) { const u = " " + String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-ZΑ-Ω0-9]+/g, " ") + " ";
+  return / (ΑΜΦ|ΑΜΦΩ|ΑΜΦΟΤΕΡΟΠΛ\S*|BIL\S*) /.test(u) ? "Άμφω" : / (ΑΡ|ΑΡΙΣΤΕΡ\S*|LT|LEFT) /.test(u) ? "Αριστερά" : / (ΔΕ|ΔΕΞΙ\S*|RT|RIGHT) /.test(u) ? "Δεξιά" : ""; };
 window.pdxActsJoin = function(L, hint) { L = (L || []).filter(Boolean); const M = L.filter(window.pdxActIsMapped); if (M.length) L = M;
   let R = [...new Set(L.map((x) => window.pdxActShort(x, hint)).filter(Boolean))];
   if (R.includes("RC pouch")) R = R.filter((x) => !/^RC (Bricker|στομίες)/.test(x));
@@ -2528,7 +2531,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v481';
+const APP_VER = '2026-11-15-v482';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -4460,6 +4463,9 @@ function showDischarge(kOpt){
     const rxMeds = (rxAfter.querySelector('input')||{}).checked && window.pdxRxParse ? window.pdxRxParse(ta.value).meds : [];
     const pl = {text: txt, therapist: rec.therapist||'', therapistName: thName, extraDx: window.pdxComorbForDischarge ? pdxComorbForDischarge(dKey) : []};
     if(rxMeds.length) pl.rxAfter = {icd:['N39'], meds: rxMeds, therapist: thName || rec.therapist || '', mode:'review'};
+    // 🩺 15/11 18:56 (χρήστης: «σε ΟΛΑ τα εξιτήρια της κλινικής ξαναμπαίνει η ιατρική πράξη που πέρασε η γραμματεία του χειρουργείου στον ΝΠΣ — με πλευρά και ☑, όπως στο Ημέρας»)
+    // το bot διαβάζει τις πράξεις της νοσηλείας (κωδικός ΚΕΤΕΚΝΥ + ημερομηνία) και τις προσθέτει· πλευρά: δικό μας χειρουργείο › χειρουργείο από ΝΠΣ/πρόγραμμα
+    if(/^\d{11}$/.test(String(rec.amka||''))) pl.npsActs = {amka:String(rec.amka), adm:String(rec.admitDate||''), side: window.pdxSideWord ? pdxSideWord(rec.surgery || ((window.pdxSurgGuessCached && pdxSurgGuessCached(dKey)) || {}).txt || '') : ''};
     { const rf = (refAfter.querySelector('input')||{}).checked && window.pdxRefParse ? pdxRefParse(ta.value) : [];
       const jf = [rec.dx, rec.surgery].map(x=>String(x||'').trim()).filter(Boolean).join(' · ') || 'Ουρολογικός έλεγχος';
       if(rf.length) pl.refAfter = rf.map(g=>({cat:g.cat, exams:g.exams, icd:['N39'], just:jf, mode:'review', urgent:false, general:true, therapist: thName || rec.therapist || ''})); }
