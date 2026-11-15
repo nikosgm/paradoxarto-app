@@ -2494,8 +2494,25 @@ window.pdxSurgGuess = async function(k, d){
   const prev = c0 && c0.txt; window.__sgG[k] = Object.assign({at:Date.now(), busy:false}, out||{});
   return ((out && out.txt) || '') !== (prev || '');
 };
+// 💊 15/11 17:38 (χρήστης: «στην καρτέλα, κάτω από το χειρουργείο: αντιβιώσεις και από πότε — τίποτα άλλο»): από την τελευταία ανάγνωση
+// «Φαρμακευτική Αγωγή» του ΝΠΣ για όλη την κλινική (npsmedsall, κρυπτογραφημένη) · μόνο αντιβιώσεις που δίνονται ακόμα (τελευταία ημέρα ≥ χθες)
+window.__abx = window.__abx || {at:0, busy:false, pts:null};
+const PDX_ABX_RE = /CILLIN|PENEM|CEF|CEPH|FLOXACIN|MYCIN|MICIN|CYCLINE|AZOLE(?!PRAZ)|SULFAMETH|TRIMETHOPR|NITROFURANT|FOSFOMYC|LINEZOLID|COLISTIN|TEICOPLANIN|VANCOMYC|DAPTOMYC|TAZOBACT|CLAVULAN|AVIBACTAM|AZTREONAM|METRONIDAZ|RIFAMPIC|AMIKAC|GENTAMIC|TOBRAMYC|TIGECYCL/i;
+window.pdxAbxLoad = async function(){ const A = window.__abx; if(A.busy || (A.pts && Date.now()-A.at < 10*60000)) return false; A.busy = true;
+  try{ if(typeof sb6!=='undefined' && window.pdxCK && await pdxCK.ready()){ const r = await sb6.from('oncall_jobs').select('payload').eq('kind','npsmedsall').eq('status','done').not('payload->result','is',null).order('id',{ascending:false}).limit(1);
+      const j = (r.data||[])[0]; const D = j && j.payload && j.payload.result && j.payload.result.enc ? await pdxCK.decrypt(j.payload.result.enc) : null; A.pts = (D && D.pts) || []; A.at = Date.now(); A.busy = false; return true; } }catch(e){}
+  A.busy = false; A.at = Date.now(); A.pts = A.pts || []; return false; };
+window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null;
+  const nz = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim(), w = nz(name);
+  const P = A.pts.find(x=>nz(x.name)===w); if(!P || !Array.isArray(P.meds)) return [];
+  const dOf = t=>{ const m = String(t||'').match(/(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/); if(!m) return 0; const now = new Date(); let y = m[3] ? +(m[3].length===2?'20'+m[3]:m[3]) : now.getFullYear(); const d = new Date(y, +m[2]-1, +m[1], 12); if(!m[3] && d - now > 60*864e5) d.setFullYear(y-1); return d.getTime(); };
+  const y0 = new Date(); y0.setHours(0,0,0,0); const yest = y0.getTime() - 864e5;
+  return P.meds.filter(m=>m && (m.abx || PDX_ABX_RE.test((m.subst||'')+' '+(m.drug||'')))).map(m=>{ const T = (m.days||[]).map(dOf).filter(Boolean).sort((a,b)=>a-b);
+      const nm = String(m.drug||m.subst||'').replace(/\s+/g,' ').trim().split(/\s+/)[0]; return {nm: nm.charAt(0)+nm.slice(1).toLowerCase(), from: T[0]||0, last: T[T.length-1]||0}; })
+    .filter(x=>x.nm && (!x.last || x.last >= yest))
+    .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v470';
+const APP_VER = '2026-11-15-v471';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7605,7 +7622,7 @@ document.head.appendChild(st);
   #mobView .mdvl{margin:6px 12px 0;display:flex;flex-wrap:wrap;align-items:center;gap:6px}#mobView .mdvl .dvr{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 10px;border-radius:999px;background:#EAF5EE;font-size:13.5px;font-weight:600;color:#1F5130;cursor:pointer;max-width:100%}#mobView .mdvl .dvr span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mobView .mdvl .dvr small{font-weight:500;color:#6B7280}
   #mobView .mdvl .dvml{border:0;border-radius:999px;background:#fff;color:#1F5130;font-weight:800;font-size:12.5px;height:24px;padding:0 9px;cursor:pointer;font-variant-numeric:tabular-nums;flex:none}#mobView .mdvl .dvml.e{color:#1D4E80;font-weight:700}
   html.pdx-night #mobView .mdvl .dvr{background:#1E3326;color:#BFE6CB}html.pdx-night #mobView .mdvl .dvml{background:#2C2C2E;color:#BFE6CB}html.pdx-night #mobView .mdvl .dvml.e{color:#64A8FF}
-  #mobView .chv{padding:4px 14px}#mobView .chv .chk{padding:8px 0;border-bottom:.5px solid #E5E7EB;font-size:14.5px;line-height:1.4}#mobView .chv .chk:last-child{border-bottom:0}#mobView .mhdr .sgx{background:#EAF1FB!important;color:#1D4E80!important;font-weight:700}#mobView .mhdr .sgx small{font-weight:500;opacity:.75}html.pdx-night #mobView .mhdr .sgx{background:#1E3A5F!important;color:#CFE3FF!important}#mobView .chv .chk b{font-weight:700}#mobView .chm{margin:4px 0 0;padding:0;list-style:none}#mobView .chm li{padding:5px 0 5px 14px;position:relative;border-top:.5px solid #EEF0F3}#mobView .chm li:first-child{border-top:0}#mobView .chm li:before{content:'';position:absolute;left:2px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--mp,#1D4E80)}#mobView .chm li em{font-style:normal;color:#8A94A3;font-size:13px}#mobView .chm li.off{opacity:.55}#mobView .chm li.off b{text-decoration:line-through}html.pdx-night #mobView .chm li{border-top-color:#38383A}#mobView .chv .chk span{display:block;font-size:11.5px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.2px;margin-bottom:2px}
+  #mobView .chv{padding:4px 14px}#mobView .chv .chk{padding:8px 0;border-bottom:.5px solid #E5E7EB;font-size:14.5px;line-height:1.4}#mobView .chv .chk:last-child{border-bottom:0}#mobView .mhdr .sgx{background:#EAF1FB!important;color:#1D4E80!important;font-weight:700}#mobView .mhdr .sgx small{font-weight:500;opacity:.75}#mobView .mhdr .abx{background:#FFF4E5!important;color:#8A4B00!important;font-weight:700}html.pdx-night #mobView .mhdr .abx{background:#3A2A10!important;color:#F5C26B!important}html.pdx-night #mobView .mhdr .sgx{background:#1E3A5F!important;color:#CFE3FF!important}#mobView .chv .chk b{font-weight:700}#mobView .chm{margin:4px 0 0;padding:0;list-style:none}#mobView .chm li{padding:5px 0 5px 14px;position:relative;border-top:.5px solid #EEF0F3}#mobView .chm li:first-child{border-top:0}#mobView .chm li:before{content:'';position:absolute;left:2px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--mp,#1D4E80)}#mobView .chm li em{font-style:normal;color:#8A94A3;font-size:13px}#mobView .chm li.off{opacity:.55}#mobView .chm li.off b{text-decoration:line-through}html.pdx-night #mobView .chm li{border-top-color:#38383A}#mobView .chv .chk span{display:block;font-size:11.5px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.2px;margin-bottom:2px}
   html.pdx-night #mobView .mhdr .hx{background:#2C2C2E!important;color:#E5E5EA!important}html.pdx-night #mobView .mhdr .ct{background:#1E3326!important;color:#BFE6CB!important}html.pdx-night #mobView .chv .chk{border-bottom-color:#38383A}
   #mobView .mhdr span{font-size:13px;font-weight:800;border-radius:999px;padding:5px 10px;background:#E8EEF5;color:var(--mp,#1D4E80)}
   #mobView .mhdr span.r{background:#FDECEA;color:#B42318}
@@ -10237,6 +10254,10 @@ document.head.appendChild(st);
     // 🔪 15/11 13:22: χωρίς δικό μας χειρουργείο → ό,τι βρέθηκε στο ΝΠΣ / πρόγραμμα χειρουργείου (πρώτο, κάτω από το όνομα)
     if(!d.surgery && window.pdxSurgGuess){ const g = pdxSurgGuessCached(k); if(g && g.txt) c.unshift('<span class="sgx" title="'+esc(g.src||'')+'">'+esc(g.txt)+'</span>'   /* 15/11 13:25 (χρήστης): χωρίς «(από πού)» — μόνο το χειρουργείο */);
       pdxSurgGuess(k, d).then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
+    // 💊 15/11 17:38: αντιβιώσεις νοσηλείας + από πότε (κάτω από το χειρουργείο)
+    if(window.pdxAbxOf){ const ab = pdxAbxOf(d.name); if(ab && ab.length){ const dd = t=>{ const x = new Date(t); return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); };
+        c.splice(c.findIndex(x=>/class="sgx"/.test(x))+1, 0, '<span class="abx">💊 '+ab.map(a=>esc(a.nm)+(a.from?' από '+dd(a.from):'')).join(' · ')+'</span>'); }
+      if(!window.__abx.pts || Date.now()-window.__abx.at > 10*60000) pdxAbxLoad().then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
     // 15/11 00:14 (χρήστης: «μη μου λες τις συννοσηρότητες κάτω από το όνομα — μόνο αν πατήσω το κουμπί Συννοσηρότητες»)
     return (c.length ? '<div class="mhdr">'+c.join('')+'</div>' : '') + hdrDev(k, d);
   }
