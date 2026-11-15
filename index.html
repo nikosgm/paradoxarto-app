@@ -2487,9 +2487,9 @@ window.pdxSurgGuess = async function(k, d){
       const vTxt = ['orOrder','opNote'].map(sk=>((S[sk]||{}).views||[]).map(v=>(v.fields||[]).filter(f=>/πλευρ|επέμβασ|επεμβασ|πράξ|πραξ|διάγν|διαγν/i.test(f.l||'')).map(f=>(f.l||'')+': '+(f.v||'')).join(' · ')).join(' · ')).join(' · ');   // προβολή εντολής/πρακτικού: πεδίο «Πλευρά» κ.λπ.
       const hint = [done.map(x=>x.all).join(' · '), ordTxt, vTxt, orH ? orH.op : ''].join(' · ');
       // 15/11 17:39 (χρήστης: «όταν έχει χειρουργηθεί, βρες πότε — να βάζεις και τη μετεγχειρητική ημέρα»): POD από την ημερομηνία της πράξης / του προγράμματος
-      const pod = t=>{ const n = Math.round((today - new Date(t).setHours(12,0,0,0))/864e5); return n >= 0 && n < 60 ? ' · POD '+n : ''; };
-      if(done.length){ const L = window.pdxActsJoin(done.map(x=>x.n), hint), t = Math.max(...done.map(x=>x.t)); if(L) out = {txt:L+pod(t), src:'ΝΠΣ '+dd(t), t}; }
-      if(!out && orH){ const L = window.pdxActShort(orH.op, hint); if(L) out = {txt:(orH.t > today ? 'Προς '+L : L+pod(orH.t)), src:'πρόγραμμα '+dd(orH.t), t: orH.t}; }
+      const pod = t=>{ const n = Math.round((today - new Date(t).setHours(12,0,0,0))/864e5); return n >= 0 && n < 60 ? 'Χ'+n+' ' : ''; };   // 15/11 17:50 (χρήστης): «όχι POD — Χ2 TurB»
+      if(done.length){ const L = window.pdxActsJoin(done.map(x=>x.n), hint), t = Math.max(...done.map(x=>x.t)); if(L) out = {txt:pod(t)+L, src:'ΝΠΣ '+dd(t), t}; }
+      if(!out && orH){ const L = window.pdxActShort(orH.op, hint); if(L) out = {txt:(orH.t > today ? 'Προς '+L : pod(orH.t)+L), src:'πρόγραμμα '+dd(orH.t), t: orH.t}; }
       if(!out && ordRows.length){ const rw = ordRows[0]; const L = window.pdxActShort(rw.filter(x=>x && !/^\d[\d\s./:-]*$/.test(x)).sort((a,b)=>b.length-a.length)[0] || '', hint); if(L && !/^(ναι|οχι|όχι)$/i.test(L)) out = {txt:'Προς '+L, src:'εντολή ΝΠΣ'}; }
     }
   }catch(e){}
@@ -2514,7 +2514,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v473';
+const APP_VER = '2026-11-15-v474';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
