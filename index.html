@@ -2520,7 +2520,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v476';
+const APP_VER = '2026-11-15-v477';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14951,11 +14951,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 15/11 17:56 (χρήστης: «την ίδια λίστα και στους ασθενείς ΝΠΣ, με τον ίδιο τρόπο»): (ημ. εισαγωγής) δίπλα στο όνομα · χειρουργείο · ΑΥ, ΣΔ, ΔΛΔ — τα δικά μας υπερισχύουν
       const d = k ? (/^extra/.test(k) ? extraPatients[k] : data[k]) : null, ri = nbRowInfo(r, x, d);
       h += '<div class="mcard mrow" data-npsv="'+i+'" style="display:flex;align-items:center;gap:10px;padding:11px 14px;margin:6px 12px;cursor:pointer"><span style="flex:1;min-width:0"><b>'+esc(r.name||'')+'</b>'+(ri.adm?' <span style="font-weight:400;color:var(--t3,#8E8E93)">('+esc(ri.adm)+')</span>':'')+(ri.sub?'<div style="font-size:12.5px;color:var(--t3,#8E8E93);margin-top:2px">'+ri.sub+'</div>':'')+'</span>'
-        + (k ? '<span style="font-size:12.5px;font-weight:700;color:#34C759;white-space:nowrap">'+esc(/^extra/.test(k)?'εκτός θαλάμου':k.replace('-', '.'))+'</span>' : '<span style="font-size:12.5px;font-weight:700;color:#FF9500;white-space:nowrap">μόνο ΝΠΣ</span>')+'</div>'; });
+        + (k ? '<span style="font-size:12.5px;font-weight:700;color:#34C759;white-space:nowrap">'+esc(/^extra/.test(k)?'εκτός θαλάμου':k.replace('-', '.'))+'</span>' : '<button data-npsvb="'+i+'" aria-label="Προσθήκη σε κρεβάτι" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:5px 9px;font-size:13px;flex:none;min-width:36px;min-height:32px">＋🛏</button>')+'</div>'; });   // 15/11 17:58 (χρήστης): όχι «μόνο ΝΠΣ» — το κουμπί προσθήκης σε κρεβάτι
     return h + (L.length ? '' : '<div class="msec">Η λίστα ΝΠΣ είναι άδεια.</div>') + '</div>';
   };
   document.addEventListener('click', e=>{ const t = e.target; if(!t.closest) return;
     if(t.closest('[data-npsfull]')) return window.pdxNpsPatients && pdxNpsPatients();
+    const pb = t.closest('[data-npsvb]'); if(pb){ e.stopPropagation(); const r = (window.__npsViewRows||[])[+pb.dataset.npsvb]; if(r && window.pdxNpsPlace){ const k = nbTemp(r); pdxNpsPlace(k); } return; }
     const b = t.closest('[data-npsv]'); if(!b) return; const r = (window.__npsViewRows||[])[+b.dataset.npsv]; if(!r || !window.mobOpen) return;
     const k = nbKey(r); mobOpen(k || nbTemp(r)); });
   window.pdxNpsCount = function(){ if(!NB.rows){ nbLoad(false); return null; } return NB.rows.length; };
