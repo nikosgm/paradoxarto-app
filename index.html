@@ -2531,7 +2531,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v484';
+const APP_VER = '2026-11-15-v485';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25067,9 +25067,33 @@ window.CLS_MODE='A';
   // κοινή κρυπτογραφημένη μνήμη
   window.pdxOrSchedGet = async function(iso){ try{ const r = await sb6.from('oncall_labs').select('data,updated_at').eq('name_key','orsched|'+iso).maybeSingle(); if(!r.data || !r.data.data || !r.data.data.enc) return null; return await pdxCK.decrypt(r.data.data.enc); }catch(e){ return null; } };
   window.pdxOrSchedPut = async function(o){ try{ const enc = await pdxCK.encrypt(o); await sb6.from('oncall_labs').upsert({name_key:'orsched|'+o.iso, name:'πρόγραμμα χειρουργείου (ανεβασμένο)', pid:null, data:{enc, at:o.at||Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){} };
+  // 🧫 15/11 19:54 (χρήστης: «κάθε ασθενής του προγράμματος χειρουργείου → η καλλιέργειά του: αρνητική ή ο ΑΑ δείγματος όσων εκκρεμούν —
+  // στην ίδια ενότητα· + σύντομη γενική ούρων: πυοσφαίρια, νιτρώδη, ερυθρά, μύκητες»).
+  // Γενική ούρων: από τα εργαστηριακά της κλινικής (oncall_labs, ήδη στη συσκευή). Καλλιέργεια: εργασία «orcult» (μόνο ανάγνωση στο Medilabi, κρυπτογραφημένη).
+  const orNm = t=>orNz(t).replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
+  const orLabsMatch = (L, name)=>{ const N = orNm(name).split(' '), sur = N[0], fi = (N[1]||'')[0]||''; if(!sur) return null;
+    const hit = L.filter(x=>{ const P = orNm(x.name).split(' '); return P[0]===sur && (!fi || !P[1] || P[1][0]===fi); }); return hit.length===1 ? hit[0] : null; };
+  // σύντομη γενική ούρων: η ΝΕΟΤΕΡΗ τιμή (μικρότερος δείκτης στήλης = νεότερη ημερομηνία) ανά δείκτη, μέσα στην ομάδα «ΓΕΝΙΚΗ ΕΞΕΤΑΣΗ ΟΥΡΩΝ»
+  window.pdxUaBrief = function(data){ const R = (data && data.rows) || [], D = (data && data.dates) || []; let inG = false; const out = {};
+    const W = [['pyo', /^Πυοσφαίρια/i, 'Πυοσφ.'], ['nit', /^Νιτρώδη/i, 'Νιτρ.'], ['rbc', /^Ερυθρά αιμοσφαίρια/i, 'Ερυθρά'], ['fun', /μύκητ|μυκητ|ζυμομύκ/i, 'Μύκητες']];
+    for(const r of R){ if(r.g){ inG = /ΓΕΝΙΚΗ ΕΞΕΤΑΣΗ ΟΥΡΩΝ/i.test(r.g); continue; } if(!inG || !r.t) continue;
+      const w = W.find(x=>x[1].test(r.t)); if(!w || out[w[0]]) continue;
+      const ks = Object.keys(r.v||{}).map(Number).filter(i=>{ const v = String(r.v[i]||'').trim(); return v && !/^\[(Παραγγ|Εκκρ)/i.test(v); }).sort((a,b)=>a-b);
+      if(ks.length) out[w[0]] = {lab:w[2], v:String(r.v[ks[0]]).trim(), d:String(D[ks[0]]||'').slice(0,5)}; }
+    const L = ['pyo','nit','rbc','fun'].filter(k=>out[k]); if(!L.length) return null;
+    const d = (out.pyo||out.nit||out.rbc||out.fun).d;
+    return {d, fun: out.fun && !/^(αρνητ|απουσ|ουδεν|neg|0|-|—)/i.test(out.fun.v) ? out.fun.v : '', txt: L.map(k=>out[k].lab+' '+out[k].v).join(' · ')}; };
+  // ερμηνεία αποτελέσματος καλλιέργειας
+  window.pdxCultTxt = function(c){ if(!c) return {t:'—', cls:''}; if(c.none) return {t:'καμία ουροκαλλιέργεια', cls:'mut'};
+    if(c.err && !c.st) return {t:'⚠ δεν διαβάστηκε', cls:'mut'};
+    const dd = String(c.sampled || c.date || '').replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/, '$1');
+    if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγέλθηκε':'εκκρεμεί')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · δείγμα '+dd : ''), cls:'pend'};
+    const r = [c.res, c.desc].filter(Boolean).join(' · ').replace(/\s+/g,' ').trim();
+    if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'αρνητική'+(dd?' · '+dd:''), cls:'ok'};
+    return {t:(r ? r.slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
-    const st = {o:null, busy:'', err:'', iso, m:null, mbusy:'', merr:''};
+    const st = {o:null, busy:'', err:'', iso, m:null, mbusy:'', merr:'', cu:null, cubusy:'', cuerr:'', cuAt:0};
     if(!document.getElementById('orsCss')){ const c = document.createElement('style'); c.id = 'orsCss'; c.textContent = '.ors-wrap{margin:12px;background:#fff;border-radius:12px;overflow:auto;-webkit-overflow-scrolling:touch;padding:8px}html.pdx-night .ors-wrap{background:#fff}.ors-pv{margin:12px;overflow:hidden;position:relative}.ors-pv.zoom{overflow:auto;-webkit-overflow-scrolling:touch}.ors-page{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);padding:22px 24px;transform-origin:top left;display:inline-block;box-sizing:border-box}.ors-btn{display:block;width:calc(100% - 32px);margin:12px 16px;height:46px;border:0;border-radius:14px;background:rgba(120,120,128,.12);color:var(--acc,#007AFF);font-size:16px;font-weight:600}.ors-pv .ors td{border-color:#888}.ors-pv .ors tr{height:20px}.ors-nav{display:flex;gap:8px;margin:8px 16px 0}.ors-nav button{flex:1;border:0;border-radius:10px;height:40px;background:rgba(120,120,128,.12);color:var(--acc,#007AFF);font-size:15px;font-weight:600}'; document.head.appendChild(c); }
     const lbl = x=>{ const dd = new Date(x+'T12:00:00'); return OR_DAYS[dd.getDay()]+' '+dd.getDate()+'/'+(dd.getMonth()+1); };
     const pg = iosPage('Ανεβασμένο πρόγραμμα', 'Πρόγραμμα χειρουργείου', ()=>{
@@ -25083,6 +25107,7 @@ window.CLS_MODE='A';
       if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ h += '<div class="ios-f" style="margin-top:8px">'+(f.extra?'➕ ':'')+'<b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
         + '<div class="ors-pdf" data-orpz="'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+(st.pz===i?'auto':'hidden')+';-webkit-overflow-scrolling:touch">'+(f.imgs||[]).map(u=>'<img src="'+u+'" style="display:block;'+(st.pz===i?'width:220%;max-width:none':'width:100%')+'">').join('')+'</div>'; });
       h += '<button class="ors-btn" data-or="mail"'+(st.mbusy?' disabled style="opacity:.5"':'')+'>📧 Ξανά από το mail</button>';
+      h += cultHtml();
       // 📧 13/11 22:49 (χρήστης: «αν το έχεις βρει από το Kerio, μην εμφανίζεις του φακέλου»)
       const mailOk = !!(st.m && st.m.files && st.m.files.length);
       if(mailOk && !st.showDir){ h += '<button class="ors-btn" data-or="dir" style="opacity:.75">📁 Δείξε και του φακέλου</button><div style="height:30px"></div>'; return h; }
@@ -25095,10 +25120,37 @@ window.CLS_MODE='A';
         + '<div class="ios-f">'+(st.o.pts ? st.o.pts.length+' ασθενείς · ' : '')+'ενημέρωση '+new Date(st.o.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>';
       h += '<button class="ors-btn" data-or="fresh"'+(st.busy?' disabled style="opacity:.5"':'')+'>↻ Ξανά από τον φάκελο</button><div style="height:30px"></div>';
       return h; });
+    // 🧫 καλλιέργειες & γενική ούρων των ασθενών του προγράμματος
+    function cultHtml(){ const P = (st.cu && st.cu.list) || []; let h2 = '<div class="ios-h" style="margin-top:18px">🧫 Καλλιέργειες ούρων · γενική ούρων</div>';
+      if(!P.length && !st.cubusy) return h2 + iosGroup('', [{t: st.cuerr ? '<span style="color:#FF3B30">⚠ '+esc(st.cuerr)+'</span>' : 'Δεν βρέθηκαν ασθενείς στο πρόγραμμα της ημέρας.'}]);
+      const col = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#8E8E93'};
+      h2 += iosGroup(st.cubusy ? '⏳ '+st.cubusy : (st.cuAt ? 'ενημέρωση '+new Date(st.cuAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''), P.map(p=>{ const c = window.pdxCultTxt(p.c), u = p.ua;
+        return {t:'<b>'+esc(p.name)+'</b>'+(p.room?' <span style="color:#8E8E93;font-size:13px">'+esc(p.room)+'</span>':''),
+          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+esc(p.pid ? c.t : 'δεν βρέθηκε στο Medilabi της κλινικής')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
+            + (u ? '<div style="margin-top:2px">🔬 '+(u.fun?'<b style="color:#C62828">🍄 Μύκητες '+esc(u.fun)+'</b> · ':'')+esc(u.txt)+(u.d?' <span style="color:#8E8E93">('+esc(u.d)+')</span>':'')+'</div>' : (p.pid ? '<div style="color:#8E8E93">🔬 χωρίς γενική ούρων</div>' : ''))};
+      }));
+      return h2 + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
+    async function cultLoad(force){ if(st.cubusy) return; const sched = st.o && st.o.pts ? st.o : await pdxOrSchedGet(st.iso).catch(()=>null);
+      const pts = ((sched && sched.pts) || []).filter(p=>p && p.name); if(!pts.length){ st.cu = {list:[]}; pg.redraw(); return; }
+      st.cubusy = 'Εργαστηριακά της κλινικής…'; pg.redraw();
+      let L = []; try{ const r = await sb6.from('oncall_labs').select('name,pid,data').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%'); L = r.data || []; }catch(e){}
+      const list = pts.map(p=>{ const m = orLabsMatch(L, p.name); return {name:p.name, room:p.room||'', pid: m ? String(m.pid) : '', ua: m ? window.pdxUaBrief(m.data) : null, c:null}; });
+      st.cu = {list}; const pids = [...new Set(list.map(x=>x.pid).filter(Boolean))];
+      if(!pids.length){ st.cubusy = ''; pg.redraw(); return; }
+      st.cubusy = 'Καλλιέργειες από το Medilabi ('+pids.length+')…'; pg.redraw();
+      try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες χειρουργείου', name_key:'zzz_orcult', status:'new', payload:{pids, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
+        const id = ins.data.id, t0 = Date.now(); let j = null;
+        while(Date.now()-t0 < 180000){ await new Promise(r=>setTimeout(r, 3000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); j = q.data; if(j && /^(done|failed|dismissed)$/.test(j.status)) break; }
+        if(!j || j.status!=='done') throw new Error((j && j.note) || 'το bot δεν απάντησε σε 3′');
+        const D = await pdxCK.decrypt(j.payload.result.enc); const by = {}; (D.pts||[]).forEach(c=>{ by[c.pid] = c; });
+        list.forEach(x=>{ if(x.pid) x.c = by[x.pid] || {err:1}; }); st.cuAt = Date.now(); st.cuerr = '';
+        sb6.from('oncall_jobs').update({payload:{pids, quiet:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται μόλις διαβαστεί
+      }catch(e){ st.cuerr = e.message || String(e); }
+      st.cubusy = ''; pg.redraw(); }
     const load = async (fresh)=>{ st.err = ''; st.o = null;
-      if(!fresh){ const c = await pdxOrSchedGet(st.iso); if(c){ st.o = c; pg.redraw(); if(c.html || Date.now() - (c.at||0) < 30*60000) return; } }   // βρέθηκε → μένει· «δεν βρέθηκε» > 30′ → ξανά
+      if(!fresh){ const c = await pdxOrSchedGet(st.iso); if(c){ st.o = c; pg.redraw(); if(!st.cu) cultLoad(); if(c.html || Date.now() - (c.at||0) < 30*60000) return; } }   // βρέθηκε → μένει· «δεν βρέθηκε» > 30′ → ξανά
       st.busy = 'Πρόγραμμα από τον φάκελο…'; pg.redraw();
-      try{ const o = await pdxOrSchedFetch(st.iso, t=>{ st.busy = t; pg.redraw(); }); st.o = o; if(o.html || o.none) pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }
+      try{ const o = await pdxOrSchedFetch(st.iso, t=>{ st.busy = t; pg.redraw(); }); st.o = o; if(o.html || o.none) pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); if(o.pts && o.pts.length) setTimeout(()=>cultLoad(), 0); }
       catch(e){ st.err = e.message || String(e); }
       st.busy = ''; pg.redraw(); };
     // 📧 PDF από το mail: εντολή kmail {op:'orpdf'} στο bot που έχει τον λογαριασμό Kerio → κρυπτογραφημένο στο img-enc → σελίδες ως εικόνες (pdf.js)·
@@ -25167,9 +25219,10 @@ window.CLS_MODE='A';
       const z = e.target.closest('[data-orpz]'); if(z){ const i = +z.dataset.orpz; st.pz = st.pz===i ? null : i; pg.redraw(); return; } });
     pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
+      if(b.dataset.or==='cult') return cultLoad(true);
       if(b.dataset.or==='fresh') return load(true);
       if(b.dataset.or==='mail') return st.mbusy ? null : loadMail(true);
-      const k = +b.dataset.od; if(k===0) st.iso = orIso(pdxOrTarget()); else { const x = new Date(st.iso+'T12:00:00'); do{ x.setDate(x.getDate()+k); }while([1,3,5].indexOf(x.getDay())<0); st.iso = orIso(x); }
+      const k = +b.dataset.od; if(k===0) st.iso = orIso(pdxOrTarget()); else { const x = new Date(st.iso+'T12:00:00'); do{ x.setDate(x.getDate()+k); }while([1,3,5].indexOf(x.getDay())<0); st.iso = orIso(x); } st.cu = null; st.cuerr = ""; st.cuAt = 0;
       st.m = null; st.pz = null; load(false); loadMail(false); });
     load(false); loadMail(false);
     return pg;
