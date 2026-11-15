@@ -2468,10 +2468,16 @@ window.pdxActsJoin = function(L, hint) { L = (L || []).filter(Boolean); const M 
 // Πηγές (μόνο ανάγνωση, ό,τι υπάρχει ήδη): (1) Φάκελος ΝΠΣ (npsdossier, κρυπτογραφημένος) › «Ιατρικές Πράξεις» μέσα στη νοσηλεία → έγινε
 // (2) πρόγραμμα χειρουργείου (orsched|ΗΜΕΡΑ, από την εισαγωγή έως +7 ημέρες) → έγινε / «Προς …» (3) «Εντολή για επέμβαση» → «Προς …»
 window.__sgG = window.__sgG || {};
+// ⚡ 15/11 20:24 (χρήστης: «τα χειρουργεία αργούν να φορτώσουν»): η τελευταία εικόνα μένει στη συσκευή (6 ώρες) → εμφανίζεται ΑΜΕΣΩΣ στο άνοιγμα
+// και ανανεώνεται στο παρασκήνιο· έως 3 ταυτόχρονες αναζητήσεις (όχι 30 μαζί που μπλόκαραν τη σύνδεση)
+try{ const c = JSON.parse(localStorage.getItem('pdx_sgG')||'{}'); Object.keys(c).forEach(k=>{ const v = c[k]; if(v && v.txt && Date.now()-(v.at||0) < 6*3600e3 && !window.__sgG[k]) window.__sgG[k] = Object.assign({}, v, {busy:false, at: v.at - 10*60000}); }); }catch(e){}
+const sgSave = ()=>{ clearTimeout(sgSave.t); sgSave.t = setTimeout(()=>{ try{ const o = {}; Object.keys(window.__sgG).forEach(k=>{ const v = window.__sgG[k]; if(v && v.txt) o[k] = {txt:v.txt, t:v.t||0, src:v.src||'', at:Date.now()}; }); localStorage.setItem('pdx_sgG', JSON.stringify(o)); }catch(e){} }, 800); };
+const SGQ = {n:0, q:[]}; const sgSlot = ()=>new Promise(ok=>{ if(SGQ.n < 3){ SGQ.n++; ok(); } else SGQ.q.push(ok); }); const sgFree = ()=>{ const nx = SGQ.q.shift(); if(nx) nx(); else SGQ.n--; };
 window.pdxSurgGuessCached = (k)=>window.__sgG[k] || null;
 window.pdxSurgGuess = async function(k, d){
   if(!d || !d.name || d.surgery) return false; const c0 = window.__sgG[k]; if(c0 && (c0.busy || Date.now()-c0.at < 10*60000)) return false;
   window.__sgG[k] = Object.assign({}, c0||{}, {busy:true, at:Date.now()});
+  await sgSlot();
   const nz = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
   const dmy = x=>{ const m = String(x||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? new Date(+(m[3].length===2?'20'+m[3]:m[3]), +m[2]-1, +m[1], 12).getTime() : 0; };
   const dd = t=>{ const x = new Date(t); return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); };
@@ -2504,7 +2510,8 @@ window.pdxSurgGuess = async function(k, d){
       if(!out && ordRows.length){ const rw = ordRows[0]; const L = window.pdxActShort(rw.filter(x=>x && !/^\d[\d\s./:-]*$/.test(x)).sort((a,b)=>b.length-a.length)[0] || '', hint); if(L && !/^(ναι|οχι|όχι)$/i.test(L)) out = {txt:'Προς '+L, src:'εντολή ΝΠΣ'}; }
     }
   }catch(e){}
-  const prev = c0 && c0.txt; window.__sgG[k] = Object.assign({at:Date.now(), busy:false}, out||{});
+  sgFree();
+  const prev = c0 && c0.txt; window.__sgG[k] = Object.assign({at:Date.now(), busy:false}, out||{}); sgSave();
   return ((out && out.txt) || '') !== (prev || '');
 };
 // 💊 15/11 17:38 (χρήστης: «στην καρτέλα, κάτω από το χειρουργείο: αντιβιώσεις και από πότε — τίποτα άλλο»): από την τελευταία ανάγνωση
@@ -2531,7 +2538,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-15-v486';
+const APP_VER = '2026-11-15-v487';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14903,7 +14910,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // 15/11 17:08 (χρήστης: «όχι ΑΜ, όχι πόσες συννοσηρότητες — μόνο ημ. εισαγωγής, το χειρουργείο (προς/έγινε) και τις συννοσηρότητες ως ΑΥ, ΔΛΔ…»)
         const adm = r.admit ? String(r.admit).replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/,'$1') : (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7) : '');
         const sk = 'nps:'+r.name, sg = window.pdxSurgGuessCached ? pdxSurgGuessCached(sk) : null;
-        if(window.pdxSurgGuess && !(sg && (sg.busy || sg.at))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} } }).catch(()=>{});
+        if(window.pdxSurgGuess && !(sg && (sg.busy || Date.now()-(sg.at||0) < 10*60000))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} } }).catch(()=>{});
         const ab = x.dx && window.pdxComorbAbbr ? pdxComorbAbbr(x.dx) : '';
         const sub = [sg && sg.txt ? '<b style="color:var(--mp,#1D4E80)">'+E5(sg.txt)+'</b>' : '', ab ? E5(ab) : ''].filter(Boolean).join(' · ');
         return '<div data-nbo="'+i+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;'+(i?'border-top:1px solid var(--sep,#EEF1F4)':'')+'"><span style="width:8px;height:8px;border-radius:4px;background:#E08A00;flex:none"></span><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+E5(r.name)+(adm?' <span style="font-weight:400;color:var(--t3,#8E8E93)">('+E5(adm)+')</span>':'')+'</div><div style="font-size:12px;color:var(--t2,#6B7280)">'+sub+'</div></div><button data-nbp="'+i+'" aria-label="Προσθήκη σε κρεβάτι" style="border:0;background:#E8F3EC;color:#15803D;font-weight:800;border-radius:999px;padding:5px 9px;font-size:13px;flex:none;min-width:36px;min-height:32px;margin-left:-2px">＋🛏</button></div>'; }).join('')
@@ -14984,7 +14991,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const adm = r.admit ? String(r.admit).replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/,'$1') : (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7) : (d && d.admitDate ? String(d.admitDate).replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/,'$1') : ''));
     let sgT = d && d.surgery ? String(d.surgery) : '';
     if(!sgT){ const sk = 'nps:'+r.name, sg = window.pdxSurgGuessCached ? pdxSurgGuessCached(sk) : null; if(sg && sg.txt) sgT = sg.txt;
-      else if(window.pdxSurgGuess && !(sg && (sg.busy || sg.at))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} try{ if(window.__npsView && window.mobRefresh) mobRefresh(); }catch(e){} } }).catch(()=>{}); }
+      else if(window.pdxSurgGuess && !(sg && (sg.busy || Date.now()-(sg.at||0) < 10*60000))) pdxSurgGuess(sk, {name:r.name, admitDate: r.admit || (x.adm && x.adm.from ? x.adm.from.slice(8,10)+'/'+x.adm.from.slice(5,7)+'/'+x.adm.from.slice(0,4) : '')}).then(ch=>{ if(ch){ try{ const o = document.getElementById('npsBlk'); if(o) o.remove(); nbPaint(); }catch(e){} try{ if(window.__npsView && window.mobRefresh) mobRefresh(); }catch(e){} } }).catch(()=>{}); }
     const own = d ? [].concat(d.historySelected||[]).concat(d.historyCustom ? [d.historyCustom] : []).join(', ') : '';
     const ab = own || (window.pdxComorbAbbr ? pdxComorbAbbr(Array.isArray(x.dx) ? x.dx : (d && Array.isArray(d._npsDx) ? d._npsDx : []), d && d.comorb && Array.isArray(d.comorb.codes) ? d.comorb.codes : []) : '');
     return {adm, sub: [sgT ? '<b style="color:var(--mp,#1D4E80)">'+E5(sgT)+'</b>' : '', ab ? E5(ab) : ''].filter(Boolean).join(' · ')}; }
@@ -25065,8 +25072,12 @@ window.CLS_MODE='A';
     return {iso, name:hit.f.name, mt:hit.f.t||0, html:pdxOrSched.render(XLSX, hit.wb).html, pts:pdxOrSched.patients(XLSX, hit.wb).map(p=>({room:p.room, name:p.name, op:p.op||p.dx, surgeon:p.surgeon})), at:Date.now()};
   };
   // κοινή κρυπτογραφημένη μνήμη
-  window.pdxOrSchedGet = async function(iso){ try{ const r = await sb6.from('oncall_labs').select('data,updated_at').eq('name_key','orsched|'+iso).maybeSingle(); if(!r.data || !r.data.data || !r.data.data.enc) return null; return await pdxCK.decrypt(r.data.data.enc); }catch(e){ return null; } };
-  window.pdxOrSchedPut = async function(o){ try{ const enc = await pdxCK.encrypt(o); await sb6.from('oncall_labs').upsert({name_key:'orsched|'+o.iso, name:'πρόγραμμα χειρουργείου (ανεβασμένο)', pid:null, data:{enc, at:o.at||Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){} };
+  // ⚡ 15/11 20:24 (χρήστης: «λίστα ΝΠΣ: τα χειρουργεία αργούν να φορτώσουν»): κοινή μνήμη ανά ημέρα (2′) — 31 ασθενείς × ~20 ημέρες ζητούσαν ΤΟ ΙΔΙΟ πρόγραμμα ξανά και ξανά
+  const OSG = window.__osg = window.__osg || {};
+  window.pdxOrSchedGet = function(iso, fresh){ const c = OSG[iso]; if(!fresh && c && Date.now()-c.at < 120000) return c.p;
+    const p = (async ()=>{ try{ const r = await sb6.from('oncall_labs').select('data,updated_at').eq('name_key','orsched|'+iso).maybeSingle(); if(!r.data || !r.data.data || !r.data.data.enc) return null; return await pdxCK.decrypt(r.data.data.enc); }catch(e){ return null; } })();
+    OSG[iso] = {at:Date.now(), p}; return p; };
+  window.pdxOrSchedPut = async function(o){ try{ delete OSG[o.iso]; const enc = await pdxCK.encrypt(o); await sb6.from('oncall_labs').upsert({name_key:'orsched|'+o.iso, name:'πρόγραμμα χειρουργείου (ανεβασμένο)', pid:null, data:{enc, at:o.at||Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){} };
   // 🧫 15/11 19:54 (χρήστης: «κάθε ασθενής του προγράμματος χειρουργείου → η καλλιέργειά του: αρνητική ή ο ΑΑ δείγματος όσων εκκρεμούν —
   // στην ίδια ενότητα· + σύντομη γενική ούρων: πυοσφαίρια, νιτρώδη, ερυθρά, μύκητες»).
   // Γενική ούρων: από τα εργαστηριακά της κλινικής (oncall_labs, ήδη στη συσκευή). Καλλιέργεια: εργασία «orcult» (μόνο ανάγνωση στο Medilabi, κρυπτογραφημένη).
@@ -25093,6 +25104,8 @@ window.CLS_MODE='A';
     if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγέλθηκε':'εκκρεμεί')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · δείγμα '+dd : ''), cls:'pend'};
     const r = [c.res, c.desc].filter(Boolean).join(' · ').replace(/\s+/g,' ').trim();
     if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};
+    // 15/11 20:30 (χάρτης cultsrc: ΑΝΑΛΥΤΗΣ «Uroquatro» στις 23/28, ΑΠΟΤΕΛΕΣΜΑ «OK»): «OK» = ένδειξη του ταχέος αναλυτή, ΟΧΙ μικρόβιο — ουδέτερο ως να επιβεβαιωθεί η σημασία του
+    if(/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim()) return {t:'Uroquattro: OK'+(dd?' · '+dd:''), cls:'mut'};
     return {t:(r ? '(+) '+r.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
