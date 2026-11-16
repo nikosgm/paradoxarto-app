@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v511';
+const APP_VER = '2026-11-16-v513';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14322,6 +14322,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const body = (dlg
         ? '<div style="background:#FFF4E5;border-radius:12px;padding:10px 12px"><div style="font-size:12px;color:#B26A00;font-weight:700">⚠ ΤΟ E-PRESCRIPTION ΡΩΤΑ ΜΕΤΑ ΤΗΝ «ΚΑΤΑΧΩΡΙΣΗ» (μάλλον όχι ακόμα καταχωρισμένη — ελέγξτε)</div><div style="font-size:14.5px;white-space:pre-wrap;line-height:1.4;margin-top:4px;max-height:40vh;overflow:auto">'+E(f.dlg)+'</div></div>'
           + '<div style="font-size:13px;color:#6D6D72;margin-top:8px">Με την έγκριση το bot πατά «'+E(f.dlgBtn||'—')+'».</div>'
+          // 📋 16/11 (χρήστης: «κολλάει, βγαίνει σφάλμα και δεν ξέρω τι»): εξήγηση με απλά λόγια + ΕΤΟΙΜΗ λύση — οι εξετάσεις με ενεργό παραπεμπτικό
+          // βγαίνουν από τη λίστα και «↻ Ξαναγράψε» στέλνει τις υπόλοιπες (ίδια διαδρομή με την «Αλλαγή»)
+          + (isRef ? (()=>{ const all = (P.exams||[]).map(x=>(x&&x.name)||x).filter(Boolean), flag = all.filter(n=>String(f.dlg).indexOf(n)>=0), rest = all.filter(n=>flag.indexOf(n)<0);
+              const act = /ενεργό\s+παραπεμπτικό/i.test(f.dlg);
+              return (flag.length ? '<div style="margin-top:10px;background:#EAF7EE;border-radius:12px;padding:10px 12px;font-size:14.5px;line-height:1.4"><b>💡 Με απλά λόγια:</b> '+(act?'για':'το e-prescription ζητά αιτιολόγηση για')+' <b>'+E(flag.map(n=>n.split(' (')[0]).join(', '))+'</b>'+(act?' υπάρχει ήδη <b>ενεργό παραπεμπτικό</b> σε αυτόν τον ΑΜΚΑ':'')+'. <b>Προτείνεται:</b> «↻ Ξαναγράψε» χωρίς '+(flag.length>1?'αυτές':'αυτήν')+' — φεύγουν οι υπόλοιπες '+rest.length+'.</div>' : '')
+                + '<details data-rxedit open style="margin-top:10px"><summary style="font-size:15px;font-weight:700;color:#1D4E80;padding:6px 0">✏️ Εξετάσεις / ICD για ξαναγράψιμο</summary>'
+                + lab('Εξετάσεις · μία ανά γραμμή')+'<textarea data-rxe rows="5" style="width:100%;box-sizing:border-box;border:1.5px solid #DCE2E8;border-radius:12px;padding:10px;font-size:15.5px;font-family:inherit">'+E((flag.length && rest.length ? rest : all).join('\n'))+'</textarea>'
+                + lab('ICD-10 (με κόμμα)')+'<input data-rxi value="'+E(icd0)+'" style="width:100%;box-sizing:border-box;border:1.5px solid #DCE2E8;border-radius:12px;padding:10px;font-size:15.5px">'
+                + '<div data-rxerr style="font-size:13px;color:#B23A3A;margin-top:4px"></div>'
+                + '<button data-redo style="margin-top:8px;width:100%;border:0;background:#1D4E80;color:#fff;border-radius:14px;height:48px;font-size:16px;font-weight:700">↻ Ξαναγράψε'+(flag.length && rest.length?' χωρίς '+(flag.length>1?'αυτές ('+flag.length+')':'αυτήν'):'')+'</button></details>'; })() : '')
           : (!isRef ? rxClean() : refClean()) + warnTop + '<details data-rvdet style="margin-top:10px"><summary style="font-size:14.5px;color:#1D4E80;padding:6px 0">Λεπτομέρειες</summary>'   // ✅ 15/11 01:26 (χρήστης ενέκρινε τα 2 φύλλα): ΜΟΝΟ τα βασικά πάνω· όλα τα άλλα στις Λεπτομέρειες
           + (isRef ? lab('ΕΞΕΤΑΣΕΙΣ ΠΟΥ ΜΠΗΚΑΝ')+'<div style="font-size:14px;line-height:1.4">'+(f.exams||[]).map(x=>'✓ '+E(x.got||x.want||'')+(x.got&&x.want&&x.got!==x.want?' <span style="color:#B26A00">(ζητήθηκε: '+E(x.want)+')</span>':'')).join('<br>')+'</div>'
               + lab('ΣΥΣΧΕΤΙΣΗ ΑΝΑ ΕΞΕΤΑΣΗ')+'<div style="font-size:13.5px;line-height:1.4">Διάγνωση: <b>'+E(as.dx||'—')+'</b><br>Λόγος παραπομπής: <b'+(as.reasonAuto?' style="color:#B23A3A"':'')+'>'+E(as.reason||'—')+'</b>'+(as.reasonAuto?' <span style="color:#B23A3A;font-size:12.5px">(αυτόματα η 1η επιλογή — ελέγξτε)</span>':'')
@@ -14709,7 +14719,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           let q = sb6.from('oncall_jobs').select('id,kind,name,room,status,created_at,updated_at,created_by,quiet:payload->quiet').eq('status','review').order('id',{ascending:false}).limit(30);
           if(window.authRole !== 'admin') q = q.or('created_by.eq.'+uid+',created_by.is.null');
           const r = await q;
-          if(!r.error){ for(const [g,t] of GONE) if(Date.now()-t > 120000) GONE.delete(g); L = (r.data||[]).filter(j=>j && j.status==='review' && !j.quiet && !GONE.has(+j.id)).sort((a,b)=>a.id-b.id); }
+          if(!r.error){ for(const [g,t] of GONE) if(Date.now()-t > 120000) GONE.delete(g); L = (r.data||[]).filter(j=>j && j.status==='review' && (!j.quiet || /^(rx|ref)$/.test(j.kind)) && !GONE.has(+j.id)).sort((a,b)=>a.id-b.id); }   // 16/11: συνταγές/παραπεμπτικά που περιμένουν (και «2η έγκριση») φαίνονται ΠΑΝΤΑ
         } else L = [];
       }catch(e){}
       busy = false;
@@ -16429,9 +16439,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(!L.length){ box.innerHTML = '<div class="r" style="color:#8E8E93">Καμία ακόμα</div>'; return; }
       const ST = {new:['περιμένει',''], seen:['παραλήφθηκε',''], running:['ετοιμάζεται…','run'], done:['έτοιμη για έλεγχο','ok'], review:['για έλεγχο','ok'], approve:['καταχωρίζεται…','run'], approved:['καταχωρίστηκε','ok'], failed:['απέτυχε','bad'], cancelled:['ακυρώθηκε',''], dismissed:['έκλεισε','']};
       box.innerHTML = L.map(j=>{ const p = j.payload||{}, st = ST[j.status]||[j.status,''], dt = new Date(j.created_at);
-        return '<div class="med"><span class="st"><span class="d '+st[1]+'"></span></span><div class="m"><b>'+E(j.name||'')+'</b><span>'+E(((p.meds||[]).map(m=>m.name).join(', ')))+' · '+dt.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit'})+' · '+E(st[0])+'</span>'+(j.status==='failed'&&j.note?'<span style="display:block;color:#B42318;font-size:13px">'+E(String(j.note).slice(0,140))+'</span>':'')+'</div>'
+        const isRef = j.kind==='ref';
+        return '<div class="med"><span class="st"><span class="d '+st[1]+'"></span></span><div class="m"><b>'+(isRef?'📋 ':'')+E(j.name||'')+'</b><span>'+E(isRef ? (p.exams||[]).map(x=>String((x&&x.name)||x).split(' (')[0]).slice(0,4).join(', ')+((p.exams||[]).length>4?' +'+((p.exams||[]).length-4):'') : ((p.meds||[]).map(m=>m.name).join(', ')))+' · '+dt.toLocaleDateString('el-GR',{day:'2-digit',month:'2-digit'})+' · '+E(st[0])+'</span>'+(j.status==='failed'&&j.note?'<span style="display:block;color:#B42318;font-size:13px">'+E(String(j.note).slice(0,140))+'</span>':'')+'</div>'
           +(/^(done|failed|cancelled|dismissed|approved)$/.test(j.status)?'<button class="pb pb-lnk pb-mut" data-hdel="'+j.id+'" aria-label="Διαγραφή">✕</button>':'')
-          +(j.status==='review'?'<button class="again pb pb-pri" data-rev="'+j.id+'">👀 Έλεγχος</button>':'<button class="again" data-use="'+j.id+'">'+(j.status==='failed'?'Ξανά':'Χρήση')+'</button>')+'</div>'; }).join('');
+          +(j.status==='review'?'<button class="again pb pb-pri" data-rev="'+j.id+'">👀 Έλεγχος</button>':isRef?'':'<button class="again" data-use="'+j.id+'">'+(j.status==='failed'?'Ξανά':'Χρήση')+'</button>')+'</div>'; }).join('');
     }
     // ⚡ 15/11 01:19 (χρήστης: «ναι, η συνταγή να ετοιμάζει όσο γράφω»): με το 1ο φάρμακο/εξέταση → προετοιμασία (rxname: σύνδεση e-prescription,
     // κλείσιμο παλιών επισκέψεων, άνοιγμα ασθενή) σε έναν υπολογιστή· η συνταγή/παραπεμπτικό πάει μετά στον ΙΔΙΟ (payload.only) αν η προετοιμασία πέτυχε (<6′)
@@ -16580,8 +16591,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     }
     async function loadHist(){
       try{ const since = new Date(Date.now()-60*864e5).toISOString();
-        const r = await sb6.from('oncall_jobs').select('id,name,status,note,payload,created_at,room').eq('kind','rx').gte('created_at', since).order('id',{ascending:false}).limit(200);
-        S.hist = (r.data||[]).filter(j=>j.payload && Array.isArray(j.payload.meds));
+        // 📋 16/11 (χρήστης: «γράφω παραπεμπτικό… ούτε στην ενότητα Συνταγή υπάρχει στα πρόσφατα»): και τα ΠΑΡΑΠΕΜΠΤΙΚΑ στα πρόσφατα
+        const r = await sb6.from('oncall_jobs').select('id,kind,name,status,note,payload,created_at,room').in('kind',['rx','ref']).gte('created_at', since).order('id',{ascending:false}).limit(200);
+        S.hist = (r.data||[]).filter(j=>j.payload && (Array.isArray(j.payload.meds) || (j.kind==='ref' && Array.isArray(j.payload.exams))));
         if(!S.me){ const ss = (await sb6.auth.getSession()).data.session; S.me = ss && ss.user && ss.user.id; } }catch(e){}
       drawFavs(); drawHist(); refresh();
       if(!S.k) drawRecent();
