@@ -459,8 +459,6 @@ html.pdx-mac .pb{font-size:14px;min-height:34px;padding:7px 12px;border-radius:8
     <h2 style="margin:0 0 16px; font-size:22px; color:var(--primary); letter-spacing:.03em;">🔒 ΠΑΡΑΔΟΧΑΡΤΟ</h2>
     <div id="lockDots" style="display:flex; gap:14px; justify-content:center; margin-bottom:20px;"></div>
     <div id="lockKeypad" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;"></div>
-    <button id="lockFaceBtn" type="button" style="display:none; width:100%; margin-top:14px; padding:14px; font-size:16px; font-weight:700; border:1.5px solid var(--primary); border-radius:12px; background:#fff; color:var(--primary); cursor:pointer;">Face ID</button>
-    <div id="lockFaceOff" style="display:none; margin-top:10px; font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer;">Απενεργοποίηση Face ID</div>
     <p id="lockError" style="color:var(--accent); font-size:12px; margin-top:12px; display:none;">Λάθος κωδικός.</p>
     <p style="font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.05em; margin-top:24px;">ΑΚΡΩΣ ΕΜΠΙΣΤΕΥΤΙΚΟ</p>
   </div>
@@ -2549,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v521';
+const APP_VER = '2026-11-16-v522';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -23984,134 +23982,9 @@ window.MEAS = { sync:sync, info:info, sup:sup, mobSub:mobSub, refresh:refresh };
 })();
 </script>
 <script>
-/* ===== FACE ID (WebAuthn, μόνο κινητό) =====
-   Χρησιμοποιεί τον αισθητήρα της συσκευής (Face ID / δακτυλικό αποτύπωμα).
-   Μετά από επιτυχία κάνει ακριβώς ό,τι κάνει και το σωστό PIN (checkLockCode),
-   οπότε όλη η υπόλοιπη εφαρμογή μένει όπως ήταν. Το PIN παραμένει πάντα διαθέσιμο.
-   Απαιτεί HTTPS (ή localhost) — δεν δουλεύει από αρχείο file://. */
-(function(){
-  'use strict';
-  var LS_ID='fid_cred', LS_NO='fid_declined';
-  function lsg(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-  function lss(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
-  function lsd(k){ try{ localStorage.removeItem(k); }catch(e){} }
-
-  function isPhoneLike(){
-    var ua = navigator.userAgent || '';
-    if(/iPhone|iPod/i.test(ua) || /Android.*Mobile/i.test(ua)) return true;
-    try{ return matchMedia('(pointer:coarse)').matches && Math.min(screen.width, screen.height) <= 500; }catch(e){ return false; }
-  }
-  function supported(){
-    return !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials && isPhoneLike());
-  }
-  function b64u(buf){
-    var b=new Uint8Array(buf), s=''; for(var i=0;i<b.length;i++) s+=String.fromCharCode(b[i]);
-    return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  }
-  function unb64u(str){
-    str=str.replace(/-/g,'+').replace(/_/g,'/'); while(str.length%4) str+='=';
-    var bin=atob(str), out=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
-    return out;
-  }
-  function rnd(n){ var a=new Uint8Array(n); crypto.getRandomValues(a); return a; }
-  function lockVisible(){ var lk=document.getElementById('lockOverlay'); return !!lk && lk.style.display!=='none'; }
-
-  function enrolled(){ return !!lsg(LS_ID); }
-
-  function syncLockUi(){
-    var b=document.getElementById('lockFaceBtn'), off=document.getElementById('lockFaceOff');
-    var on = supported() && enrolled();
-    if(b) b.style.display = on ? 'block' : 'none';
-    if(off) off.style.display = on ? 'block' : 'none';
-  }
-
-  var busy=false;
-  function unlockWithFace(auto){
-    if(busy || !supported() || !enrolled() || !lockVisible()) return;
-    busy=true;
-    navigator.credentials.get({ publicKey:{
-      challenge: rnd(32),
-      allowCredentials: [{ type:'public-key', id: unb64u(lsg(LS_ID)), transports:['internal'] }],
-      userVerification: 'required',
-      timeout: 60000
-    }}).then(function(cred){
-      busy=false;
-      if(!cred) return;
-      // ίδια διαδρομή με σωστό PIN
-      lockEntered = LOCK_CODE;
-      checkLockCode();
-    }).catch(function(err){
-      busy=false;
-      // ακύρωση/αποτυχία → απλά μένει η οθόνη PIN (σιωπηλά αν ήταν αυτόματη προσπάθεια)
-      if(!auto && err && err.name!=='NotAllowedError'){
-        var le=document.getElementById('lockError'); if(le){ le.textContent='Το Face ID δεν δούλεψε — χρησιμοποίησε το PIN.'; le.style.display='block'; }
-      }
-    });
-  }
-
-  function enroll(){
-    return navigator.credentials.create({ publicKey:{
-      challenge: rnd(32),
-      rp: { name:'ΠΑΡΑΔΟΧΑΡΤΟ' },
-      user: { id: rnd(16), name:'paradoxarto', displayName:'Παραδόχαρτο' },
-      pubKeyCredParams: [{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
-      authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'discouraged' },
-      attestation: 'none',
-      timeout: 60000
-    }}).then(function(cred){
-      lss(LS_ID, b64u(cred.rawId));
-      lsd(LS_NO);
-      syncLockUi();
-      return true;
-    });
-  }
-
-  function toast(msg){
-    var t=document.createElement('div');
-    t.textContent=msg;
-    t.style.cssText='position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateX(-50%);background:#1A222B;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9500;max-width:90%;text-align:center;';
-    document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 3500);
-  }
-
-  function offerEnroll(){
-    if(!supported() || enrolled() || lsg(LS_NO)==='1' || document.getElementById('fidOffer')) return;
-    var d=document.createElement('div'); d.id='fidOffer';
-    d.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);background:#fff;border:1px solid #DCE2E8;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:14px;z-index:9400;font-size:15px;color:#1A222B;';
-    d.innerHTML='<div style="font-weight:700;margin-bottom:4px;">Face ID για το άνοιγμα;</div>'+
-      '<div style="font-size:13px;color:#6B7686;margin-bottom:12px;">Την επόμενη φορά θα ξεκλειδώνεις με Face ID αντί για PIN. Το PIN μένει πάντα διαθέσιμο.</div>'+
-      '<div style="display:flex;gap:8px;">'+
-      '<button id="fidYes" style="flex:1;padding:12px;border:none;border-radius:10px;background:#1B4B66;color:#fff;font-size:15px;font-weight:700;">Ενεργοποίηση</button>'+
-      '<button id="fidNo" style="flex:1;padding:12px;border:1px solid #DCE2E8;border-radius:10px;background:#fff;color:#1A222B;font-size:15px;">Όχι τώρα</button></div>';
-    document.body.appendChild(d);
-    document.getElementById('fidYes').onclick=function(){
-      enroll().then(function(){ d.remove(); toast('Το Face ID ενεργοποιήθηκε'); })
-        .catch(function(){ d.remove(); toast('Δεν ενεργοποιήθηκε το Face ID'); });
-    };
-    document.getElementById('fidNo').onclick=function(){ lss(LS_NO,'1'); d.remove(); };
-  }
-
-  // κουμπιά οθόνης κλειδώματος
-  var fb=document.getElementById('lockFaceBtn'), fo=document.getElementById('lockFaceOff');
-  if(fb) fb.onclick=function(){ unlockWithFace(false); };
-  if(fo) fo.onclick=function(){ lsd(LS_ID); lsd(LS_NO); syncLockUi(); toast('Το Face ID απενεργοποιήθηκε'); };
-
-  // μετά από επιτυχημένο PIN: πρόταση ενεργοποίησης (μία φορά, μέχρι να απαντήσει)
-  var prev = window.checkLockCode;
-  window.checkLockCode = function(){
-    var r = prev.apply(this, arguments);
-    if(!lockVisible()) setTimeout(offerEnroll, 600);
-    return r;
-  };
-
-  // αυτόματη προσπάθεια όταν εμφανίζεται η οθόνη κλειδώματος (άνοιγμα εφαρμογής / ξανακλείδωμα)
-  syncLockUi();
-  setTimeout(function(){ unlockWithFace(true); }, 400);
-  var lkEl=document.getElementById('lockOverlay');
-  if(lkEl && window.MutationObserver){
-    new MutationObserver(function(){ if(lockVisible()){ syncLockUi(); setTimeout(function(){ unlockWithFace(true); }, 300); } })
-      .observe(lkEl, {attributes:true, attributeFilter:['style']});
-  }
-})();
+/* 16/11 (χρήστης: «δεν έχω πλέον Face ID — να σβηστεί· η έμπιστη συσκευή ανοίγει κατευθείαν»): ο κώδικας Face ID (WebAuthn) αφαιρέθηκε.
+   Καθαρίζει μόνο τα παλιά κλειδιά του από τη συσκευή. */
+try{ localStorage.removeItem('fid_cred'); localStorage.removeItem('fid_declined'); }catch(e){}
 </script>
 <script>
 /* #files → ανοίγει τα «📁 Αρχεία κλινικής» (από το κουμπί «Φάκελος κλινικής» του viewer στο κινητό) */
