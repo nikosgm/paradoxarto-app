@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v503';
+const APP_VER = '2026-11-16-v504';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7834,7 +7834,9 @@ document.head.appendChild(st);
       +'.tl .tl-ic{font-size:27px;width:54px;height:54px;border-radius:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.35);line-height:1}.tl b{font-size:12.5px;line-height:1.2;font-weight:600}'
       +'.tl-add .tl-ic{background:transparent!important;box-shadow:none;color:var(--acc,#0A84FF)}'
       // 16/11 (χρήστης: «μόνο το σχήμα, όχι και το πλαίσιο γύρω-γύρω»): όπως η αρχική οθόνη του iPhone — εικονίδιο + όνομα, χωρίς κάρτα
-      +'.tl:not(.tl-add){background:transparent!important;box-shadow:none!important;padding:6px 2px;min-height:0}html.pdx-night .tl:not(.tl-add){background:transparent!important}'
+      +'.tl:not(.tl-add),.mtp-freq>.tl:not(.tl-add){background:transparent!important;box-shadow:none!important;border:0!important;padding:6px 2px;min-height:0!important}html.pdx-night .tl:not(.tl-add){background:transparent!important}'
+      +'.mtp-freq>.tl:not(.tl-add):hover{background:rgba(120,120,128,.12)!important}'
+      +'.tl .tl-ic{filter:none}.tl .tl-ic{text-shadow:0 1px 2px rgba(0,0,0,.35)}.tl b{color:#111827;font-weight:600}html.pdx-night .tl b{color:#F2F2F7}'
       +'.tl-hd{display:flex;align-items:center;justify-content:space-between}.tl-hd button{border:0;background:none;color:var(--acc,#0A84FF);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;padding:4px 2px;cursor:pointer}'
       +'.tl-wb{animation:tlwb .3s ease-in-out infinite alternate;cursor:grab;touch-action:none}.tl-wb:nth-child(2n){animation-delay:.11s}@keyframes tlwb{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}'
       +'.tl-drag{opacity:.55;animation:none!important;transform:scale(1.06)!important;z-index:5}'
@@ -7948,7 +7950,8 @@ document.head.appendChild(st);
       window.__pdxToolFavIds = favIds; window.__pdxToolSecs = SEC.map(sc=>sc.g); window.__pdxToolById = byId;
       const ed = window.__tlEdit || '';
       // 🎨 16/11 (χρήστης: «εικονίδια πιο σαν του iPhone»): χρωματιστό «squircle» με διαβάθμιση ανά εργαλείο (σταθερό χρώμα από το id)
-      const IOSG = [['#5AC8FA','#007AFF'],['#4CD964','#28A745'],['#FF9500','#FF5E3A'],['#FF2D55','#C2185B'],['#AF52DE','#5856D6'],['#FFCC00','#FF9500'],['#34C7BE','#0E8C83'],['#8E8E93','#48484A'],['#5E5CE6','#3634A3'],['#FF6B6B','#E5484D']];
+      // 16/11 14:09 (χρήστης: «οι αντιθέσεις δεν είναι πολύ καλές»): πιο σκούρα/κορεσμένα χρώματα (όχι κίτρινο/ανοιχτό) ώστε να ξεχωρίζει το σύμβολο
+      const IOSG = [['#0A84FF','#0040DD'],['#30B350','#1A6E30'],['#FF8A00','#C2410C'],['#FF375F','#A3123A'],['#A855F7','#5B21B6'],['#14B8A6','#0F5E57'],['#5E5CE6','#2E2C9E'],['#64748B','#334155'],['#EF4444','#991B1B'],['#0EA5E9','#075985']];
       const icBg = id=>{ let h = 0; for(const c of String(id)) h = (h*31 + c.charCodeAt(0)) >>> 0; const g = IOSG[h % IOSG.length]; return 'background:linear-gradient(160deg,'+g[0]+','+g[1]+')'; };
       const tile = (x, sec)=>{ const E1 = !!ed, fav = favIds.indexOf(x.id)>=0;
         return '<div class="tl'+(E1?' tl-wb':'')+'" data-tid="'+esc(x.id)+'" data-tsec="'+esc(sec)+'"'+(E1?'':' onclick="'+x.on+'"')+' title="'+esc(String(x.sub||'').replace(/<[^>]*>/g,''))+'">'
