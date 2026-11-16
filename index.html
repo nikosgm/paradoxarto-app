@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v528';
+const APP_VER = '2026-11-17-v529';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21493,7 +21493,9 @@ window.pdxEpsineOpen = function(){
     // 🌙 12/11: ό,τι άφησε η νυχτερινή ΕΨΙΝΕ «για έλεγχο» (κενό Χειρουργείο/Οδηγίες ή ίδια μέρα) τις τελευταίες 4 ημέρες
     // ⚠ 13/11 22:49 (χρήστης: «κράτα αυτά που δε μπορείς και ανέφερέ μου απευθείας ποιο είναι το πρόβλημα — αλλιώς ξανανοίγουμε τον καθένα»):
     // και οι ΑΠΟΤΥΧΙΕΣ (failed) με την αιτία τους· μετράει μόνο η ΤΕΛΕΥΤΑΙΑ εργασία του ασθενή (μια νεότερη επιτυχία τις σβήνει)
-    try{ const q = await sb6.from('oncall_jobs').select('id,payload,note,status').eq('kind','epsine').in('status',['done','failed','approved','dismissed']).gte('created_at', new Date(Date.now()-4*864e5).toISOString()).order('id',{ascending:false}).limit(300);
+    // 🐞 17/11 01:47 (χρήστης: «πάλι ΕΨΙΝΕ Ημέρας στις Κλινικές»): το «για έλεγχο/αποτυχίες» διάβαζε ΚΑΙ τις εργασίες του Ημέρας → τώρα ίδιο φίλτρο με τη λίστα
+    try{ let q1 = sb6.from('oncall_jobs').select('id,payload,note,status').eq('kind','epsine').in('status',['done','failed','approved','dismissed']).gte('created_at', new Date(Date.now()-4*864e5).toISOString()); q1 = st.du ? q1.not('payload->du','is',null) : q1.is('payload->du', null);
+      const q = await q1.order('id',{ascending:false}).limit(300);
       const NG = {}, FL = {}, NJ = {}, seen = new Set(); (q.data||[]).forEach(x=>{ const R = (x.payload||{}).result||{}, a = R.amka || (x.payload||{}).amka, nt = String(x.note||''); if(!a || seen.has(a)) return;
         if(x.status==='failed'){ seen.add(a); FL[a] = nt.replace(/^📑\s*ΕΨΙΝΕ:\s*/,'').replace(/\s*·\s*⏱.*$/,'').slice(0,300) || 'απέτυχε'; return; }
         // 15/11 09:45: ΚΑΙ «🌤 Ημέρας · 🌙 …» (πριν: /^🌙/ → οι 134 του Ημέρας δεν φαίνονταν «για έλεγχο») · κρατάμε την εργασία (με τα πεδία) για ΑΜΕΣΟ άνοιγμα
