@@ -114,8 +114,10 @@
     for (const R of rooms(prog)) {
       h += '<tr class="rm"><td colspan="8">' + HE(R.label) + "</td></tr>";
       for (const p of R.pts) {
-        h += '<tr class="p1"><td rowspan="2" class="b">' + HE(p.bed) + '</td><td rowspan="2" class="b">' + HE(p.adm) + '</td><td rowspan="2">' + hb(p.nm) + "</td><td>" + HE(p.dx) + "</td><td>" + HE(p.an) + '</td><td class="b">' + HE(p.bl) + '</td><td class="b">' + HE(p.ca) + '</td><td rowspan="2" class="b">' + HE(p.surg) + "</td></tr>";
-        h += '<tr class="p2"><td colspan="4">' + hb(procText(p)) + "</td></tr>";
+        // ✏ 16/11 (χρήστης: «να πατάω στο κελί και να το αλλάζω εύκολα»): στην προεπισκόπηση (opt.click) κάθε κελί ανοίγει την επεξεργασία στο πεδίο του
+        const A = (f) => opt.click ? ' data-cell="' + HE(p.id) + "|" + f + '" style="cursor:pointer"' : "";
+        h += '<tr class="p1"><td rowspan="2" class="b"' + A("bed") + ">" + HE(p.bed) + '</td><td rowspan="2" class="b"' + A("adm") + ">" + HE(p.adm) + '</td><td rowspan="2"' + A("nm") + ">" + hb(p.nm) + "</td><td" + A("dx") + ">" + HE(p.dx) + "</td><td" + A("an") + ">" + HE(p.an) + '</td><td class="b"' + A("bl") + ">" + HE(p.bl) + '</td><td class="b"' + A("ca") + ">" + HE(p.ca) + '</td><td rowspan="2" class="b"' + A("surg") + ">" + HE(p.surg) + "</td></tr>";
+        h += '<tr class="p2"><td colspan="4"' + A("proc") + ">" + hb(procText(p)) + "</td></tr>";
       }
     }
     h += '<tr class="end"><td colspan="8"></td></tr><tr><td colspan="7" style="border:0"></td><td class="b c" style="border:0;font-size:14pt">Ο ΔΙΕΥΘΥΝΤΗΣ</td></tr></table>';
@@ -203,7 +205,7 @@
   window.pdxOrProg = async function (date0, kind0) {
     let P = { date: date0 || (kind0 === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? todayIso() : ORP.defDate()), kind: kind0 || "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }, cfg = {}, dirty = false, busy = "", loaded = false;
     const can = ["resident", "attending", "admin"].indexOf(window.authRole) >= 0;
-    const css = '<style>#orpPg .chip{display:inline-flex;align-items:center;min-height:36px;padding:6px 12px;margin:3px;border-radius:18px;border:1px solid #C7CDD4;background:#fff;font:600 14px -apple-system,system-ui;color:#1F2933}#orpPg .chip.on{background:#0A84FF;border-color:#0A84FF;color:#fff}'
+    const css = '<style>#orpPg .ie{box-sizing:border-box;font:15px -apple-system,system-ui;padding:5px 7px;border:1px solid #C7CDD4;border-radius:8px;background:#fff;color:#1F2933}#orpPg .iel{display:inline-flex;align-items:center;gap:4px;color:#6B7280;font-size:13px}#orpPg [data-cell]:hover{background:#FFF7CC!important;outline:2px solid #0A84FF}#orpPg .chip{display:inline-flex;align-items:center;min-height:36px;padding:6px 12px;margin:3px;border-radius:18px;border:1px solid #C7CDD4;background:#fff;font:600 14px -apple-system,system-ui;color:#1F2933}#orpPg .chip.on{background:#0A84FF;border-color:#0A84FF;color:#fff}'
       + '#orpPg .card{margin:8px 12px;padding:10px 12px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);font:14px -apple-system,system-ui}#orpPg .card b{font-weight:700}#orpPg .rm{margin:16px 16px 4px;font:700 13px -apple-system,system-ui;color:#6B7280;letter-spacing:.4px}'
       + '#orpPg .mini{border:0;background:#EEF2F6;border-radius:8px;min-width:38px;min-height:34px;font-size:15px;margin-left:4px}#orpPg .bar{position:sticky;bottom:0;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(242,242,247,.96);backdrop-filter:blur(8px);border-top:1px solid #DDE1E6}'
       + '#orpPg .bar button{flex:1;min-height:46px;border:0;border-radius:12px;font:700 14px -apple-system,system-ui}#orpPg input,#orpPg select{font-size:16px;padding:8px 10px;border:1px solid #C7CDD4;border-radius:10px;background:#fff}'
@@ -225,16 +227,18 @@
       for (const R of ORP.rooms(P)) {
         h += '<div class="rm">' + E(R.label) + " · " + R.pts.length + "</div>";
         R.pts.forEach((p, i) => {
-          h += '<div class="card" data-open="' + E(p.id) + '"><div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><b>' + (i + 1) + ". " + E(p.nm || "—") + '</b><div style="color:#6B7280;font-size:13px">' + E([p.bed, p.adm && "εισ. " + p.adm].filter(Boolean).join(" · ")) + "</div>"
+          h += '<div class="card" data-open="' + E(p.id) + '"><div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><b>' + (i + 1) + ". " + (p.key ? E(p.nm || "—") + "</b>" : '</b><input class="ie" data-ie="nm" data-pid="' + E(p.id) + '" value="' + E(p.nm) + '" placeholder="✍ ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΤΟΥ ΠΑΤΡΟΣ ΑΜ (εκτός κλινικής)" style="width:calc(100% - 30px);font-weight:700">')
+            // ✏ 16/11 (χρήστης: «να δηλώνω θάλαμο-κρεβάτι π.χ. 345-1 και ημ. εισόδου — προκαθορισμένη από το εισιτήριο, αλλά να την αλλάζω»): πεδία μέσα στην κάρτα
+            + '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap"><label class="iel">Θάλ.<input class="ie" data-ie="bed" data-pid="' + E(p.id) + '" value="' + E(p.bed) + '" placeholder="345-1" style="width:78px"></label><label class="iel">Εισ.<input class="ie" data-ie="adm" data-pid="' + E(p.id) + '" value="' + E(p.adm) + '" placeholder="ηη/μμ" style="width:70px"></label></div>'
             + '<div style="margin-top:3px">' + E(p.dx || "") + '</div><div style="font-weight:600">' + E(ORP.procText(p) || "⚠ χωρίς επέμβαση") + '</div><div style="color:#6B7280;font-size:13px">' + E([p.an, p.bl && "αίμα " + p.bl, p.ca && "c-ARM", p.surg].filter(Boolean).join(" · ")) + "</div></div>"
             + '<span style="display:flex;flex-direction:column"><button class="mini" data-up="' + E(p.id) + '">▲</button><button class="mini" data-dn="' + E(p.id) + '" style="margin-top:4px">▼</button>'
             // 🗑 16/11 (χρήστης: «στον υπολογιστή δεν μπορώ να αφαιρέσω ασθενή»): αφαίρεση από τη λίστα· 1ο πάτημα «Σίγουρα;», 2ο αφαιρεί (χωρίς παράθυρο browser)
             + '<button class="mini" data-rmp="' + E(p.id) + '" title="Αφαίρεση" style="margin-top:4px;' + (rmArm === p.id ? "background:#FF3B30;color:#fff;min-width:74px" : "background:#FDECEC;color:#B42318") + '">' + (rmArm === p.id ? "Σίγουρα;" : "🗑") + "</button></span></div></div>";
         });
-        h += '<div style="margin:2px 12px"><button class="chip" data-add="' + E(R.r) + '">＋ Ασθενής στην ' + E(R.label.replace("ΑΙΘΟΥΣΑ", "αίθουσα")) + "</button></div>";
+        h += '<div style="margin:2px 12px"><button class="chip" data-add="' + E(R.r) + '">＋ Ασθενής στην ' + E(R.label.replace("ΑΙΘΟΥΣΑ", "αίθουσα")) + '</button><button class="chip" data-man="' + E(R.r) + '">✍ Εκτός κλινικής (γράφω στοιχεία)</button></div>';
       }
       if (!P.rooms.length) h += '<div class="card">Διαλέξτε αίθουσες.</div>';
-      h += '<div class="card" style="overflow:auto;padding:6px"><div style="font-weight:700;margin:4px 6px">Προεπισκόπηση</div><div style="zoom:.55;min-width:1100px">' + ORP.html(P, { bodyOnly: true }) + "</div></div><div style=\"height:20px\"></div>";
+      h += '<div class="card" style="overflow:auto;padding:6px"><div style="font-weight:700;margin:4px 6px">Προεπισκόπηση</div><div style="color:#6B7280;font-size:12px;margin:0 6px 4px">✏ Πατήστε σε οποιοδήποτε κελί για αλλαγή</div><div data-prev style="zoom:.65;min-width:1100px">' + ORP.html(P, { bodyOnly: true, click: true }) + "</div></div><div style=\"height:20px\"></div>";
       h += '<div class="bar"><button data-act="save" style="background:#EEF2F6;color:#0A84FF">💾 Πρόχειρο</button><button data-act="print" style="background:#EEF2F6;color:#0A84FF">🖨 Εκτύπωση</button><button data-act="submit" style="background:#34C759;color:#fff"' + (can ? "" : " disabled") + ">✅ Υποβολή</button></div></div>";
       return h;
     };
@@ -267,7 +271,10 @@
     pg.el.addEventListener("change", async (e) => { const f = e.target.dataset.f; if (!f) return;
       if (f === "resp" && e.target.value === "__add") { const n = UP(prompt("Επώνυμο ειδικευόμενου:") || "").trim(); if (n) { cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; } touch(); return; } if (f === "date") { const nd = e.target.value; if (!(await saveNow())) { e.target.value = P.date; return; } load(nd, P.kind); return; } if (f === "kind") { switchKind(e.target.value); return; } P[f] = e.target.value; touch(); });
     pg.el.addEventListener("click", async (e) => {
+      if (e.target.closest("input,select,textarea,label.iel")) return;
+      const c = e.target.closest("[data-cell]"); if (c) { const [pid, f] = c.dataset.cell.split("|"); const p = P.pts.find((x) => x.id === pid); if (p) edit(p, f); return; }
       const b = e.target.closest("button,[data-open]"); if (!b) return; const ds = b.dataset;
+      if (ds.man) { addManual(ds.man); return; }
       if (ds.kind) { switchKind(ds.kind); return; }
       if (ds.rmp) { e.stopPropagation(); const p = P.pts.find((x) => x.id === ds.rmp); if (!p) return; clearTimeout(rmT);
         if (rmArm === ds.rmp) { removePt(p); return; } rmArm = ds.rmp; redraw(); rmT = setTimeout(() => { rmArm = ""; redraw(); }, 4000); return; }
@@ -319,11 +326,21 @@
         if (e.target.closest("[data-npsq]")) { npsAll(); return; }
         const r = e.target.closest("[data-k]");
         if (r) { const x = L.find((y) => y.k === r.dataset.k); const p = fromPatient(x.k, x.d); p.room = room; p.n = P.pts.filter((q) => q.room === room).length + 1; P.pts.push(p); ov.remove(); touch(); if (!p.t) edit(p); return; }
-        if (e.target.closest("[data-man]")) { const p = { id: "m" + Date.now().toString(36), key: "", room, n: P.pts.filter((q) => q.room === room).length + 1, bed: "", adm: "", nm: "", dx: "", an: "ΓΕΝΙΚΗ", bl: "", ca: "", t: "", side: "", t2: "", side2: "", surg: "" }; P.pts.push(p); ov.remove(); touch(); edit(p); }
+        if (e.target.closest("[data-man]")) { ov.remove(); addManual(room); }
       });
     }
+    // ✍ 16/11 (χρήστης: «να μπορώ να βάλω ασθενή εκτός κλινικής — να γράφω εγώ στοιχεία»): κενή κάρτα, ημ. εισόδου = σήμερα (αλλάζει)
+    function addManual(room) { const t = new Date(); const p = { id: "m" + Date.now().toString(36), key: "", room, n: P.pts.filter((q) => q.room === room).length + 1, bed: "", adm: String(t.getDate()).padStart(2, "0") + "/" + String(t.getMonth() + 1).padStart(2, "0"), nm: "", dx: "", an: "ΓΕΝΙΚΗ", bl: "", ca: "", t: "", side: "", t2: "", side2: "", surg: "" }; P.pts.push(p); touch(); edit(p, "nm"); }
+    // θάλαμος-κρεβάτι: «345-1» / «345 1» / «345/1» → «345.1» (όπως στο πρόγραμμα της κλινικής)
+    const bedNorm = (v) => String(v || "").trim().toUpperCase().replace(/^(\d{3}Α?)\s*[-\/ ,]\s*(\d{1,2})$/, "$1.$2");
+    const admNorm = (v) => String(v || "").trim().replace(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-]\d{2,4})?$/, (x, a, b) => a.padStart(2, "0") + "/" + b.padStart(2, "0"));
+    const prevUpd = () => { const pv = pg.el.querySelector("[data-prev]"); if (pv) pv.innerHTML = ORP.html(P, { bodyOnly: true, click: true }); };
+    pg.el.addEventListener("input", (e) => { const t = e.target; if (!t.dataset || !t.dataset.ie) return; const p = P.pts.find((x) => x.id === t.dataset.pid); if (!p) return;
+      p[t.dataset.ie] = t.dataset.ie === "nm" ? t.value.toUpperCase() : t.value; dirty = true; if (P.status === "submitted") P.status = "changed"; autoSave(); });
+    pg.el.addEventListener("change", (e) => { const t = e.target; if (!t.dataset || !t.dataset.ie) return; const p = P.pts.find((x) => x.id === t.dataset.pid); if (!p) return;
+      if (t.dataset.ie === "bed") { p.bed = bedNorm(t.value); t.value = p.bed; } if (t.dataset.ie === "adm") { p.adm = admNorm(t.value); t.value = p.adm; } dirty = true; autoSave(); prevUpd(); });
     // ---- επεξεργασία ασθενή ----
-    function edit(p) {
+    function edit(p, fld) {
       if (!p) return;
       const box = (lbl, inner) => '<div style="margin-top:10px"><div style="font-weight:700;margin-bottom:4px">' + lbl + "</div>" + inner + "</div>";
       const ch = (a, v, on, t) => '<button data-' + a + '="' + E(v) + '" style="min-height:36px;margin:3px;padding:6px 12px;border-radius:18px;border:1px solid ' + (on ? "#0A84FF" : "#C7CDD4") + ";background:" + (on ? "#0A84FF" : "#fff") + ";color:" + (on ? "#fff" : "#1F2933") + ';font-weight:600">' + E(t == null ? (v || "—") : t) + "</button>";
@@ -346,11 +363,13 @@
         if (!ov) ov = sheet(inner); else ov.querySelector("#orpSh").innerHTML = inner;
       };
       render();
+      if (fld) (() => { const el = ov.querySelector(fld === "proc" ? "[data-pkq]" : '[data-e="' + fld + '"]'); if (el) { el.focus(); if (el.select) el.select(); } else { const b = ov.querySelector(fld === "an" ? "[data-an]" : fld === "bl" ? "[data-bl]" : fld === "ca" ? "[data-ca]" : "x"); if (b) b.scrollIntoView({ block: "center" }); } })();
       let pkItems = [];
       ov.addEventListener("input", (e) => { if (e.target.dataset.pkq !== undefined) { const q = e.target.value, dd = ov.querySelector("[data-pkdd]"); pkItems = q.trim().length >= 2 ? pkFind(q, 8) : [];
           dd.innerHTML = pkItems.length ? '<div style="border:1px solid #C7CDD4;border-radius:10px;background:#fff;overflow:hidden;margin-bottom:6px">' + pkItems.map((x, i) => '<button data-pki="' + i + '" style="display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #EEF2F6;background:#fff;padding:8px 10px;font-size:14px;cursor:pointer">' + (x.dx ? "<b>" + E(x.dx) + "</b><br>" : "") + E(x.t) + (x.sub ? '<br><span style="color:#6B7280;font-size:12px">' + E(x.sub) + "</span>" : "") + "</button>").join("") + "</div>"
             : q.trim().length >= 2 ? '<div style="color:#6B7280;font-size:13px;margin:2px 4px 6px">Τίποτα — δοκιμάστε άλλη λέξη ή «🔎 Διάλεξε…» για όλη τη λίστα</div>' : ""; return; }
         const f = e.target.dataset.e; if (!f) return; p[f] = f === "surg" || f === "dx" || f === "nm" ? e.target.value.toUpperCase().replace(/^Κ /, "κ ") : e.target.value; dirty = true; autoSave(); });
+      ov.addEventListener("change", (e) => { const f = e.target.dataset.e; if (f === "bed") { p.bed = bedNorm(e.target.value); e.target.value = p.bed; } if (f === "adm") { p.adm = admNorm(e.target.value); e.target.value = p.adm; } dirty = true; autoSave(); });
       ov.addEventListener("click", (e) => {
         const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
         if (d.x !== undefined) { ov.remove(); touch(); return; }
