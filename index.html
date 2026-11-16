@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v504';
+const APP_VER = '2026-11-16-v505';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7836,7 +7836,8 @@ document.head.appendChild(st);
       // 16/11 (χρήστης: «μόνο το σχήμα, όχι και το πλαίσιο γύρω-γύρω»): όπως η αρχική οθόνη του iPhone — εικονίδιο + όνομα, χωρίς κάρτα
       +'.tl:not(.tl-add),.mtp-freq>.tl:not(.tl-add){background:transparent!important;box-shadow:none!important;border:0!important;padding:6px 2px;min-height:0!important}html.pdx-night .tl:not(.tl-add){background:transparent!important}'
       +'.mtp-freq>.tl:not(.tl-add):hover{background:rgba(120,120,128,.12)!important}'
-      +'.tl .tl-ic{filter:none}.tl .tl-ic{text-shadow:0 1px 2px rgba(0,0,0,.35)}.tl b{color:#111827;font-weight:600}html.pdx-night .tl b{color:#F2F2F7}'
+      +'.tl .tl-ic{box-shadow:0 1px 3px rgba(0,0,0,.10)!important;box-sizing:border-box}.tl b{color:#111827;font-weight:600}html.pdx-night .tl b{color:#F2F2F7}'
+      +'html.pdx-night .tl .tl-ic{background:#2C2C2E!important;border-color:#48484A!important}'
       +'.tl-hd{display:flex;align-items:center;justify-content:space-between}.tl-hd button{border:0;background:none;color:var(--acc,#0A84FF);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;padding:4px 2px;cursor:pointer}'
       +'.tl-wb{animation:tlwb .3s ease-in-out infinite alternate;cursor:grab;touch-action:none}.tl-wb:nth-child(2n){animation-delay:.11s}@keyframes tlwb{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}'
       +'.tl-drag{opacity:.55;animation:none!important;transform:scale(1.06)!important;z-index:5}'
@@ -7951,8 +7952,10 @@ document.head.appendChild(st);
       const ed = window.__tlEdit || '';
       // 🎨 16/11 (χρήστης: «εικονίδια πιο σαν του iPhone»): χρωματιστό «squircle» με διαβάθμιση ανά εργαλείο (σταθερό χρώμα από το id)
       // 16/11 14:09 (χρήστης: «οι αντιθέσεις δεν είναι πολύ καλές»): πιο σκούρα/κορεσμένα χρώματα (όχι κίτρινο/ανοιχτό) ώστε να ξεχωρίζει το σύμβολο
-      const IOSG = [['#0A84FF','#0040DD'],['#30B350','#1A6E30'],['#FF8A00','#C2410C'],['#FF375F','#A3123A'],['#A855F7','#5B21B6'],['#14B8A6','#0F5E57'],['#5E5CE6','#2E2C9E'],['#64748B','#334155'],['#EF4444','#991B1B'],['#0EA5E9','#075985']];
-      const icBg = id=>{ let h = 0; for(const c of String(id)) h = (h*31 + c.charCodeAt(0)) >>> 0; const g = IOSG[h % IOSG.length]; return 'background:linear-gradient(160deg,'+g[0]+','+g[1]+')'; };
+      // 16/11 14:18 (χρήστης: «δεν είναι καλή αντίθεση»): τα σύμβολα (emoji) είναι ήδη χρωματιστά → σε έντονο φόντο χάνονταν.
+      // Τώρα: ανοιχτό απαλό «squircle» (απόχρωση ανά εργαλείο) με λεπτό περίγραμμα ίδιου τόνου → το σύμβολο ξεχωρίζει πάντα
+      const IOSG = [['#EAF2FF','#D3E4FF','#B7D0FF'],['#E8F7EC','#CDEFD6','#A9DDB8'],['#FFF1E3','#FFE0C2','#FBC594'],['#FFEAF0','#FFD3DF','#F7AEC2'],['#F3EAFF','#E4D3FF','#CDB2FB'],['#E3F8F6','#C6EFEA','#9ADCD3'],['#ECECFF','#D9D8FF','#BDBBF7'],['#F1F3F6','#E2E6EC','#C9D0DA']];
+      const icBg = id=>{ let h = 0; for(const c of String(id)) h = (h*31 + c.charCodeAt(0)) >>> 0; const g = IOSG[h % IOSG.length]; return 'background:linear-gradient(160deg,'+g[0]+','+g[1]+');border:1px solid '+g[2]; };
       const tile = (x, sec)=>{ const E1 = !!ed, fav = favIds.indexOf(x.id)>=0;
         return '<div class="tl'+(E1?' tl-wb':'')+'" data-tid="'+esc(x.id)+'" data-tsec="'+esc(sec)+'"'+(E1?'':' onclick="'+x.on+'"')+' title="'+esc(String(x.sub||'').replace(/<[^>]*>/g,''))+'">'
           + (E1 ? '<button class="tl-mn" data-tlhide="'+esc(x.id)+'" aria-label="'+(sec==='★'?'Έξω από τα Συχνά':'Απόκρυψη')+'">−</button>'+(sec!=='★'?'<button class="tl-st'+(fav?' on':'')+'" data-tlfav="'+esc(x.id)+'" aria-label="Συχνά">'+(fav?'★':'☆')+'</button>':'') : '')
