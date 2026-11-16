@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v501';
+const APP_VER = '2026-11-16-v502';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7831,7 +7831,8 @@ document.head.appendChild(st);
   window.__tlRender = tlRR;
   if(!document.getElementById('tlCss')){ const c = document.createElement('style'); c.id = 'tlCss';
     c.textContent = '.tl{position:relative;background:#fff;border-radius:16px;padding:12px 4px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}'
-      +'.tl .tl-ic{font-size:26px}.tl b{font-size:13px;line-height:1.2}'
+      +'.tl .tl-ic{font-size:27px;width:54px;height:54px;border-radius:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.35);line-height:1}.tl b{font-size:12.5px;line-height:1.2;font-weight:600}'
+      +'.tl-add .tl-ic{background:transparent!important;box-shadow:none;color:var(--acc,#0A84FF)}'
       +'.tl-hd{display:flex;align-items:center;justify-content:space-between}.tl-hd button{border:0;background:none;color:var(--acc,#0A84FF);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;padding:4px 2px;cursor:pointer}'
       +'.tl-wb{animation:tlwb .3s ease-in-out infinite alternate;cursor:grab;touch-action:none}.tl-wb:nth-child(2n){animation-delay:.11s}@keyframes tlwb{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}'
       +'.tl-drag{opacity:.55;animation:none!important;transform:scale(1.06)!important;z-index:5}'
@@ -7859,7 +7860,7 @@ document.head.appendChild(st);
       if(o.k==='mv') return tlSheet('Μετακίνηση «'+x.t+'» σε…', SECS.map(g=>({t:(g===cur?'✓ ':'')+g, g, on:g===cur})), (q)=>{ window.pdxToolLaySet(L=>{ L.mv = L.mv||{}; if(q.g===x.home) delete L.mv[id]; else L.mv[id] = q.g; if(L.hid) delete L.hid[id]; }); tlRR(); });
       if(o.k==='nm') return tlSheet('Μετονομασία', [{t:'Αποθήκευση', input:x.t, ph:'όνομα κουμπιού'}, {t:'Αρχικό όνομα', k:'r'}], (q, v)=>{ window.pdxToolLaySet(L=>{ L.nm = L.nm||{}; const n = L.nm[id] = L.nm[id]||{}; if(q.k==='r') delete n.t; else if(String(v||'').trim()) n.t = String(v).trim().slice(0,30); if(!n.t && !n.ic) delete L.nm[id]; }); tlRR(); });
       if(o.k==='ic') return tlSheet('Εικονίδιο (ένα emoji)', [{t:'Αποθήκευση', input:x.ic, ph:'π.χ. 🧾'}, {t:'Αρχικό εικονίδιο', k:'r'}], (q, v)=>{ window.pdxToolLaySet(L=>{ L.nm = L.nm||{}; const n = L.nm[id] = L.nm[id]||{}; if(q.k==='r') delete n.ic; else if(String(v||'').trim()) n.ic = [...String(v).trim()].slice(0,2).join(''); if(!n.t && !n.ic) delete L.nm[id]; }); tlRR(); });
-      if(o.k==='ed'){ window.__tlEdit = sec; return tlRR(); }
+      if(o.k==='ed'){ window.__tlEdit = '*'; return tlRR(); }
       if(o.k==='hid'){ window.pdxToolLaySet(L=>{ L.hid = L.hid||{}; L.hid[id] = 1; }); return tlRR(); } }); };
   if(!window.__tlWired){ window.__tlWired = 1;
     let lp = null, sup = 0, drag = null;
@@ -7944,22 +7945,27 @@ document.head.appendChild(st);
       const favIds = (Array.isArray(L.fav) ? L.fav : (window.pdxApGet && (pdxApGet().tfav||[]).length ? pdxApGet().tfav : F0.map(x=>x[1]))).map(id=>ALIAS[id]||id).filter((id,i,a)=>byId[id] && a.indexOf(id)===i);
       window.__pdxToolFavIds = favIds; window.__pdxToolSecs = SEC.map(sc=>sc.g); window.__pdxToolById = byId;
       const ed = window.__tlEdit || '';
-      const tile = (x, sec)=>{ const E1 = ed===sec, fav = favIds.indexOf(x.id)>=0;
+      // 🎨 16/11 (χρήστης: «εικονίδια πιο σαν του iPhone»): χρωματιστό «squircle» με διαβάθμιση ανά εργαλείο (σταθερό χρώμα από το id)
+      const IOSG = [['#5AC8FA','#007AFF'],['#4CD964','#28A745'],['#FF9500','#FF5E3A'],['#FF2D55','#C2185B'],['#AF52DE','#5856D6'],['#FFCC00','#FF9500'],['#34C7BE','#0E8C83'],['#8E8E93','#48484A'],['#5E5CE6','#3634A3'],['#FF6B6B','#E5484D']];
+      const icBg = id=>{ let h = 0; for(const c of String(id)) h = (h*31 + c.charCodeAt(0)) >>> 0; const g = IOSG[h % IOSG.length]; return 'background:linear-gradient(160deg,'+g[0]+','+g[1]+')'; };
+      const tile = (x, sec)=>{ const E1 = !!ed, fav = favIds.indexOf(x.id)>=0;
         return '<div class="tl'+(E1?' tl-wb':'')+'" data-tid="'+esc(x.id)+'" data-tsec="'+esc(sec)+'"'+(E1?'':' onclick="'+x.on+'"')+' title="'+esc(String(x.sub||'').replace(/<[^>]*>/g,''))+'">'
           + (E1 ? '<button class="tl-mn" data-tlhide="'+esc(x.id)+'" aria-label="'+(sec==='★'?'Έξω από τα Συχνά':'Απόκρυψη')+'">−</button>'+(sec!=='★'?'<button class="tl-st'+(fav?' on':'')+'" data-tlfav="'+esc(x.id)+'" aria-label="Συχνά">'+(fav?'★':'☆')+'</button>':'') : '')
-          + '<span class="tl-ic">'+x.ic+'</span><b>'+x.t+'</b></div>'; };
-      const head = (title, sec)=>'<div class="mtp-h tl-hd" style="margin:16px 16px 6px"><span>'+title+'</span><button data-tled="'+esc(sec)+'">'+(ed===sec?'Τέλος':'Επεξεργασία')+'</button></div>';
-      const grid = inner=>'<div class="mtp-freq tl-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 12px">'+inner+'</div>';
+          + '<span class="tl-ic" style="'+icBg(x.id)+'">'+x.ic+'</span><b>'+x.t+'</b></div>'; };
+      // ✏️ 16/11 (χρήστης: «το Επεξεργασία να είναι ΕΝΑ για όλη τη σελίδα»): ένα κουμπί πάνω δεξιά → όλες οι ενότητες σε επεξεργασία μαζί
+      const head = (title, sec)=>'<div class="mtp-h tl-hd" style="margin:16px 16px 6px"><span>'+title+'</span></div>';
+      const grid = (inner, wide)=>'<div class="mtp-freq tl-grid" style="display:grid;grid-template-columns:'+(wide?'repeat(auto-fill,minmax(118px,1fr))':'repeat(3,1fr)')+';gap:9px;margin:0 12px">'+inner+'</div>';
+      h = h.replace('<!--TFAV-->', '<div class="tl-hd" style="margin:6px 16px 0;justify-content:flex-end"><button data-tled="*">'+(ed?'Τέλος':'Επεξεργασία')+'</button></div><!--TFAV-->');
       // ★ Συχνά
-      { const F = favIds.map(id=>byId[id]); const add = ed==='★' ? '<div class="tl tl-add" data-tladd="★"><span class="tl-ic">＋</span><b>Πρόσθεσε</b></div>' : '';
-        h = h.replace('<!--TFAV-->', (F.length || ed==='★') ? '<div class="mtp-gw" data-tlsec="★" style="max-width:620px">'+head('Τα πιο συχνά','★')+grid(F.map(x=>tile(x,'★')).join('')+add)+'</div>' : '<div style="margin:12px 16px 0;text-align:right"><button class="pb pb-lnk pb-sm" data-tled="★">＋ Τα πιο συχνά</button></div>'); }
+      { const F = favIds.map(id=>byId[id]); const add = ed ? '<div class="tl tl-add" data-tladd="★"><span class="tl-ic">＋</span><b>Πρόσθεσε</b></div>' : '';
+        h = h.replace('<!--TFAV-->', (F.length || ed) ? '<div class="mtp-gw tl-favw" data-tlsec="★" style="width:100%">'+head('Τα πιο συχνά','★')+grid(F.map(x=>tile(x,'★')).join('')+add, true)+'</div>' : ''); }
       // ενότητες: μετακινήσεις (mv) · σειρά (ord) · κρυφά (hid)
       SEC.forEach((sc, i)=>{ const ids = Object.keys(byId).filter(id=>((L.mv||{})[id] || byId[id].home)===sc.g && window.__pdxToolSecs.indexOf((L.mv||{})[id] || byId[id].home)>=0);
         const ord = ((L.ord||{})[sc.g]||[]).filter(id=>ids.indexOf(id)>=0); ids.forEach(id=>{ if(ord.indexOf(id)<0) ord.push(id); });
         // χωρίς διπλά: ό,τι είναι στα «Τα πιο συχνά» δεν ξαναφαίνεται στην ενότητά του (βγαίνει από τα Συχνά → επιστρέφει εδώ)
         const own = ord.filter(id=>favIds.indexOf(id)<0), vis = own.filter(id=>!(L.hid||{})[id]), nh = own.length - vis.length;
-        const add = ed===sc.g && nh ? '<div class="tl tl-add" data-tlun="'+esc(sc.g)+'"><span class="tl-ic">＋</span><b>'+nh+(nh===1?' κρυφό':' κρυφά')+'</b></div>' : '';
-        h = h.replace('<!--SEC'+i+'-->', (vis.length || ed===sc.g || nh) ? '<div class="mtp-gw" data-tlsec="'+esc(sc.g)+'">'+head(sc.g, sc.g)+grid(vis.map(id=>tile(byId[id], sc.g)).join('')+add)+'</div>' : ''); });
+        const add = ed && nh ? '<div class="tl tl-add" data-tlun="'+esc(sc.g)+'"><span class="tl-ic">＋</span><b>'+nh+(nh===1?' κρυφό':' κρυφά')+'</b></div>' : '';
+        h = h.replace('<!--SEC'+i+'-->', (vis.length || ed || nh) ? '<div class="mtp-gw" data-tlsec="'+esc(sc.g)+'">'+head(sc.g, sc.g)+grid(vis.map(id=>tile(byId[id], sc.g)).join('')+add)+'</div>' : ''); });
     }
     return h + '<div style="height:110px"></div>' + tabs();
   }
