@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v506';
+const APP_VER = '2026-11-16-v507';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7838,6 +7838,10 @@ document.head.appendChild(st);
       +'.mtp-freq>.tl:not(.tl-add):hover{background:rgba(120,120,128,.12)!important}'
       +'.tl .tl-sv{background-image:linear-gradient(180deg,rgba(255,255,255,.22),rgba(0,0,0,.08));box-shadow:0 1px 3px rgba(0,0,0,.18)!important}.tl .tl-em{background:#fff;border:1px solid #E5E5EA;box-shadow:0 1px 2px rgba(0,0,0,.08)!important}html.pdx-night .tl .tl-em{background:#2C2C2E;border-color:#3A3A3C}'
       +'.tl b{color:#111827;font-weight:600}html.pdx-night .tl b{color:#F2F2F7}'
+      // emoji (όλα εκτός «σύμβολα»): όπως τα πρώτα — λευκή κάρτα, μεγάλο emoji, ΧΩΡΙΣ περίγραμμα
+      +'html.tl-card .tl:not(.tl-add),html.tl-card .mtp-freq>.tl:not(.tl-add){background:#fff!important;box-shadow:0 1px 3px rgba(0,0,0,.07)!important;border:0!important;border-radius:16px!important;padding:12px 4px;min-height:92px!important}'
+      +'html.tl-card.pdx-night .tl:not(.tl-add){background:#1C1C1E!important;box-shadow:none!important}'
+      +'html.tl-card .tl .tl-em{background:none!important;border:0!important;box-shadow:none!important;width:auto;height:auto;font-size:32px}'
       +'.tl-hd{display:flex;align-items:center;justify-content:space-between}.tl-hd button{border:0;background:none;color:var(--acc,#0A84FF);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;padding:4px 2px;cursor:pointer}'
       +'.tl-wb{animation:tlwb .3s ease-in-out infinite alternate;cursor:grab;touch-action:none}.tl-wb:nth-child(2n){animation-delay:.11s}@keyframes tlwb{from{transform:rotate(-1.6deg)}to{transform:rotate(1.6deg)}}'
       +'.tl-drag{opacity:.55;animation:none!important;transform:scale(1.06)!important;z-index:5}'
@@ -7872,6 +7876,9 @@ document.head.appendChild(st);
     document.addEventListener('click', e=>{
       if(Date.now() < sup && e.target.closest('.tl')){ e.preventDefault(); e.stopPropagation(); return; }   // μετά από παρατεταμένο πάτημα: όχι άνοιγμα
       const ed = e.target.closest('[data-tled]'); if(ed){ e.stopPropagation(); window.__tlEdit = window.__tlEdit===ed.dataset.tled ? '' : ed.dataset.tled; return tlRR(); }
+      const sy = e.target.closest('[data-tlsty]'); if(sy){ e.stopPropagation(); const cur = (window.pdxApGet && pdxApGet().ticon) || 'fluent';
+        const O = [['fluent','Emoji 3D — σαν του iPhone (προτείνεται)'],['twemoji','Emoji επίπεδα (Twitter)'],['noto','Emoji Google'],['native','Emoji της συσκευής'],['sym','Γραμμικά σύμβολα σε χρώμα']];
+        return tlSheet('Στυλ εικονιδίων', O.map(([k,t])=>({t:(k===cur?'✓ ':'')+t, k, on:k===cur})), (q)=>{ try{ const o = JSON.parse(localStorage.getItem('pdx_ap')||'{}')||{}; o.ticon = q.k; localStorage.setItem('pdx_ap', JSON.stringify(o)); }catch(x){} tlRR(); }); }
       const hd = e.target.closest('[data-tlhide]'); if(hd){ e.stopPropagation(); const id = hd.dataset.tlhide, sec = hd.closest('[data-tsec]').dataset.tsec;
         window.pdxToolLaySet(L=>{ if(sec==='★'){ const F = Array.isArray(L.fav) ? L.fav : tlFav(); L.fav = F.filter(x=>x!==id); } else { L.hid = L.hid||{}; L.hid[id] = 1; } }); return tlRR(); }
       const fv = e.target.closest('[data-tlfav]'); if(fv){ e.stopPropagation(); const id = fv.dataset.tlfav; window.pdxToolLaySet(L=>{ const F = Array.isArray(L.fav) ? L.fav : tlFav(); const i = F.indexOf(id); if(i>=0) F.splice(i,1); else F.push(id); L.fav = F; }); return tlRR(); }
@@ -7982,8 +7989,21 @@ document.head.appendChild(st);
         [/Αξονικ|Απεικον/,'scan','#30B0C7'],[/Ημέρας/,'sun','#FF9500'],[/Πρόγραμμα|χειρουργ/,'cal','#FF3B30'],[/Ογκολογ/,'ribbon','#FF2D55'],[/Αρχεία κλινικ/,'folder','#32ADE6'],[/Τηλεόρασ/,'tv','#5856D6'],
         [/Zebra|Ετικέτ/,'tag','#8E8E93'],[/Εκκρεμ/,'check','#FF9500'],[/ΕΨΙΝΕ/,'docok','#34C759'],[/εισαγωγ/,'useradd','#AF52DE'],[/Αρχείο ασθεν/,'box','#A2845E'],[/εξιτηρ/,'doc','#30B0C7'],
         [/Επαναφορ/,'undo','#8E8E93'],[/Partin/,'calc','#636366'],[/R\.?E\.?N\.?A\.?L/,'kidney','#FF6482'],[/eGFR/,'drop','#0A84FF'],[/EAU|Risk/,'target','#FF9500']];
-      const icHtml = x=>{ const L0 = window.pdxToolLay(), cust = ((L0.nm||{})[x.id]||{}).ic; const m = !cust && IMAP.find(r=>r[0].test(x.t||'') || r[0].test(x.id||''));
-        if(!m) return '<span class="tl-ic tl-em">'+x.ic+'</span>';
+      // 🎨 16/11 14:28 (χρήστης: «στείλε προτάσεις να επιλέξω — θέλω τα σχήματα του κινητού»): ΣΤΥΛ ΕΙΚΟΝΙΔΙΩΝ (Εργαλεία → 🎨 Στυλ) — αλλάζει αμέσως:
+      //  sym = γραμμικά σύμβολα · fluent = emoji 3D (Microsoft Fluent, ανοιχτή άδεια — το πιο κοντινό στα emoji του iPhone· τα emoji της Apple δεν επιτρέπεται να μπουν)
+      //  noto = emoji Google · twemoji = emoji Twitter · native = τα emoji της συσκευής (στο iPhone = iPhone, στα Windows = Windows)
+      const TST = (window.pdxApGet && pdxApGet().ticon) || 'fluent';
+      const FLU = {'🧾':'Receipt','🧪':'Test tube','💊':'Pill','🎙':'Studio microphone','🔬':'Microscope','📧':'E-mail','🩻':'X-ray','🌤':'Sun behind small cloud','🗓':'Spiral calendar','🎗':'Reminder ribbon','📁':'File folder','📺':'Television','🦓':'Zebra','☑':'Check box with check','📑':'Bookmark tabs','🌙':'Crescent moon','📂':'Open file folder','🗄':'File cabinet','🛟':'Ring buoy','🧮':'Abacus','🫘':'Beans','🎯':'Bullseye','📋':'Clipboard','🩺':'Stethoscope','📷':'Camera','🖨':'Printer','📝':'Memo','🔎':'Magnifying glass tilted right','🏥':'Hospital','📊':'Bar chart','⚙':'Gear'};
+      const emoImg = (ch, url)=>'<img src="'+url+'" alt="'+ch+'" loading="lazy" style="width:38px;height:38px" onerror="this.replaceWith(document.createTextNode(this.alt))">';
+      const cps = ch=>[...String(ch)].map(c=>c.codePointAt(0).toString(16)).filter(h=>h!=='fe0f').join('-');
+      const emoHtml = ch=>{ const e = String(ch||'').trim(), base = e.replace(/\uFE0F/g,'');
+        if(TST==='fluent' && FLU[base]){ const n = FLU[base]; return emoImg(e, 'https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/'+encodeURIComponent(n)+'/3D/'+n.toLowerCase().replace(/ /g,'_')+'_3d.png'); }
+        if(TST==='twemoji') return emoImg(e, 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/'+cps(base)+'.svg');
+        return '<span'+(TST==='noto'?' style="font-family:\'Noto Color Emoji\',sans-serif"':'')+'>'+e+'</span>'; };
+      if(TST==='noto' && !document.getElementById('notoEmoji')){ const l = document.createElement('link'); l.id = 'notoEmoji'; l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap'; document.head.appendChild(l); }
+      document.documentElement.classList.toggle('tl-card', TST!=='sym');
+      const icHtml = x=>{ const L0 = window.pdxToolLay(), cust = ((L0.nm||{})[x.id]||{}).ic; const m = TST==='sym' && !cust && IMAP.find(r=>r[0].test(x.t||'') || r[0].test(x.id||''));
+        if(!m) return '<span class="tl-ic tl-em">'+emoHtml(x.ic)+'</span>';
         return '<span class="tl-ic tl-sv" style="background-color:'+m[2]+'"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(SV[m[1]]||SV.grid)+'</svg></span>'; };
       const tile = (x, sec)=>{ const E1 = !!ed, fav = favIds.indexOf(x.id)>=0;
         return '<div class="tl'+(E1?' tl-wb':'')+'" data-tid="'+esc(x.id)+'" data-tsec="'+esc(sec)+'"'+(E1?'':' onclick="'+x.on+'"')+' title="'+esc(String(x.sub||'').replace(/<[^>]*>/g,''))+'">'
@@ -7992,7 +8012,7 @@ document.head.appendChild(st);
       // ✏️ 16/11 (χρήστης: «το Επεξεργασία να είναι ΕΝΑ για όλη τη σελίδα»): ένα κουμπί πάνω δεξιά → όλες οι ενότητες σε επεξεργασία μαζί
       const head = (title, sec)=>'<div class="mtp-h tl-hd" style="margin:16px 16px 6px"><span>'+title+'</span></div>';
       const grid = (inner, wide)=>'<div class="mtp-freq tl-grid" style="display:grid;grid-template-columns:'+(wide?'repeat(auto-fill,minmax(118px,1fr))':'repeat(3,1fr)')+';gap:9px;margin:0 12px">'+inner+'</div>';
-      h = h.replace('<!--TFAV-->', '<div class="tl-hd" style="margin:6px 16px 0;justify-content:flex-end"><button data-tled="*">'+(ed?'Τέλος':'Επεξεργασία')+'</button></div><!--TFAV-->');
+      h = h.replace('<!--TFAV-->', '<div class="tl-hd" style="margin:6px 16px 0;justify-content:flex-end;gap:14px"><button data-tlsty="1">🎨 Στυλ εικονιδίων</button><button data-tled="*">'+(ed?'Τέλος':'Επεξεργασία')+'</button></div><!--TFAV-->');
       // ★ Συχνά
       { const F = favIds.map(id=>byId[id]); const add = ed ? '<div class="tl tl-add" data-tladd="★"><span class="tl-ic">＋</span><b>Πρόσθεσε</b></div>' : '';
         h = h.replace('<!--TFAV-->', (F.length || ed) ? '<div class="mtp-gw tl-favw" data-tlsec="★" style="width:100%">'+head('Τα πιο συχνά','★')+grid(F.map(x=>tile(x,'★')).join('')+add, true)+'</div>' : ''); }
