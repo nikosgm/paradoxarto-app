@@ -2545,7 +2545,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v516';
+const APP_VER = '2026-11-16-v517';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7487,7 +7487,7 @@ document.head.appendChild(st);
     const since = new Date(Date.now()-36*3600e3).toISOString();
     Promise.all([
       window.pdxBotAlive ? pdxBotAlive() : Promise.resolve({ok:null, seen:0}),
-      sb6.from('oncall_jobs').select('id,name,room,kind,status,note,payload,created_at,updated_at').gte('created_at', since).order('created_at',{ascending:false}).limit(60).then(r=>r, ()=>({data:null}))
+      sb6.from('oncall_jobs').select('id,name,room,kind,status,note,created_at,updated_at').gte('created_at', since).order('created_at',{ascending:false}).limit(60)   /* 16/11 Disk IO: χωρίς payload (έως 0,5 MB/εντολή, ανά 30″ σε κάθε συσκευή) */.then(r=>r, ()=>({data:null}))
     ]).then(([a, r])=>{
       S.ok = a.ok; S.seen = a.seen; S.at = Date.now(); S.med = a.medilabi || null; S.vault = a.vault || ''; S.noaccess = a.noaccess || null; S.par = a.par || null; S.emrAcc = a.emrAcc || null; S.by = a.by || ''; S.out = a.out || null;
       if(r && Array.isArray(r.data)){ S.jobs = r.data.filter(j=>j.status!=='dismissed');
@@ -7585,9 +7585,9 @@ document.head.appendChild(st);
   window.mobJobRetry = function(id){
     const j = (window.__botSt.jobs||[]).find(x=>x.id===id); if(!j) return;
     const live = recOf2(j.room); if(!live || nrmN(live.name)!==nrmN(j.name)){ alert('Ο ασθενής δεν είναι πια σε αυτό το κρεβάτι.'); return; }
-    const p = Object.assign({}, j.payload||{}); delete p.result;
     if(!window.pdxBotSend) return;
-    pdxBotSend(j.room, j.kind, p).then(ok=>{ if(ok) botRefresh(true); });
+    sb6.from('oncall_jobs').select('payload').eq('id', id).maybeSingle().then(q=>{ const p = Object.assign({}, (q.data && q.data.payload) || {}); delete p.result;
+      pdxBotSend(j.room, j.kind, p).then(ok=>{ if(ok) botRefresh(true); }); });
   };
   // Σβήσιμο ολοκληρωμένων/αποτυχιών/ακυρωμένων από τη λίστα (για όλους): γίνονται «dismissed» — το bot δεν τις ξαναπιάνει
   window.mobJobDismiss = function(id){
@@ -19106,7 +19106,7 @@ Z99.2:C|αιμοκάθαρση
   async function load(){
     if(busy || typeof sb6==='undefined' || Date.now()-at < 5*60000 || Date.now()-tryAt < 60000) return; busy = true; tryAt = Date.now();
     try{
-      const r = await sb6.from('oncall_labs').select('name_key,data').not('name_key','like','efbot|%').not('name_key','like','pack|%').limit(400);
+      const r = await sb6.from('oncall_labs').select('name_key,data').not('pid','is',null).not('name_key','like','efbot|%').not('name_key','like','pack|%').limit(400);
       const out = {};
       (r.data||[]).forEach(row=>{
         const D = row.data || {}, dates = D.dates || [], res = {};
@@ -19430,7 +19430,7 @@ Z99.2:C|αιμοκάθαρση
     // 14/11 17:09 (χρήστης: «τα εργαστηριακά κόλλησαν και δεν φορτώνουν»): η ανάγνωση δεν είχε όριο — μια «κρεμασμένη» σύνδεση στο κινητό = «Φόρτωση…» για πάντα.
     // Τώρα: έως 12″ → μήνυμα + αυτόματη 2η προσπάθεια· τα στοιχεία που υπάρχουν ήδη μένουν στην οθόνη.
     const TO = (p, ms)=>Promise.race([p, new Promise((_, no)=>setTimeout(()=>no(new Error('timeout')), ms))]);
-    return Promise.all([TO(pc, 8000).catch(()=>{}), TO(sb6.from('oncall_labs').select('name_key,name,pid,data,updated_at').not('name_key','like','ahfy|%').not('name_key','like','efbot|%').not('name_key','like','pack|%').then(r=>{   // όχι το ιστορικό ΑΗΦΥ (📈)
+    return Promise.all([TO(pc, 8000).catch(()=>{}), TO(sb6.from('oncall_labs').select('name_key,name,pid,data,updated_at').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%').not('name_key','like','pack|%').then(r=>{   // όχι το ιστορικό ΑΗΦΥ (📈)
       if(r.error){ err = /oncall_labs|relation|schema cache/i.test(r.error.message) ? 'Δεν έχει ενεργοποιηθεί ακόμα ο πίνακας εργαστηριακών στη βάση.' : r.error.message; return; }
       err = ''; rows = (r.data || []).filter(x=>!/^pack\|/.test(x.name_key||'')); loadedAt = Date.now();
     }), 12000).catch(e=>{ const to = /timeout/.test(String(e&&e.message||e)); err = to ? '⏱ Η βάση δεν απάντησε σε 12″ — ξαναδοκιμάζω…' : String(e&&e.message||e);
