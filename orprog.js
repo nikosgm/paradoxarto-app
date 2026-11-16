@@ -146,6 +146,20 @@
   const RESIDENTS = ["ΓΑΡΥΦΑΛΛΟΣ", "ΓΙΑΓΚΟΣ", "ΘΕΟΔΩΡΟΛΕΑΣ", "ΚΑΛΦΑΣ", "ΚΑΛΦΟΥΝΤΖΟΣ", "ΜΑΝΟΣ", "ΜΑΥΡΟΥΔΗΣ", "ΠΑΝΑΓΟΠΟΥΛΟΣ"];
   const ANS = ["ΓΕΝΙΚΗ", "ΤΟΠΙΚΗ"], BLOOD = ["", "300", "600", "900", "1200", "1500"], SIDES = ["", "ΑΡ", "ΔΕ", "ΑΜΦΩ"];
   const PK = () => { const d = window.ORP_DATA || {}; return [...(d.lib || []), ...(d.extra || [])]; };
+  // 🔎 16/11 (χρήστης: «αναζήτηση χειρουργείων με drop-down»): ταίριασμα ΑΝΑ ΛΕΞΗ (οποιαδήποτε σειρά, χωρίς τόνους) + συντομογραφίες της κλινικής
+  const PKSYN = { TURB: ["ΔΙΟΥΡΗΘΡ", "ΚΥΣΤ"], TURBT: ["ΔΙΟΥΡΗΘΡ", "ΚΥΣΤ"], TUR: ["ΔΙΟΥΡΗΘΡ"], TURP: ["ΔΙΟΥΡΗΘΡ", "ΠΡΟΣΤΑΤ"], HOLEP: ["ΠΡΟΣΤΑΤ"], RIRS: ["ΟΥΡΗΤΗΡΟΣΚΟΠ"], URS: ["ΟΥΡΗΤΗΡΟΣΚΟΠ"], ΟΛΥ: ["ΟΥΡΗΤΗΡΟΛΙΘΟΤΡΙΨ"], ΟΝΥ: ["ΟΥΡΗΤΗΡΟΛΙΘΟΤΡΙΨ"],
+    PCNL: ["ΔΙΑΔΕΡΜ", "ΝΕΦΡΟΛΙΘ"], PCN: ["ΝΕΦΡΟΣΤΟΜ"], RC: ["ΚΥΣΤΕΚΤΟΜ"], RP: ["ΠΡΟΣΤΑΤΕΚΤΟΜ"], RARP: ["ΠΡΟΣΤΑΤΕΚΤΟΜ"], NX: ["ΝΕΦΡΕΚΤΟΜ"], PN: ["ΜΕΡΙΚΗ", "ΝΕΦΡΕΚΤΟΜ"], NUX: ["ΝΕΦΡΟΟΥΡΗΤΗΡΕΚΤΟΜ"], NU: ["ΝΕΦΡΟΟΥΡΗΤΗΡΕΚΤΟΜ"],
+    AUS: ["ΣΦΙΓΚΤΗΡ"], DJ: ["PIGTAIL"], JJ: ["PIGTAIL"], PIGTAIL: ["PIGTAIL"], STENT: ["PIGTAIL"], MALLEABLE: ["ΗΜΙΑΚΑΜΠΤ"], IPP: ["ΠΕΟΣ", "ΠΡΟΘΕΣ"], OPTILUME: ["ΑΥΧΕΝΑ"], CYSTO: ["ΚΥΣΤΕΟΣΚΟΠ"], ΚΥΣΤΕΟ: ["ΚΥΣΤΕΟΣΚΟΠ"], ΠΕΡΙΤΟΜΗ: ["ΠΕΡΙΤΟΜ"] };
+  const PKSIDE = { ΑΡ: "ΑΡ", ΑΡΙΣΤΕΡΑ: "ΑΡ", ΑΡΙΣΤΕΡΗ: "ΑΡ", ΔΕ: "ΔΕ", ΔΕΞΙΑ: "ΔΕ", ΔΕΞΙΑΣ: "ΔΕ", ΑΜΦ: "ΑΜΦΩ", ΑΜΦΩ: "ΑΜΦΩ", ΑΜΦΟΤΕΡΟΠΛΕΥΡΗ: "ΑΜΦΩ" };
+  const pkSide = (q) => { for (const t of UP(q).split(/[^A-ZΑ-Ω]+/)) if (PKSIDE[t]) return PKSIDE[t]; return ""; };
+  const pkTok = (q) => UP(q).split(/[^A-ZΑ-Ω0-9.]+/).filter((t) => t && !PKSIDE[t]).map((t) => PKSYN[t.replace(/\./g, "")] || [t.replace(/\./g, "")]);
+  // κάθε λέξη (ή η επέκτασή της) πρέπει να υπάρχει· βαθμός: πόσες λέξεις ταιριάζουν στην ΑΡΧΗ λέξης
+  const pkHit = (toks, hay) => { const H = NZ(hay), W = UP(hay).split(/[^A-ZΑ-Ω0-9]+/); let sc = 0;
+    for (const alt of toks) { if (!alt.every((t) => H.indexOf(NZ(t)) >= 0)) return -1; if (alt.some((t) => W.some((w) => w.startsWith(NZ(t))))) sc++; } return sc; };
+  const pkFind = (q, max) => { const toks = pkTok(q); if (!toks.length) return []; const out = [];
+    for (const x of PK()) { const sc = pkHit(toks, x.dx + " " + x.t + " " + x.g); if (sc >= 0) out.push({ x, sc: sc + 2 }); }
+    for (const c of ((window.ORP_DATA || {}).codes || [])) { const sc = pkHit(toks, c.d + " " + c.c + " " + c.s); if (sc >= 0) out.push({ x: { dx: "", t: UP(c.d) + " " + c.c, code: c.c, sub: c.s }, sc }); }
+    return out.sort((a, b) => b.sc - a.sc).slice(0, max || 40).map((o) => o.x); };
   const FULL = () => window.THERAPIST_FULL || { "Αν": "Αναστασίου", "Αδ": "Αδαμάκης", "Στρ": "Στραβοδήμος", "Φρ": "Φραγκιάδης", "Μουλ": "Μουλαβασίλης", "Λεβ": "Λεβής", "Δουρ": "Δουρούμης" };
   const surgeonOf = (t) => { const f = FULL()[t]; return f ? "κ " + UP(f) : ""; };
   const SURGEONS = () => Object.values(FULL()).map((f) => "κ " + UP(f));
@@ -213,7 +227,9 @@
         R.pts.forEach((p, i) => {
           h += '<div class="card" data-open="' + E(p.id) + '"><div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><b>' + (i + 1) + ". " + E(p.nm || "—") + '</b><div style="color:#6B7280;font-size:13px">' + E([p.bed, p.adm && "εισ. " + p.adm].filter(Boolean).join(" · ")) + "</div>"
             + '<div style="margin-top:3px">' + E(p.dx || "") + '</div><div style="font-weight:600">' + E(ORP.procText(p) || "⚠ χωρίς επέμβαση") + '</div><div style="color:#6B7280;font-size:13px">' + E([p.an, p.bl && "αίμα " + p.bl, p.ca && "c-ARM", p.surg].filter(Boolean).join(" · ")) + "</div></div>"
-            + '<span style="display:flex;flex-direction:column"><button class="mini" data-up="' + E(p.id) + '">▲</button><button class="mini" data-dn="' + E(p.id) + '" style="margin-top:4px">▼</button></span></div></div>';
+            + '<span style="display:flex;flex-direction:column"><button class="mini" data-up="' + E(p.id) + '">▲</button><button class="mini" data-dn="' + E(p.id) + '" style="margin-top:4px">▼</button>'
+            // 🗑 16/11 (χρήστης: «στον υπολογιστή δεν μπορώ να αφαιρέσω ασθενή»): αφαίρεση από τη λίστα· 1ο πάτημα «Σίγουρα;», 2ο αφαιρεί (χωρίς παράθυρο browser)
+            + '<button class="mini" data-rmp="' + E(p.id) + '" title="Αφαίρεση" style="margin-top:4px;' + (rmArm === p.id ? "background:#FF3B30;color:#fff;min-width:74px" : "background:#FDECEC;color:#B42318") + '">' + (rmArm === p.id ? "Σίγουρα;" : "🗑") + "</button></span></div></div>";
         });
         h += '<div style="margin:2px 12px"><button class="chip" data-add="' + E(R.r) + '">＋ Ασθενής στην ' + E(R.label.replace("ΑΙΘΟΥΣΑ", "αίθουσα")) + "</button></div>";
       }
@@ -234,6 +250,8 @@
     };
     // 💾 16/11: ΠΡΩΤΑ αποθήκευση, ΜΕΤΑ αλλαγή είδους/ημερομηνίας (πριν: ερώτηση «χωρίς αποθήκευση;» → χανόταν ασθενής)
     const saveNow = async () => { clearTimeout(asT); if (!dirty || !loaded) return true; try { await saveDraft(P); dirty = false; return true; } catch (er) { say("⚠ δεν αποθηκεύτηκε: " + (er.message || er)); return false; } };
+    let rmArm = "", rmT = 0;
+    const removePt = (p) => { P.pts = P.pts.filter((x) => x !== p); renum(p.room); rmArm = ""; touch(); say("🗑 Αφαιρέθηκε: " + (p.nm || "ασθενής")); };
     const switchKind = async (k) => { if (k === P.kind) return; if (!(await saveNow())) return;
       const date = k === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? todayIso() : P.kind === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? ORP.defDate() : P.date; await load(date, k); };
     // 💾 9/11 (χρήστης: «με το που προσθέτω ασθενή να κάνει αυτόματα πρόχειρο — να μη χαθεί τίποτα»): αποθήκευση 0,6″ μετά από κάθε αλλαγή
@@ -251,6 +269,8 @@
     pg.el.addEventListener("click", async (e) => {
       const b = e.target.closest("button,[data-open]"); if (!b) return; const ds = b.dataset;
       if (ds.kind) { switchKind(ds.kind); return; }
+      if (ds.rmp) { e.stopPropagation(); const p = P.pts.find((x) => x.id === ds.rmp); if (!p) return; clearTimeout(rmT);
+        if (rmArm === ds.rmp) { removePt(p); return; } rmArm = ds.rmp; redraw(); rmT = setTimeout(() => { rmArm = ""; redraw(); }, 4000); return; }
       if (ds.room) { const i = P.rooms.indexOf(ds.room); if (i >= 0) { if (P.pts.some((p) => p.room === ds.room)) { say("Η αίθουσα έχει ασθενείς"); return; } P.rooms.splice(i, 1); } else P.rooms.push(ds.room); touch(); return; }
       if (ds.resp) { P.resp = P.resp === ds.resp ? "" : ds.resp; touch(); return; }
       if (ds.respAdd !== undefined) { const n = UP(prompt("Επώνυμο ειδικευόμενου (όπως θα γράφεται):") || "").trim(); if (!n) return; cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; touch(); return; }
@@ -258,7 +278,7 @@
       if (ds.add) { pick(ds.add); return; }
       if (ds.open) { edit(P.pts.find((x) => x.id === ds.open)); return; }
       if (ds.act === "save") { try { await saveDraft(P); dirty = false; say("💾 Αποθηκεύτηκε (πρόχειρο)"); redraw(); } catch (er) { say("⚠ " + er.message); } return; }
-      if (ds.act === "print") { printLocal(P); return; }
+      if (ds.act === "print") { printViaExcel(); return; }
       if (ds.act === "submit") { submit(); return; }
       if (ds.act === "xr") { xrQueue(); return; }
     });
@@ -314,7 +334,7 @@
           + box("Αίθουσα", P.rooms.map((r) => ch("rm", r, p.room === r, ORP.roomLabel(r).replace("ΑΙΘΟΥΣΑ ", ""))).join(""))
           + '<div style="display:flex;gap:8px">' + '<div style="flex:1">' + box("Θάλαμος.κρεβάτι", inp("bed", p.bed, "341.1")) + '</div><div style="flex:1">' + box("Ημ. εισόδου", inp("adm", p.adm, "08/11")) + "</div></div>"
           + box("Ονοματεπώνυμο · του πατρός · ΑΜ", inp("nm", p.nm, "ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΤΟΥ ΠΑΤΡΟΣ 12345678"))
-          + box("Επέμβαση (έτοιμο σετ)", '<button data-pk="1" style="width:100%;text-align:left;min-height:44px;border:1px solid #C7CDD4;border-radius:10px;background:#fff;padding:8px 10px;font-size:15px">' + (p.t ? "<b>" + E(p.dx) + "</b><br>" + E(p.t) : "🔎 Διάλεξε…") + "</button>"
+          + box("Επέμβαση (έτοιμο σετ)", '<input data-pkq autocomplete="off" placeholder="🔎 Γράψε επέμβαση (π.χ. TURB, νεφρεκτομή αρ, 357.03)" style="width:100%;box-sizing:border-box;font-size:16px;padding:9px;border:1px solid #0A84FF;border-radius:10px;margin-bottom:4px"><div data-pkdd></div><button data-pk="1" style="width:100%;text-align:left;min-height:44px;border:1px solid #C7CDD4;border-radius:10px;background:#fff;padding:8px 10px;font-size:15px">' + (p.t ? "<b>" + E(p.dx) + "</b><br>" + E(p.t) : "🔎 Διάλεξε…") + "</button>"
             + '<div style="margin-top:4px">' + SIDES.map((s) => ch("sd", s, (p.side || "") === s, s || "χωρίς πλευρά")).join("") + "</div>")
           + box("Δεύτερη επέμβαση", (p.t2 ? '<div style="display:flex;gap:6px;align-items:center"><span style="flex:1">' + E(p.t2) + '</span><button data-t2x style="border:0;background:#FDECEC;color:#B42318;border-radius:8px;min-height:34px;padding:0 10px">✕</button></div><div>' + SIDES.map((s) => ch("sd2", s, (p.side2 || "") === s, s || "χωρίς πλευρά")).join("") + "</div>" : '<button data-pk="2" style="min-height:40px;border:1px dashed #C7CDD4;border-radius:10px;background:none;padding:6px 12px;color:#0A84FF">＋ δεύτερη επέμβαση</button>'))
           + box("Διάγνωση", inp("dx", p.dx, "π.χ. ΑΠΟΦΡΑΚΤΙΚΗ ΟΥΡΟΠΑΘΕΙΑ"))
@@ -326,11 +346,17 @@
         if (!ov) ov = sheet(inner); else ov.querySelector("#orpSh").innerHTML = inner;
       };
       render();
-      ov.addEventListener("input", (e) => { const f = e.target.dataset.e; if (!f) return; p[f] = f === "surg" || f === "dx" || f === "nm" ? e.target.value.toUpperCase().replace(/^Κ /, "κ ") : e.target.value; dirty = true; autoSave(); });
+      let pkItems = [];
+      ov.addEventListener("input", (e) => { if (e.target.dataset.pkq !== undefined) { const q = e.target.value, dd = ov.querySelector("[data-pkdd]"); pkItems = q.trim().length >= 2 ? pkFind(q, 8) : [];
+          dd.innerHTML = pkItems.length ? '<div style="border:1px solid #C7CDD4;border-radius:10px;background:#fff;overflow:hidden;margin-bottom:6px">' + pkItems.map((x, i) => '<button data-pki="' + i + '" style="display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #EEF2F6;background:#fff;padding:8px 10px;font-size:14px;cursor:pointer">' + (x.dx ? "<b>" + E(x.dx) + "</b><br>" : "") + E(x.t) + (x.sub ? '<br><span style="color:#6B7280;font-size:12px">' + E(x.sub) + "</span>" : "") + "</button>").join("") + "</div>"
+            : q.trim().length >= 2 ? '<div style="color:#6B7280;font-size:13px;margin:2px 4px 6px">Τίποτα — δοκιμάστε άλλη λέξη ή «🔎 Διάλεξε…» για όλη τη λίστα</div>' : ""; return; }
+        const f = e.target.dataset.e; if (!f) return; p[f] = f === "surg" || f === "dx" || f === "nm" ? e.target.value.toUpperCase().replace(/^Κ /, "κ ") : e.target.value; dirty = true; autoSave(); });
       ov.addEventListener("click", (e) => {
         const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
         if (d.x !== undefined) { ov.remove(); touch(); return; }
-        if (d.del !== undefined) { if (!confirm("Αφαίρεση από το πρόγραμμα;")) return; P.pts = P.pts.filter((x) => x !== p); renum(p.room); ov.remove(); touch(); return; }
+        if (d.pki !== undefined) { const x = pkItems[+d.pki]; const sd = pkSide((ov.querySelector("[data-pkq]") || {}).value || ""); if (x) { if (sd && SIDES.indexOf(sd) >= 0) p.side = sd; p.t = x.t; if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; if (x.dx) { p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; autoSave(); render(); } return; }
+        if (d.del !== undefined) { if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "Σίγουρα; Πάτα ξανά"; b.style.background = "#FF3B30"; b.style.color = "#fff"; setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "Αφαίρεση"; b.style.background = "#FDECEC"; b.style.color = "#B42318"; } }, 4000); return; }
+          ov.remove(); removePt(p); return; }
         if (d.opn !== undefined && window.pdxOpNote) { const proc = [p.t, p.t2].filter(Boolean).join(" + ") || p.dx || ""; window.pdxOpNote({ name: p.nm, proc, side: p.side || "", surg: p.opsurg || "", text: p.opnote || "", onSave: (r) => { p.opnote = r.text; p.opsurg = r.surg; dirty = true; autoSave(); render(); touch(); } }); return; }
         if (d.rm) { const old = p.room; p.room = d.rm; p.n = P.pts.filter((q) => q.room === d.rm && q !== p).length + 1; renum(old); }
         else if (d.sd !== undefined) p.side = d.sd;
@@ -353,10 +379,10 @@
       const row = (i, a, b, c) => '<div data-i="' + i + '" style="background:#fff;margin-top:6px;padding:9px 12px;border-radius:10px"><b>' + E(a) + '</b><br><span style="font-size:14px">' + E(b) + "</span>" + (c ? '<br><span style="color:#6B7280;font-size:12px">' + E(c) + "</span>" : "") + "</div>";
       const show = async (q) => {
         const z = NZ(q); items = []; let h = "";
-        const L = PK().filter((x) => !z || NZ(x.dx + " " + x.t + " " + x.g).indexOf(z) >= 0);
+        const toks = pkTok(q), L = !toks.length ? PK() : PK().filter((x) => pkHit(toks, x.dx + " " + x.t + " " + x.g) >= 0);
         let g = ""; for (const x of L) { if (x.g !== g && !z) { g = x.g; h += '<div style="margin:12px 4px 2px;font-weight:700;color:#6B7280;font-size:13px">' + E(g) + "</div>"; } items.push(x); h += row(items.length - 1, x.dx, x.t, [x.an, x.bl && "αίμα " + x.bl, x.ca && "c-ARM"].filter(Boolean).join(" · ")); }
         if (z.length >= 3) {
-          const C = ((window.ORP_DATA || {}).codes || []).filter((c) => NZ(c.d + " " + c.c + " " + c.s).indexOf(z) >= 0).slice(0, 30);
+          const C = ((window.ORP_DATA || {}).codes || []).filter((c) => pkHit(toks, c.d + " " + c.c + " " + c.s) >= 0).slice(0, 30);
           if (C.length) h += '<div style="margin:12px 4px 2px;font-weight:700;color:#6B7280;font-size:13px">ΚΩΔΙΚΟΙ (ΝΕΟΙ) ΓΙΑ ΛΙΣΤΑ ΧΕΙΡΟΥΡΓΕΙΟΥ</div>';
           for (const c of C) { items.push({ dx: "", t: UP(c.d) + " " + c.c }); h += row(items.length - 1, UP(c.d), c.c, c.s); }
           if (!etip) { try { etip = await (await fetch("etip.json", { cache: "force-cache" })).json(); } catch (e) { etip = []; } }
@@ -381,6 +407,25 @@
         items.push({ key: p.key || "", name, am, amka: (d && d.amka) || "", ad: (d && d.admitDate) || p.adm || "", label: R.label.replace("ΑΙΘΟΥΣΑ ", "Αίθ. ") + (p.bed ? " · " + p.bed : "") });
       }
       window.pdxXrQueue(items);
+    }
+    // 🖨 16/11 (χρήστης: «να τυπώνεται ΑΚΡΙΒΩΣ όπως το Excel μας»): το ίδιο .xlsx τυπώνεται μέσα από το Excel του υπολογιστή του εκτυπωτή
+    // (ΜΟΝΟ εκτύπωση — κανένα αρχείο στο δίκτυο). Αν το bot δεν απαντήσει σε ~45″ ή αποτύχει → τοπική εκτύπωση όπως πριν.
+    async function printViaExcel() {
+      if (!P.pts.length) { say("Το πρόγραμμα είναι άδειο"); return; }
+      try {
+        say("🖨 Στέλνω το Excel για εκτύπωση…");
+        const x = await sealB64(ORP.xlsx(P)), hh = await sealB64(new TextEncoder().encode(ORP.html(P)));
+        const ins = await SB().from("oncall_jobs").insert({ name_key: "orprint", name: "🖨 Εκτύπωση " + (P.kind && P.kind !== "ΠΡΟΓΡΑΜΜΑ" ? P.kind.replace(/ ΠΡΟΓΡΑΜΜΑ$/, "") + " " : "") + ORP.dShort(P.date), room: null, kind: "orsubmit", status: "new",
+          payload: { x, h: hh, dir: ORP.monthDir(P.date), name: ORP.fileName(P.date, P.kind), noSave: true, printer: PRINTER, only: BOT, quiet: true } }).select("id").single();
+        if (ins.error) throw new Error(ins.error.message);
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          const r = await SB().from("oncall_jobs").select("status,note").eq("id", ins.data.id).maybeSingle(); const j = r.data || {};
+          if (j.status === "done") { say(j.note || "🖨 Τυπώθηκε"); SB().from("oncall_jobs").update({ payload: { wiped: true } }).eq("id", ins.data.id).then(() => {}, () => {}); return; }
+          if (j.status === "failed") { if (confirm("⚠ " + (j.note || "η εκτύπωση απέτυχε") + "\n\nΕκτύπωση από εδώ;")) printLocal(P); return; }
+        }
+        if (confirm("Ο υπολογιστής του εκτυπωτή δεν απάντησε ακόμη. Εκτύπωση από εδώ;")) printLocal(P);
+      } catch (er) { if (confirm("⚠ " + (er.message || er) + "\n\nΕκτύπωση από εδώ;")) printLocal(P); }
     }
     // ---- υποβολή: Excel στο δίκτυο + εκτύπωση (bot Μεσαίου) ----
     async function submit() {
