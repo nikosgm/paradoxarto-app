@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v510';
+const APP_VER = '2026-11-16-v511';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19204,6 +19204,8 @@ Z99.2:C|αιμοκάθαρση
   #labsFull .lf-tb tr.none td{color:#94A3B8;cursor:default}#labsFull .lf-tb td.nr{text-align:left;font-size:13px}
   #labsFull .lf-tb td.v.up,#labsFull .lf-tb td.v.dn{color:#B42318;font-weight:800}
   #labsFull .lf-tb td.v.old{color:#94A3B8}#labsFull .lf-tb td.v.old.up,#labsFull .lf-tb td.v.old.dn{color:#D99A92}
+  #labsFull .lf-tb td.v.old .ov{font-size:.82em;font-weight:400;color:#A1A1AA}#labsFull .lf-tb td.v.old .od{display:block;font-size:10px;line-height:1.1;color:#A1A1AA;font-weight:500}
+  #labsFull .lf-tb td.v.pend .pw{display:block;font-size:13px;line-height:1.1;opacity:.8}#labsFull .lf-tb td.v.pend{background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(148,163,184,.10) 6px 12px)}
   #labsFull .lf-tb td.na{color:#CBD5E1}
   #labsFull .lf-tb td.cnt .b{background:#FDECEA;color:#B42318;border-radius:999px;padding:2px 8px;font-weight:800}#labsFull .lf-tb td.cnt .g{background:#F1F5F9;color:#64748B;border-radius:999px;padding:2px 8px}
   html.nv3 #labsFull{left:var(--nvS,220px)!important}
@@ -19571,7 +19573,7 @@ Z99.2:C|αιμοκάθαρση
   window.labsFullTable = function(v){ lfTable = v ? '1' : '0'; try{ localStorage.setItem('pdx_lf_table', lfTable); }catch(e){} render(); };
   function renderTable(P, withLab){
     let h = top('🧪 Εργαστηριακά', withLab+'/'+P.length+' ασθενείς με αποτελέσματα'+(loadedAt?' · '+hhmm(loadedAt):''));
-    h += '<div class="lf-bar"><button class="on" onclick="labsFullTable(true)">▦ Πίνακας</button><button onclick="labsFullTable(false)">▤ Κάρτες</button><span style="font-size:12.5px;color:#64748B;margin-left:6px">Τελευταία τιμή κάθε εξέτασης · <b style="color:#B42318">↑↓</b> εκτός ορίων · γκρι = όχι από την τελευταία ημέρα</span></div>';
+    h += '<div class="lf-bar"><button class="on" onclick="labsFullTable(true)">▦ Πίνακας</button><button onclick="labsFullTable(false)">▤ Κάρτες</button><span style="font-size:12.5px;color:#64748B;margin-left:6px">Τελευταία τιμή κάθε εξέτασης · <b style="color:#B42318">↑↓</b> εκτός ορίων · ⏳ = δεν βγήκε ακόμα σήμερα (από κάτω η προηγούμενη τιμή με την ημερομηνία της)</span></div>';
     h += deskBar() + '<div class="lf-body" id="lmBody">' + deskBody(P) + '</div>';
     box.innerHTML = h;
   }
@@ -19593,7 +19595,11 @@ Z99.2:C|αιμοκάθαρση
         LF_COLS.forEach(k=>{ const T = b.tests.find(t=>t.k===k); const p0 = T && T.pts[0];
           if(!p0){ h += '<td class="na">·</td>'; return; }
           const a = alarmOf(k, p0), old = dayOf(p0.d)!==b.days[0];
-          h += '<td class="v '+cls(a)+(old?' old':'')+'" title="'+E(p0.d||'')+'">'+valOrNote(p0.v, a)+'</td>'; });
+          // 🕘 16/11 (χρήστης: «σήμερα βγήκε η γενική, μέχρι να βγει το βιοχημικό δείχνεις τα χθεσινά — μπορεί να μπερδευτούμε»):
+          // τιμή ΑΛΛΗΣ ημέρας → ⏳ όταν η τελευταία ημέρα είναι σήμερα (περιμένουμε τη σημερινή) + μικρή παλιά τιμή ΜΕ ημερομηνία· αλλιώς γκρι + ημερομηνία
+          if(old){ const dl = (()=>{ const dd = dayOf(p0.d), y = new Date(Date.now()-864e5); const yk = String(y.getDate()).padStart(2,'0')+'/'+String(y.getMonth()+1).padStart(2,'0')+'/'+String(y.getFullYear()).slice(2); return dd===yk ? 'χθες' : dd.slice(0,5); })(), pend = b.days[0]===today;
+            h += '<td class="v old'+(pend?' pend':'')+'" title="'+E((pend?'Δεν βγήκε ακόμα σήμερα · ':'')+'τελευταία: '+(p0.d||''))+'">'+(pend?'<span class="pw">⏳</span>':'')+'<span class="ov">'+valOrNote(p0.v, a)+'</span><span class="od">'+E(dl)+'</span></td>'; return; }
+          h += '<td class="v '+cls(a)+'" title="'+E(p0.d||'')+'">'+valOrNote(p0.v, a)+'</td>'; });
         h += '<td class="cnt">'+(all?'<span class="'+(imp?'b':'g')+'">'+all+'</span>':'')+'</td></tr>';
       });
       return h + '</tbody></table>';
