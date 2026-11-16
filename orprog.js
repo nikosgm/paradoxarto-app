@@ -223,6 +223,7 @@
       const RES = [...new Set([...RESIDENTS, ...(cfg.residents || []), ...(P.resp ? [P.resp] : [])])];
       h += '<div style="margin-top:8px;font-weight:700">Υπεύθυνος προγράμματος</div><select data-f="resp" style="width:100%;margin-top:4px"><option value="">— διάλεξε ειδικευόμενο —</option>' + RES.map((n) => "<option" + (P.resp === n ? " selected" : "") + ">" + E(n) + "</option>").join("") + '<option value="__add">＋ άλλος…</option></select>';
       h += (P.pts.length && window.pdxXrQueue ? '<button class="chip" data-act="xr" style="margin-top:8px;background:#0F172A;color:#fff;border-color:#0F172A">🫁 Ακτινογραφίες θώρακα (' + P.pts.length + ') → Νίκος CT Viewer</button>' : "");
+      h += '<label class="chip" style="margin-top:8px;cursor:pointer;' + (photoBusy ? "opacity:.6" : "") + '">' + (photoBusy ? "⏳ Διαβάζω το πρόχειρο…" : "📷 Από φωτογραφία χειρόγραφου προχείρου") + '<input type="file" accept="image/*" capture="environment" data-photo style="display:none"' + (photoBusy ? " disabled" : "") + "></label>";
       h += '<div style="margin-top:8px;font-weight:700">Αίθουσες</div><div>' + ROOMS_ALL.map((r) => chip("data-room", r, P.rooms.indexOf(r) >= 0, E(ORP.roomLabel(r).replace("ΑΙΘΟΥΣΑ ", "")))).join("") + "</div></div>";
       for (const R of ORP.rooms(P)) {
         h += '<div class="rm">' + E(R.label) + " · " + R.pts.length + "</div>";
@@ -230,7 +231,7 @@
           h += '<div class="card" data-open="' + E(p.id) + '"><div style="display:flex;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><b>' + (i + 1) + ". " + (p.key ? E(p.nm || "—") + "</b>" : '</b><input class="ie" data-ie="nm" data-pid="' + E(p.id) + '" value="' + E(p.nm) + '" placeholder="✍ ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΤΟΥ ΠΑΤΡΟΣ ΑΜ (εκτός κλινικής)" style="width:calc(100% - 30px);font-weight:700">')
             // ✏ 16/11 (χρήστης: «να δηλώνω θάλαμο-κρεβάτι π.χ. 345-1 και ημ. εισόδου — προκαθορισμένη από το εισιτήριο, αλλά να την αλλάζω»): πεδία μέσα στην κάρτα
             + '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap"><label class="iel">Θάλ.<input class="ie" data-ie="bed" data-pid="' + E(p.id) + '" value="' + E(p.bed) + '" placeholder="345-1" style="width:78px"></label><label class="iel">Εισ.<input class="ie" data-ie="adm" data-pid="' + E(p.id) + '" value="' + E(p.adm) + '" placeholder="ηη/μμ" style="width:70px"></label></div>'
-            + '<div style="margin-top:3px">' + E(p.dx || "") + '</div><div style="font-weight:600">' + E(ORP.procText(p) || "⚠ χωρίς επέμβαση") + '</div><div style="color:#6B7280;font-size:13px">' + E([p.an, p.bl && "αίμα " + p.bl, p.ca && "c-ARM", p.surg].filter(Boolean).join(" · ")) + "</div></div>"
+            + (p.warn ? '<div style="margin-top:4px;padding:4px 8px;border-radius:8px;background:#FFF4E5;color:#9A3412;font-size:13px">' + E(p.warn) + ' <button class="mini" data-wok="' + E(p.id) + '" style="background:#fff;color:#9A3412">✓ ΟΚ</button></div>' : "") + '<div style="margin-top:3px">' + E(p.dx || "") + '</div><div style="font-weight:600">' + E(ORP.procText(p) || "⚠ χωρίς επέμβαση") + '</div><div style="color:#6B7280;font-size:13px">' + E([p.an, p.bl && "αίμα " + p.bl, p.ca && "c-ARM", p.surg].filter(Boolean).join(" · ")) + "</div></div>"
             + '<span style="display:flex;flex-direction:column"><button class="mini" data-up="' + E(p.id) + '">▲</button><button class="mini" data-dn="' + E(p.id) + '" style="margin-top:4px">▼</button>'
             // 🗑 16/11 (χρήστης: «στον υπολογιστή δεν μπορώ να αφαιρέσω ασθενή»): αφαίρεση από τη λίστα· 1ο πάτημα «Σίγουρα;», 2ο αφαιρεί (χωρίς παράθυρο browser)
             + '<button class="mini" data-rmp="' + E(p.id) + '" title="Αφαίρεση" style="margin-top:4px;' + (rmArm === p.id ? "background:#FF3B30;color:#fff;min-width:74px" : "background:#FDECEC;color:#B42318") + '">' + (rmArm === p.id ? "Σίγουρα;" : "🗑") + "</button></span></div></div>";
@@ -275,6 +276,7 @@
       const c = e.target.closest("[data-cell]"); if (c) { const [pid, f] = c.dataset.cell.split("|"); const p = P.pts.find((x) => x.id === pid); if (p) edit(p, f); return; }
       const b = e.target.closest("button,[data-open]"); if (!b) return; const ds = b.dataset;
       if (ds.man) { addManual(ds.man); return; }
+      if (ds.wok) { const p = P.pts.find((x) => x.id === ds.wok); if (p) { delete p.warn; touch(); } return; }
       if (ds.kind) { switchKind(ds.kind); return; }
       if (ds.rmp) { e.stopPropagation(); const p = P.pts.find((x) => x.id === ds.rmp); if (!p) return; clearTimeout(rmT);
         if (rmArm === ds.rmp) { removePt(p); return; } rmArm = ds.rmp; redraw(); rmT = setTimeout(() => { rmArm = ""; redraw(); }, 4000); return; }
@@ -331,12 +333,75 @@
     }
     // ✍ 16/11 (χρήστης: «να μπορώ να βάλω ασθενή εκτός κλινικής — να γράφω εγώ στοιχεία»): κενή κάρτα, ημ. εισόδου = σήμερα (αλλάζει)
     function addManual(room) { const t = new Date(); const p = { id: "m" + Date.now().toString(36), key: "", room, n: P.pts.filter((q) => q.room === room).length + 1, bed: "", adm: String(t.getDate()).padStart(2, "0") + "/" + String(t.getMonth() + 1).padStart(2, "0"), nm: "", dx: "", an: "ΓΕΝΙΚΗ", bl: "", ca: "", t: "", side: "", t2: "", side2: "", surg: "" }; P.pts.push(p); touch(); edit(p, "nm"); }
+    // 📷 16/11 (χρήστης: «σου δίνω το χειρόγραφο πρόχειρο και φτιάχνεις όσους γράφει, μετά προσθέτω όσους λείπουν — αποθήκευση σημαντικό»):
+    // φωτογραφία → AI διαβάζει γραμμές (αίθουσα, σειρά, επώνυμο, θάλαμος, επέμβαση, πλευρά, χειρουργός, αναισθησία, αίμα, c-ARM) → ταίριασμα ΤΟΠΙΚΑ
+    // με τους ασθενείς της κλινικής (κανένα όνομα δεν στέλνεται στο AI πέρα από τη φωτογραφία) και με τα έτοιμα σετ → μπαίνουν όλοι + αυτόματη αποθήκευση.
+    const imgJpeg = (file) => new Promise((ok, no) => { const fr = new FileReader(); fr.onerror = () => no(new Error("δεν διαβάστηκε η φωτογραφία")); fr.onload = () => { const im = new Image(); im.onerror = () => no(new Error("μη έγκυρη εικόνα"));
+      im.onload = () => { const M = 2200, k = Math.min(1, M / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL("image/jpeg", 0.85).split(",")[1]); }; im.src = fr.result; }; fr.readAsDataURL(file); });
+    const PHOTO_SYS = "Διαβάζεις χειρόγραφο πρόχειρο προγράμματος χειρουργείου ουρολογικής κλινικής. Επέστρεψε ΜΟΝΟ JSON: {\"rows\":[{\"room\":\"10|9|8|8Α ή κενό\",\"n\":σειρά,\"surname\":\"ΕΠΩΝΥΜΟ όπως γράφεται (κεφαλαία)\",\"first\":\"όνομα αν υπάρχει\",\"bed\":\"θάλαμος-κρεβάτι αν υπάρχει π.χ. 345-1\",\"proc\":\"επέμβαση όπως γράφεται (π.χ. TURB, Lap Nx, ΟΛΨ, Double J)\",\"side\":\"ΑΡ|ΔΕ|ΑΜΦΩ ή κενό\",\"surgeon\":\"χειρουργός/συντομογραφία αν υπάρχει\",\"an\":\"ΓΕΝΙΚΗ|ΤΟΠΙΚΗ ή κενό\",\"blood\":\"ml ή κενό\",\"carm\":true/false,\"unsure\":\"ό,τι δεν διαβάζεται καθαρά\"}]}. Μία γραμμή ανά ασθενή, με τη σειρά του χαρτιού. Αίθουσα: από επικεφαλίδες/στήλες (π.χ. «10», «Αιθ. 8», «8 απόγευμα» = 8Α). Μην επινοείς ό,τι δεν γράφεται — άφησέ το κενό.";
+    async function fromPhoto(file) {
+      if (!(window.pdxAiOn && window.pdxAiOn())) { say("Οι λειτουργίες AI είναι κλειστές (Ρυθμίσεις → 🤖) — προσθέστε τους ασθενείς με «＋ Ασθενής»"); return; }
+      say("📷 Διαβάζω το πρόχειρο…"); photoBusy = true; redraw();
+      try {
+        const b64 = await imgJpeg(file);
+        const r = await window.pdxAI("πρόγραμμα χειρουργείου", { model: "claude-sonnet-5-5", max_tokens: 4000, system: PHOTO_SYS, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } }, { type: "text", text: "Ημερομηνία προγράμματος: " + ORP.dShort(P.date) + ". Επέστρεψε το JSON." }] }] });
+        if (!r.ok) throw new Error(r.error || "το AI δεν απάντησε");
+        const t = String(r.text || ""), a = t.indexOf("{"), z = t.lastIndexOf("}"); let J; try { J = JSON.parse(t.slice(a, z + 1)); } catch (e) { throw new Error("η απάντηση δεν διαβάστηκε"); }
+        const rows = (J.rows || []).filter((x) => x && String(x.surname || "").trim());
+        if (!rows.length) throw new Error("δεν βρέθηκαν ασθενείς στη φωτογραφία");
+        const res = photoApply(rows); touch(); await saveNow();
+        photoReport(res);
+      } catch (er) { say("⚠ " + (er.message || er)); }
+      photoBusy = false; redraw();
+    }
+    // καθαρή συνάρτηση (δοκιμάζεται χωρίς AI): γραμμές → ασθενείς στο P
+    function photoApply(rows) {
+      const L = inpatients(), used = new Set(P.pts.map((p) => p.key).filter(Boolean)), usedNm = new Set(P.pts.map((p) => NZ(String(p.nm || "").split(" ")[0])));
+      const bedK = (b) => String(b || "").replace(/[.\/ ]/g, "-").replace(/-+/g, "-").trim();
+      const out = { added: [], skipped: [] };
+      for (const x of rows) {
+        const sn = NZ(x.surname), fn = NZ(x.first || ""), bk = bedK(x.bed);
+        let room = String(x.room || "").toUpperCase().replace(/A$/, "Α").replace(/\s+/g, ""); if (ROOMS_ALL.indexOf(room) < 0) room = P.rooms[0] || "10";
+        if (P.rooms.indexOf(room) < 0) P.rooms.push(room);
+        let C = L.filter((y) => { const w = NZ(String(y.d.name || "").split(/\s+/)[0]); return w && sn && (w === sn || (sn.length >= 5 && (w.indexOf(sn) === 0 || sn.indexOf(w) === 0))); });
+        if (C.length > 1 && fn) { const C2 = C.filter((y) => NZ(y.d.name).indexOf(fn.slice(0, 3)) >= 0); if (C2.length) C = C2; }
+        if (C.length > 1 && bk) { const C2 = C.filter((y) => y.k === bk); if (C2.length) C = C2; }
+        if (C.length > 1) { const C2 = C.filter((y) => !y.nps); if (C2.length) C = C2; }
+        const hit = C.length === 1 ? C[0] : null;
+        if (hit && used.has(hit.k)) { out.skipped.push(x.surname + " (ήδη στο πρόγραμμα)"); continue; }
+        if (!hit && usedNm.has(sn)) { out.skipped.push(x.surname + " (ήδη στο πρόγραμμα)"); continue; }
+        const p = hit ? fromPatient(hit.k, hit.d) : { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), key: "", bed: bedNorm(x.bed), adm: "", nm: UP([x.surname, x.first].filter(Boolean).join(" ")), dx: "", an: "ΓΕΝΙΚΗ", bl: "", ca: "", t: "", side: "", t2: "", side2: "", surg: "" };
+        if (hit) used.add(hit.k); usedNm.add(sn);
+        p.room = room; p.n = P.pts.filter((q) => q.room === room).length + 1;
+        const warn = [];
+        // επέμβαση: από τη φωτογραφία (υπερισχύει της συντομογραφίας του Παραδόχαρτου), αλλιώς ό,τι έφερε ο ασθενής
+        const pq = String(x.proc || "").trim();
+        if (pq) { const k = pkFind(pq, 1)[0]; if (k) { p.t = k.t; if (k.dx) { p.dx = k.dx; p.bl = k.bl || ""; p.ca = k.ca || ""; } if (k.an) p.an = k.an; } else warn.push("επέμβαση «" + pq + "» χωρίς σετ"); }
+        const sd = SIDES.indexOf(String(x.side || "").toUpperCase()) > 0 ? String(x.side).toUpperCase() : pkSide(pq); if (sd) p.side = sd;
+        if (/^ΤΟΠ/i.test(String(x.an || ""))) p.an = "ΤΟΠΙΚΗ"; else if (/^ΓΕΝ/i.test(String(x.an || ""))) p.an = "ΓΕΝΙΚΗ";
+        const bl = String(x.blood || "").replace(/\D/g, ""); if (BLOOD.indexOf(bl) > 0) p.bl = bl;
+        if (x.carm === true) p.ca = "ΝΑΙ";
+        const sg = UP(x.surgeon || "").replace(/^Κ\s+/, ""); if (sg) { const F = FULL(), key = Object.keys(F).find((k) => UP(k) === sg || NZ(F[k]).indexOf(NZ(sg)) === 0); if (key) p.surg = "κ " + UP(F[key]); }
+        if (!hit) warn.push("εκτός κλινικής / δεν βρέθηκε — συμπληρώστε στοιχεία");
+        if (x.unsure) warn.push("δυσανάγνωστο: " + String(x.unsure).slice(0, 60));
+        if (warn.length) p.warn = "📷 " + warn.join(" · ");
+        P.pts.push(p); out.added.push({ nm: p.nm, ok: !!hit && !warn.length });
+      }
+      return out;
+    }
+    function photoReport(res) {
+      const ok = res.added.filter((x) => x.ok).length, chk = res.added.length - ok;
+      say("📷 Μπήκαν " + res.added.length + " ασθενείς" + (chk ? " · ⚠ " + chk + " για έλεγχο (πορτοκαλί)" : "") + (res.skipped.length ? " · " + res.skipped.length + " ήταν ήδη" : "") + " · 💾 αποθηκεύτηκε");
+    }
+    let photoBusy = false;
+    window.__orpPhotoApply = (rows) => { const r = photoApply(rows); touch(); return r; };   // για τις δοκιμές
     // θάλαμος-κρεβάτι: «345-1» / «345 1» / «345/1» → «345.1» (όπως στο πρόγραμμα της κλινικής)
     const bedNorm = (v) => String(v || "").trim().toUpperCase().replace(/^(\d{3}Α?)\s*[-\/ ,]\s*(\d{1,2})$/, "$1.$2");
     const admNorm = (v) => String(v || "").trim().replace(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-]\d{2,4})?$/, (x, a, b) => a.padStart(2, "0") + "/" + b.padStart(2, "0"));
     const prevUpd = () => { const pv = pg.el.querySelector("[data-prev]"); if (pv) pv.innerHTML = ORP.html(P, { bodyOnly: true, click: true }); };
     pg.el.addEventListener("input", (e) => { const t = e.target; if (!t.dataset || !t.dataset.ie) return; const p = P.pts.find((x) => x.id === t.dataset.pid); if (!p) return;
       p[t.dataset.ie] = t.dataset.ie === "nm" ? t.value.toUpperCase() : t.value; dirty = true; if (P.status === "submitted") P.status = "changed"; autoSave(); });
+    pg.el.addEventListener("change", (e) => { if (e.target.dataset && e.target.dataset.photo !== undefined) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) fromPhoto(f); return; } });
     pg.el.addEventListener("change", (e) => { const t = e.target; if (!t.dataset || !t.dataset.ie) return; const p = P.pts.find((x) => x.id === t.dataset.pid); if (!p) return;
       if (t.dataset.ie === "bed") { p.bed = bedNorm(t.value); t.value = p.bed; } if (t.dataset.ie === "adm") { p.adm = admNorm(t.value); t.value = p.adm; } dirty = true; autoSave(); prevUpd(); });
     // ---- επεξεργασία ασθενή ----

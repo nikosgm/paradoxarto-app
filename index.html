@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v497';
+const APP_VER = '2026-11-16-v498';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8510,7 +8510,8 @@ document.head.appendChild(st);
     ['πρακτικό','📝','Πρακτικό χειρουργείου από υπαγόρευση','φόρμα + επιλογή προτύπου (όπως πριν)'],
     ['ογκολογικό','🎗','Σύνοψη ογκολογικού + μητρώο','συμπληρώνεις με το χέρι'],
     ['βοηθός','🎙','Φωνητικός βοηθός (εντολές με επιβεβαίωση)','ο βοηθός δεν λειτουργεί — κάνεις τις ενέργειες από τα κουμπιά'],
-    ['επισκευή bot','🛠','Bot: επισκευή αλλαγμένων σελίδων','το bot σταματά και αναφέρει το σφάλμα (όπως πριν)']];
+    ['επισκευή bot','🛠','Bot: επισκευή αλλαγμένων σελίδων','το bot σταματά και αναφέρει το σφάλμα (όπως πριν)'],
+    ['πρόγραμμα χειρουργείου','📷','Πρόγραμμα χειρουργείου από φωτογραφία προχείρου','προσθέτεις τους ασθενείς με «＋ Ασθενής»']];
   window.pdxAiPage = async function(){
     let st = null, msg = '';
     const ping = async ()=>{ try{ const ss = (await sb6.auth.getSession()).data.session; const r = await fetch(SB6_URL + '/functions/v1/pdx-ai', { method:'POST', headers:{ 'content-type':'application/json', apikey:SB6_KEY, Authorization:'Bearer ' + (ss ? ss.access_token : SB6_KEY) }, body:'{"ping":1}' }); st = await r.json().catch(()=>null); }catch(e){ st = { error:String(e.message||e) }; }
