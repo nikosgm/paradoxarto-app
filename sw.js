@@ -42,6 +42,17 @@ self.addEventListener('fetch', (e) => {
     })());
     return;
   }
+  // 🖼 16/11 (χρήστης: «γυρνάω πίσω από μια ενότητα… φεύγουν τα εικονίδια και ξαναεμφανίζονται»): εικονίδια (Fluent/Twemoji) και σταθερές
+  // βιβλιοθήκες με έκδοση από το jsdelivr → ΠΡΩΤΑ η κρυφή μνήμη (δεν αλλάζουν) → εμφανίζονται ακαριαία
+  if (url.host === 'cdn.jsdelivr.net' && (/\/(fluentui-emoji|twemoji)@/.test(url.pathname) || /@\d+\.\d+\.\d+\//.test(url.pathname))) {
+    e.respondWith((async () => {
+      const cache = await caches.open('pdx-icons-v1');
+      const hit = await cache.match(req.url); if (hit) return hit;
+      const r = await fetch(req); if (r && (r.ok || r.type === 'opaque')) cache.put(req.url, r.clone()).catch(() => {});
+      return r;
+    })());
+    return;
+  }
   if (url.origin !== self.location.origin || !SHELL.test(url.pathname)) return;
   // ?v=… = ζητήθηκε ρητά νέα έκδοση: περιμένουμε το δίκτυο περισσότερο
   const waitMs = url.searchParams.has('v') ? 12000 : 4000;

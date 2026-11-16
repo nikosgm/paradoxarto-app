@@ -1332,7 +1332,11 @@ window.authRole = null;
 try{ navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', ev=>{ const d = ev.data || {}; if(d.type!=='pdx-newver' || !d.v || (typeof APP_VER!=='undefined' && d.v===APP_VER) || document.getElementById('pdxNewVer')) return;
   const b = document.createElement('button'); b.id = 'pdxNewVer'; b.type = 'button'; b.textContent = '🔄 Νέα έκδοση — πάτα για ανανέωση';
   b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:100000;border:0;border-radius:22px;padding:10px 18px;background:#1D4E80;color:#fff;font-size:15px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.25)';
-  b.onclick = ()=>location.reload(); document.body.appendChild(b); setTimeout(()=>{ try{ b.remove(); }catch(e){} }, 120000); }); }catch(e){}
+  // 16/11 17:30 (χρήστης: «μου βγάζει συνέχεια πάτα για νέα έκδοση»): το reload μπορεί να ξαναπάρει την ΠΑΛΙΑ σελίδα από την κρυφή μνήμη (αν δεν
+  // είχε τελειώσει η αποθήκευση της νέας) → ξανά λωρίδα. Τώρα: άνοιγμα με ?v=ΝΕΑ (πάντα από το δίκτυο) + μία φορά ανά έκδοση ανά συνεδρία
+  b.onclick = ()=>{ try{ sessionStorage.setItem('pdx_nv_go', d.v); }catch(e){} try{ flushPendingSave(); }catch(e){} location.href = location.pathname + '?v=' + encodeURIComponent(d.v); };
+  try{ if(sessionStorage.getItem('pdx_nv_go')===d.v) return; }catch(e){}
+  document.body.appendChild(b); setTimeout(()=>{ try{ b.remove(); }catch(e){} }, 120000); }); }catch(e){}
 window.pdxIsBotUser = function(){ return ['resident','attending','admin'].indexOf(window.authRole) >= 0; };
 (function(){ const st=document.createElement('style'); st.textContent='html.pdx-nobot [data-medgo],html.pdx-nobot [data-pull],html.pdx-nobot [data-upd]{display:none!important}'; document.head.appendChild(st); })();
 function _lg(msg, bad){ const e = document.getElementById('loginMsg'); if(e){ e.textContent = msg||''; e.style.color = bad ? 'var(--accent)' : 'var(--muted)'; } }
@@ -2545,7 +2549,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v518';
+const APP_VER = '2026-11-16-v519';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
