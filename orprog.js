@@ -119,11 +119,12 @@
       }
     }
     h += '<tr class="end"><td colspan="8"></td></tr><tr><td colspan="7" style="border:0"></td><td class="b c" style="border:0;font-size:14pt">Ο ΔΙΕΥΘΥΝΤΗΣ</td></tr></table>';
-    const css = ".orp{border-collapse:collapse;width:100%;table-layout:fixed;font:11pt Arial,Helvetica,sans-serif;color:#000}.orp td{border:1px solid #000;padding:2px 4px;text-align:center;vertical-align:middle;word-wrap:break-word}"
+    // 🖨 16/11 (χρήστης: «η εκτύπωση κόβει τα γκρι — θέλω ακριβώς όπως το χαρτί»): οι browsers ΔΕΝ τυπώνουν φόντα από προεπιλογή → ρητό print-color-adjust
+    const css = ".orp,.orp *{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}.orp{border-collapse:collapse;width:100%;table-layout:fixed;font:11pt Arial,Helvetica,sans-serif;color:#000}.orp td{border:1px solid #000;padding:2px 4px;text-align:center;vertical-align:middle;word-wrap:break-word}"
       + ".orp .b{font-weight:700}.orp .l{text-align:left;border:0}.orp tr:nth-child(1) td,.orp tr:nth-child(2) td,.orp tr:nth-child(3) td{border:0;font-weight:700}.orp tr:nth-child(2) td.l{font-weight:400}"
       + ".orp .hd td{background:#C0C0C0;font-weight:700}.orp .rm td{background:#BFBFBF;font-weight:700;text-align:center}.orp .p2 td{font-size:11pt}.orp .end td{border:0;height:8px}";
     if (opt.bodyOnly) return "<style>" + css + "</style>" + h;
-    return '<!doctype html><html><head><meta charset="utf-8"><title>' + HE((prog.kind || "ΠΡΟΓΡΑΜΜΑ") + " " + dShort(prog.date)) + "</title><style>@page{size:A4 landscape;margin:4mm 3mm}body{margin:0}" + css + "</style></head><body>" + h + "</body></html>";
+    return '<!doctype html><html><head><meta charset="utf-8"><title>' + HE((prog.kind || "ΠΡΟΓΡΑΜΜΑ") + " " + dShort(prog.date)) + "</title><style>@page{size:A4 landscape;margin:4mm 3mm}html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}" + css + "</style></head><body>" + h + "</body></html>";
   }
   const ORP = { defDate, dShort, monthDir, fileName, withSide, procText, rooms, roomLabel, sheetXml, xlsx, html, zip, crc32 };
   root.ORP = ORP;
@@ -173,16 +174,20 @@
       nm: [full, fa ? "ΤΟΥ " + fa : "", am].filter(Boolean).join(" "), dx: pk ? pk.dx : UP(d.dx || ""), an: pk ? pk.an : "ΓΕΝΙΚΗ", bl: pk ? pk.bl : "", ca: pk ? pk.ca : "", t: pk ? pk.t : "", side: sideOf(d.side), t2: "", side2: "", surg: surgeonOf(d.therapist) };
   }
   // ---- αποθήκευση ----
-  const keyOf = (date) => "orprog|" + date;
+  // 🚨 16/11: χωριστό πρόχειρο ανά είδος — τακτικό «orprog|<ημ>» (όπως πριν), έκτακτο «orprog|<ημ>|ΕΚΤΑΚΤΟ», συμπληρωματικό «…|ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ»
+  const KINDS = [["ΠΡΟΓΡΑΜΜΑ", "📋 Τακτικό"], ["ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ", "🚨 Έκτακτο"], ["ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΠΡΟΓΡΑΜΜΑ", "➕ Συμπληρωματικό"]];
+  const kTag = (kind) => (!kind || kind === "ΠΡΟΓΡΑΜΜΑ") ? "" : "|" + String(kind).replace(/ ΠΡΟΓΡΑΜΜΑ$/, "");
+  const keyOf = (date, kind) => "orprog|" + date + kTag(kind);
+  const todayIso = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
   async function loadCfg() { try { const r = await SB().from("oncall_labs").select("data").eq("name_key", "orprog|cfg").maybeSingle(); return (r.data && r.data.data) || {}; } catch (e) { return {}; } }
   async function saveCfg(c) { await SB().from("oncall_labs").upsert({ name_key: "orprog|cfg", name: "Πρόγραμμα χειρουργείου", pid: null, data: c, updated_at: new Date().toISOString() }, { onConflict: "name_key" }); }
-  async function loadDraft(date) { const r = await SB().from("oncall_labs").select("data,updated_at").eq("name_key", keyOf(date)).maybeSingle(); if (r.error) throw new Error(r.error.message); const env = r.data && r.data.data; if (!env) return null; return await CK().decrypt(env.enc || env); }
-  async function saveDraft(P) { P.at = Date.now(); P.by = String(window.authName || "").replace(/@paradoxarto\.app$/, ""); const enc = await CK().encrypt(P); const r = await SB().from("oncall_labs").upsert({ name_key: keyOf(P.date), name: "Πρόγραμμα χειρουργείου " + ORP.dShort(P.date), pid: null, data: { enc, st: P.status || "draft", n: (P.pts || []).length }, updated_at: new Date().toISOString() }, { onConflict: "name_key" }); if (r.error) throw new Error(r.error.message); }
+  async function loadDraft(date, kind) { const r = await SB().from("oncall_labs").select("data,updated_at").eq("name_key", keyOf(date, kind)).maybeSingle(); if (r.error) throw new Error(r.error.message); const env = r.data && r.data.data; if (!env) return null; return await CK().decrypt(env.enc || env); }
+  async function saveDraft(P) { P.at = Date.now(); P.by = String(window.authName || "").replace(/@paradoxarto\.app$/, ""); const enc = await CK().encrypt(P); const r = await SB().from("oncall_labs").upsert({ name_key: keyOf(P.date, P.kind), name: (P.kind && P.kind !== "ΠΡΟΓΡΑΜΜΑ" ? P.kind.replace(/ ΠΡΟΓΡΑΜΜΑ$/, "") + " " : "Πρόγραμμα χειρουργείου ") + ORP.dShort(P.date), pid: null, data: { enc, st: P.status || "draft", n: (P.pts || []).length }, updated_at: new Date().toISOString() }, { onConflict: "name_key" }); if (r.error) throw new Error(r.error.message); }
   async function sealB64(u8) { const s = await CK().sealBytes(u8); let b = ""; for (let i = 0; i < s.length; i += 0x8000) b += String.fromCharCode.apply(null, s.subarray(i, i + 0x8000)); return btoa(b); }
   function printLocal(P) { const w = window.open("", "_blank"); if (!w) { say("Επιτρέψτε τα αναδυόμενα για εκτύπωση"); return; } w.document.write(ORP.html(P)); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400); }
 
-  window.pdxOrProg = async function (date0) {
-    let P = { date: date0 || ORP.defDate(), kind: "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }, cfg = {}, dirty = false, busy = "", loaded = false;
+  window.pdxOrProg = async function (date0, kind0) {
+    let P = { date: date0 || (kind0 === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? todayIso() : ORP.defDate()), kind: kind0 || "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }, cfg = {}, dirty = false, busy = "", loaded = false;
     const can = ["resident", "attending", "admin"].indexOf(window.authRole) >= 0;
     const css = '<style>#orpPg .chip{display:inline-flex;align-items:center;min-height:36px;padding:6px 12px;margin:3px;border-radius:18px;border:1px solid #C7CDD4;background:#fff;font:600 14px -apple-system,system-ui;color:#1F2933}#orpPg .chip.on{background:#0A84FF;border-color:#0A84FF;color:#fff}'
       + '#orpPg .card{margin:8px 12px;padding:10px 12px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.08);font:14px -apple-system,system-ui}#orpPg .card b{font-weight:700}#orpPg .rm{margin:16px 16px 4px;font:700 13px -apple-system,system-ui;color:#6B7280;letter-spacing:.4px}'
@@ -193,7 +198,10 @@
     const draw = () => {
       if (!loaded) return css + '<div id="orpPg"><div class="card">Φόρτωση…</div></div>';
       let h = css + '<div id="orpPg">';
-      h += '<div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" data-f="date" value="' + E(P.date) + '"><select data-f="kind">' + ["ΠΡΟΓΡΑΜΜΑ", "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ", "ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΠΡΟΓΡΑΜΜΑ"].map((k) => "<option" + (P.kind === k ? " selected" : "") + ">" + k + "</option>").join("") + "</select>"
+      // 🚨 16/11 (χρήστης: «αρχική επιλογή για έκτακτο — το έκτακτο να ΜΗΝ μπαίνει στο κύριο»): είδος πάνω-πάνω· κάθε είδος = δικό του πρόχειρο/αρχείο
+      h += '<div class="card"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">' + KINDS.map(([k, t]) => '<button class="chip' + (P.kind === k ? " on" : "") + '" data-kind="' + E(k) + '" style="flex:1;justify-content:center;min-height:44px' + (k === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" && P.kind === k ? ";background:#FF3B30;border-color:#FF3B30" : "") + '">' + t + "</button>").join("") + "</div>"
+        + (P.kind === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? '<div style="color:#FF3B30;font-weight:700;margin-bottom:6px">🚨 ΕΚΤΑΚΤΟ — χωριστό από το κύριο πρόγραμμα της ημέρας</div>' : "")
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="date" data-f="date" value="' + E(P.date) + '">'
         + '<span style="color:#6B7280;font-size:13px">' + (P.status === "submitted" ? "✅ υποβλήθηκε" + (P.file ? " · " + E(P.file) : "") : dirty ? "● μη αποθηκευμένο" : P.at ? "💾 πρόχειρο " + new Date(P.at).toLocaleTimeString("el-GR", { hour: "2-digit", minute: "2-digit" }) + (P.by ? " · " + E(P.by) : "") : "νέο") + "</span></div>";
       // 8/11: οι 8 ειδικευόμενοι (από τα προγράμματα του φακέλου) σε λίστα επιλογής· «＋ άλλος…» μόνο για νέο όνομα
       const RES = [...new Set([...RESIDENTS, ...(cfg.residents || []), ...(P.resp ? [P.resp] : [])])];
@@ -216,26 +224,33 @@
     };
     const pg = window.iosPage("Πρόγραμμα χειρουργείου", "Ρυθμίσεις", draw);
     const redraw = () => { const y = pg.el.querySelector(".ios-body") && pg.el.querySelector(".ios-body").scrollTop; pg.redraw(); if (y) pg.el.querySelector(".ios-body").scrollTop = y; };
-    const load = async (date) => {
-      loaded = false; redraw();
-      try { if (CK() && CK().ready) await CK().ready(); cfg = await loadCfg(); const d = await loadDraft(date); P = d || { date, kind: "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }; dirty = false; }
-      catch (e) { say("⚠ " + (e.message || e)); P = { date, kind: "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }; }
+    const load = async (date, kind) => {
+      kind = kind || P.kind || "ΠΡΟΓΡΑΜΜΑ"; loaded = false; redraw();
+      try { if (CK() && CK().ready) await CK().ready(); cfg = await loadCfg(); const d = await loadDraft(date, kind);
+        // παλιό πρόχειρο με άλλο είδος στο ίδιο κλειδί (π.χ. «ΕΚΤΑΚΤΟ» γραμμένο πάνω στο κύριο πριν το 16/11) → εμφανίζεται όπως είναι, με το είδος του
+        P = d || { date, kind, resp: "", rooms: ["10", "8"], pts: [], status: "draft" }; if (!P.kind) P.kind = kind; dirty = false; }
+      catch (e) { say("⚠ " + (e.message || e)); P = { date, kind, resp: "", rooms: ["10", "8"], pts: [], status: "draft" }; }
       loaded = true; redraw();
     };
+    // 💾 16/11: ΠΡΩΤΑ αποθήκευση, ΜΕΤΑ αλλαγή είδους/ημερομηνίας (πριν: ερώτηση «χωρίς αποθήκευση;» → χανόταν ασθενής)
+    const saveNow = async () => { clearTimeout(asT); if (!dirty || !loaded) return true; try { await saveDraft(P); dirty = false; return true; } catch (er) { say("⚠ δεν αποθηκεύτηκε: " + (er.message || er)); return false; } };
+    const switchKind = async (k) => { if (k === P.kind) return; if (!(await saveNow())) return;
+      const date = k === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? todayIso() : P.kind === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? ORP.defDate() : P.date; await load(date, k); };
     // 💾 9/11 (χρήστης: «με το που προσθέτω ασθενή να κάνει αυτόματα πρόχειρο — να μη χαθεί τίποτα»): αποθήκευση 0,6″ μετά από κάθε αλλαγή
     let asT = 0, asBusy = false, asAgain = false;
     function autoSave() { clearTimeout(asT); asT = setTimeout(async () => { if (!dirty || !loaded) return; if (asBusy) { asAgain = true; return; } asBusy = true;
       try { await saveDraft(P); dirty = false; window.__orpAutoAt = Date.now(); } catch (er) { say("⚠ αυτόματη αποθήκευση: " + (er.message || er)); }
-      asBusy = false; if (asAgain) { asAgain = false; autoSave(); } }, 600); }
+      asBusy = false; if (asAgain) { asAgain = false; autoSave(); } }, 150); }
     const flush = () => { if (dirty && loaded && !asBusy) { clearTimeout(asT); saveDraft(P).then(() => { dirty = false; }, () => {}); } };
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
     window.addEventListener("pagehide", flush);
     const touch = () => { dirty = true; autoSave(); if (P.status === "submitted") P.status = "changed"; redraw(); };
     const renum = (room) => P.pts.filter((p) => p.room === room).sort((a, b) => (a.n || 0) - (b.n || 0)).forEach((p, i) => { p.n = i + 1; });
     pg.el.addEventListener("change", async (e) => { const f = e.target.dataset.f; if (!f) return;
-      if (f === "resp" && e.target.value === "__add") { const n = UP(prompt("Επώνυμο ειδικευόμενου:") || "").trim(); if (n) { cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; } touch(); return; } if (f === "date") { if (dirty && !confirm("Αλλαγή ημερομηνίας χωρίς αποθήκευση;")) { e.target.value = P.date; return; } load(e.target.value); return; } P[f] = e.target.value; touch(); });
+      if (f === "resp" && e.target.value === "__add") { const n = UP(prompt("Επώνυμο ειδικευόμενου:") || "").trim(); if (n) { cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; } touch(); return; } if (f === "date") { const nd = e.target.value; if (!(await saveNow())) { e.target.value = P.date; return; } load(nd, P.kind); return; } if (f === "kind") { switchKind(e.target.value); return; } P[f] = e.target.value; touch(); });
     pg.el.addEventListener("click", async (e) => {
       const b = e.target.closest("button,[data-open]"); if (!b) return; const ds = b.dataset;
+      if (ds.kind) { switchKind(ds.kind); return; }
       if (ds.room) { const i = P.rooms.indexOf(ds.room); if (i >= 0) { if (P.pts.some((p) => p.room === ds.room)) { say("Η αίθουσα έχει ασθενείς"); return; } P.rooms.splice(i, 1); } else P.rooms.push(ds.room); touch(); return; }
       if (ds.resp) { P.resp = P.resp === ds.resp ? "" : ds.resp; touch(); return; }
       if (ds.respAdd !== undefined) { const n = UP(prompt("Επώνυμο ειδικευόμενου (όπως θα γράφεται):") || "").trim(); if (!n) return; cfg.residents = [...new Set([...(cfg.residents || []), n])].sort((a, b) => a.localeCompare(b, "el")); try { await saveCfg(cfg); } catch (er) {} P.resp = n; touch(); return; }
@@ -391,7 +406,7 @@
         alert("Το bot του Μεσαίου δεν απάντησε ακόμα — θα το κάνει μόλις ξυπνήσει. Δείτε «Ενέργειες bot».");
       } catch (e) { alert("⚠ " + (e.message || e)); }
     }
-    load(P.date);
+    load(P.date, P.kind);
     return pg;
   };
 })();
