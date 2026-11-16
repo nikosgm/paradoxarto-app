@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v522';
+const APP_VER = '2026-11-16-v523';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12805,32 +12805,39 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const epxStC = s=>/ακυρ/i.test(s)?'#B42318':/εκτελ|ολοκλ/i.test(s)?'#1F6F43':/μερικ/i.test(s)?'#8A4B00':'#0A66C2';
   window.pdxEpHist = function(amka, name){
     amka = String(amka||'').replace(/\D/g,''); if(!/^\d{11}$/.test(amka)) return;
-    const S = {st:'load', r:null, tab:'rx', err:''};
-    const css = '<style>.eph .tabs{display:flex;gap:6px;margin:4px 0 10px}.eph .tabs button{flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:600;background:#EEF1F4;color:#333}.eph .tabs button.on{background:#0A66C2;color:#fff}'
+    // 🗓 16/11 17:36 (χρήστης: «στο ιστορικό να διαλέγω πόσο παλιά να ψάξω»): περίοδος 3/6/12/24/60 μήνες (θυμάται την τελευταία επιλογή)
+    let mo0 = 12; try{ mo0 = +localStorage.getItem('pdx_ephist_mo') || 12; }catch(e){}
+    const S = {st:'load', r:null, tab:'rx', err:'', mo:mo0, q:''};
+    const css = '<style>.eph .per{display:flex;gap:6px;margin:0 0 8px;overflow-x:auto}.eph .per button{flex:none;border:1px solid #D0D7DE;background:#fff;border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;color:#333;min-height:36px}.eph .per button.on{background:#0A66C2;border-color:#0A66C2;color:#fff}.eph .flt{width:100%;box-sizing:border-box;border:1px solid #D0D7DE;border-radius:10px;padding:9px 11px;font-size:15px;margin:0 0 8px}.eph .tabs{display:flex;gap:6px;margin:4px 0 10px}.eph .tabs button{flex:1;border:0;border-radius:10px;padding:10px;font-size:15px;font-weight:600;background:#EEF1F4;color:#333}.eph .tabs button.on{background:#0A66C2;color:#fff}'
       +'.eph .it{display:flex;gap:10px;align-items:center;padding:12px 4px;border-bottom:1px solid #EEF0F2;min-height:44px}.eph .it b{font-size:16px}.eph .sm{font-size:13px;color:#6B6B70}.eph .st{font-size:12px;font-weight:700;white-space:nowrap}'
       +'.eph .hd{background:#F6F8FA;border-radius:12px;padding:10px 12px;margin-bottom:10px}.eph .msg{color:#8A4B00;font-size:13px;margin-top:4px}.eph .ld{padding:30px;text-align:center;color:#6B6B70}</style>';
     const pg = window.iosPage('Ιστορικό e-prescription', 'Πίσω', ()=>{
       let h = css+'<div class="eph">';
-      if(S.st==='load') return h+'<div class="ld">⏳ Διαβάζω από το e-prescription…</div></div>';
+      h += '<div class="per">'+[3,6,12,24,60].map(m=>'<button data-mo="'+m+'" class="'+(S.mo===m?'on':'')+'">'+(m<12?m+' μήνες':m===12?'1 έτος':(m/12)+' έτη')+'</button>').join('')+'</div>';
+      if(S.st==='load') return h+'<div class="ld">⏳ Διαβάζω από το e-prescription ('+(S.mo<12?S.mo+' μήνες':S.mo/12+(S.mo===12?' έτος':' έτη'))+')…</div></div>';
       if(S.st==='err') return h+'<div class="ld" style="color:#B42318">⚠ '+E(S.err)+'<br><br><button data-ep="re" style="min-height:44px">Ξανά</button></div></div>';
       const P = S.r.patient||{};
       h += '<div class="hd"><b style="font-size:18px">'+E(P.name||name||'')+'</b><div class="sm">ΑΜΚΑ '+E(amka)+(P.ins?' · '+E(P.ins):'')+(P.insExp?' · ασφ. έως '+E(epxD(P.insExp)):'')+(P.lastRx?' · τελ. συνταγή '+E(epxD(P.lastRx)):'')+'</div>'
         + (P.msgs||[]).map(m=>'<div class="msg">⚠ '+E(m)+'</div>').join('')+'</div>';
       h += '<div class="tabs"><button data-tab="rx" class="'+(S.tab==='rx'?'on':'')+'">💊 Συνταγές · '+(S.r.rxs||[]).length+'</button><button data-tab="ref" class="'+(S.tab==='ref'?'on':'')+'">🧾 Παραπεμπτικά · '+(S.r.refs||[]).length+'</button></div>';
-      const L = S.tab==='rx' ? (S.r.rxs||[]) : (S.r.refs||[]);
-      if(!L.length) h += '<div class="ld">Τίποτα τον τελευταίο χρόνο</div>';
+      const fq = String(S.q||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+      const L = (S.tab==='rx' ? (S.r.rxs||[]) : (S.r.refs||[])).filter(x=>!fq || String((S.tab==='rx' ? x.med : x.group)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(fq));
+      h += '<input class="flt" data-flt type="search" placeholder="🔎 Φίλτρο ('+(S.tab==='rx'?'φάρμακο':'κατηγορία')+')" value="'+E(S.q||'')+'">';
+      if(!L.length) h += '<div class="ld">'+(fq ? 'Τίποτα για «'+E(S.q)+'»' : 'Τίποτα στο διάστημα που διάλεξες')+'</div>';
       h += L.map(x=>'<div class="it" data-doc="'+E(x.bc)+'"><div style="flex:1;min-width:0"><b>'+E(S.tab==='rx' ? (x.med||'—') : (x.group||'—'))+'</b><div class="sm">'+E(epxD(x.date))+' · '+E(x.bc)+(S.tab==='rx' && x.q!=null ? ' · '+E(x.used||0)+'/'+E(x.q)+' εκτελ.' : '')+(x.ins?' · '+E(x.ins):'')+'</div></div><span class="st" style="color:'+epxStC(x.st)+'">'+E(x.st||'')+'</span><span style="color:#C7C7CC">›</span></div>').join('');
       return h+'</div>';
     });
-    const load = async ()=>{ S.st='load'; pg.redraw(); try{ const id = await epxJob('ephist', {amka}, name);
+    const load = async ()=>{ S.st='load'; pg.redraw(); try{ const id = await epxJob('ephist', {amka, months:S.mo}, name);
       const j = await jobWait(id, 120000); if(!j){ S.st='err'; S.err='το bot δεν απάντησε σε 2′'; }
       else if(j.status!=='done'){ S.st='err'; S.err=j.note||'απέτυχε'; } else { S.st='ok'; S.r=(j.payload||{}).result||{}; }
     }catch(e){ S.st='err'; S.err=e.message; } if(pg.el.isConnected) pg.redraw(); };
     pg.el.addEventListener('click', e=>{ const t = e.target;
       const tb = t.closest('[data-tab]'); if(tb){ S.tab = tb.dataset.tab; pg.redraw(); return; }
+      const mb = t.closest('[data-mo]'); if(mb){ const m = +mb.dataset.mo; if(m!==S.mo){ S.mo = m; try{ localStorage.setItem('pdx_ephist_mo', String(m)); }catch(x){} load(); } return; }
       if(t.closest('[data-ep=re]')){ load(); return; }
       const d = t.closest('[data-doc]'); if(d){ window.__pdxTapPg = pg.el; pdxEpDoc(amka, d.dataset.doc, S.tab, name, load); }
     });
+    pg.el.addEventListener('input', e=>{ const f = e.target.closest('[data-flt]'); if(!f) return; S.q = f.value; const pos = f.selectionStart; pg.redraw(); const f2 = pg.el.querySelector('[data-flt]'); if(f2){ f2.focus(); try{ f2.setSelectionRange(pos, pos); }catch(x){} } });
     load();
   };
   window.pdxEpDoc = function(amka, bc, type, name, onChange){
@@ -12847,7 +12854,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           : row('Φάρμακα', (d.meds||[]).map(m=>'<b>'+E(m.name)+'</b> '+E(m.content||'')+' <span class="sm">· '+E(m.qty)+' τεμ.'+(m.dose?' · '+E(m.dose):'')+(m.days?' · '+E(m.days)+' ημ.':'')+(m.pct!=null?' · '+E(m.pct)+'%':'')+((m.executed||[]).length?' · ✅ εκτελέστηκε '+E(epxD(m.executed[0])):'')+'</span>').join('<br>'))
             + row('Πληρωτέο', d.payable!=null ? E(d.payable)+' €' : ''))+'</div>';
       const exec = type!=='ref' && (d.meds||[]).some(m=>(m.executed||[]).length);
-      h += '<div style="display:flex;gap:10px;margin-top:14px">'
+      // 📋 16/11 17:36 (χρήστης: «από το ιστορικό του ασθενή να μπορώ να κάνω αντιγραφή συνταγής»): ίδια φάρμακα/εξετάσεις + ICD → νέα Συνταγή για έλεγχο
+      h += '<button data-ep="copy" style="width:100%;margin-top:14px;min-height:48px;border:1.5px solid #0A66C2;border-radius:12px;background:#fff;color:#0A66C2;font-size:16px;font-weight:700">📋 Αντιγραφή '+(type==='ref'?'παραπεμπτικού':'συνταγής')+' → νέα</button>';
+      h += '<div style="display:flex;gap:10px;margin-top:10px">'
         + '<button data-ep="print" class="go" style="flex:1;min-height:48px;border:0;border-radius:12px;background:#0A66C2;color:#fff;font-size:16px;font-weight:600"'+(S.busy?' disabled':'')+'>'+(S.busy==='print'?'⏳ Εκτύπωση…':'🖨 Εκτύπωση')+'</button>'
         + (type!=='ref' && !exec && !/ακυρ/i.test(d.status) ? '<button data-ep="cancel" style="flex:1;min-height:48px;border:0;border-radius:12px;background:#FDECEC;color:#B42318;font-size:16px;font-weight:600"'+(S.busy?' disabled':'')+'>'+(S.busy==='cancel'?'⏳ …':'✖ Ακύρωση')+'</button>' : '')
         + '</div>';
@@ -12858,6 +12867,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const load = async ()=>{ try{ const id = await epxJob('epdoc', {amka, bc, type}, name); const j = await jobWait(id, 90000);
       if(!j || j.status!=='done'){ S.st='err'; S.err = (j && j.note) || 'το bot δεν απάντησε'; } else { S.st='ok'; S.d = ((j.payload||{}).result||{}).doc||{}; } }catch(e){ S.st='err'; S.err=e.message; } if(pg.el.isConnected) pg.redraw(); };
     pg.el.addEventListener('click', async e=>{
+      if(e.target.closest('[data-ep=copy]') && S.d){ const d = S.d;
+        const icd = [...new Set((d.dx||[]).map(x=>(String(x).toUpperCase().match(/\b[A-Z]\d{2}(?:\.\d{1,2})?\b/)||[])[0]).filter(Boolean))].slice(0, 6);
+        if(!window.pdxRxStudio) return;
+        if(type==='ref') pdxRxStudio({amka, mode:'ref', icd, ex:(d.exams||[]).map(x=>({n:x.name, ep:true}))});
+        else pdxRxStudio({amka, mode:'rx', icd, lines:(d.meds||[]).map(m=>[m.name, m.content, m.dose, m.days ? 'για '+m.days+' ημέρες' : ''].filter(Boolean).join(' '))});
+        toast('📋 Αντιγράφηκε — έλεγξε και πάτα «Ετοίμασε…»'); return; }
       if(e.target.closest('[data-ep=print]') && !S.busy){ S.busy='print'; S.msg=''; pg.redraw();
         try{ const id = await epxJob('epprint', {amka, bc, type}, name); const j = await jobWait(id, 120000); S.msg = j ? E(j.note||'') : '⚠ το bot δεν απάντησε'; }catch(err){ S.msg='⚠ '+E(err.message); }
         S.busy=''; if(pg.el.isConnected) pg.redraw(); return; }
