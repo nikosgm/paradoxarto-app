@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v507';
+const APP_VER = '2026-11-16-v508';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -23596,6 +23596,7 @@ var box = document.createElement('div');
 box.id = 'arOv';
 var st = document.createElement('style');
 st.textContent = '#arOv{position:fixed;inset:0;z-index:9500;background:var(--bg,#fff);display:none;flex-direction:column}#arOv.on{display:flex}'
+  + '#arOv.ar-emb{position:static!important;inset:auto;z-index:auto;background:transparent!important;min-height:0}#arOv.ar-emb .ar-top{position:static;background:transparent!important;border:0!important;padding:0 16px}#arOv.ar-emb .ar-top b,#arOv.ar-emb .ar-top button[onclick^="archiveClose"]{display:none}#arOv.ar-emb .ar-body{max-width:none;padding:4px 16px 40px}#arOv.ar-emb .ar-h1{display:none}'
  + '#arOv .ar-top{display:flex;gap:8px;align-items:center;padding:10px 12px;background:var(--primary,#1d4f6e);color:#fff}#arOv .ar-top b{flex:1;font-size:16px}#arOv .ar-top button{background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:14px}'
  + '#arOv .ar-body{flex:1;overflow:auto;padding:12px;max-width:900px;width:100%;margin:0 auto;box-sizing:border-box}'
  + '#arOv input{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1.5px solid var(--border,#ccc);border-radius:10px;margin-bottom:10px}'
@@ -23685,6 +23686,12 @@ function listHtml(q){
   }).join('') + '</div>';
 }
 window.archiveOpen = function(){
+  // 🪟 16/11 (χρήστης: «το αρχείο εξιτηρίων έχει μείνει παλιό UI»): μέσα σε σελίδα της εφαρμογής (iosPage — στον υπολογιστή στο δεξί πάνελ, στο κινητό
+  // σπρώχνεται από δεξιά) αντί για ξεχωριστή πλήρη οθόνη. Το ίδιο περιεχόμενο (box) μετακινείται μέσα στη σελίδα.
+  if(window.iosPage && !(window.__arApi && window.__arApi.el && window.__arApi.el.isConnected)){
+    const put = ()=>{ const h = document.getElementById('arHost'); if(h && box.parentNode!==h) h.appendChild(box); };
+    window.__arApi = window.iosPage('Αρχείο εξιτηρίων', 'Εργαλεία', ()=>{ setTimeout(put, 0); return '<div id="arHost"></div>'; });
+    box.classList.add('ar-emb'); put(); }
   box.classList.add('on');
   shell('<p>Φόρτωση…</p>', ' ');
   rpc('oncall_archive_list', {p_code:LOCK_CODE}).then(function(list){
@@ -23698,7 +23705,7 @@ window.archiveOpen = function(){
     q.focus();
   }).catch(function(){ shell('<p style="color:#B23A3A">Δεν έγινε σύνδεση με τη βάση.</p>'); });
 };
-window.archiveClose = function(){ box.classList.remove('on'); box.innerHTML=''; };
+window.archiveClose = function(){ box.classList.remove('on'); box.innerHTML=''; const a = window.__arApi; window.__arApi = null; if(a && a.el && a.el.isConnected){ box.classList.remove('ar-emb'); document.body.appendChild(box); a.close(); } };
 // swipe αριστερά σε γραμμή του αρχείου → «🗑 Διαγραφή» (όπως το εξιτήριο στη λίστα). Πάτημα αλλού κλείνει.
 // Ένας χειριστής για όλη τη λίστα, ώστε να δουλεύει και μετά από αναζήτηση (που ξαναγράφει τις γραμμές).
 function arSwipe(list){
