@@ -202,7 +202,7 @@
   async function sealB64(u8) { const s = await CK().sealBytes(u8); let b = ""; for (let i = 0; i < s.length; i += 0x8000) b += String.fromCharCode.apply(null, s.subarray(i, i + 0x8000)); return btoa(b); }
   function printLocal(P) { const w = window.open("", "_blank"); if (!w) { say("Επιτρέψτε τα αναδυόμενα για εκτύπωση"); return; } w.document.write(ORP.html(P)); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400); }
 
-  window.pdxOrProg = async function (date0, kind0) {
+  window.pdxOrProg = async function (date0, kind0, opts0) {
     let P = { date: date0 || (kind0 === "ΕΚΤΑΚΤΟ ΠΡΟΓΡΑΜΜΑ" ? todayIso() : ORP.defDate()), kind: kind0 || "ΠΡΟΓΡΑΜΜΑ", resp: "", rooms: ["10", "8"], pts: [], status: "draft" }, cfg = {}, dirty = false, busy = "", loaded = false;
     const can = ["resident", "attending", "admin"].indexOf(window.authRole) >= 0;
     const css = '<style>#orpPg .ie{box-sizing:border-box;font:15px -apple-system,system-ui;padding:5px 7px;border:1px solid #C7CDD4;border-radius:8px;background:#fff;color:#1F2933}#orpPg .iel{display:inline-flex;align-items:center;gap:4px;color:#6B7280;font-size:13px}#orpPg [data-cell]:hover{background:#FFF7CC!important;outline:2px solid #0A84FF}#orpPg .chip{display:inline-flex;align-items:center;min-height:36px;padding:6px 12px;margin:3px;border-radius:18px;border:1px solid #C7CDD4;background:#fff;font:600 14px -apple-system,system-ui;color:#1F2933}#orpPg .chip.on{background:#0A84FF;border-color:#0A84FF;color:#fff}'
@@ -535,7 +535,8 @@
         alert("Το bot του Μεσαίου δεν απάντησε ακόμα — θα το κάνει μόλις ξυπνήσει. Δείτε «Ενέργειες bot».");
       } catch (e) { alert("⚠ " + (e.message || e)); }
     }
-    load(P.date, P.kind);
+    // 🗓 16/11: πρόχειρο από τη Σάρωση (scanrx «ordraft») → οι γραμμές μπαίνουν μόλις φορτώσει το πρόγραμμα της ημέρας + αυτόματη αποθήκευση
+    load(P.date, P.kind).then(async () => { if (opts0 && Array.isArray(opts0.rows) && opts0.rows.length) { const res = photoApply(opts0.rows); touch(); await saveNow(); photoReport(res); } });
     return pg;
   };
 })();

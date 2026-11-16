@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v498';
+const APP_VER = '2026-11-16-v499';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16717,6 +16717,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 📷💊 14/11: συνταγές/παραπεμπτικά που διαβάστηκαν από σάρωση ή Συντόμευση iPhone (oncall_jobs kind «scanrx») → φύλλο «Από σάρωση» → η φόρμα προσυμπληρωμένη
   // 📲 14/11 23:01 (χρήστης: «μόλις ανεβάσω συνταγή/παραπεμπτικό, κουμπί που με πάει κατευθείαν στην έγκριση»): άνοιγμα ενός «📷 Από σάρωση» απευθείας
   window.pdxScanRxOpen = function(x){ const p = x.payload || {};
+    // 🗓 16/11: χειρόγραφο πρόχειρο προγράμματος από τη Σάρωση → πρόγραμμα χειρουργείου της ημέρας (γραφόμενης ή επόμενης εργάσιμης) με τους ασθενείς
+    if(p.mode==='ordraft'){ const o = p.ordraft || {}, m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(o.date||'').trim()); const iso = m ? (m[3].length===2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : undefined; return window.pdxOrProgOpen(iso, {rows: o.rows||[]}); }
     if(p.mode==='opnote') return window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:p.patient||{}, opnote:p.opnote||{}});
     const allOk = p.amka_sure !== false && /^\d{11}$/.test(String(p.amka||'')) && ![].concat(p.meds||[], p.exams||[]).some(x=>!x || x.miss || x.ep===0 || typeof x==='string');
     window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[], autoGo: false});   // 15/11 00:44 (χρήστης: «να πατάω έγκριση ΠΡΙΝ ξεκινήσει να ετοιμάζει συνταγογράφηση από σάρωση»): ΠΟΤΕ αυτόματη έναρξη — μόνο όταν πατήσεις «Ετοίμασε»
@@ -16740,7 +16742,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + '<div style="display:flex;align-items:center"><b style="font-size:19px;flex:1">📷 Από σάρωση</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 14px;font-size:15px">Αργότερα</button></div>'
         + '<div style="font-size:13px;color:#64748B;margin:4px 0 10px">Διαβάστηκαν από φωτογραφία — άνοιξε για <b>έλεγχο</b> και αποστολή (το bot σταματά πάντα για έγκριση).</div>'
         + L.map(x=>{ const p = x.payload, n = p.mode==='opnote' ? E4(((p.opnote||{}).op||'επέμβαση') + ((p.opnote||{}).date ? ' · ' + p.opnote.date : '')) : p.mode==='ref' || !(p.meds||[]).length ? (p.exams||[]).length + ' εξετάσεις' : (p.exams||[]).length ? (p.meds||[]).length + ' φάρμακα + ' + (p.exams||[]).length + ' εξετάσεις' : (p.meds||[]).length + ' φάρμακα';
-          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #EEF1F4"><div style="flex:1;min-width:0"><b style="font-size:16px">'+(p.mode==='opnote'?'📝 Πρακτικό':p.mode==='ref'?'🧾 Παραπεμπτικό':'💊 Συνταγή')+'</b><div style="font-size:13px;color:#64748B">ΑΜΚΑ '+E4(p.amka||'—')+(p.amka_sure===false?' <b style="color:#B26A00">(έλεγξέ το)</b>':'')+' · '+n+'</div></div>'
+          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #EEF1F4"><div style="flex:1;min-width:0"><b style="font-size:16px">'+(p.mode==='ordraft'?'🗓 Πρόχειρο προγράμματος':p.mode==='opnote'?'📝 Πρακτικό':p.mode==='ref'?'🧾 Παραπεμπτικό':'💊 Συνταγή')+'</b><div style="font-size:13px;color:#64748B">'+(p.mode==='ordraft' ? (((p.ordraft||{}).rows||[]).length+' ασθενείς'+((p.ordraft||{}).date?' · '+E4(p.ordraft.date):'')) : 'ΑΜΚΑ '+E4(p.amka||'—')+(p.amka_sure===false?' <b style="color:#B26A00">(έλεγξέ το)</b>':'')+' · '+n)+'</div></div>'
             + '<button data-no="'+x.id+'" style="border:0;background:#EEF2F6;border-radius:11px;padding:10px 12px;font-size:14.5px">🗑</button><button data-go="'+x.id+'" style="border:0;background:var(--mp,#1D4E80);color:#fff;border-radius:11px;padding:10px 14px;font-size:14.5px;font-weight:600">Άνοιγμα</button></div>'; }).join('') + '</div>'; };
       draw(); document.body.appendChild(ov);
       ov.addEventListener('click', async e=>{ if(e.target===ov || e.target.closest('[data-x]')) return ov.remove();
@@ -25295,10 +25297,10 @@ window.CLS_MODE='A';
       try{ localStorage.setItem(K, String(now)); }catch(e){}
       await pdxOrSchedPut({iso, none:true, list:[], at:now});   // «ψάχνει τώρα» → οι άλλες συσκευές περιμένουν 30′
       const o = await pdxOrSchedFetch(iso); await pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }catch(e){} finally{ orBgBusy = false; } }, 5*60000);
-  window.pdxOrProgOpen = async function(date){
+  window.pdxOrProgOpen = async function(date, opts){
     const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v='+encodeURIComponent(typeof APP_VER !== 'undefined' ? APP_VER : '213'); s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
     try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{});
-      const r = await window.pdxOrProg(date);
+      const r = await window.pdxOrProg(date, undefined, opts);
       // 📋 10/11 βράδυ: πάνω-πάνω «Ανεβασμένο πρόγραμμα» (από τον φάκελο) — έξω από το .ios-in ώστε να μη σβήνεται στα redraw
       try{ const pg = [...document.querySelectorAll('#iosPg')].find(x=>x.__ttl==='Πρόγραμμα χειρουργείου'), body = pg && pg.querySelector('.ios-body');
         if(body && !body.querySelector('[data-orsched]')){ const iso = orIso(pdxOrTarget()), dd = new Date(iso+'T12:00:00'); const b = document.createElement('button'); b.setAttribute('data-orsched', '1');
