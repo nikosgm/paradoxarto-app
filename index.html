@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v496';
+const APP_VER = '2026-11-16-v497';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15397,7 +15397,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxDayUnit = async function(){
     const E2 = x=>esc(String(x==null?'':x));
     const DEF = {procs:[{name:'Κυστεοσκόπηση', code:''}], docs:[], time:'14:00', user:'KDOUROUMIS'};
-    let C = Object.assign({}, DEF), job = null, rows = null, sel = {}, msg = '', busy = '', showDone = false;
+    let C = Object.assign({}, DEF), job = null, rows = null, sel = {}, msg = '', busy = '', showDone = false, showCfg = false;
     // 🚪 9/11 (χρήστης): όσοι πήραν εξιτήριο (✅) φεύγουν ΑΜΕΣΩΣ από τη λίστα· στο τέλος μόνο «✅ N εξιτήρια» (εμφάνιση)
     const isDone = s1=>!!(s1 && s1.job && /^✅/.test(s1.st||''));
     try{ const r = await sb6.from('oncall_config').select('value').eq('key','dayunit').maybeSingle(); if(r.data && r.data.value) C = Object.assign({}, DEF, r.data.value); }catch(e){}
@@ -15465,14 +15465,19 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const dmy = iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
     const inp = 'style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px;background:var(--card,#fff);color:inherit"';
     const pg = iosPage('Ουρολογικό Ημέρας', 'Εργαλεία', ()=>{
-      let h = '<div class="ios-h">Ιατρικές πράξεις (όνομα · κωδικός ΝΠΣ)</div><div class="ios-g noic" style="padding:10px 14px">';
-      C.procs.forEach((x,i)=>{ h += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input data-pn="'+i+'" value="'+E2(x.name)+'" placeholder="π.χ. Κυστεοσκόπηση" '+inp+'><input data-pc="'+i+'" value="'+E2(x.code)+'" placeholder="κωδικός" '+inp.replace('width:100%','width:42%')+'><label title="Ζητά πλευρά (Δεξιά/Αριστερά/Άμφω)" style="display:flex;align-items:center;gap:3px;font-size:13px;white-space:nowrap"><input type="checkbox" data-psd="'+i+'"'+(needSide(x)?' checked':'')+(/στομ/i.test(String(x.name||''))?' disabled':'')+'>↔</label><button class="pb pb-lnk pb-dngc" data-pdel="'+i+'" aria-label="διαγραφή" style="min-width:40px">✕</button></div>'; });
-      h += '<button class="pb pb-lnk pb-sm" data-a="padd">＋ Πράξη</button></div>';
-      h += '<div class="ios-h">Θεράποντες (όπως στο ΝΠΣ, ένας ανά γραμμή)</div><div class="ios-g noic" style="padding:10px 14px"><textarea data-docs rows="4" '+inp+'>'+E2((C.docs||[]).join('\n'))+'</textarea></div>';
+      // 🧹 16/11 (χρήστης: «τη λίστα θεραπόντων σβήσ' την από εδώ — να ρυθμίζεται κάπου στις ρυθμίσεις· πιο καθαρό UI»): πάνω μόνο ώρα/ημέρα, οι ρυθμίσεις (πράξεις, θεράποντες) κλειστές
+      let h = '';
       // 16/11 (χρήστης: «ώρα και ημερομηνία στην ίδια σειρά, να μην πιάνουν τόσο χώρο»)
       h += '<div class="ios-h">Ώρα · Ημέρα εξόδου</div><div class="ios-g noic" style="padding:8px 14px;display:flex;gap:8px;align-items:center"><input data-time type="time" value="'+E2(C.time)+'" '+inp.replace('width:100%','width:40%;flex:0 0 auto')+'><input data-dcday type="date" max="'+todayK()+'" value="'+E2(dcDay)+'" '+inp.replace('width:100%','flex:1;min-width:0')+'>'+(dcIsToday() ? '<span style="white-space:nowrap;color:#6B7280">σήμερα</span>' : '<button class="pb pb-lnk pb-sm" data-a="dctoday" style="white-space:nowrap">↺ σήμερα</button>')+'</div>'
         + (dcIsToday() ? '' : '<div style="margin:-4px 16px 8px;padding:8px 10px;border-radius:10px;background:#FEF3C7;color:#92400E;font-size:14px">⚠ Τα εξιτήρια θα βγουν με ημερομηνία <b>'+dmy(dcDay)+'</b> και ώρα <b>'+E2(C.time||'14:00')+'</b> (και η ιατρική πράξη την ίδια ημέρα).</div>');
+      h += '<div style="margin:4px 16px 10px"><button class="pb pb-lnk pb-sm" data-a="cfg">'+(showCfg ? '▾ Κλείσιμο ρυθμίσεων' : '⚙ Ρυθμίσεις: ιατρικές πράξεις · θεράποντες ›')+'</button></div>';
+      if(showCfg){
+      h += '<div class="ios-h">Ιατρικές πράξεις (όνομα · κωδικός ΝΠΣ)</div><div class="ios-g noic" style="padding:10px 14px">';
+      C.procs.forEach((x,i)=>{ h += '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input data-pn="'+i+'" value="'+E2(x.name)+'" placeholder="π.χ. Κυστεοσκόπηση" '+inp+'><input data-pc="'+i+'" value="'+E2(x.code)+'" placeholder="κωδικός" '+inp.replace('width:100%','width:42%')+'><label title="Ζητά πλευρά (Δεξιά/Αριστερά/Άμφω)" style="display:flex;align-items:center;gap:3px;font-size:13px;white-space:nowrap"><input type="checkbox" data-psd="'+i+'"'+(needSide(x)?' checked':'')+(/στομ/i.test(String(x.name||''))?' disabled':'')+'>↔</label><button class="pb pb-lnk pb-dngc" data-pdel="'+i+'" aria-label="διαγραφή" style="min-width:40px">✕</button></div>'; });
+      h += '<button class="pb pb-lnk pb-sm" data-a="padd">＋ Πράξη</button></div>';
+      h += '<div class="ios-h">Θεράποντες (όπως στο ΝΠΣ, ένας ανά γραμμή)</div><div class="ios-g noic" style="padding:10px 14px"><textarea data-docs rows="4" '+inp+'>'+E2((C.docs||[]).join('\n'))+'</textarea></div>';
       h += '<div style="margin:10px 16px"><button class="pb pb-pri pb-lg" data-a="save" style="width:100%">Αποθήκευση ρυθμίσεων</button></div>';
+      }
       h += '<div class="ios-h">Ασθενείς σήμερα (ΝΠΣ 3434)</div><div class="ios-g noic" style="padding:10px 14px">';
       { const td = todayDoc(); h += '<div style="font-size:13px;font-weight:700;color:#6D6D72;margin-bottom:6px">ΣΗΜΕΡΙΝΟΣ ΕΙΔΙΚΟΣ <span style="font-weight:500">(λογαριασμός ΝΠΣ + θεράπων)</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'
         + (C.docs||[]).map(d=>'<button type="button" data-td="'+E2(d)+'" style="border-radius:999px;padding:7px 12px;font-size:14px;font-weight:700;min-height:38px;border:1.5px solid #1D4E80;background:'+(td===d?'#1D4E80;color:#fff':'none;color:#1D4E80')+'">'+E2(d)+'</button>').join('')
@@ -15507,7 +15512,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const t = pg.el.querySelector('[data-time]'); if(t) C.time = t.value || '14:00'; const u = pg.el.querySelector('[data-user]'); if(u) C.user = u.value.trim() || 'KDOUROUMIS';
       q('[data-pr]').forEach(e=>{ sel[e.dataset.pr].proc = +e.value; }); q('[data-dc]').forEach(e=>{ const s1 = sel[e.dataset.dc]; if(s1.doc !== e.value){ s1.doc = e.value; s1.docManual = true; } }); q('[data-tx]').forEach(e=>{ sel[e.dataset.tx].txt = isDef(e.value) ? null : e.value; }); selSave(); };
     pg.el.addEventListener('input', e=>{ const t = e.target.closest('[data-tx]'); if(t){ sel[t.dataset.tx].txt = t.value; selSave(); } });
-    pg.el.addEventListener('change', e=>{ const tm = e.target.closest('[data-time]'); if(tm){ C.time = tm.value || '14:00'; if(!dcIsToday()) pg.redraw(); return; } const dd = e.target.closest('[data-dcday]'); if(dd){ const v = dd.value; dcDay = (/^\d{4}-\d{2}-\d{2}$/.test(v) && v<=todayK()) ? v : todayK(); return pg.redraw(); } const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))){ sel[k].proc = +bp.value; if(!needSide(prOf(sel[k]))) delete sel[k].side; } }); selSave(); } pg.redraw(); return; }
+    pg.el.addEventListener('change', e=>{ const tm = e.target.closest('[data-time]'); if(tm){ C.time = tm.value || '14:00'; save(); return; } const dd = e.target.closest('[data-dcday]'); if(dd){ const v = dd.value; dcDay = (/^\d{4}-\d{2}-\d{2}$/.test(v) && v<=todayK()) ? v : todayK(); return pg.redraw(); } const bp = e.target.closest('[data-bulkpr]'); if(bp){ rd(); if(bp.value!==''){ Object.keys(sel).forEach(k=>{ if(sel[k].on && rows && rows[k] && !isDone(sel[k]) && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))){ sel[k].proc = +bp.value; if(!needSide(prOf(sel[k]))) delete sel[k].side; } }); selSave(); } pg.redraw(); return; }
       rd(); const c = e.target.closest('[data-on]'); if(c){ sel[c.dataset.on].on = c.checked; selSave(); pg.redraw(); }
       const pr = e.target.closest('[data-pr]'); if(pr){ const s1 = sel[pr.dataset.pr]; if(s1){ if(!needSide(prOf(s1))) delete s1.side; } selSave(); pg.redraw(); } });   // 10/11: αλλαγή πράξης → εμφανίζεται αμέσως η πλευρά (στομίες) και ενημερώνεται το κείμενο
     pg.el.addEventListener('click', async e=>{ const rv = e.target.closest('[data-rev]'); if(rv){ if(window.pdxBotReview) pdxBotReview(+rv.dataset.rev); return; }
@@ -15521,6 +15526,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(a==='padd'){ C.procs.push({name:'',code:''}); return pg.redraw(); }
       if(a==='sdone'){ showDone = !showDone; return pg.redraw(); }
       if(a==='dctoday'){ dcDay = todayK(); return pg.redraw(); }
+      if(a==='cfg'){ rd(); showCfg = !showCfg; return pg.redraw(); }
       if(a==='dc'){
         // 📄 9/11 (χρήστης: «εξιτήριο γίνεται ένα-ένα όπως της κλινικής»): μία εντολή «discharge» ανά ασθενή, με τον λογαριασμό του Ημέρας
         const L = Object.keys(sel).filter(k=>sel[k].on && rows[k] && (!sel[k].job || /^(✗|⚠)/.test(sel[k].st||''))).map(Number);   // ✗ απέτυχε / ⚠ δεν αποθηκεύτηκε → ξανά
