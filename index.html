@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v526';
+const APP_VER = '2026-11-17-v527';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18206,11 +18206,11 @@ Z99.2:C|αιμοκάθαρση
     // που κρατά τη σκυτάλη) στέλνονται όσοι κωδικοί δεν έχουν σταλεί ακόμα (comorbNps2) — έως 3 ασθενείς ανά κύκλο.
     try{ if(window.pdxBotSend){ let sent = 0;
       allKeys().forEach(k=>{ if(sent>=3) return; const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived || !d.comorb || !Array.isArray(d.comorb.codes)) return;
-        const done = (d.comorbNps2 && d.comorbNps2.codes) || [];
+        const done = (d.comorbDx && d.comorbDx.codes) || [];   // 17/11 00:41: → «Διάγνωση» ΔΕΥΤΕΡΕΥΟΥΣΑ (όχι Ατομικό Αναμνηστικό)
         const newC = d.comorb.codes.filter(x=>x && x.code && done.indexOf(String(x.code).toUpperCase())<0).map(x=>({code:String(x.code).toUpperCase(), desc:x.desc||''}));
         if(!newC.length) return;
-        d.comorbNps2 = {codes: done.concat(newC.map(x=>x.code)), at: now};
-        try{ window.pdxBotSend(k, 'comorb', {codes: newC, targets: ['hist'], save: true, auto: true, quiet: true}); sent++; saveRec(k, d); }catch(e){} }); } }catch(e){}
+        d.comorbDx = {codes: done.concat(newC.map(x=>x.code)), at: now};
+        try{ window.pdxBotSend(k, 'npsdx', {codes: newC, type: '02', auto: true, quiet: true}); sent++; saveRec(k, d); }catch(e){} }); } }catch(e){}
     allKeys().forEach(k=>{ const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived) return;
       const a = d.comorbAuto;
       if(a && (a.status==='ok' || a.status==='fail')) return;              // μία φορά ανά ασθενή· «fail» = χρειάζεται άνθρωπο
@@ -18271,7 +18271,7 @@ Z99.2:C|αιμοκάθαρση
     // τα αμφίβολα ΠΟΤΕ αυτόματα. Μία φορά ανά σύνολο κωδικών (comorbNps.sig).  // 11/11: comorbNps2 — η παλιά ροή δεν καταχώρισε ποτέ τίποτα → όλα ξαναστέλνονται μία φορά
     const newC = C.filter(i=>!(d.comorbNps2 && (d.comorbNps2.codes||[]).indexOf(i.code)>=0)).map(i=>({code:i.code, desc:i.desc||''}));
     if(newC.length && window.pdxBotSend){ d.comorbNps2 = {codes: ((d.comorbNps2&&d.comorbNps2.codes)||[]).concat(newC.map(x=>x.code)), at: Date.now()};
-      try{ window.pdxBotSend(k, 'comorb', {codes: newC, targets: ['hist'], save: true, auto: true}); }catch(e){} }
+      /* 17/11: τα στέλνει πλέον η pdxComorbAutoList ως «Διάγνωση» ΔΕΥΤΕΡΕΥΟΥΣΑ */ }
     saveRec(k, d);
     return {ok:true, c: C.length, u: U.length, nps: newC.length};
   };
