@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v524';
+const APP_VER = '2026-11-17-v525';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -19554,7 +19554,7 @@ Z99.2:C|αιμοκάθαρση
       Object.entries(r.v||{}).forEach(([i,raw])=>{
         const d = ds[i]; if(!d || !raw) return;
         const v = plain(raw);
-        if(NOVAL.test(v)) return;   // «[Εκκρ.]», «[Παραγγ.]»: δεν είναι τιμή
+        if(NOVAL.test(v)){ const s0 = sortKey(d); if(!T.pend || s0 > T.pend) T.pend = s0; return; }   // «[Εκκρ.]», «[Παραγγ.]»: δεν είναι τιμή — κρατάμε ότι ΕΚΚΡΕΜΕΙ (17/11: ⏳ μόνο όταν το λέει το Medilabi)
         const s = sortKey(d);
         if(T.pts.some(p=>p.s===s && p.v===v)) return;    // ίδια στήλη δύο φορές / ίδια γραμμή δύο φορές
         T.pts.push({s, d, v, f:flagOf(raw), n:numOf(raw)});
@@ -19660,7 +19660,7 @@ Z99.2:C|αιμοκάθαρση
   window.labsFullTable = function(v){ lfTable = v ? '1' : '0'; try{ localStorage.setItem('pdx_lf_table', lfTable); }catch(e){} render(); };
   function renderTable(P, withLab){
     let h = top('🧪 Εργαστηριακά', withLab+'/'+P.length+' ασθενείς με αποτελέσματα'+(loadedAt?' · '+hhmm(loadedAt):''));
-    h += '<div class="lf-bar"><button class="on" onclick="labsFullTable(true)">▦ Πίνακας</button><button onclick="labsFullTable(false)">▤ Κάρτες</button><span style="font-size:12.5px;color:#64748B;margin-left:6px">Τελευταία τιμή κάθε εξέτασης · <b style="color:#B42318">↑↓</b> εκτός ορίων · ⏳ = δεν βγήκε ακόμα σήμερα (από κάτω η προηγούμενη τιμή με την ημερομηνία της)</span></div>';
+    h += '<div class="lf-bar"><button class="on" onclick="labsFullTable(true)">▦ Πίνακας</button><button onclick="labsFullTable(false)">▤ Κάρτες</button><span style="font-size:12.5px;color:#64748B;margin-left:6px">Τελευταία τιμή κάθε εξέτασης · <b style="color:#B42318">↑↓</b> εκτός ορίων · ⏳ = εκκρεμεί στο Medilabi (από κάτω η προηγούμενη τιμή με την ημερομηνία της)</span></div>';
     h += deskBar() + '<div class="lf-body" id="lmBody">' + deskBody(P) + '</div>';
     box.innerHTML = h;
   }
@@ -19684,8 +19684,8 @@ Z99.2:C|αιμοκάθαρση
           const a = alarmOf(k, p0), old = dayOf(p0.d)!==b.days[0];
           // 🕘 16/11 (χρήστης: «σήμερα βγήκε η γενική, μέχρι να βγει το βιοχημικό δείχνεις τα χθεσινά — μπορεί να μπερδευτούμε»):
           // τιμή ΑΛΛΗΣ ημέρας → ⏳ όταν η τελευταία ημέρα είναι σήμερα (περιμένουμε τη σημερινή) + μικρή παλιά τιμή ΜΕ ημερομηνία· αλλιώς γκρι + ημερομηνία
-          if(old){ const dl = (()=>{ const dd = dayOf(p0.d), y = new Date(Date.now()-864e5); const yk = String(y.getDate()).padStart(2,'0')+'/'+String(y.getMonth()+1).padStart(2,'0')+'/'+String(y.getFullYear()).slice(2); return dd===yk ? 'χθες' : dd.slice(0,5); })(), pend = b.days[0]===today;
-            h += '<td class="v old'+(pend?' pend':'')+'" title="'+E((pend?'Δεν βγήκε ακόμα σήμερα · ':'')+'τελευταία: '+(p0.d||''))+'">'+(pend?'<span class="pw">⏳</span>':'')+'<span class="ov">'+valOrNote(p0.v, a)+'</span><span class="od">'+E(dl)+'</span></td>'; return; }
+          if(old){ const dl = (()=>{ const dd = dayOf(p0.d), y = new Date(Date.now()-864e5); const yk = String(y.getDate()).padStart(2,'0')+'/'+String(y.getMonth()+1).padStart(2,'0')+'/'+String(y.getFullYear()).slice(2); return dd===yk ? 'χθες' : dd.slice(0,5); })(), pend = !!(T.pend && T.pend > p0.s);
+            h += '<td class="v old'+(pend?' pend':'')+'" title="'+E((pend?'Εκκρεμεί στο Medilabi · ':'')+'τελευταία: '+(p0.d||''))+'">'+(pend?'<span class="pw">⏳</span>':'')+'<span class="ov">'+valOrNote(p0.v, a)+'</span><span class="od">'+E(dl)+'</span></td>'; return; }
           h += '<td class="v '+cls(a)+'" title="'+E(p0.d||'')+'">'+valOrNote(p0.v, a)+'</td>'; });
         h += '<td class="cnt">'+(all?'<span class="'+(imp?'b':'g')+'">'+all+'</span>':'')+'</td></tr>';
       });
