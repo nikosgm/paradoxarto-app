@@ -107,6 +107,8 @@ self.addEventListener('push', (e) => {
     badge: 'icon-192.png',
     tag: d.tag || undefined,
     data: { url: d.url || './', title, kind: /για (έλεγχο|έγκριση)/.test(title + ' ' + (d.body || '')) ? 'review'
+      // 📑 16/11 (χρήστης: «ειδοποίηση για τα ΕΨΙΝΕ → να ανοίγει εκεί»): ΕΨΙΝΕ → σελίδα ΕΨΙΝΕ
+      : /ΕΨΙΝΕ|Ε\.Ψ\.Ι\.Ν/i.test(title + ' ' + (d.body || '')) ? 'eps'
       // αποτυχίες/κολλήματα εργασιών bot → σελίδα «Εργασίες bot»
       // 10/11 βράδυ (χρήστης: «πατάω ειδοποίηση του bot → με πετάει στην αρχή»): ΟΛΕΣ οι ειδοποιήσεις ενεργειών bot (❌ 🚑 ΔΕΝ καταχωρ… κόλλησε 🤖 ✅) → «Εργασίες bot»
       : /⚠|❌|🚑|🤖|✅|💾|δεν ξεκίνησε|απέτυχε|κόλλησε|ΔΕΝ (καταχωρ|ολοκληρ|μπήκαν)|καταχωρ|οριστικοπ|εξιτήρι|συνταγ|παραπεμπ|ΕΨΙΝΕ|bot|υπολογιστ|φύλακας/i.test(title + ' ' + (d.body || '')) && !/εκτός ορίων|κωδικ|βιοψ/i.test(title + ' ' + (d.body || '')) ? 'jobs'
@@ -122,7 +124,7 @@ self.addEventListener('notificationclick', (e) => {
   const nd = e.notification.data || {}, rev = nd.kind === 'review';
   // «για έλεγχο/έγκριση» → η εφαρμογή ανοίγει κατευθείαν το φύλλο ελέγχου
   const jobs = nd.kind === 'jobs', nt = nd.kind === 'notif', bx = nd.kind === 'bx';
-  const tu = new URL(nd.url || './', self.location.href); if (rev) tu.hash = 'pdxrev'; else if (jobs) tu.hash = 'pdxjobs'; else if (nt) tu.hash = 'pdxnotif'; else if (bx) tu.hash = 'pdxbx'; const target = tu.href;
+  const tu = new URL(nd.url || './', self.location.href); if (rev) tu.hash = 'pdxrev'; else if (nd.kind === 'eps') tu.hash = 'pdxeps'; else if (jobs) tu.hash = 'pdxjobs'; else if (nt) tu.hash = 'pdxnotif'; else if (bx) tu.hash = 'pdxbx'; const target = tu.href;
   e.waitUntil((async () => {
     // 10/11 βράδυ: το iPhone συχνά ΧΑΝΕΙ το #hash/το μήνυμα όταν ξυπνά η εφαρμογή → «σημείωμα» στην κρυφή μνήμη· η εφαρμογή το διαβάζει μόλις ανοίξει/φανεί
     if (nd.kind) { try { const ch = await caches.open('pdx-nav'); await ch.put('/__pdxnav', new Response(JSON.stringify({ kind: nd.kind, t: Date.now(), title: nd.title || '' }), { headers: { 'content-type': 'application/json' } })); } catch (err) {} }

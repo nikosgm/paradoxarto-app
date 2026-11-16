@@ -2549,7 +2549,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v519';
+const APP_VER = '2026-11-16-v521';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12676,9 +12676,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const c=b.dataset.icdpick;
       let chip=[...box.querySelectorAll('[data-c]')].find(x=>x.getAttribute('data-c')===c);
       if(!chip){ const t=document.createElement('div'); t.innerHTML=chips('i',[c],true,[c]); chip=t.querySelector('[data-c]'); box.appendChild(chip); }
+      // 🩺 16/11 17:35 (χρήστης: «όταν πατάω άλλη διάγνωση να φεύγει αυτή που έχεις»): ΜΙΑ διάγνωση — οι υπόλοιπες ξετσεκάρονται
+      box.querySelectorAll('[data-c].on').forEach(x=>{ if(x!==chip){ x.classList.remove('on'); x.style.background=''; x.style.color=''; } });
       chip.classList.add('on'); chip.style.background='var(--mp,#1D4E80)'; chip.style.color='#fff'; chip.title=icdTxt(c);
       q.value=''; res.innerHTML='';
     }, true);
+    // ίδιο και όταν πατάς έτοιμη διάγνωση (chip): ανάβει μόνο αυτή
+    box.addEventListener('click', e=>{ const ch = e.target.closest('[data-c]'); if(!ch || ch.classList.contains('on')) return;
+      box.querySelectorAll('[data-c].on').forEach(x=>{ if(x!==ch){ x.classList.remove('on'); x.style.background=''; x.style.color=''; } }); }, true);
   };
   const rxShort = m=>m.name+' '+m.strength+' '+(m.dose==='1'?'1':m.dose.replace('.',','))+'x'+m.freq+' για '+m.days+' ημέρες';
   // Το κείμενο των οδηγιών όπως θα έβγαινε στο εξιτήριο (χωρίς να ανοίξει παράθυρο)
@@ -14420,10 +14425,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(kind==='review') return pdxOpenNewestReview();
     if(kind==='jobs') return window.pdxBotJobs && pdxBotJobs();
     if(kind==='notif') return window.pdxNotifOpen && pdxNotifOpen();
-    if(kind==='bx') return window.pdxBiopsies && pdxBiopsies(); };
+    if(kind==='bx') return window.pdxBiopsies && pdxBiopsies();
+    if(kind==='eps') return window.pdxEpsineOpen && pdxEpsineOpen(); };
   window.pdxNavNote = async function(){ try{ if(!window.caches) return; const ch = await caches.open('pdx-nav'), r = await ch.match('/__pdxnav'); if(!r) return; await ch.delete('/__pdxnav');
       const j = await r.json(); if(!j || !j.kind || Date.now() - (j.t||0) > 180000) return; if(window.__pdxNavHit && Date.now() - window.__pdxNavHit < 4000) return;
-      const go = ()=>{ try{ pdxNavGo(j.kind); }catch(e){} }; if(window.authRole) go(); else setTimeout(go, 1500); }catch(e){} };
+      // 16/11 17:36 (χρήστης: «πατάω την ειδοποίηση → απλά με πετάς στην εφαρμογή»): περιμένει να ολοκληρωθεί η είσοδος/ξεκλείδωμα (έως 20″) και μετά ανοίγει τη σελίδα
+      const go = ()=>{ try{ pdxNavGo(j.kind); }catch(e){} }; const t0 = Date.now(); const w = ()=>{ const lk = document.getElementById('lockOverlay') || document.getElementById('loginOv'); if(window.authRole && !(lk && lk.offsetParent)) return setTimeout(go, 300); if(Date.now()-t0 < 20000) setTimeout(w, 400); else go(); }; w(); }catch(e){} };
   setTimeout(()=>pdxNavNote(), 900); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) setTimeout(()=>pdxNavNote(), 250); });
   // νέος SW: στέλνει ΠΡΩΤΑ «pdx-nav» (και μετά τα παλιά pdx-open-* για συμβατότητα → αγνοούνται)· ό,τι ανοίξει πρώτο (σημείωμα ή μήνυμα) κερδίζει
   try{ navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e=>{ if(!e.data || e.data.type!=='pdx-nav') return; window.__pdxNavMsg = Date.now();
@@ -14431,6 +14438,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   if(location.hash === '#pdxbx'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxBiopsies) pdxBiopsies(); }, 1500); }
   if(location.hash === '#pdxnotif'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxNotifOpen) pdxNotifOpen(); }, 1500); }
   if(location.hash === '#pdxjobs'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxBotJobs) pdxBotJobs(); }, 1500); }
+  if(location.hash === '#pdxeps'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxEpsineOpen) pdxEpsineOpen(); }, 1500); }
   if(location.hash === '#pdxrev'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxOpenNewestReview(), 1500); }
   window.pdxBotReview = function(id){
     if(typeof sb6==='undefined') return;
@@ -16100,7 +16108,19 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxEpExamFind = function(q, n){ if(!EXC.items) return null; const W = rfN(q).split(' ').filter(Boolean); if(!W.length) return [];
     if(!EXC.idx){ const D = exDead(EXC.items); EXC.idx = EXC.items.map(x=>D.has(x[0]) ? '\u0000' : rfN(x[0])); }
     const out = []; for(let i=0;i<EXC.items.length && out.length<300;i++){ const nm = EXC.idx[i]; if(W.every(w=>nm.includes(w))) out.push(i); }
-    out.sort((a,b)=>(EXC.idx[b].indexOf(W[0])===0)-(EXC.idx[a].indexOf(W[0])===0) || EXC.idx[a].length-EXC.idx[b].length);
+    // 🩸 16/11 17:33 (χρήστης: «νάτριο → πρώτα νάτριο ορού· κάλιο → αίματος· κρεατινίνη → αίματος, των ούρων μετά — πρώτα τα πιο συχνά του αίματος»):
+    // βαθμολογία: ήδη στις «Συχνές της κλινικής» / όσα έχουμε στείλει ξανά ⬆⬆ · αίμα/ορός ⬆ · ούρα/24ωρο/άλλα υγρά ⬇ (εκτός αν τα ζήτησες) · αρχή λέξης ⬆ · μικρότερο όνομα ⬆
+    const qn = W.join(' '), wantU = /ουρ/.test(qn), wantF = /(εγκεφ|πλευρ|ασκιτ|αρθρ|σπερμ|κοπρ|πτυελ|ιδρωτ|γαλα)/.test(qn);
+    const favS = new Set(((window.pdxRefFav)||[]).map(f=>rfN(f[0]))); let usedS = null; try{ usedS = new Set(JSON.parse(localStorage.getItem('pdx_ex_used')||'[]')); }catch(e){ usedS = new Set(); }
+    const sc = i=>{ const nm = EXC.idx[i]; let v = 0;
+      if(favS.has(nm)) v += 120; if(usedS.has(nm)) v += 80;
+      if(/αιμα|ορου|ορο\b|πλασματ/.test(nm)) v += 45;
+      if(!wantU && /ουρ|24ωρ|24 ωρ/.test(nm)) v -= 45;
+      if(!wantF && /(εγκεφαλονωτ|πλευριτ|ασκιτ|αρθρικ|σπερμ|κοπραν|πτυελ|ιδρωτ|γαλακτ|αμνιακ|περικαρδ|περιτοναι)/.test(nm)) v -= 60;
+      if(nm.indexOf(W[0])===0) v += 25; else if(new RegExp('(^|\\s)'+W[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(nm)) v += 12;
+      return v - nm.length/8; };
+    const SC = {}; out.forEach(i=>{ SC[i] = sc(i); });
+    out.sort((a,b)=>SC[b]-SC[a]);
     return out.slice(0, n||15).map(i=>({name:EXC.items[i][0], id:EXC.items[i][1], group:EXC.items[i][2]||''})); };
   setTimeout(()=>{ try{ window.pdxEpExamLoad(); }catch(e){} }, 9500);
   // 🗂 10/11: κατηγορία e-prescription μιας εξέτασης (ακριβές όνομα στον κατάλογο) — για «ένα παραπεμπτικό ανά κατηγορία»
@@ -16133,9 +16153,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     box.addEventListener('click', e=>{ if(e.target.closest('[data-exdone]')){ e.preventDefault(); e.stopPropagation(); seq++; clearTimeout(tm); inp.value = ''; box.innerHTML = ''; return; }
       const b = e.target.closest('[data-exn]'); if(!b) return; e.stopPropagation(); e.preventDefault();
       if(opt.multi && b.dataset.exep==='1'){ const q = inp.value.replace(/\s+/g,' ').trim(), had = (opt.have ? opt.have() : []).some(n=>rfN(n)===rfN(b.dataset.exn));
-        if(had){ if(opt.onUnpick) opt.onUnpick(b.dataset.exn); } else onPick({n:b.dataset.exn, k:b.dataset.exk||rfKind(b.dataset.exn), ep:true});
-        render(q, last); return; }
+        if(had){ if(opt.onUnpick) opt.onUnpick(b.dataset.exn); render(q, last); return; }
+        onPick({n:b.dataset.exn, k:b.dataset.exk||rfKind(b.dataset.exn), ep:true});
+        // ⌨ 16/11 17:33 (χρήστης: «πατάω κρεατινίνη → να φεύγει η λέξη από το πλαίσιο, να γράφω κατευθείαν το επόμενο»)
+        seq++; clearTimeout(tm); inp.value = ''; box.innerHTML = ''; try{ inp.focus({preventScroll:true}); }catch(x){} return; }
       seq++; clearTimeout(tm); onPick({n:b.dataset.exn, k:b.dataset.exk||rfKind(b.dataset.exn), ep:b.dataset.exep==='1'}); inp.value = ''; box.innerHTML = ''; });
+    // 🧠 16/11: όσα διαλέγεις → μπαίνουν πιο ψηλά την επόμενη φορά (μόνο σε αυτή τη συσκευή)
+    box.addEventListener('click', e=>{ const b = e.target.closest('[data-exn]'); if(!b) return; try{ const k = rfN(b.dataset.exn), L = JSON.parse(localStorage.getItem('pdx_ex_used')||'[]').filter(x=>x!==k); L.unshift(k); localStorage.setItem('pdx_ex_used', JSON.stringify(L.slice(0,200))); }catch(x){} }, true);
     return {render, last:()=>last};
   };
   // ✏️ επεξεργασία της λίστας «Συχνές στην κλινική» (πάνω από την τρέχουσα σελίδα — δεν την κλείνει)
@@ -17302,7 +17326,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(t===ov || t.closest('[data-x]')){ ov.remove(); return; }
       if(t.closest('[data-lib]')){ ov.remove(); openLibOver(fam, opt); return; }
       const fv = t.closest('[data-fav]'); if(fv){ e.stopPropagation(); await toggleFav(fv.dataset.fav); draw(); return; }
-      const op = t.closest('[data-open]'); if(op){ const p = (S.packs||[]).find(x=>x.id===op.dataset.open); if(!p) return; ov.style.display = 'none';
+      const op = t.closest('[data-open]'); if(op){ const p = (S.packs||[]).find(x=>x.id===op.dataset.open); if(!p) return;
+        // ⚡ 16/11 17:34 (χρήστης: «πατάω πακέτο → να μπαίνει κατευθείαν, χωρίς έλεγχο και "Προσθήκη"· αν θέλω, σβήνω μετά»): Συνταγή → ΑΜΕΣΗ προσθήκη όλων
+        if(fam==='rx' && opt.onApply){ ov.remove(); markUsed(p.id); const it = (p.items||[]);
+          opt.onApply({meds: it.filter(x=>x.t==='med').map(x=>medLine(x)), ex: it.filter(x=>x.t==='ref').map(x=>({n:x.n, k:x.k||refKind(x.n)})), pack:p.name}); return; }
+        ov.style.display = 'none';
         preview(p, {k:opt.k, who:opt.who, onApply:r=>{ ov.remove(); opt.onApply && opt.onApply(r); }, back:()=>{ ov.style.display = ''; draw(); }}); }
     });
     return ov;
