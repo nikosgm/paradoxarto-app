@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v513';
+const APP_VER = '2026-11-16-v514';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -4360,6 +4360,8 @@ function showDischarge(kOpt){
     const _sg = [ (surgName + (side ? ' '+side : '')).trim(), ((rec.surgery2||'').trim() + (rec.side2 ? ' '+(sideMap[rec.side2]||rec.side2) : '')).trim() ].filter(Boolean).join(' + ');
     const _head = [_nm, _sg].filter(Boolean).join(' - ');
     if(_head) out += _head + '\n\n';
+    // ✂️ 16/11 15:49 (χρήστης: «σε περιτομές οδηγίες εξόδου να βάζεις σαν του ημέρας»): σύντομο κείμενο όπως στο Ουρολογικό Ημέρας
+    if(/περιτομ/.test(sl.normalize('NFD').replace(/[\u0300-\u036f]/g,'')) && !String(rec.surgery2||'').trim()) return out + 'Ασθενής υπεβλήθη σε περιτομή. Εξέρχεται σε καλή γενική κατάσταση.';
     out += 'Ασθενής υπεβλήθη σε '+what+' στις '+(sd?fmt(sd):'__/__/____')+'. Ομαλή μετεγχειρητική πορεία.'+bloodTxt+' Εξέρχεται με οδηγίες για:\n\n';
     let lines = [...(grp.lines||[]).map(sub)];
     const applyStyle = st=>{
