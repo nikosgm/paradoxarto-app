@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v508';
+const APP_VER = '2026-11-16-v509';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21484,7 +21484,7 @@ window.pdxCtInbox = async function(){
     const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     return nm + (x.amka ? ' - '+x.amka : x.am ? ' - ΑΜ '+x.am : '') + '\\' + iso + ' ' + String(x.folder||'CT').slice(0,40) + ' (από ' + x.res + ')'; };
   const pg = iosPage('Αξονικές ειδικευομένων', 'Πίσω', ()=>{
-    let h = '<div style="margin:0 16px 10px;font-size:13.5px;color:#6B7280">Φάκελοι ειδικευομένων στο \\\\pronas\\OUROLOGIKH_KLINIKH · ταιριάζουν επώνυμο <b>και</b> ημερομηνία ανεβάσματος (ίδια μέρα ή μετά την εισαγωγή στο ΝΠΣ)'+(st.at?' · '+dt(st.at):'')+'</div>';
+    let h = '<div style="margin:0 16px 10px;font-size:13.5px;color:#6B7280">Φάκελοι ειδικευομένων στο \\\\pronas\\OUROLOGIKH_KLINIKH · ταιριάζουν επώνυμο (και παρεμφερές γραπτό) <b>και</b> ημερομηνία ανεβάσματος (ίδια μέρα ή μετά την εισαγωγή στο ΝΠΣ)'+(st.at?' · '+dt(st.at):'')+'</div>';
     if(st.busy) h += '<div style="margin:12px 16px;color:#6B7280">⏳ '+E6(st.busy)+'</div>';
     if(st.msg) h += '<div style="margin:12px 16px;color:#B42318">'+E6(st.msg)+'</div>';
     const rows = (st.R && st.R.rows) || [];
@@ -21495,7 +21495,7 @@ window.pdxCtInbox = async function(){
         const btn = m==='ok' ? '<span style="color:#1F8A4C">✓ στο αρχείο</span>' : m==='run' ? '<span style="color:#6B7280">⏳ μετακίνηση…</span>' : (m && m.err) ? '<span style="color:#B42318">⚠ '+E6(m.err)+'</span>'
           : '<button data-ctmv="'+i+'" style="border:0;background:'+(x.sure?'#0A84FF':'#8E8E93')+';color:#fff;border-radius:9px;padding:7px 11px;font-size:13.5px;font-weight:600">📦 Στο αρχείο</button>';
         return {t:'<div style="display:flex;gap:10px;align-items:center;justify-content:space-between"><div><b>'+E6(x.name)+'</b><div style="font-size:12.5px;color:#6B7280">'+E6(x.folder)+' · ανέβηκε '+dt(x.up)+(x.ad?' · εισαγωγή '+E6(x.ad):'')+' · '+(x.n||0)+' αρχεία'
-          +(x.amOk?' · <span style="color:#1F8A4C">✓ ΑΜ στο DICOM</span>':'')+(x.sure?'':' · <span style="color:#B26A00">έλεγξε ('+(x.noAd?'χωρίς ημ. εισαγωγής ΝΠΣ':'συνεπώνυμοι/χωρίς εικόνες')+')</span>')+'</div></div>'+btn+'</div>'}; }));
+          +(x.amOk?' · <span style="color:#1F8A4C">✓ ΑΜ στο DICOM</span>':'')+(x.sure?'':' · <span style="color:#B26A00">έλεγξε ('+(x.fuzzy?'παρεμφερές όνομα φακέλου: «'+E6(x.folder)+'»':x.noAd?'χωρίς ημ. εισαγωγής ΝΠΣ':'συνεπώνυμοι/χωρίς εικόνες')+')</span>')+'</div></div>'+btn+'</div>'}; }));
     });
     const nS = rows.filter((x,i)=>x.sure && !st.mv[i]).length;
     if(nS > 1) h += iosGroup('', [{t:'<b style="color:#0A84FF">📦 Μετακίνηση όλων των σίγουρων ('+nS+')</b>', on:'window.__ctAll && __ctAll()'}]);
