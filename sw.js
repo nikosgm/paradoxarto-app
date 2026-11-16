@@ -1,7 +1,7 @@
 // Παραδόχαρτο service worker — pdx-shell-v3 (2026-11-02)
 // Κέλυφος: πάντα πρώτα το δίκτυο (για να μην κολλάει παλιά έκδοση), με αντίγραφο στην cache για χωρίς σήμα.
 // Μόνο τα δικά μας αρχεία· Supabase/CDN περνούν απευθείας. Web Push: {title, body} από τη send-reminders.
-const CACHE = 'pdx-shell-v7-ct';   // (ίδιο όνομα: η cache κρατιέται — v8 μόνο η λογική)
+const CACHE = 'pdx-shell-v8';   // (ίδιο όνομα: η cache κρατιέται — v8 μόνο η λογική)
 const SHELL = /\/(index\.html|ct\.html|ct|manifest\.json|ct-manifest\.json|icon-\d+\.png|ct-icon-\d+\.png)?$/;
 // 7/11: ο server κάνει ct.html → /ct (307). Μια απάντηση «με ανακατεύθυνση» ΔΕΝ επιτρέπεται για άνοιγμα σελίδας (σφάλμα «δεν είναι δυνατή η πρόσβαση»)
 // → κρατάμε/δίνουμε πάντα «καθαρό» αντίγραφο.
@@ -60,26 +60,8 @@ self.addEventListener('fetch', (e) => {
   // ⚡ 16/11 (χρήστης: «γενικά κολλάει — ανοίγω και αργεί / ξαφνικά reload»): η κεντρική σελίδα (2,8 MB) ανοίγει ΑΜΕΣΑ από την κρυφή μνήμη·
   // η νέα έκδοση κατεβαίνει στο παρασκήνιο και, αν διαφέρει, η εφαρμογή δείχνει «Νέα έκδοση — πάτα για ανανέωση» (ΠΟΤΕ αυτόματο reload).
   // Με ?v=… (ρητό αίτημα νέας έκδοσης) ή χωρίς αντίγραφο → όπως πριν (πρώτα το δίκτυο).
-  const isMain = /\/(index\.html)?$/.test(url.pathname) && !url.searchParams.has('v');
-  if (isMain) {
-    e.respondWith((async () => {
-      const cache = await caches.open(CACHE);
-      const hit = await clean(await cache.match(url.origin + url.pathname));
-      if (!hit) { const r = await clean(await fetch(req.url, { cache: 'no-store', credentials: 'same-origin', redirect: 'follow' })); if (r && r.ok) await cache.put(url.origin + url.pathname, r.clone()).catch(() => {}); return r; }
-      const verOf = (t) => (String(t).match(/APP_VER\s*=\s*'([^']+)'/) || [])[1] || '';
-      e.waitUntil((async () => { try {
-        const old = verOf(await hit.clone().text());
-        const r = await clean(await fetch(req.url, { cache: 'no-store', credentials: 'same-origin', redirect: 'follow' }));
-        if (!r || !r.ok) return;
-        const txt = await r.clone().text(), nv = verOf(txt);
-        if (!nv) return;
-        await cache.put(url.origin + url.pathname, r).catch(() => {});
-        if (nv !== old) { const all = await self.clients.matchAll({ type: 'window' }); for (const c of all) c.postMessage({ type: 'pdx-newver', v: nv, old }); }
-      } catch (err) {} })());
-      return hit;
-    })());
-    return;
-  }
+  // ↩ 16/11 21:35 (χρήστης: «κόλλησε η εφαρμογή, δείχνει μαύρο»): το «πρώτα η κρυφή μνήμη» για την κεντρική σελίδα ΑΝΑΙΡΕΘΗΚΕ → ξανά πρώτα το δίκτυο
+  // (όπως δούλευε σταθερά). Νέα έκδοση: σε επόμενο άνοιγμα — το αυτόματο reload της εφαρμογής μένει κλειστό.
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const net = fetch(req.url, { cache: 'no-store', credentials: 'same-origin', redirect: 'follow' }).then(clean).then(async (r) => {
