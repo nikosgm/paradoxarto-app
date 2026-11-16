@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v500';
+const APP_VER = '2026-11-16-v501';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15537,7 +15537,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(!confirm('Εξιτήρια για '+L.length+' ασθενείς'+(dcIsToday() ? '' : ' με ημερομηνία εξόδου '+dmy(dcDay)+' '+(C.time||'14:00'))+'; Το bot τα συμπληρώνει ένα-ένα και κάθε ένα περιμένει τον δικό σου «Έλεγχο» πριν την αποθήκευση.')) return;
         for(const k of L){ const r = rows[k], s1 = sel[k], pr = C.procs[+s1.proc||0] || {};
           const txt = String(txOf(s1)).trim();
-          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:emrU(), proc:pr.name||'', code:pr.code||'', side:needSide(pr) ? (s1.side||'') : '', actAt:actAt(k), dcDate: dcIsToday() ? '' : dmy(dcDay), dcTime: dcIsToday() ? '' : (C.time||'14:00')}, amka:r.amka||''}}).select('id').single();
+          try{ const ins = await sb6.from('oncall_jobs').insert({kind:'discharge', name:r.name, name_key:nrm(r.name), room:null, status:'new', payload:{text:txt, therapist:'', therapistName:s1.doc||'', dayunit:{emrUser:emrU(), proc:pr.name||'', code:pr.code||'', side:needSide(pr) ? (s1.side||'') : '', actAt:actAt(k), admit:String(r.admit||'').slice(0,20), dcDate: dcIsToday() ? '' : dmy(dcDay), dcTime: dcIsToday() ? '' : (C.time||'14:00')}, amka:r.amka||''}}).select('id').single();
             if(ins.error) throw ins.error; s1.job = ins.data.id; s1.st = '📤 στάλθηκε στο bot'; }catch(x){ s1.st = '✗ δεν στάλθηκε: '+(x.message||x); }
         }
         selSave(); pg.redraw(); poll(); return;
