@@ -2540,7 +2540,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-16-v514';
+const APP_VER = '2026-11-16-v515';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25205,6 +25205,45 @@ window.CLS_MODE='A';
     const L = ['pyo','nit','rbc','fun'].filter(k=>out[k]); if(!L.length) return null;
     const d = (out.pyo||out.nit||out.rbc||out.fun).d;
     return {d, fun: out.fun && !/^(αρνητ|απουσ|ουδεν|neg|0|-|—|\(-\))/i.test(out.fun.v) ? out.fun.v : '', txt: L.map(k=>out[k].lab+' '+out[k].v).join(' · ')}; };
+  // 🧫 16/11 16:51 (χρήστης: «στους ασθενείς του ΝΠΣ να κρατάς για τον καθένα κρυφά γενική και καλλιέργεια, ώστε όταν μπαίνουν στο πρόγραμμα
+  // χειρουργείου να είναι ήδη περασμένη — να μη χρειάζεται να ξαναψάχνεις»): ΑΘΟΡΥΒΗ προ-φόρτωση ανά 2 ώρες για ΟΛΟΥΣ τους ασθενείς της κλινικής
+  // (όσοι έχουν εργαστηριακά τις τελευταίες 5 ημέρες) → μία κοινή ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΗ μνήμη «ptcult|all» {pid → καλλιέργεια}. Γενική ούρων: ήδη στα εργαστηριακά.
+  // Μία συσκευή τη φορά (αν τρέχει ήδη εργασία orcult <10′, οι άλλες περιμένουν)· ανά 25 ασθενείς (όριο του bot).
+  const PTC = 'ptcult|all', PTC_TTL = 2*3600e3;
+  const ptcSig = c=>c ? [c.st||'', c.aa||'', c.date||'', c.res||''].join('|') : '';
+  window.pdxPtCultGet = async function(){ try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key', PTC).maybeSingle(); const e = r && r.data && r.data.data && r.data.data.enc; if(!e) return null;
+      await pdxCK.ready(); const D = await pdxCK.decrypt(e); return {at: (r.data.data.at || D.at || 0), by: D.by || {}}; }catch(e){ return null; } };
+  let ptcBusy = false;
+  window.pdxPtCultPrefetch = async function(force){
+    if(ptcBusy || typeof sb6==='undefined' || typeof pdxCK==='undefined' || !(window.pdxIsBotUser && pdxIsBotUser())) return;
+    if(!force && document.hidden) return;
+    ptcBusy = true;
+    try{
+      const cur = await window.pdxPtCultGet();
+      if(!force && cur && Date.now() - cur.at < PTC_TTL) return;
+      const rj = await sb6.from('oncall_jobs').select('id').eq('kind','orcult').in('status',['new','seen','running']).gte('created_at', new Date(Date.now()-10*60000).toISOString()).limit(1);
+      if(!force && (rj.data||[]).length) return;
+      const r = await sb6.from('oncall_labs').select('pid').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%').gte('updated_at', new Date(Date.now()-5*864e5).toISOString());
+      const pids = [...new Set((r.data||[]).map(x=>String(x.pid||'').replace(/\D/g,'')).filter(Boolean))]; if(!pids.length) return;
+      const by = {}; pids.forEach(pid=>{ if(cur && cur.by[pid]) by[pid] = cur.by[pid]; });   // όσοι έφυγαν από την κλινική → βγαίνουν από τη μνήμη
+      let got = 0;
+      for(let i = 0; i < pids.length; i += 25){ const part = pids.slice(i, i+25);
+        const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες (παρασκήνιο)', name_key:'zzz_orcult', status:'new', payload:{pids:part, quiet:true, pre:true}}).select('id').single(); if(ins.error) break;
+        const id = ins.data.id, t0 = Date.now(); let j = null;
+        while(Date.now()-t0 < 6*60000){ await new Promise(res=>setTimeout(res, 5000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); j = q.data; if(j && /^(done|failed|dismissed|cancelled)$/.test(j.status)) break; }
+        if(!j || j.status!=='done' || !j.payload || !j.payload.result || !j.payload.result.enc) continue;
+        const D = await pdxCK.decrypt(j.payload.result.enc);
+        (D.pts||[]).forEach(c=>{ if(!c || !c.pid || c.err) return; const o = by[c.pid];
+          if(o && ptcSig(o) !== ptcSig(c)){ c.isNew = 1; c.newAt = Date.now(); } else if(o && o.isNew && Date.now() - (o.newAt||0) < 12*3600e3){ c.isNew = 1; c.newAt = o.newAt; }
+          c.at = Date.now(); by[c.pid] = c; got++; });
+        sb6.from('oncall_jobs').update({payload:{pids:part, quiet:true, pre:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται
+      }
+      if(!got && !(cur && Object.keys(by).length)) return;
+      const at = Date.now(), enc = await pdxCK.encrypt({at, by});
+      await sb6.from('oncall_labs').upsert({name_key:PTC, name:'καλλιέργειες ασθενών κλινικής (παρασκήνιο)', pid:null, data:{enc, at}, updated_at:new Date().toISOString()}, {onConflict:'name_key'});
+    }catch(e){} finally{ ptcBusy = false; }
+  };
+  setTimeout(()=>{ window.pdxPtCultPrefetch(); setInterval(()=>window.pdxPtCultPrefetch(), 15*60000); }, 25000);
   // ερμηνεία αποτελέσματος καλλιέργειας
   window.pdxCultTxt = function(c){ if(!c) return {t:'—', cls:''}; if(c.none) return {t:'καμία ουροκαλλιέργεια', cls:'mut'};
     if(c.err && !c.st) return {t:'⚠ δεν διαβάστηκε', cls:'mut'};
@@ -25276,18 +25315,22 @@ window.CLS_MODE='A';
       // κοινή κρυπτογραφημένη μνήμη «orcult|ΗΜΕΡΑ» → εμφάνιση ΑΜΕΣΑ, μετά νέα ανάγνωση· σύγκριση με την προηγούμενη → «🆕» σε όποιον άλλαξε
       let prevBy = {}; try{ const r0 = await sb6.from('oncall_labs').select('data').eq('name_key','orcult|'+st.iso).maybeSingle(); const e0 = r0 && r0.data && r0.data.data && r0.data.data.enc;
         if(e0){ const P0 = await pdxCK.decrypt(e0); (P0.pts||[]).forEach(c=>{ prevBy[c.pid] = c; }); list.forEach(x=>{ if(x.pid && prevBy[x.pid] && !x.c) x.c = prevBy[x.pid]; }); st.cuAt = P0.at || 0; pg.redraw(); } }catch(e){}
-      if(!pids.length){ st.cubusy = ''; pg.redraw(); return; }
-      st.cubusy = 'Καλλιέργειες από το Medilabi ('+pids.length+')…'; pg.redraw();
-      try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες χειρουργείου', name_key:'zzz_orcult', status:'new', payload:{pids, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
+      // 🧫 16/11: ό,τι έχει ήδη φέρει η αθόρυβη προ-φόρτωση (<2 ώρες) → ΑΜΕΣΑ, χωρίς νέο ψάξιμο στο Medilabi (μόνο «Ξανά έλεγχος» ξαναψάχνει)
+      let need = pids;
+      try{ const PC = await window.pdxPtCultGet(); if(PC && PC.by){ list.forEach(x=>{ const c = x.pid && PC.by[x.pid]; if(c && (!x.c || (c.at||0) >= (x.c.at||0))) x.c = c; });
+          if(!force && Date.now() - PC.at < 2*3600e3) need = pids.filter(pid=>!PC.by[pid]); if(need.length < pids.length){ st.cuAt = Math.max(st.cuAt||0, PC.at); pg.redraw(); } } }catch(e){}
+      if(!pids.length || !need.length){ if(pids.length){ cultLocalPut({at:st.cuAt||Date.now(), list}); } st.cubusy = ''; pg.redraw(); return; }
+      st.cubusy = 'Καλλιέργειες από το Medilabi ('+need.length+')…'; pg.redraw();
+      try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες χειρουργείου', name_key:'zzz_orcult', status:'new', payload:{pids:need, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
         const id = ins.data.id, t0 = Date.now(); let j = null;
         while(Date.now()-t0 < 180000){ await new Promise(r=>setTimeout(r, 3000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); j = q.data; if(j && /^(done|failed|dismissed)$/.test(j.status)) break; }
         if(!j || j.status!=='done') throw new Error((j && j.note) || 'το bot δεν απάντησε σε 3′');
         const D = await pdxCK.decrypt(j.payload.result.enc); const by = {}; (D.pts||[]).forEach(c=>{ by[c.pid] = c; });
         const sig = c=>c ? [c.st||'', c.aa||'', c.date||'', c.res||''].join('|') : '';
-        list.forEach(x=>{ if(!x.pid) return; const nw = by[x.pid] || {err:1}, old = prevBy[x.pid]; if(old && sig(old) !== sig(nw) && !nw.err) nw.isNew = 1; else if(old && old.isNew && sig(old) === sig(nw) && Date.now() - (old.newAt||0) < 12*3600e3){ nw.isNew = 1; nw.newAt = old.newAt; } if(nw.isNew && !nw.newAt) nw.newAt = Date.now(); x.c = nw; });
+        list.forEach(x=>{ if(!x.pid || need.indexOf(x.pid)<0) return; const nw = by[x.pid] || {err:1}, old = prevBy[x.pid]; if(old && sig(old) !== sig(nw) && !nw.err) nw.isNew = 1; else if(old && old.isNew && sig(old) === sig(nw) && Date.now() - (old.newAt||0) < 12*3600e3){ nw.isNew = 1; nw.newAt = old.newAt; } if(nw.isNew && !nw.newAt) nw.newAt = Date.now(); x.c = nw; });
         st.cuAt = Date.now(); st.cuerr = ''; cultLocalPut({at:st.cuAt, list});
         try{ const enc = await pdxCK.encrypt({at:st.cuAt, pts:list.filter(x=>x.pid && x.c && !x.c.err).map(x=>x.c)}); await sb6.from('oncall_labs').upsert({name_key:'orcult|'+st.iso, name:'καλλιέργειες χειρουργείου', pid:null, data:{enc, at:st.cuAt}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){}
-        sb6.from('oncall_jobs').update({payload:{pids, quiet:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται μόλις διαβαστεί
+        sb6.from('oncall_jobs').update({payload:{pids:need, quiet:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται μόλις διαβαστεί
       }catch(e){ st.cuerr = e.message || String(e); }
       st.cubusy = ''; pg.redraw(); }
     const load = async (fresh)=>{ st.err = ''; st.o = null;
