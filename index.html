@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v542';
+const APP_VER = '2026-11-17-v543';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25273,7 +25273,8 @@ window.CLS_MODE='A';
       if(i >= 0){ used.add(i); rowPt[x.r] = list[i]; } });
     const COL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#555'};
     const txt = p=>{ if(!p) return ['', '']; if(!p.pid) return ['—', 'mut']; const c = window.pdxCultTxt(p.c); if(!p.c) return ['—', 'mut'];
-      if(c.cls==='pend') return [(p.c.aa ? 'ΕΚΚΡ. '+p.c.aa : 'ΕΚΚΡ.'), 'pend']; return [c.t, c.cls]; };
+      // 17/11 16:17 (χρήστης: «για αρνητική απλά "(-)" και αν εκκρεμεί μόνο ο α/α, π.χ. "200987"»)
+      if(c.cls==='pend') return [String(p.c.aa||'εκκρ.'), 'pend']; return [c.t.replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''), c.cls]; };
     cells.forEach(x=>{ if(!(x.c0 <= W && W < x.c0 + x.cs)) return;
       if(x.cs===1 || (x.r===HR && x.c0 + x.cs - 1===W)){ const td = doc.createElement('td'); if(x.rs > 1) td.rowSpan = x.rs;
         if(x.r===HR){ td.textContent = 'ΚΑΛΛΙΕΡΓΕΙΑ'; td.setAttribute('style', x.td.getAttribute('style')||''); }
@@ -25287,13 +25288,13 @@ window.CLS_MODE='A';
   window.pdxOrCultPrintHtml = async function(st, title){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const P = (st.cu && st.cu.list) || [], css = window.pdxOrSchedCss(), ts = st.cuAt ? new Date(st.cuAt).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     const head = '<!doctype html><html><head><meta charset="utf-8"><title>Πρόγραμμα '+E2(title)+'</title><style>@page{size:A4 landscape;margin:5mm 4mm}html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Calibri,Arial,sans-serif}'+css+'.ft{font-size:10px;color:#555;margin-top:4px}.ct{border-collapse:collapse;font:13px Calibri,Arial,sans-serif;margin-top:8px}.ct td,.ct th{border:1px solid #444;padding:3px 8px}.ct th{background:#E8EEF5}</style></head><body>';
-    const foot = '<div class="ft">🧫 Καλλιέργειες ούρων'+(ts?' · ενημέρωση '+ts:'')+' · (-) αρνητική · ΕΚΚΡ. = εκκρεμεί (ΑΑ δείγματος) · — = δεν βρέθηκε στο Medilabi</div>';
+    const foot = '<div class="ft">🧫 Καλλιέργειες ούρων'+(ts?' · ενημέρωση '+ts:'')+' · (-) αρνητική · αριθμός = εκκρεμεί (α/α δείγματος) · — = δεν βρέθηκε στο Medilabi</div>';
     const X = st.o && st.o.html ? window.pdxOrCultCol(st.o.html, P) : null;
     if(X){ const z = Math.min(1, 1085 / X.width); return head + '<div style="zoom:'+z.toFixed(3)+'">'+X.html+foot+'</div></body></html>'; }
     // μόνο Kerio (PDF ως εικόνες): οι σελίδες του + πίνακας καλλιεργειών
     const d2u = async u=>{ if(/^data:/.test(u)) return u; try{ const bl = await (await fetch(u)).blob(); return await new Promise(ok=>{ const fr = new FileReader(); fr.onload = ()=>ok(fr.result); fr.onerror = ()=>ok(''); fr.readAsDataURL(bl); }); }catch(e){ return ''; } };
     let imgs = ''; for(const f of ((st.m && st.m.files) || [])) for(const u of (f.imgs||[])){ const d = await d2u(u); if(d) imgs += '<img src="'+d+'" style="display:block;width:100%;page-break-after:always">'; }
-    const rows = P.map(p=>{ const c = window.pdxCultTxt(p.c), t = !p.pid ? ';' : (p.c && c.cls==='pend' ? (p.c.aa ? 'ΕΚΚΡ. '+p.c.aa : 'ΕΚΚΡ.') : c.t); return '<tr><td>'+E2(p.room||'')+'</td><td><b>'+E2(p.name)+'</b></td><td style="font-weight:700;color:'+({ok:'#1F8A4C',pend:'#B26B00',pos:'#C62828'}[c.cls]||'#000')+'">'+E2(t)+'</td></tr>'; }).join('');
+    const rows = P.map(p=>{ const c = window.pdxCultTxt(p.c), t = !p.pid ? '—' : (p.c && c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, '')); return '<tr><td>'+E2(p.room||'')+'</td><td><b>'+E2(p.name)+'</b></td><td style="font-weight:700;color:'+({ok:'#1F8A4C',pend:'#B26B00',pos:'#C62828'}[c.cls]||'#000')+'">'+E2(t)+'</td></tr>'; }).join('');
     return head + imgs + '<h3 style="margin:0">🧫 Καλλιέργειες · '+E2(title)+'</h3><table class="ct"><tr><th>Αίθουσα</th><th>Ασθενής</th><th>Καλλιέργεια</th></tr>'+rows+'</table>'+foot+'</body></html>'; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
