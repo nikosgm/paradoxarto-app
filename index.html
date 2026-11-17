@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v545';
+const APP_VER = '2026-11-17-v546';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -20153,7 +20153,10 @@ let viaList = false;   // ο ασθενής ανοίχτηκε από τη λί�
       if(onlyBad && !vals.some(v=>/[↑↓]$/.test(v))) return;
       if(group && !groupOut){ t += '<tr class="lf-g"><td colspan="'+(cols.length+1)+'">'+E(group)+'</td></tr>'; groupOut = true; }
       t += '<tr><td class="lf-n">'+E(r.t)+((r.r||r.u)?'<small>'+E([r.r,r.u].filter(Boolean).join(' · '))+'</small>':'')+'</td>'
-        + vals.map((v,k)=>{ const up=/↑$/.test(v), dn=/↓$/.test(v); return '<td class="'+(up?'up ':dn?'dn ':'')+(dayOf(cols[k].d)===today?'today':'')+'">'+E(v)+'</td>'; }).join('') + '</tr>';
+        + vals.map((v,k)=>{ const up=/↑$/.test(v), dn=/↓$/.test(v);
+            // 🧫 17/11 16:48 (χρήστης: «πατάω πάνω στο εκκρεμεί → α/α και σημείωση, π.χ. νεφροστομία»)
+            const cp = /^\[(Εκκρ|Παραγγ)/.test(v) && /ΚΑΛΛΙΕΡΓ/i.test(group||'') && lab.pid ? ' data-cpend="'+E(String(lab.pid))+'" style="color:#0A84FF;text-decoration:underline;cursor:pointer"' : '';
+            return '<td class="'+(up?'up ':dn?'dn ':'')+(dayOf(cols[k].d)===today?'today':'')+'"'+cp+'>'+E(v)+'</td>'; }).join('') + '</tr>';
       shown++;
     });
     t += '</tbody></table>';
@@ -25273,7 +25276,7 @@ window.CLS_MODE='A';
   // κείμενο κουτιού: (-) · μόνο ο α/α αν εκκρεμεί · (+) μικρόβιο · + «Μύκητες»
   window.pdxOrMarkTxt = function(p){ if(!p) return null; let t = '', cls = 'mut';
     if(!p.pid){ t = '? έλεγξε'; cls = 'pos'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); }
-    const fun = !!(p.ua && p.ua.fun); return {t, cls, fun}; };
+    const fun = !!(p.ua && p.ua.fun); return {t, cls, fun, note: (p.c && p.c.note) ? String(p.c.note).slice(0, 40) : ''}; };
   const orPick = (list, words, used)=>{ for(let j = 0; j < list.length; j++){ if(used.has(j)) continue; const a = ORN(list[j].name).split(' '); if(!a[0]) continue;
       const k = words.indexOf(a[0]); if(k < 0) continue; if(a[1] && !words.slice(k+1, k+4).some(w=>w[0]===a[1][0])) continue; return j; } return -1; };
   // PDF: γραμμές από τις θέσεις κειμένου → ταίριασμα επωνύμου (+ αρχικό ονόματος)
@@ -25297,7 +25300,7 @@ window.CLS_MODE='A';
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     return '<div style="container-type:inline-size;padding-left:15%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.85)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
-        return '<div style="position:absolute;right:100%;margin-right:1.5cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:12.5cqw;box-sizing:border-box;border:1.5px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 1.25cqw/1.15 Calibri,Arial,sans-serif;text-align:center;padding:.25em .3em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
+        return '<div style="position:absolute;right:100%;margin-right:1.5cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:12.5cqw;box-sizing:border-box;border:1.5px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 1.25cqw/1.15 Calibri,Arial,sans-serif;text-align:center;padding:.25em .3em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
       + '</div></div>'; };
   // σελίδα εκτύπωσης: κάθε σελίδα του PDF (ή ο πίνακας του Excel) μικραίνει σε Α4 οριζόντιο με τα κουτάκια αριστερά
   window.pdxOrCultPrintHtml = async function(st, title){ const P = (st.cu && st.cu.list) || [];
@@ -25313,6 +25316,27 @@ window.CLS_MODE='A';
       pages = '<div class="pg"><div style="width:285mm">'+window.pdxOrMarked('<div style="zoom:var(--z,1)">'+st.o.html+'</div>', m)+'</div></div>';
       pages += '<script>(function(){var t=document.querySelector(".pg table");if(!t)return;var b=t.parentNode,W=b.parentNode.clientWidth;b.style.setProperty("--z",Math.min(1,W/t.offsetWidth));})()<\/script>'; }
     return head + pages + '</body></html>'; };
+  // 🧫 πληροφορίες εκκρεμούς καλλιέργειας: πρώτα ό,τι υπάρχει στη μνήμη, μετά φρέσκια ανάγνωση από το Medilabi (μόνο αυτός ο ασθενής)
+  window.pdxCultInfo = async function(pid){ pid = String(pid||'').replace(/\D/g,''); if(!pid) return; const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center';
+    const S = {c:null, busy:'Ανάγνωση από το Medilabi…'};
+    const draw = ()=>{ const c = S.c, row = (k,v)=>v ? '<div style="display:flex;gap:10px;padding:9px 2px;border-bottom:.5px solid rgba(60,60,67,.18)"><span style="color:#8E8E93;min-width:110px">'+k+'</span><b style="flex:1">'+E2(v)+'</b></div>' : '';
+      ov.innerHTML = '<div style="background:var(--card,#fff);color:inherit;width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-family:-apple-system,system-ui,sans-serif">'
+        + '<div style="font-size:17px;font-weight:700;margin-bottom:8px">🧫 Καλλιέργεια ούρων</div>'
+        + (c ? row('Κατάσταση', c.none ? 'καμία ουροκαλλιέργεια' : window.pdxCultTxt(c).t) + row('Α/Α δείγματος', c.aa) + row('Σημείωση', c.note) + row('Είδος δείγματος', c.spec) + row('Δείγμα', c.sampled || c.date) + row('Παραγγελία', c.order) : '')
+        + (S.busy ? '<div style="color:#8E8E93;padding:10px 2px">⏳ '+E2(S.busy)+'</div>' : '') + (S.err ? '<div style="color:#C62828;padding:10px 2px">⚠ '+E2(S.err)+'</div>' : '')
+        + '<button data-cix style="width:100%;margin-top:12px;border:0;border-radius:12px;background:#F2F2F7;padding:13px;font-size:16px;font-weight:600;color:#0A84FF">Κλείσιμο</button></div>'; };
+    ov.addEventListener('click', e=>{ if(e.target===ov || e.target.closest('[data-cix]')) ov.remove(); });
+    document.body.appendChild(ov);
+    try{ const PC = await window.pdxPtCultGet(); if(PC && PC.by && PC.by[pid]) S.c = PC.by[pid]; }catch(e){} draw();
+    try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργεια (πληροφορίες)', name_key:'zzz_orcult', status:'new', payload:{pids:[pid], quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
+      let j = null; for(let i = 0; i < 40 && ov.isConnected; i++){ await new Promise(r=>setTimeout(r, 2000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); j = q.data; if(j && /^(done|failed|dismissed|cancelled)$/.test(j.status)) break; }
+      if(j && j.status==='done' && j.payload && j.payload.result && j.payload.result.enc){ const D = await pdxCK.decrypt(j.payload.result.enc); const c = (D.pts||[]).find(x=>String(x.pid)===pid); if(c) S.c = c; S.busy = ''; }
+      else { S.busy = ''; S.err = j ? (j.note || 'δεν διαβάστηκε') : 'το bot δεν απάντησε'; }
+      sb6.from('oncall_jobs').update({payload:{pids:[pid], read:true}}).eq('id', ins.data.id).then(()=>{}, ()=>{});
+    }catch(e){ S.busy = ''; S.err = e.message || String(e); }
+    if(ov.isConnected) draw(); };
+  document.addEventListener('click', e=>{ const t = e.target.closest && e.target.closest('[data-cpend]'); if(t){ e.stopPropagation(); window.pdxCultInfo(t.dataset.cpend); } }, true);
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
     const st = {o:null, busy:'', err:'', iso, m:null, mbusy:'', merr:'', cu:null, cubusy:'', cuerr:'', cuAt:0};
@@ -25348,7 +25372,7 @@ window.CLS_MODE='A';
       const col = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#8E8E93'};
       h2 += iosGroup(st.cubusy ? '⏳ '+st.cubusy : (st.cuAt ? 'ενημέρωση '+new Date(st.cuAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''), P.map(p=>{ const c = window.pdxCultTxt(p.c), u = p.ua;
         return {t:'<b>'+esc(p.name)+'</b>'+(p.room?' <span style="color:#8E8E93;font-size:13px">'+esc(p.room)+'</span>':''),
-          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+(p.pid ? esc(c.t) : '<span style="color:#C62828">⚠ ΔΕΝ ταυτοποιήθηκε στο Medilabi (όνομα) — έλεγξε χειροκίνητα· ΔΕΝ σημαίνει ότι δεν έχει καλλιέργεια</span>')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
+          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+(p.pid ? esc(c.t)+(p.c && p.c.note ? ' · 📝 '+esc(p.c.note) : '') : '<span style="color:#C62828">⚠ ΔΕΝ ταυτοποιήθηκε στο Medilabi (όνομα) — έλεγξε χειροκίνητα· ΔΕΝ σημαίνει ότι δεν έχει καλλιέργεια</span>')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
             + (u ? '<div style="margin-top:2px">🔬 '+(u.fun?'<b style="color:#C62828">🍄 Μύκητες '+esc(u.fun)+'</b> · ':'')+esc(u.txt)+(u.d?' <span style="color:#8E8E93">('+esc(u.d)+')</span>':'')+'</div>' : (p.pid ? '<div style="color:#8E8E93">🔬 χωρίς γενική ούρων</div>' : ''))};
       }));
       // 🫁 17/11 15:14 (χρήστης: «στο πρόγραμμα που κάναμε τώρα δεν βλέπω ακτινογραφίες»): και στο ανεβασμένο πρόγραμμα, όπως στον επεξεργαστή
