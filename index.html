@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v563';
+const APP_VER = '2026-11-17-v564';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16252,7 +16252,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   html.pdx-night .rxs .ch{background:#2C2C2E;color:#fff}html.pdx-night .rxs .ch.on{background:#0A84FF}html.pdx-night .rxs .stp{background:#2C2C2E}html.pdx-night .rxs .bar{background:rgba(0,0,0,.9);border-top-color:#38383A}
   html.pdx-night .rxs .r+.r:before,html.pdx-night .rxs .med+.med:before{border-top-color:#38383A}
   .rxs .g{margin:0 12px;border-radius:16px}.rxs .h{font-size:12.5px;font-weight:700;color:#8E8E93;letter-spacing:.05em;margin:16px 18px 6px}
-  .rxs .rxa-top{display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:flex-end;margin:4px 16px 6px}.rxs .rxa-top button{border:0;background:none;color:#0A84FF;font-size:14.5px;font-weight:600;min-height:36px;font-family:inherit}
+  .rxs .rxa-top{display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:flex-end;margin:4px 16px 6px}.rxs .rxq-cam{margin-right:auto;width:36px;height:36px;border-radius:18px;background:rgba(118,118,128,.14);display:flex;align-items:center;justify-content:center;font-size:18px;text-decoration:none}.rxs .rxa-top button{border:0;background:none;color:#0A84FF;font-size:14.5px;font-weight:600;min-height:36px;font-family:inherit}
   .rxs .ptc{display:flex;align-items:center;gap:12px;padding:12px 14px}.rxs .ptc .av{width:44px;height:44px;border-radius:50%;background:#E8F0FE;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none}
   .rxs .ptc .ptb{flex:1;min-width:0;display:flex;flex-direction:column-reverse}.rxs .ptc .r{padding:0!important;min-height:0!important}.rxs .ptc .r:before{display:none!important}
   .rxs .ptc input.big{font-size:20px;padding:2px 0}.rxs .ptc .who{padding:0!important;margin:0!important;font-size:14px}
@@ -16602,7 +16602,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 10/11 βράδυ (χρήστης): ΠΡΩΤΑ ο ΑΜΚΑ (ασθενής) και από κάτω επιλογή Συνταγή / Παραπεμπτικό — ΜΙΑ κοινή επίσκεψη (χωρίς διακόπτη «μαζί με τη συνταγή»)
       // 1) Ασθενής
       // 🎨 14/11 23:29 (χρήστης: «θέλω ακριβώς το UI του Α»)
-      let h = '<div class="rxa-top"><button data-a="ephist">🗂 Ιστορικό</button><button data-a="vclose" class="pb-okc">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
+      let h = '<div class="rxa-top"><a href="/scan" class="rxq-cam" aria-label="Σάρωση με φωτογραφία" title="Σάρωση">📷</a><button data-a="ephist">🗂 Ιστορικό</button><button data-a="vclose" class="pb-okc">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
       if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka)+aylB(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
       else h += '<div class="r" style="display:flex;align-items:center;gap:8px"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'" style="flex:1;min-width:0"><span data-aylin style="flex:none">'+(S.amka && /^\d{11}$/.test(S.amka) ? aylB(S.amka) : '')+'</span></div><div class="who" data-who></div>';
       h += '</div></div>';
@@ -16611,10 +16611,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
 
       // 🎨 14/11 23:20 (χρήστης: «Α + Β + Δ» — πανεύκολο, λιγότερα κλικ): ΜΙΑ σελίδα (φάρμακα + εξετάσεις μαζί, όχι καρτέλες) + ΜΙΑ γραμμή «γράψε ή πες»
       // → Claude: ανάλυση + αντιστοίχιση ΜΟΝΟ με τον κατάλογο e-prescription → μπαίνουν ως ✓· ΕΝΑ κουμπί «Ετοίμασε συνταγή + παραπεμπτικό».
-      h += '<div class="rxq"><textarea data-rxq rows="2" placeholder="Γράψε ή πες, π.χ. «algofren 1x2 7 μέρες + γενική και καλλιέργεια ούρων»">'+E(S.q||'')+'</textarea>'
-        // 14/11 23:38 (χρήστης): χωρίς «✨ Πρόσθεσε» — μόνο υπαγόρευση (μόλις σταματήσεις, μπαίνουν μόνα τους) + κουμπί για τη Σάρωση
-        + '<div class="rxq-b"><button type="button" data-a="rxqmic" class="pri">'+(S.sr?'⏹ Σταμάτα':'🎙 Υπαγόρευση')+'</button><a href="/scan" class="rxq-scan">📷 Σάρωση</a></div>'
-        + (S.qBusy ? '<div class="rxq-m">⏳ Καταλαβαίνω… (μπορείς να συνεχίσεις να μιλάς)</div>' : S.qMsg ? '<div class="rxq-m">'+E(S.qMsg)+'</div>' : '') + '</div>';
+      // 🗑 17/11 20:24 (χρήστης: «σβήσε την υπαγόρευση στη συνταγογράφηση, δεν μου αρέσει — άσε μόνο ένα μικρό κουμπάκι για τη σάρωση, μόνο φωτογραφική μηχανή»)
+      if(S.qBusy || S.qMsg) h += '<div class="rxq">'+(S.qBusy ? '<div class="rxq-m">⏳ Καταλαβαίνω…</div>' : '<div class="rxq-m">'+E(S.qMsg)+'</div>')+'</div>';
       // 3) Φάρμακα
       h += '<div class="h">💊 Φάρμακα'+(S.meds.length?' · '+S.meds.length:'')+'<span style="display:flex;gap:16px"><button data-a="again" style="display:none">Ίδια με την προηγούμενη</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:32px">📦 Πακέτα</button>':'')+(window.pdxPackFrom?'<button data-a="packsave" style="min-height:32px'+(S.meds.length||S.ex.length?'':';display:none')+'">💾 Πακέτο από αυτά</button>':'')+'<button data-a="rxmem" style="min-height:32px" aria-label="Μνήμη δοσολογίας">🧠</button></span></div><div class="g" data-meds></div>';
       const opt = (L, v)=>L.map(x=>'<option value="'+E(x[0])+'"'+(String(x[0])===String(v)?' selected':'')+'>'+E(x[1])+'</option>').join('');
@@ -16949,6 +16947,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // ό,τι υπαγορεύτηκε ΕΝΩ δούλευε το AI μένει στο κουτί και μπαίνει αμέσως μετά
       { const a3 = root.querySelector('[data-rxq]'), now = String((a3 && a3.value) || '').trim(); if(now && now !== txt) S.q = now.indexOf(txt)===0 ? now.slice(txt.length).trim() : now; }
       S.qBusy = false; draw(); if(S.qAgain){ S.qAgain = false; if(!S.sr && String(S.q||'').trim().length > 3) rxQuick(); } }
+    window.__rxQuick = (t)=>{ S.q = String(t||''); return rxQuick(); };   // για τις δοκιμές (η γραμμή «γράψε ή πες» αφαιρέθηκε 17/11)
     // 🎙 15/11: κοινό μικρόφωνο (pdxMic) · ΠΟΤΕ κλείδωμα όσο «καταλαβαίνει» το AI — μιλάς ξανά και μπαίνει στη σειρά
     let MIC = null;
     const micLbl = ()=>{ const b = root.querySelector('[data-a="rxqmic"]'); if(b) b.textContent = S.sr ? '⏹ Σταμάτα' : '🎙 Υπαγόρευση'; };
