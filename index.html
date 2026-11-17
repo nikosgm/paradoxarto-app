@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v549';
+const APP_VER = '2026-11-17-v551';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -6427,7 +6427,7 @@ function renderExtraRows(){
   // Only ones actually filled in — an arrival opened and then abandoned
   // empty (no name, no ward, nothing) shouldn't take up a report row just
   // because it still exists as an empty placeholder in extraPatients.
-  const keys = Object.keys(extraPatients).filter(k=>hasContent(extraPatients[k])).sort();
+  const keys = Object.keys(extraPatients).filter(k=>hasContent(extraPatients[k]) && !extraPatients[k]._npsKeep).sort();
   // Cap of 6 (3/page) — raised from the earlier 4 because arrivals were
   // being silently dropped off the printed report in practice. With a
   // fixed row height and a fixed 2-page layout, more than this still risks
@@ -7359,7 +7359,7 @@ document.head.appendChild(st);
   function entries(noFilter){
     const out = [];
     Object.keys(data||{}).forEach(k=>{ const d=data[k]; if(d && hasContent(d)){ const i=k.lastIndexOf('-'); const r=k.slice(0,i), b=k.slice(i+1); out.push({k,d,room:r,bed:b,sort:(parseInt(r,10)||0)*100+(+b||0)+(isNaN(+r)?50:0)}); } });
-    Object.keys(extraPatients||{}).forEach(k=>{ const d=extraPatients[k]; if(d && !d._npsTemp && hasContent(d)) out.push({k,d,room:(d.assignedWard||'Έξτρα'),bed:'',air:(!d.assignedWard || /^\d+$/.test(String(d.assignedWard))),sort:((/^\d+$/.test(String(d.assignedWard||'')))?(parseInt(d.assignedWard,10)*100+90):(d.assignedWard?2e7+((CLINICS.indexOf(d.assignedWard)+1)||99)*1000:1e7))+(parseInt(k.replace('extra-',''),10)||0)/1000}); });
+    Object.keys(extraPatients||{}).forEach(k=>{ const d=extraPatients[k]; if(d && !d._npsTemp && !d._npsKeep && hasContent(d)) out.push({k,d,room:(d.assignedWard||'Έξτρα'),bed:'',air:(!d.assignedWard || /^\d+$/.test(String(d.assignedWard))),sort:((/^\d+$/.test(String(d.assignedWard||'')))?(parseInt(d.assignedWard,10)*100+90):(d.assignedWard?2e7+((CLINICS.indexOf(d.assignedWard)+1)||99)*1000:1e7))+(parseInt(k.replace('extra-',''),10)||0)/1000}); });
     const f=MOB_CFG.filter||'all';
     const keep = e=>{ const d=e.d; if(f==='todos') return todos(d).length>0; if(f==='post') return /^\d+$/.test(String(d.pod||'').trim()); if(f==='catheter') return (d.foleyTypes||[]).length>0||!!d.drainType; return true; };
     const num=e=>{ const n=parseInt(e.d.pod,10); return isNaN(n)?1e6:n; };
@@ -10351,7 +10351,9 @@ document.head.appendChild(st);
     have.labs = true; have.course = true; if(bot) have.npsmed = true; if(window.pdxScanOpen) have.scan = true; if(window.pdxOpNotesOpen) have.opnote = true; if(window.pdxCtOpen) have.ct = true;
     const go = {ct:"pdxCtOpen('"+xk+"')", course:"pdxDictate('"+xk+"')", npsmed:"pdxMedOrder('"+xk+"')", scan:"pdxScanOpen()", opnote:"pdxOpNotesOpen('"+xk+"')", comorb:"pdxEFolder('"+xk+"')"};   // 🗂 15/11 10:54: Συννοσηρότητες + Χρόνια φάρμακα = «Ηλ. φάκελος»
     const cell = (ic, t, act, dot)=>'<button class="ptg-b" onclick="'+act+'"><span class="ptg-i">'+ic+(dot?'<b class="ptg-d"></b>':'')+'</span><span class="ptg-t">'+t+'</span></button>';
-    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>' : '');
+    // 🏥 17/11 18:29 (χρήστης: «τον πήραμε από τον ΝΠΣ, απλά του προσθέσαμε ιστορικό — γιατί εκτός θαλάμου;»): ιστορικό σε ασθενή μόνο του ΝΠΣ → μένει στη λίστα ΝΠΣ
+    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>' : d._npsKeep ? '<button onclick="pdxNpsKeepPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>'
+      : (String(xk).indexOf('extra')===0 && !d.assignedWard && window.pdxNpsInfo && pdxNpsInfo(d)) ? '<button onclick="pdxNpsKeepSet(\''+xk+'\')" class="ptg-add" style="background:#FFF4E5;color:#8A4B00">↩ Μόνο στη λίστα ΝΠΣ (όχι εκτός θαλάμου)</button>' : '');
     const warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
     let g = '';
     PTA_ORDER.forEach(id=>{ if(!have[id]) return; const m = PTA_GRID[id]; g += cell(m[0], m[1], go[id] || "mobAct('"+xk+"','"+id+"')", id==='labs' && warn); });
@@ -14978,7 +14980,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 17/11 01:05 (χρήστης: «μην ψάχνεις ασθενείς που ξέρεις ότι έχουν πάρει εξιτήριο»): ποιοι νοσηλεύονται ΤΩΡΑ = η λίστα ΝΠΣ (3449) των τελευταίων 12 ωρών· null = δεν ξέρουμε
   window.pdxNpsInNow = ()=>{ if(!NB.busy && Date.now()-NB.at > 10*60000) { try{ nbLoad(true); }catch(e){} }   // 17/11 03:40: φόρτωση και στο bot (πριν μόνο όταν ανοιγόταν η οθόνη ΝΠΣ)
     if(!Array.isArray(NB.rows) || !NB.rows.length || Date.now()-(NB.listAt||0) > 12*3600e3) return null; const S = new Set(NB.rows.map(r=>nbNz(r.name))); return name=>S.has(nbNz(name)); };
-  const nbHere = r=>{ const t = nbNz(r.name).split(' '); const all = []; [data||{}, extraPatients||{}].forEach(S=>Object.keys(S).forEach(k=>{ const d = S[k]; if(d && !d._npsTemp && String(d.name||'').trim()) all.push(d); }));
+  const nbHere = r=>{ const t = nbNz(r.name).split(' '); const all = []; [data||{}, extraPatients||{}].forEach(S=>Object.keys(S).forEach(k=>{ const d = S[k]; if(d && !d._npsTemp && !d._npsKeep && String(d.name||'').trim()) all.push(d); }));
     return all.some(d=>{ if(r.am && d.am && String(d.am)===String(r.am)) return true; const u = nbNz(d.name).split(' '); const [a, b] = u.length <= t.length ? [u, t] : [t, u]; return a.length && a.every((w, i)=>b[i] && (b[i]===w || (w.length>=4 && b[i].startsWith(w)) || (b[i].length>=4 && w.startsWith(b[i])))); }); };
   async function nbLoad(force){
     if(NB.busy || (!force && Date.now()-NB.at < 120000)) return; NB.busy = true; NB.at = Date.now();
@@ -15043,6 +15045,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const nbMiss = ()=>{ const M = npsSort((NB.rows||[]).filter(r=>!nbHere(r))); window.__npsMissing = M; return M; };
   function nbDxN(x){ try{ if(!x || !Array.isArray(x.dx) || !window.pdxComorbClassify) return 0; return pdxComorbClassify(x.dx.join('\n')).filter(i=>i.cls==='C').length; }catch(e){ return 0; } }
   function nbTemp(r){
+    { const kk = Object.keys(extraPatients).find(k=>extraPatients[k] && extraPatients[k]._npsKeep && (extraPatients[k].name===r.name || (r.am && String(extraPatients[k].am||'')===String(r.am)))); if(kk) return kk; }
     Object.keys(extraPatients).forEach(k=>{ if(extraPatients[k] && extraPatients[k]._npsTemp && extraPatients[k].name!==r.name) delete extraPatients[k]; });
     let key = Object.keys(extraPatients).find(k=>extraPatients[k] && extraPatients[k]._npsTemp && extraPatients[k].name===r.name);
     if(!key){ key = 'extra-nps'+Date.now().toString(36); extraPatients[key] = {name:r.name, _npsTemp:true, _npsAt:Date.now()}; }
@@ -15091,6 +15094,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const hook = ()=>{ const mv = mv0(); if(!mv){ return setTimeout(hook, 1000); } new MutationObserver(tick).observe(mv, {childList:true}); tick(); };
     hook(); setInterval(()=>{ if(typeof sb6!=='undefined' && !document.hidden && mv0() && getComputedStyle(mv0()).display!=='none') nbLoad(); }, 60000); setTimeout(()=>{ if(typeof sb6!=='undefined') nbLoad(true); }, 4000); }
   window.pdxNpsBlockRefresh = ()=>nbLoad(true);
+  window.pdxNpsKeepSet = function(k){ const d = extraPatients[k]; if(!d) return; d._npsKeep = true; try{ saveEntryToStorage(k, true, d, true); }catch(e){} try{ if(window.mobBack) mobBack(); }catch(e){} try{ render(); }catch(e){} toast('🏥 '+(d.name||'')+': μόνο στη λίστα ΝΠΣ — το ιστορικό μένει'); };
+  window.pdxNpsKeepPlace = function(k){ const d = extraPatients[k]; if(!d) return; delete d._npsKeep; try{ saveEntryToStorage(k, true, d, true); }catch(e){} try{ render(); }catch(e){} toast('＋ '+(d.name||'')+': μπήκε στους ασθενείς (εκτός θαλάμου) — μετακίνηση σε κρεβάτι από «⇄»'); };
   window.pdxNpsPlace = function(k){
     const d = extraPatients[k]; if(!d || !d._npsTemp) return;
     // 7/11: ΟΛΑ τα κρεβάτια όλων των θαλάμων (κατειλημμένα: γκρι, με το όνομα) + «Εκτός θαλάμου». Χωρίς τον θάλαμο του ΝΠΣ (λάθος πάντα).
@@ -15170,7 +15175,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxNpsKey = function(k, permanent){
     const name = String(k).replace(/^nps:/,''), r = (NB.rows||[]).find(z=>z.name===name) || {name}, x = NB.enr[nbNz(name)] || {};
     const rec = {name}; const am = x.am || r.am, amka = x.amka || r.amka; if(/^\d{8}$/.test(am||'')) rec.am = am; if(/^\d{11}$/.test(amka||'')) rec.amka = amka;
-    if(permanent){ extraCounter++; const nk = 'extra-'+extraCounter; extraPatients[nk] = rec; saveEntryToStorage(nk, true, rec, true); try{ if(Array.isArray(x.dx) && x.dx.length && window.pdxComorbAutoApply) setTimeout(()=>pdxComorbAutoApply(nk, name, x.dx), 400); }catch(e){} return nk; }
+    if(permanent){ if(permanent==='keep'){ const kk = Object.keys(extraPatients).find(q=>extraPatients[q] && extraPatients[q]._npsKeep && extraPatients[q].name===name); if(kk) return kk; rec._npsKeep = true; }
+      extraCounter++; const nk = 'extra-'+extraCounter; extraPatients[nk] = rec; saveEntryToStorage(nk, true, rec, true); try{ if(Array.isArray(x.dx) && x.dx.length && window.pdxComorbAutoApply) setTimeout(()=>pdxComorbAutoApply(nk, name, x.dx), 400); }catch(e){} return nk; }
     const old = Object.keys(extraPatients).find(q=>extraPatients[q] && extraPatients[q]._npsTemp && extraPatients[q].name===name); if(old) return old;
     const key = 'extra-nps'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); rec._npsTemp = true; rec._npsAt = Date.now(); if(Array.isArray(x.dx)){ rec._npsDx = x.dx; pdxComorbTempFill(rec); } extraPatients[key] = rec; return key;
   };
@@ -22086,7 +22092,7 @@ function histPendRefresh(){
         if((!x || x.level!=='ok') && window.pdxNpsFindMissing && window.pdxNpsKey){ try{
           var nm = pdxNpsFindMissing(String(r.label||dd.name||'').replace(/\(;\)/g,''), dd.amka || dd.AMKA);
           window.__histNps = window.__histNps || {};
-          if(nm && !window.__histNps[r.id]){ window.__histNps[r.id] = 1; var nk = pdxNpsKey('nps:'+nm, true); if(nk){ x = {key:nk, level:'ok', extra:true}; try{ toast('🏥 '+nm+': από τη λίστα ΝΠΣ στο Παραδόχαρτο (εκτός θαλάμου) με το ιστορικό του', 3500); }catch(e){} } }
+          if(nm && !window.__histNps[r.id]){ window.__histNps[r.id] = 1; var nk = pdxNpsKey('nps:'+nm, 'keep'); if(nk){ x = {key:nk, level:'ok', extra:true}; try{ toast('🏥 '+nm+': το ιστορικό μπήκε στον ασθενή του ΝΠΣ (μένει στη λίστα ΝΠΣ) του', 3500); }catch(e){} } }
         }catch(e){} }
         if(!x || x.level!=='ok') return;
         if(!m[x.key] || r.id > m[x.key].row.id) m[x.key] = {row:r, level:x.level, extra:!!x.extra};
@@ -25316,9 +25322,9 @@ window.CLS_MODE='A';
     return XLM[key].map(m=>({v:m.v, p:list[m.j]})); };
   const MCOL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666'};
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    return '<div style="container-type:inline-size;padding-left:9%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.91)+'px':'')+'"><div style="position:relative">'+inner
+    return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
-        return '<div style="position:absolute;right:100%;margin-right:.6cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:8cqw;box-sizing:border-box;border:1.2px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 .95cqw/1.1 Calibri,Arial,sans-serif;text-align:center;padding:.15em .2em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
+        return '<div style="position:absolute;right:100%;margin-right:.35cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:5cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 .78cqw/1.1 Calibri,Arial,sans-serif;text-align:center;padding:.15em .2em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
       + '</div></div>'; };
   // σελίδα εκτύπωσης: κάθε σελίδα του PDF (ή ο πίνακας του Excel) μικραίνει σε Α4 οριζόντιο με τα κουτάκια αριστερά
   window.pdxOrCultPrintHtml = async function(st, title){ const P = (st.cu && st.cu.list) || [];
@@ -25328,7 +25334,7 @@ window.CLS_MODE='A';
     let pages = '';
     for(const f of ((st.m && st.m.files) || [])) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
       // διαθέσιμο 285×197mm· με το αριστερό περιθώριο (15%) το ύψος της σελίδας = πλάτος·0.85·h/w
-      const W = Math.min(285, 197 / (0.91 * h / w));
+      const W = Math.min(285, 197 / (0.945 * h / w));
       pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', window.pdxOrMarksPdf((f.txt||[])[i], P))+'</div></div>'; }
     if(!pages && st.o && st.o.html){ const m = window.pdxOrMarksXl(st.o.html, P);
       pages = '<div class="pg"><div style="width:285mm">'+window.pdxOrMarked('<div style="zoom:var(--z,1)">'+st.o.html+'</div>', m)+'</div></div>';
@@ -25357,14 +25363,14 @@ window.CLS_MODE='A';
   document.addEventListener('click', e=>{ const t = e.target.closest && e.target.closest('[data-cpend]'); if(t){ e.stopPropagation(); window.pdxCultInfo(t.dataset.cpend); } }, true);
   // 📤 17/11 16:58 (χρήστης: «εξαγωγή → προεπισκόπηση στο iPhone με κουμπί share: print / save to files / send»): PDF Α4 οριζόντιο,
   // κάθε σελίδα = εικόνα του προγράμματος μικρότερη δεξιά + κουτάκια καλλιέργειας αριστερά (ζωγραφισμένα, ίδια με την προεπισκόπηση)
-  window.pdxOrCultPdf = async function(st, title){ const P = (st.cu && st.cu.list) || [], W = 1600, H = 1131, M = 30, SW = 0.09;
+  window.pdxOrCultPdf = async function(st, title){ const P = (st.cu && st.cu.list) || [], W = 1600, H = 1131, M = 30, SW = 0.06;
     const ld = u=>new Promise((ok, no)=>{ const im = new Image(); im.onload = ()=>ok(im); im.onerror = ()=>no(new Error('εικόνα')); im.src = u; });
     const COL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666666'};
     const page = (img, marks)=>{ const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
       const aw = W - 2*M, ah = H - 2*M, iw0 = img.width || img.naturalWidth, ih0 = img.height || img.naturalHeight;
       let tw = aw, iw = tw*(1-SW), ih = iw*ih0/iw0; if(ih > ah){ ih = ah; iw = ih*iw0/ih0; tw = iw/(1-SW); }
       const ox = M + (aw - tw)/2, ix = ox + tw*SW, iy = M; x.drawImage(img, ix, iy, iw, ih);
-      const bw = tw*SW - 8, fs = 15; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
+      const bw = tw*SW - 6, fs = 13; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
       for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue; const L = [[k.t, COL[k.cls]||'#000']]; if(k.note) L.push([k.note, '#333']); if(k.fun) L.push(['Μύκητες', '#C62828']);
         x.font = '700 '+fs+'px Arial'; const lines = []; for(const [t, col] of L){ let cur = ''; for(const w of String(t).split(' ')){ const t2 = cur ? cur+' '+w : w; if(x.measureText(t2).width > bw - 10 && cur){ lines.push([cur, col]); cur = w; } else cur = t2; } if(cur) lines.push([cur, col]); }
         const lh = fs*1.18, bh = lines.length*lh + 10, by = Math.max(iy + m.v*ih - bh/2, yEnd + 4), bx = ox; yEnd = by + bh;
