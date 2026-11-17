@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v531';
+const APP_VER = '2026-11-17-v532';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18202,7 +18202,9 @@ Z99.2:C|αιμοκάθαρση
   // rec.comorbSuggest = {text, at, src}  → ό,τι βρέθηκε, για να αποφασίσει ο γιατρός τα «αμφίβολα» στο 🩺
   const nmz = s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
   const allKeys = ()=>[].concat(Object.keys((typeof data!=='undefined'&&data)||{}), Object.keys((typeof extraPatients!=='undefined'&&extraPatients)||{}));
-  window.pdxComorbAutoList = function(){
+  // 🩺 17/11 08:15: η αποστολή «Διάγνωσης» και ΜΟΝΗ της (καλείται από ξεχωριστό χρονοδιακόπτη του bot) — ο κύκλος ΑΗΦΥ τη μέρα σταματά νωρίς
+  window.pdxComorbDxSweep = function(){ try{ window.pdxComorbAutoList(true); return {ok:1}; }catch(e){ return {err:String(e.message||e)}; } };
+  window.pdxComorbAutoList = function(sweepOnly){
     const now = Date.now(), out = [];
     // 🩺 17/11 (χρήστης: «δεν έχεις περάσει συννοσηρότητες σε νπς σε κανέναν»): από 14/11 οι κωδικοί έρχονται από τη λίστα ΝΠΣ
     // (pdxComorbTempFill) → ο ασθενής σημειωνόταν «ok» και ΔΕΝ έφευγε ποτέ εργασία καταχώρισης. Εδώ (τρέχει ΜΟΝΟ στο Chrome του bot
@@ -18226,6 +18228,7 @@ Z99.2:C|αιμοκάθαρση
         if(!newC.length) return;
         d.comorbDx = {codes: done.concat(newC.map(x=>x.code)), at: now};
         try{ window.pdxBotSend(k, 'npsdx', {codes: newC, type: '02', auto: true, quiet: true}); sent++; saveRec(k, d); }catch(e){} }); } }catch(e){}
+    if(sweepOnly) return out;
     allKeys().forEach(k=>{ const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived) return;
       const a = d.comorbAuto;
       if(a && (a.status==='ok' || a.status==='fail')) return;              // μία φορά ανά ασθενή· «fail» = χρειάζεται άνθρωπο
