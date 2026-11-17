@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v544';
+const APP_VER = '2026-11-17-v545';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25188,8 +25188,17 @@ window.CLS_MODE='A';
   // στην ίδια ενότητα· + σύντομη γενική ούρων: πυοσφαίρια, νιτρώδη, ερυθρά, μύκητες»).
   // Γενική ούρων: από τα εργαστηριακά της κλινικής (oncall_labs, ήδη στη συσκευή). Καλλιέργεια: εργασία «orcult» (μόνο ανάγνωση στο Medilabi, κρυπτογραφημένη).
   const orNm = t=>orNz(t).replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
+  // 🐞 17/11 16:46 (χρήστης: ασθενής με λατινικό όνομα στο Medilabi — «TKESHELASHVILI NANA» — έβγαινε «δεν βρέθηκε» ενώ ΕΧΕΙ καλλιέργεια):
+  // το πρόγραμμα γράφει το όνομα στα ελληνικά, το Medilabi στα λατινικά → ταίριασμα ΜΟΝΟ με ελληνικά γράμματα αποτύγχανε. Τώρα και «σκελετός»
+  // συμφώνων (ελληνικά↔λατινικά: ΣΒ=SHV, Χ=CH/KH, Θ=TH…), πάντα με ΜΟΝΑΔΙΚΟ αποτέλεσμα.
+  const GRL = {Α:'a',Β:'v',Γ:'g',Δ:'d',Ε:'e',Ζ:'z',Η:'i',Θ:'t',Ι:'i',Κ:'k',Λ:'l',Μ:'m',Ν:'n',Ξ:'ks',Ο:'o',Π:'p',Ρ:'r',Σ:'s',Τ:'t',Υ:'i',Φ:'f',Χ:'k',Ψ:'ps',Ω:'o'};
+  const orSk = w=>{ let x = String(w||'').replace(/[Α-Ω]/g, c=>GRL[c]||'').toLowerCase().replace(/mp/g,'b').replace(/nt/g,'d').replace(/gk|gg/g,'g').replace(/ch|kh/g,'k').replace(/ph/g,'f').replace(/th/g,'t').replace(/sch|sh/g,'s').replace(/tz|dz/g,'z').replace(/w/g,'v').replace(/c/g,'k').replace(/q/g,'k').replace(/x/g,'ks').replace(/j/g,'g').replace(/h/g,'');
+    return x ? x[0] + x.slice(1).replace(/[aeiouy]/g,'').replace(/(.)\1+/g,'$1') : ''; };
+  window.pdxOrSk = orSk;
   const orLabsMatch = (L, name)=>{ const N = orNm(name).split(' '), sur = N[0], fi = (N[1]||'')[0]||''; if(!sur) return null;
-    const hit = L.filter(x=>{ const P = orNm(x.name).split(' '); return P[0]===sur && (!fi || !P[1] || P[1][0]===fi); }); return hit.length===1 ? hit[0] : null; };
+    const hit = L.filter(x=>{ const P = orNm(x.name).split(' '); return P[0]===sur && (!fi || !P[1] || P[1][0]===fi); }); if(hit.length===1) return hit[0]; if(hit.length > 1) return null;
+    const s0 = orSk(sur), f0 = orSk(N[1]||'')[0]||''; if(s0.length < 3) return null;
+    const h2 = L.filter(x=>{ const P = orNm(x.name).split(' '); return orSk(P[0])===s0 && (!f0 || !P[1] || orSk(P[1])[0]===f0); }); return h2.length===1 ? h2[0] : null; };
   // σύντομη γενική ούρων: η ΝΕΟΤΕΡΗ τιμή (μικρότερος δείκτης στήλης = νεότερη ημερομηνία) ανά δείκτη, μέσα στην ομάδα «ΓΕΝΙΚΗ ΕΞΕΤΑΣΗ ΟΥΡΩΝ»
   window.pdxUaBrief = function(data){ const R = (data && data.rows) || [], D = (data && data.dates) || []; let inG = false; const out = {};
     const W = [['pyo', /^Πυοσφαίρια/i, 'Πυοσφ.'], ['nit', /^Νιτρώδη/i, 'Νιτρ.'], ['rbc', /^Ερυθρά αιμοσφαίρια/i, 'Ερυθρά'], ['fun', /μύκητ|μυκητ|ζυμομύκ/i, 'Μύκητες']];
@@ -25263,7 +25272,7 @@ window.CLS_MODE='A';
     return T.map(t=>({s:t.s, u: q===90 ? 1-t.v : q===180 ? 1-t.u : t.v, v: q===90 ? t.u : q===180 ? 1-t.v : 1-t.u})); };
   // κείμενο κουτιού: (-) · μόνο ο α/α αν εκκρεμεί · (+) μικρόβιο · + «Μύκητες»
   window.pdxOrMarkTxt = function(p){ if(!p) return null; let t = '', cls = 'mut';
-    if(!p.pid) t = '—'; else if(!p.c) t = '—'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); }
+    if(!p.pid){ t = '? έλεγξε'; cls = 'pos'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); }
     const fun = !!(p.ua && p.ua.fun); return {t, cls, fun}; };
   const orPick = (list, words, used)=>{ for(let j = 0; j < list.length; j++){ if(used.has(j)) continue; const a = ORN(list[j].name).split(' '); if(!a[0]) continue;
       const k = words.indexOf(a[0]); if(k < 0) continue; if(a[1] && !words.slice(k+1, k+4).some(w=>w[0]===a[1][0])) continue; return j; } return -1; };
@@ -25339,7 +25348,7 @@ window.CLS_MODE='A';
       const col = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#8E8E93'};
       h2 += iosGroup(st.cubusy ? '⏳ '+st.cubusy : (st.cuAt ? 'ενημέρωση '+new Date(st.cuAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''), P.map(p=>{ const c = window.pdxCultTxt(p.c), u = p.ua;
         return {t:'<b>'+esc(p.name)+'</b>'+(p.room?' <span style="color:#8E8E93;font-size:13px">'+esc(p.room)+'</span>':''),
-          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+esc(p.pid ? c.t : 'δεν βρέθηκε στο Medilabi της κλινικής')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
+          sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+(p.pid ? esc(c.t) : '<span style="color:#C62828">⚠ ΔΕΝ ταυτοποιήθηκε στο Medilabi (όνομα) — έλεγξε χειροκίνητα· ΔΕΝ σημαίνει ότι δεν έχει καλλιέργεια</span>')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
             + (u ? '<div style="margin-top:2px">🔬 '+(u.fun?'<b style="color:#C62828">🍄 Μύκητες '+esc(u.fun)+'</b> · ':'')+esc(u.txt)+(u.d?' <span style="color:#8E8E93">('+esc(u.d)+')</span>':'')+'</div>' : (p.pid ? '<div style="color:#8E8E93">🔬 χωρίς γενική ούρων</div>' : ''))};
       }));
       // 🫁 17/11 15:14 (χρήστης: «στο πρόγραμμα που κάναμε τώρα δεν βλέπω ακτινογραφίες»): και στο ανεβασμένο πρόγραμμα, όπως στον επεξεργαστή
