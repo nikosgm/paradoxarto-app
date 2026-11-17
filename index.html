@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v541';
+const APP_VER = '2026-11-17-v542';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -20941,7 +20941,14 @@ window.pdxEFolder = function(k){ const isX = String(k).indexOf('extra')===0, d =
     const cl = (d2.comorb && Array.isArray(d2.comorb.codes)) ? d2.comorb.codes : [], ml = Array.isArray(d2.chronicMeds) ? d2.chronicMeds : [];
     const cr = cl.map(c=>{ const o = typeof c === 'string' ? {code:c} : (c||{}); return {t:'<b>'+E2(o.code||'')+'</b> '+E2(o.desc||''), on:"mobAct('"+ks+"','comorb')"}; });
     const mr = ml.map(m=>({t:'<b>'+E2(m.name||m)+'</b>'+(m.why?' <span style="color:#8A94A3;font-size:13px">'+E2(m.why)+'</span>':''), on:"pdxChronicMeds('"+ks+"')"}));
-    return iosGroup('🩺 Συννοσηρότητες ('+cl.length+')', cr.length ? cr.concat([{t:'<span style="color:#0A84FF">Επεξεργασία / Από ΑΗΦΥ</span>', on:"mobAct('"+ks+"','comorb')"}]) : [{t:'<span style="color:#0A84FF">＋ Συννοσηρότητες (από ΑΗΦΥ)</span>', on:"mobAct('"+ks+"','comorb')"}])
+    // 🗂 17/11 16:11 (χρήστης: «να τις έχει ομαδοποιημένες ανά κατηγορία») — ομάδες κεφαλαίων ICD-10
+    const ICDG = [['A','B','🦠 Λοιμώδη'],['C','D4','🎗 Νεοπλάσματα'],['D5','D8','🩸 Αίμα'],['E','E','⚖️ Ενδοκρινικά · μεταβολικά'],['F','F','🧠 Ψυχικά'],['G','G','🧠 Νευρικό'],['H0','H5','👁 Οφθαλμός'],['H6','H9','👂 Ους'],['I','I','❤️ Κυκλοφορικό'],['J','J','🫁 Αναπνευστικό'],['K','K','🍽 Πεπτικό'],['L','L','🧴 Δέρμα'],['M','M','🦴 Μυοσκελετικό'],['N','N','🫘 Ουρογεννητικό'],['O','Q','👶 Κύηση · συγγενή'],['R','R','❔ Συμπτώματα'],['S','T','🩹 Κακώσεις'],['V','Z','📋 Λοιπά']];
+    const grpOf = c=>{ const u = String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,''); for(const g of ICDG){ const lo=g[0], hi=g[1]; const a = u.slice(0,lo.length), b = u.slice(0,hi.length); if(a>=lo && b<=hi) return g[2]; } return '📋 Λοιπά'; };
+    const cg = {}; cl.forEach((c,i)=>{ const o = typeof c === 'string' ? {code:c} : (c||{}); const g = grpOf(o.code); (cg[g]=cg[g]||[]).push(cr[i]); });
+    const gOrd = ICDG.map(g=>g[2]).filter((g,i,a)=>a.indexOf(g)===i && cg[g]);
+    const comorbHtml = cr.length ? '<div style="padding:4px 16px 0;color:#8A94A3;font-size:13px">🩺 ΣΥΝΝΟΣΗΡΟΤΗΤΕΣ ('+cl.length+')</div>' + gOrd.map(g=>iosGroup(g+' ('+cg[g].length+')', cg[g])).join('') + iosGroup('', [{t:'<span style="color:#0A84FF">Επεξεργασία / Από ΑΗΦΥ</span>', on:"mobAct('"+ks+"','comorb')"}])
+      : iosGroup('🩺 Συννοσηρότητες (0)', [{t:'<span style="color:#0A84FF">＋ Συννοσηρότητες (από ΑΗΦΥ)</span>', on:"mobAct('"+ks+"','comorb')"}]);
+    return comorbHtml
       + iosGroup('💊 Χρόνια φάρμακα · ΑΗΦΥ ('+ml.length+')', mr.length ? mr.concat([{t:'<span style="color:#0A84FF">Λεπτομέρειες</span>', on:"pdxChronicMeds('"+ks+"')"}]) : [{t:'<span style="color:#0A84FF">＋ Χρόνια φάρμακα</span>', on:"pdxChronicMeds('"+ks+"')"}]); });
   window.pdxChronicSync(k).then(L=>{ if(L && pg && pg.redraw) pg.redraw(); });
   return pg; };
@@ -25248,6 +25255,46 @@ window.CLS_MODE='A';
     // 15/11 20:30 (χάρτης cultsrc: ΑΝΑΛΥΤΗΣ «Uroquatro» στις 23/28, ΑΠΟΤΕΛΕΣΜΑ «OK»): «OK» = ένδειξη του ταχέος αναλυτή, ΟΧΙ μικρόβιο — ουδέτερο ως να επιβεβαιωθεί η σημασία του
     if(/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim()) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};   // «OK» του αναλυτή = χωρίς σήμα ανάπτυξης
     return {t:(r ? '(+) '+r.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
+  // 🧫🖨 στήλη «ΚΑΛΛΙΕΡΓΕΙΑ» δεξιά από τον ΘΑΛΑΜΟ στον πίνακα του Excel (χειρίζεται ενωμένα κελιά: rowspan/colspan)
+  window.pdxOrCultCol = function(html, list){
+    const doc = new DOMParser().parseFromString('<div>'+html+'</div>', 'text/html'), tb = doc.querySelector('table'); if(!tb) return null;
+    const N = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+    const occ = [], cells = []; [...tb.rows].forEach((tr, r)=>{ occ[r] = occ[r] || []; let c = 0;
+      [...tr.cells].forEach(td=>{ while(occ[r][c]) c++; const cs = td.colSpan||1, rs = td.rowSpan||1; cells.push({td, r, c0:c, cs, rs}); for(let i = 0; i < rs; i++){ occ[r+i] = occ[r+i] || []; for(let k = 0; k < cs; k++) occ[r+i][c+k] = 1; } c += cs; }); });
+    let W = -1, NC = -1, HR = -1;
+    cells.forEach(x=>{ const t = N(x.td.textContent); if(NC < 0 && /ΟΝΟΜΑΤΕΠΩΝΥΜΟ/.test(t)){ NC = x.c0; HR = x.r; } });
+    if(NC < 0) return null;
+    cells.forEach(x=>{ if(W < 0 && x.r===HR && /^ΘΑΛ/.test(N(x.td.textContent))) W = x.c0 + x.cs - 1; });
+    if(W < 0) W = NC;   // χωρίς στήλη θαλάμου → δίπλα στο ονοματεπώνυμο
+    const nm = t=>N(t).replace(/\d+/g,' ').replace(/\sΤΟΥ\s.*$/,'').replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
+    const used = new Set(), rowPt = {};
+    cells.forEach(x=>{ if(x.r <= HR || x.c0 !== NC) return; const a = nm(x.td.textContent).split(' '); if(!a[0]) return;
+      const i = list.findIndex((p, j)=>{ if(used.has(j)) return false; const b = nm(p.name).split(' '); return b[0]===a[0] && (!a[1] || !b[1] || a[1][0]===b[1][0]); });
+      if(i >= 0){ used.add(i); rowPt[x.r] = list[i]; } });
+    const COL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#555'};
+    const txt = p=>{ if(!p) return ['', '']; if(!p.pid) return ['—', 'mut']; const c = window.pdxCultTxt(p.c); if(!p.c) return ['—', 'mut'];
+      if(c.cls==='pend') return [(p.c.aa ? 'ΕΚΚΡ. '+p.c.aa : 'ΕΚΚΡ.'), 'pend']; return [c.t, c.cls]; };
+    cells.forEach(x=>{ if(!(x.c0 <= W && W < x.c0 + x.cs)) return;
+      if(x.cs===1 || (x.r===HR && x.c0 + x.cs - 1===W)){ const td = doc.createElement('td'); if(x.rs > 1) td.rowSpan = x.rs;
+        if(x.r===HR){ td.textContent = 'ΚΑΛΛΙΕΡΓΕΙΑ'; td.setAttribute('style', x.td.getAttribute('style')||''); }
+        else { const p = rowPt[x.r]; const t = txt(p); td.textContent = t[0]; if(t[0]) td.setAttribute('style', 'text-align:center;font-weight:700;font-size:12px;color:'+(COL[t[1]]||'#000')); }
+        x.td.after(td); }
+      else x.td.colSpan = x.cs + 1; });
+    const cg = tb.querySelector('colgroup'), CW = 118; if(cg && cg.children[W]){ const c = doc.createElement('col'); c.style.width = CW+'px'; cg.children[W].after(c); }
+    const w0 = parseInt(tb.style.width)||0; if(w0) tb.style.width = (w0 + CW)+'px';
+    return {html: tb.outerHTML, width: (w0||1000) + CW, matched: used.size}; };
+  // ολόκληρη σελίδα εκτύπωσης (Α4 οριζόντιο, ταιριασμένη στο πλάτος)
+  window.pdxOrCultPrintHtml = async function(st, title){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const P = (st.cu && st.cu.list) || [], css = window.pdxOrSchedCss(), ts = st.cuAt ? new Date(st.cuAt).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const head = '<!doctype html><html><head><meta charset="utf-8"><title>Πρόγραμμα '+E2(title)+'</title><style>@page{size:A4 landscape;margin:5mm 4mm}html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:Calibri,Arial,sans-serif}'+css+'.ft{font-size:10px;color:#555;margin-top:4px}.ct{border-collapse:collapse;font:13px Calibri,Arial,sans-serif;margin-top:8px}.ct td,.ct th{border:1px solid #444;padding:3px 8px}.ct th{background:#E8EEF5}</style></head><body>';
+    const foot = '<div class="ft">🧫 Καλλιέργειες ούρων'+(ts?' · ενημέρωση '+ts:'')+' · (-) αρνητική · ΕΚΚΡ. = εκκρεμεί (ΑΑ δείγματος) · — = δεν βρέθηκε στο Medilabi</div>';
+    const X = st.o && st.o.html ? window.pdxOrCultCol(st.o.html, P) : null;
+    if(X){ const z = Math.min(1, 1085 / X.width); return head + '<div style="zoom:'+z.toFixed(3)+'">'+X.html+foot+'</div></body></html>'; }
+    // μόνο Kerio (PDF ως εικόνες): οι σελίδες του + πίνακας καλλιεργειών
+    const d2u = async u=>{ if(/^data:/.test(u)) return u; try{ const bl = await (await fetch(u)).blob(); return await new Promise(ok=>{ const fr = new FileReader(); fr.onload = ()=>ok(fr.result); fr.onerror = ()=>ok(''); fr.readAsDataURL(bl); }); }catch(e){ return ''; } };
+    let imgs = ''; for(const f of ((st.m && st.m.files) || [])) for(const u of (f.imgs||[])){ const d = await d2u(u); if(d) imgs += '<img src="'+d+'" style="display:block;width:100%;page-break-after:always">'; }
+    const rows = P.map(p=>{ const c = window.pdxCultTxt(p.c), t = !p.pid ? ';' : (p.c && c.cls==='pend' ? (p.c.aa ? 'ΕΚΚΡ. '+p.c.aa : 'ΕΚΚΡ.') : c.t); return '<tr><td>'+E2(p.room||'')+'</td><td><b>'+E2(p.name)+'</b></td><td style="font-weight:700;color:'+({ok:'#1F8A4C',pend:'#B26B00',pos:'#C62828'}[c.cls]||'#000')+'">'+E2(t)+'</td></tr>'; }).join('');
+    return head + imgs + '<h3 style="margin:0">🧫 Καλλιέργειες · '+E2(title)+'</h3><table class="ct"><tr><th>Αίθουσα</th><th>Ασθενής</th><th>Καλλιέργεια</th></tr>'+rows+'</table>'+foot+'</body></html>'; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
     const st = {o:null, busy:'', err:'', iso, m:null, mbusy:'', merr:'', cu:null, cubusy:'', cuerr:'', cuAt:0};
@@ -25288,8 +25335,24 @@ window.CLS_MODE='A';
       }));
       // 🫁 17/11 15:14 (χρήστης: «στο πρόγραμμα που κάναμε τώρα δεν βλέπω ακτινογραφίες»): και στο ανεβασμένο πρόγραμμα, όπως στον επεξεργαστή
       const XP = (st.o && st.o.pts && st.o.pts.length ? st.o.pts : (st.cu && st.cu.list) || []); window.__orsXP = XP; const nX = XP.length;
-      return h2 + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
+      return h2 + (P.length ? '<button class="ors-btn" data-or="print" style="background:#1D4E80;color:#fff"'+(st.prbusy?' disabled style="opacity:.5"':'')+'>'+(st.prbusy ? '⏳ '+esc(st.prbusy) : '🖨 Εκτύπωση προγράμματος με καλλιέργειες')+'</button>' : '') + (st.prmsg ? '<div class="ios-f">'+esc(st.prmsg)+'</div>' : '') + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
         + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
+    // 🖨 17/11 16:13 (χρήστης: «κουμπί εκτύπωση προγράμματος με καλλιέργειες — νέο κελί δίπλα στον θάλαμο: αρνητική ή ο κωδικός αν εκκρεμεί·
+    // να επιλέγω σε ποιον από τους εκτυπωτές Α4»): το Excel του φακέλου + στήλη «ΚΑΛΛΙΕΡΓΕΙΑ»· αν υπάρχει μόνο το PDF του Kerio → οι σελίδες του + πίνακας καλλιεργειών.
+    // Εκτύπωση: επιλογή υπολογιστή (ο Α4 εκτυπωτής του) → εργασία orsubmit hOnly (κρυπτογραφημένο HTML, κανένα αρχείο στο δίκτυο).
+    async function printCult(){ if(st.prbusy) return; const P = (st.cu && st.cu.list) || []; if(!P.length) return toast('Δεν υπάρχουν καλλιέργειες ακόμα');
+      const at = await window.pdxPrintPick(); if(!at) return;
+      st.prbusy = 'Ετοιμάζω τη σελίδα…'; st.prmsg = ''; pg.redraw();
+      try{ const html = await window.pdxOrCultPrintHtml(st, lbl(st.iso));
+        const u8 = await pdxCK.sealBytes(new TextEncoder().encode(html)); let b = ''; for(let i = 0; i < u8.length; i += 0x8000) b += String.fromCharCode.apply(null, u8.subarray(i, i+0x8000));
+        st.prbusy = 'Στέλνω στον '+(at.name||'υπολογιστή')+'…'; pg.redraw();
+        const ins = await sb6.from('oncall_jobs').insert({name_key:'orprint', name:'🖨 Πρόγραμμα + καλλιέργειες '+lbl(st.iso), room:null, kind:'orsubmit', status:'new', payload:{hOnly:true, h:btoa(b), name:'cult', dir:'-', only:at.id, quiet:true}}).select('id').single();
+        if(ins.error) throw new Error(ins.error.message);
+        let j = null; for(let i = 0; i < 40; i++){ await new Promise(r=>setTimeout(r, 1500)); const q = await sb6.from('oncall_jobs').select('status,note').eq('id', ins.data.id).maybeSingle(); j = q.data; if(j && /^(done|failed|cancelled|dismissed)$/.test(j.status)) break; }
+        sb6.from('oncall_jobs').update({payload:{wiped:true}}).eq('id', ins.data.id).then(()=>{}, ()=>{});
+        st.prmsg = !j ? '⚠ ο υπολογιστής δεν απάντησε ακόμα' : (j.status==='done' ? (j.note||'🖨 Τυπώθηκε') : '⚠ '+(j.note||'η εκτύπωση απέτυχε'));
+      }catch(er){ st.prmsg = '⚠ '+(er.message||er); }
+      st.prbusy = ''; pg.redraw(); }
     // ανανέωση κάθε 20′ όσο είναι ανοιχτή η σελίδα του προγράμματος
     const cuTimer = setInterval(()=>{ if(!document.body.contains(pg.el)) return clearInterval(cuTimer); if(st.cu && Date.now() - (st.cuAt||0) > 20*60000) cultLoad(); }, 60000);
     // 💾 15/11 20:55 (χρήστης: «γιατί οι καλλιέργειες, ενώ είχαν φορτωθεί, χάθηκαν όταν ξαναμπήκα; cache παντού»): η τελευταία λίστα ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΗ στη συσκευή
@@ -25400,6 +25463,7 @@ window.CLS_MODE='A';
     pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
       if(b.dataset.or==='cult') return cultLoad(true);
+      if(b.dataset.or==='print') return printCult();
       if(b.dataset.or==='xr'){ const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
         const recs = []; [typeof data!=='undefined'?data:{}, typeof extraPatients!=='undefined'?extraPatients:{}].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) recs.push({k, d}); }));
         const items = (window.__orsXP||[]).map(p=>{ const N = nz(p.name).split(' '); const r = recs.find(x=>{ const M = nz(x.d.name).split(' '); return M[0]===N[0] && (!N[1] || !M[1] || M[1].slice(0,3)===N[1].slice(0,3)); });
