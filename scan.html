@@ -30,6 +30,7 @@ input[type=text]{font-size:17px;padding:12px;border-radius:12px;border:0;width:2
 @keyframes r{to{transform:rotate(360deg)}}
 a.go{display:block;text-align:center;text-decoration:none;background:#34C759;color:#fff;border-radius:14px;padding:15px;font-weight:800;font-size:17px;width:280px;max-width:90vw}
 a.go2{color:#9fd4ff;font-size:14px}
+.qb{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:5;background:rgba(0,0,0,.72);color:#fff;border-radius:999px;padding:8px 14px;font:600 14px -apple-system,system-ui,sans-serif;display:none;white-space:nowrap;border:0}
 .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .15s}
 /* 📄 9/11: σκάνερ εγγράφων — μπλε περίγραμμα χαρτιού, αυτόματη λήψη, ίσιωμα σε Α4 */
 #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -41,7 +42,7 @@ a.go2{color:#9fd4ff;font-size:14px}
 </style>
 </head><body>
 <div id="app">
-  <div class="cam"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas><div class="hint" id="hint" style="display:none"></div><div class="flash" id="fl"></div><div class="msg" id="msg"><div class="spin"></div></div></div>
+  <div class="cam"><video id="v" playsinline muted autoplay></video><canvas id="ov"></canvas><div class="hint" id="hint" style="display:none"></div><div class="flash" id="fl"></div><button class="qb" id="qb"></button><div class="msg" id="msg"><div class="spin"></div></div></div>
   <div class="bar" id="bar" style="visibility:hidden"><button class="gal" id="gal" aria-label="Από τις φωτογραφίες">🖼</button><button class="shot" id="shot" aria-label="Λήψη"></button><button class="gal" id="mod" aria-label="Τι σαρώνω" style="width:auto;min-width:96px;padding:0 10px;font-size:13px;font-weight:800;line-height:1.2"></button></div>
 </div>
 <div id="ed"><div id="edw"><canvas id="edc"></canvas><canvas id="edo"></canvas><div class="hint">Σύρε τις μπλε γωνίες στις άκρες του χαρτιού</div></div>
@@ -375,7 +376,6 @@ async function aiScan(id, khex){
   try{
     const h = await (await fetch(F, { method:'POST', headers:H, body: JSON.stringify({ haskey: 1 }) })).json();
     if(!h || !h.on) return null;
-    msg('<div class="spin"></div>');   // 14/11 23:01 (χρήστης: «ας μην γράφει τίποτα»)
     const ac = new AbortController(), to = setTimeout(()=>ac.abort(), 150000);
     const r = await fetch(F, { method:'POST', headers:H, signal: ac.signal, body: JSON.stringify({ scan: { id, k: khex, token: tok.get() } }) }); clearTimeout(to);
     const j = await r.json().catch(()=>null);
@@ -386,7 +386,46 @@ async function aiScan(id, khex){
     return { fail: true, error: (j && j.error) || ('HTTP ' + r.status) };
   }catch(e){ return { fail: true, error: String((e && e.message) || e) }; }
 }
+// 📚 17/11 18:13 (χρήστης: «με το που κάνω σάρωση να την παίρνει στη μνήμη και να μπορώ να κάνω απευθείας κι άλλη — να ανεβαίνουν πολλές μαζί»):
+// όρθια σάρωση με ανοιχτό AI → μπαίνει σε ΟΥΡΑ (στιγμιότυπο στη μνήμη), η κάμερα μένει ανοιχτή για την επόμενη· ανέβασμα+ανάγνωση στο παρασκήνιο
+// μία-μία· πάνω στην οθόνη «📤 2 ανεβαίνουν · ✅ 3» (πάτημα = λίστα με αποτελέσματα / ↻ για όσα απέτυχαν). Πρόγραμμα (οριζόντια) / χωρίς AI → όπως πριν.
+const SQ = []; let sqRun = false;
+window.__aiOn = null; (async ()=>{ try{ const h = await (await fetch(SB + '/functions/v1/pdx-ai', { method:'POST', headers:{ 'Content-Type':'application/json', apikey: KEY }, body: JSON.stringify({ haskey: 1 }) })).json(); window.__aiOn = !!(h && h.on); }catch(e){ window.__aiOn = false; } })();
+const WHAT = {report:'📋 Πόρισμα', rx:'💊 Συνταγή', ref:'🧾 Παραπεμπτικό', opnote:'📝 Πρακτικό', ordraft:'🗓 Πρόγραμμα'};
+function sqPaint(){ const b = $('qb'); if(!b) return; const run = SQ.filter(x=>x.st==='wait' || x.st==='up').length, ok = SQ.filter(x=>x.st==='ok').length, bad = SQ.filter(x=>x.st==='fail').length;
+  if(!SQ.length){ b.style.display = 'none'; return; } b.style.display = 'block';
+  b.textContent = (run ? '📤 ' + run + (run === 1 ? ' ανεβαίνει' : ' ανεβαίνουν') : '') + (ok ? (run ? ' · ' : '') + '✅ ' + ok : '') + (bad ? ' · ⚠ ' + bad : '') + (!run ? ' — μπορείτε να κλείσετε' : ''); }
+async function sqOne(it){
+  const raw = crypto.getRandomValues(new Uint8Array(16)), key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), pages = [];
+  for(const c of it.srcs){ const jpg = new Uint8Array(await (await new Promise(r=>c.toBlob(r, 'image/jpeg', 0.8))).arrayBuffer());
+    const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, jpg)), o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12);
+    let s = ''; for(let i = 0; i < o.length; i += 0x8000) s += String.fromCharCode.apply(null, o.subarray(i, i + 0x8000)); pages.push(btoa(s)); }
+  const id = await rpc('scan_put', { p_token: tok.get(), p_payload: { pages } }), khex = [...raw].map(b=>b.toString(16).padStart(2, '0')).join('');
+  let ar = await aiScan(id, khex); if(ar && ar.fail){ await new Promise(r=>setTimeout(r, 1500)); ar = await aiScan(id, khex); }
+  return ar; }
+async function sqWork(){ if(sqRun) return; sqRun = true;
+  try{ for(;;){ const it = SQ.find(x=>x.st==='wait'); if(!it) break; it.st = 'up'; sqPaint();
+      try{ const ar = await sqOne(it); if(ar && ar.ok){ it.st = 'ok'; it.txt = (WHAT[ar.doc_type] || '🩺 Ιστορικό') + (ar.name ? ' ' + ar.name : ''); it.rx = /^(rx|ref|opnote|ordraft)$/.test(ar.doc_type) ? (ar.rxid || '1') : ''; }
+        else { it.st = 'fail'; it.txt = ar && ar.msg ? ar.msg : ar && ar.error ? 'Δεν διαβάστηκε: ' + ar.error : 'Δεν διαβάστηκε (AI κλειστό;)'; } }
+      catch(e){ it.st = 'fail'; it.txt = String((e && e.message) || e).slice(0, 140); }
+      it.srcs = it.st === 'fail' ? it.srcs : null; sqPaint(); if($('msg').dataset.sq === '1') sqList(); } }
+  finally{ sqRun = false; } }
+function sqList(){ $('msg').dataset.sq = '1';
+  msg('<b style="font-size:18px">📚 Σαρώσεις</b><div style="width:100%;max-width:360px;max-height:55vh;overflow:auto">' + SQ.map((x, i)=>'<div style="display:flex;gap:8px;align-items:center;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.15)"><span style="flex:1;text-align:left">' + (x.st==='ok' ? '✅ ' : x.st==='fail' ? '⚠ ' : '⏳ ') + E(x.txt || (x.st==='up' ? 'ανεβαίνει…' : 'σε αναμονή')) + '</span>'
+    + (x.rx ? '<a class="btn" style="min-width:0;padding:6px 10px;font-size:13px;text-decoration:none" href="/?scanrx=' + encodeURIComponent(x.rx) + '">Έγκριση</a>' : '') + (x.st==='fail' && x.srcs ? '<button class="btn sec" data-rt="' + i + '" style="min-width:0;padding:6px 10px;font-size:13px">↻</button>' : '') + '</div>').join('') + '</div>'
+    + '<button class="btn" id="sqb">📷 Συνέχεια σάρωσης</button>' + (SQ.some(x=>x.st==='ok' || x.st==='fail') ? '<button class="btn sec" id="sqc" style="min-width:0">Καθάρισμα λίστας</button>' : ''));
+  $('sqb').onclick = ()=>{ $('msg').dataset.sq = ''; if(stream) $('msg').style.display = 'none'; else camera(); };
+  if($('sqc')) $('sqc').onclick = ()=>{ for(let i = SQ.length - 1; i >= 0; i--) if(SQ[i].st==='ok' || (SQ[i].st==='fail' && !SQ[i].srcs)) SQ.splice(i, 1); sqPaint(); sqList(); };
+  $('msg').querySelectorAll('[data-rt]').forEach(b=>b.onclick = ()=>{ const it = SQ[+b.dataset.rt]; if(it){ it.st = 'wait'; it.txt = ''; sqPaint(); sqWork(); sqList(); } }); }
+try{ $('qb').onclick = ()=>sqList(); }catch(e){}
 async function send(srcs, w0, h0){
+  // 📚 ουρά: όρθια σάρωση + AI ανοιχτό (όχι πρόγραμμα/πρακτικό/στροφή)
+  try{ if(window.__aiOn === true && !window.__scanNoQueue && !window.__scanNoAi && !rotOn() && !opOn() && !(!histOn() && isLand(srcs, w0, h0))){
+    const cs = srcs.map(sr=>{ const w = w0 || sr.width, h = h0 || sr.height, sc = Math.min(1, 1800 / Math.max(w, h)); const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc); c.getContext('2d').drawImage(sr, 0, 0, c.width, c.height); return c; });
+    SQ.push({ srcs: cs, st: 'wait' }); busy = false; lastShot = Date.now(); sqPaint(); sqWork();
+    try{ $('fl').style.background = '#34C759'; $('fl').style.opacity = '.55'; setTimeout(()=>{ $('fl').style.opacity = '0'; setTimeout(()=>{ $('fl').style.background = '#fff'; }, 200); }, 180); }catch(e){}
+    if(!stream && $('msg').style.display !== 'none' && !$('msg').dataset.sq) camera();
+    return; } }catch(e){}
   // 📋 10/11 (χρήστης: «μας πέταξε στη συζήτηση Claude χωρίς να γράψει κάτι»): η εφαρμογή Claude στο iPhone ΔΕΝ γεμίζει πάντα το μήνυμα από τον σύνδεσμο.
   // Το Safari επιτρέπει αντιγραφή μόνο ΤΗ ΣΤΙΓΜΗ του πατήματος → «κλείνουμε θέση» στο πρόχειρο τώρα και τη γεμίζουμε όταν ανέβει η σάρωση.
   try{ if(!window.__clipRes && navigator.clipboard && window.ClipboardItem){ let ok, no; const pr = new Promise((a, b)=>{ ok = a; no = b; }); pr.catch(()=>{});
