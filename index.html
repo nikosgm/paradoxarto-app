@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v529';
+const APP_VER = '2026-11-17-v530';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14960,7 +14960,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   const NB = {rows:null, enr:{}, at:0, listAt:0, busy:false};
   const nbNz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω0-9 ]/g,' ').replace(/\s+/g,' ').trim();
   // 17/11 01:05 (χρήστης: «μην ψάχνεις ασθενείς που ξέρεις ότι έχουν πάρει εξιτήριο»): ποιοι νοσηλεύονται ΤΩΡΑ = η λίστα ΝΠΣ (3449) των τελευταίων 12 ωρών· null = δεν ξέρουμε
-  window.pdxNpsInNow = ()=>{ if(!Array.isArray(NB.rows) || !NB.rows.length || Date.now()-(NB.listAt||0) > 12*3600e3) return null; const S = new Set(NB.rows.map(r=>nbNz(r.name))); return name=>S.has(nbNz(name)); };
+  window.pdxNpsInNow = ()=>{ if(!NB.busy && Date.now()-NB.at > 10*60000) { try{ nbLoad(true); }catch(e){} }   // 17/11 03:40: φόρτωση και στο bot (πριν μόνο όταν ανοιγόταν η οθόνη ΝΠΣ)
+    if(!Array.isArray(NB.rows) || !NB.rows.length || Date.now()-(NB.listAt||0) > 12*3600e3) return null; const S = new Set(NB.rows.map(r=>nbNz(r.name))); return name=>S.has(nbNz(name)); };
   const nbHere = r=>{ const t = nbNz(r.name).split(' '); const all = []; [data||{}, extraPatients||{}].forEach(S=>Object.keys(S).forEach(k=>{ const d = S[k]; if(d && !d._npsTemp && String(d.name||'').trim()) all.push(d); }));
     return all.some(d=>{ if(r.am && d.am && String(d.am)===String(r.am)) return true; const u = nbNz(d.name).split(' '); const [a, b] = u.length <= t.length ? [u, t] : [t, u]; return a.length && a.every((w, i)=>b[i] && (b[i]===w || (w.length>=4 && b[i].startsWith(w)) || (b[i].length>=4 && w.startsWith(b[i])))); }); };
   async function nbLoad(force){
@@ -18207,7 +18208,9 @@ Z99.2:C|αιμοκάθαρση
     // (pdxComorbTempFill) → ο ασθενής σημειωνόταν «ok» και ΔΕΝ έφευγε ποτέ εργασία καταχώρισης. Εδώ (τρέχει ΜΟΝΟ στο Chrome του bot
     // που κρατά τη σκυτάλη) στέλνονται όσοι κωδικοί δεν έχουν σταλεί ακόμα (comorbNps2) — έως 3 ασθενείς ανά κύκλο.
     try{ const inNow = window.pdxNpsInNow ? pdxNpsInNow() : null; if(window.pdxBotSend && inNow){ let sent = 0;   // ΧΩΡΙΣ φρέσκια λίστα ΝΠΣ → τίποτα
-      allKeys().forEach(k=>{ if(sent>=3) return; const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived || !d.comorb || !Array.isArray(d.comorb.codes)) return;
+      // 🎲 17/11 03:40 (χρήστης: «τυχαία από τους ασθενείς στη λίστα»): τυχαία σειρά, έως 4 ανά κύκλο (μοιράζονται στους υπολογιστές)
+      const KK = allKeys().slice(); for(let i=KK.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=KK[i]; KK[i]=KK[j]; KK[j]=t; }
+      KK.forEach(k=>{ if(sent>=4) return; const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived || !d.comorb || !Array.isArray(d.comorb.codes)) return;
         if(!inNow(d.name)) return;   // μόνο όσοι νοσηλεύονται τώρα — ποτέ ασθενείς που έφυγαν
         const done = (d.comorbDx && d.comorbDx.codes) || [];   // 17/11 00:41: → «Διάγνωση» ΔΕΥΤΕΡΕΥΟΥΣΑ (όχι Ατομικό Αναμνηστικό)
         const newC = d.comorb.codes.filter(x=>x && x.code && done.indexOf(String(x.code).toUpperCase())<0).map(x=>({code:String(x.code).toUpperCase(), desc:x.desc||''}));
