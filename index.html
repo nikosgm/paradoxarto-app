@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v547';
+const APP_VER = '2026-11-17-v548';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14462,12 +14462,21 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   try{ navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e=>{ if(window.__pdxNavMsg && Date.now() - window.__pdxNavMsg < 3000) return; if(e.data && e.data.type==='pdx-open-review') pdxOpenNewestReview(); if(e.data && e.data.type==='pdx-open-jobs' && window.pdxBotJobs) pdxBotJobs(); if(e.data && e.data.type==='pdx-open-notif' && window.pdxNotifOpen) pdxNotifOpen(); }); }catch(e){}
   // 10/11 βράδυ (χρήστης: «πατάω ειδοποίηση του bot → με πετάει στην αρχή»): ο service worker αφήνει «σημείωμα» (cache pdx-nav) — το iPhone συχνά χάνει #hash/μήνυμα.
   // Διαβάζεται στην εκκίνηση ΚΑΙ κάθε φορά που η εφαρμογή ξαναφαίνεται· ισχύει 3′ · μία φορά.
-  window.pdxNavGo = function(kind){ window.__pdxNavHit = Date.now();
-    if(kind==='review') return pdxOpenNewestReview();
-    if(kind==='jobs') return window.pdxBotJobs && pdxBotJobs();
-    if(kind==='notif') return window.pdxNotifOpen && pdxNotifOpen();
-    if(kind==='bx') return window.pdxBiopsies && pdxBiopsies();
-    if(kind==='eps') return window.pdxEpsineOpen && pdxEpsineOpen(); };
+  // 🐞 17/11 16:59 (χρήστης: «πατάω την ειδοποίηση και με πετάει στην αρχική — το κάνεις συνέχεια»): η σελίδα-στόχος (π.χ. «Εργασίες bot»)
+  // ορίζεται ΑΡΓΟΤΕΡΑ στην εκκίνηση (μετά τη σύνδεση/ξεκλείδωμα) → «window.pdxBotJobs && …» δεν έκανε ΤΙΠΟΤΑ σιωπηλά. Τώρα: περιμένει έως 25″
+  // να υπάρχει η συνάρτηση + να μην είναι κλειδωμένη η οθόνη, και καταγράφει κάθε βήμα (navlog, χωρίς στοιχεία ασθενών) για έλεγχο.
+  const NAVF = {review:'pdxOpenNewestReview', jobs:'pdxBotJobs', notif:'pdxNotifOpen', bx:'pdxBiopsies', eps:'pdxEpsineOpen'};
+  const navLog = (k, step)=>{ try{ const L = JSON.parse(sessionStorage.getItem('pdx_navlog')||'[]'); L.push([Date.now(), k, step]); sessionStorage.setItem('pdx_navlog', JSON.stringify(L.slice(-30)));
+      if(/^(ok|fail)/.test(step) && typeof sb6!=='undefined') sb6.auth.getSession().then(r=>{ const u = r && r.data && r.data.session && r.data.session.user; if(!u) return;
+        sb6.from('oncall_labs').upsert({name_key:'navlog|'+u.id.slice(0,8), name:'πατήματα ειδοποιήσεων (έλεγχος)', pid:null, data:{L:L.slice(-30), ua:navigator.userAgent.slice(0,80), v:(typeof APP_VER!=='undefined'?APP_VER:'')}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); }); }catch(e){} };
+  window.pdxNavGo = function(kind){ window.__pdxNavHit = Date.now(); const fn = NAVF[kind]; if(!fn) return; navLog(kind, 'start');
+    const t0 = Date.now(); let done = false;
+    const tryIt = ()=>{ if(done) return; const lk = document.getElementById('lockOverlay') || document.getElementById('loginOv'), locked = !!(lk && lk.offsetParent);
+      if(typeof window[fn]==='function' && window.authRole && !locked && !document.hidden){ done = true; navLog(kind, 'call');
+        try{ window[fn](); navLog(kind, 'ok'); }catch(e){ navLog(kind, 'fail:'+String(e.message||e).slice(0,60)); } return; }
+      if(Date.now() - t0 > 25000){ done = true; navLog(kind, 'fail:timeout fn='+(typeof window[fn])+' auth='+(!!window.authRole)+' lock='+locked); return; }
+      setTimeout(tryIt, 300); };
+    tryIt(); };
   window.pdxNavNote = async function(){ try{ if(!window.caches) return; const ch = await caches.open('pdx-nav'), r = await ch.match('/__pdxnav'); if(!r) return; await ch.delete('/__pdxnav');
       const j = await r.json(); if(!j || !j.kind || Date.now() - (j.t||0) > 180000) return; if(window.__pdxNavHit && Date.now() - window.__pdxNavHit < 4000) return;
       // 16/11 17:36 (χρήστης: «πατάω την ειδοποίηση → απλά με πετάς στην εφαρμογή»): περιμένει να ολοκληρωθεί η είσοδος/ξεκλείδωμα (έως 20″) και μετά ανοίγει τη σελίδα
@@ -14476,10 +14485,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // νέος SW: στέλνει ΠΡΩΤΑ «pdx-nav» (και μετά τα παλιά pdx-open-* για συμβατότητα → αγνοούνται)· ό,τι ανοίξει πρώτο (σημείωμα ή μήνυμα) κερδίζει
   try{ navigator.serviceWorker && navigator.serviceWorker.addEventListener('message', e=>{ if(!e.data || e.data.type!=='pdx-nav') return; window.__pdxNavMsg = Date.now();
     try{ caches.open('pdx-nav').then(c=>c.delete('/__pdxnav')); }catch(x){} if(window.__pdxNavHit && Date.now() - window.__pdxNavHit < 4000) return; pdxNavGo(e.data.kind); }); }catch(e){}
-  if(location.hash === '#pdxbx'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxBiopsies) pdxBiopsies(); }, 1500); }
-  if(location.hash === '#pdxnotif'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxNotifOpen) pdxNotifOpen(); }, 1500); }
-  if(location.hash === '#pdxjobs'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxBotJobs) pdxBotJobs(); }, 1500); }
-  if(location.hash === '#pdxeps'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>{ if(window.pdxEpsineOpen) pdxEpsineOpen(); }, 1500); }
+  if(location.hash === '#pdxbx'){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('bx'), 300); }
+  if(location.hash === '#pdxnotif'){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('notif'), 300); }
+  if(location.hash === '#pdxjobs'){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('jobs'), 300); }
+  if(location.hash === '#pdxeps'){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('eps'), 300); }
   if(location.hash === '#pdxrev'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxOpenNewestReview(), 1500); }
   window.pdxBotReview = function(id){
     if(typeof sb6==='undefined') return;
@@ -25300,7 +25309,7 @@ window.CLS_MODE='A';
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     return '<div style="container-type:inline-size;padding-left:15%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.85)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
-        return '<div style="position:absolute;right:100%;margin-right:1.5cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:12.5cqw;box-sizing:border-box;border:1.5px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 1.25cqw/1.15 Calibri,Arial,sans-serif;text-align:center;padding:.25em .3em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
+        return '<div style="position:absolute;right:100%;margin-right:1.5cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:12.5cqw;box-sizing:border-box;border:1.5px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 1.05cqw/1.12 Calibri,Arial,sans-serif;text-align:center;padding:.25em .3em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
       + '</div></div>'; };
   // σελίδα εκτύπωσης: κάθε σελίδα του PDF (ή ο πίνακας του Excel) μικραίνει σε Α4 οριζόντιο με τα κουτάκια αριστερά
   window.pdxOrCultPrintHtml = async function(st, title){ const P = (st.cu && st.cu.list) || [];
@@ -25337,6 +25346,34 @@ window.CLS_MODE='A';
     }catch(e){ S.busy = ''; S.err = e.message || String(e); }
     if(ov.isConnected) draw(); };
   document.addEventListener('click', e=>{ const t = e.target.closest && e.target.closest('[data-cpend]'); if(t){ e.stopPropagation(); window.pdxCultInfo(t.dataset.cpend); } }, true);
+  // 📤 17/11 16:58 (χρήστης: «εξαγωγή → προεπισκόπηση στο iPhone με κουμπί share: print / save to files / send»): PDF Α4 οριζόντιο,
+  // κάθε σελίδα = εικόνα του προγράμματος μικρότερη δεξιά + κουτάκια καλλιέργειας αριστερά (ζωγραφισμένα, ίδια με την προεπισκόπηση)
+  window.pdxOrCultPdf = async function(st, title){ const P = (st.cu && st.cu.list) || [], W = 1754, H = 1240, M = 36, SW = 0.15;
+    const ld = u=>new Promise((ok, no)=>{ const im = new Image(); im.onload = ()=>ok(im); im.onerror = ()=>no(new Error('εικόνα')); im.src = u; });
+    const COL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666666'};
+    const page = (img, marks)=>{ const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+      const aw = W - 2*M, ah = H - 2*M, iw0 = img.width || img.naturalWidth, ih0 = img.height || img.naturalHeight;
+      let tw = aw, iw = tw*(1-SW), ih = iw*ih0/iw0; if(ih > ah){ ih = ah; iw = ih*iw0/ih0; tw = iw/(1-SW); }
+      const ox = M + (aw - tw)/2, ix = ox + tw*SW, iy = M; x.drawImage(img, ix, iy, iw, ih);
+      const bw = tw*SW - 14, fs = 18; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
+      for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue; const L = [[k.t, COL[k.cls]||'#000']]; if(k.note) L.push([k.note, '#333']); if(k.fun) L.push(['Μύκητες', '#C62828']);
+        x.font = '700 '+fs+'px Arial'; const lines = []; for(const [t, col] of L){ let cur = ''; for(const w of String(t).split(' ')){ const t2 = cur ? cur+' '+w : w; if(x.measureText(t2).width > bw - 10 && cur){ lines.push([cur, col]); cur = w; } else cur = t2; } if(cur) lines.push([cur, col]); }
+        const lh = fs*1.18, bh = lines.length*lh + 10, by = Math.max(iy + m.v*ih - bh/2, yEnd + 4), bx = ox; yEnd = by + bh;
+        x.fillStyle = '#fff'; x.strokeStyle = L[0][1]; x.lineWidth = 3; x.beginPath(); if(x.roundRect) x.roundRect(bx, by, bw, bh, 8); else x.rect(bx, by, bw, bh); x.fill(); x.stroke();
+        lines.forEach(([t, col], i)=>{ x.fillStyle = col; x.fillText(t, bx + bw/2, by + 5 + lh*(i+0.5)); }); }
+      return c; };
+    const pages = [];
+    for(const f of ((st.m && st.m.files) || [])) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, window.pdxOrMarksPdf((f.txt||[])[i], P))); }
+    if(!pages.length && st.o && st.o.html && typeof html2canvas!=='undefined'){ const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff'; d.innerHTML = '<style>'+window.pdxOrSchedCss()+'</style>'+st.o.html; document.body.appendChild(d);
+      try{ const cv = await html2canvas(d.querySelector('table'), {scale:2, backgroundColor:'#fff'}); pages.push(page(cv, window.pdxOrMarksXl(st.o.html, P))); } finally { d.remove(); } }
+    if(!pages.length) throw new Error('δεν υπάρχει πρόγραμμα (PDF ή Excel) για εξαγωγή');
+    const { jsPDF } = window.jspdf; const pdf = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+    pages.forEach((c, i)=>{ if(i) pdf.addPage('a4', 'landscape'); pdf.addImage(c.toDataURL('image/jpeg', .9), 'JPEG', 0, 0, 297, 210); });
+    const nm = 'Πρόγραμμα χειρουργείου '+String(title||'').replace(/[\/\\:*?"<>|]/g,'-')+'.pdf', blob = pdf.output('blob'), file = new File([blob], nm, {type:'application/pdf'});
+    return file; };
+  // το iPhone επιτρέπει «κοινοποίηση» μόνο ΑΜΕΣΑ μετά από πάτημα → το PDF φτιάχνεται πρώτα, και το 2ο πάτημα ανοίγει το φύλλο κοινοποίησης
+  window.pdxShareFile = async function(file){ if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:file.name}); return 'shared'; }catch(e){ if(e && e.name==='AbortError') return 'cancel'; } }
+    const blob = file, nm = file.name, u = URL.createObjectURL(blob); const w = window.open(u, '_blank'); if(!w){ const a = document.createElement('a'); a.href = u; a.download = nm; document.body.appendChild(a); a.click(); a.remove(); } setTimeout(()=>URL.revokeObjectURL(u), 120000); return 'opened'; };
   window.pdxOrSchedOpen = function(iso0){
     const iso = iso0 || orIso(pdxOrTarget()); const d = new Date(iso+'T12:00:00');
     const st = {o:null, busy:'', err:'', iso, m:null, mbusy:'', merr:'', cu:null, cubusy:'', cuerr:'', cuAt:0};
@@ -25351,7 +25388,8 @@ window.CLS_MODE='A';
       if(st.merr) h += iosGroup('', [{t:'<span style="color:#FF3B30">⚠ '+esc(st.merr)+'</span>'}]);
       if(st.m && st.m.none) h += iosGroup('', [{t:'Δεν βρέθηκε mail προγράμματος για '+esc(lbl(st.iso)), sub: (st.m.seen||[]).length ? 'Τελευταία: '+esc(st.m.seen.join(' · ')) : ''}]);
       if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ h += '<div class="ios-f" style="margin-top:8px">'+(f.extra?'➕ ':'')+'<b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
-        + '<div class="ors-pdf" data-orpz="'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+(st.pz===i?'auto':'hidden')+';-webkit-overflow-scrolling:touch">'+(f.imgs||[]).map((u,pi)=>'<div style="'+(st.pz===i?'width:220%':'')+'">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', window.pdxOrMarksPdf((f.txt||[])[pi], (st.cu && st.cu.list) || []))+'</div>').join('')+'</div>'; });
+        // 🤏 17/11 16:58 (χρήστης: «zoom με τα δύο δάχτυλα στην προεπισκόπηση»): pinch → πλάτος ×1–5 (μένει μετά τις ανανεώσεις)· πάτημα = ×1 ↔ ×2.2
+        + '<div class="ors-pdf" data-orpz="'+i+'" data-pinch="m'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+((st.zs&&st.zs['m'+i]>1)?'auto':'hidden')+';-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y">'+(f.imgs||[]).map((u,pi)=>'<div class="pz-in" style="width:'+Math.round(((st.zs&&st.zs['m'+i])||1)*100)+'%">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', window.pdxOrMarksPdf((f.txt||[])[pi], (st.cu && st.cu.list) || []))+'</div>').join('')+'</div>'; });
       h += '<button class="ors-btn" data-or="mail"'+(st.mbusy?' disabled style="opacity:.5"':'')+'>📧 Ξανά από το mail</button>';
       h += cultHtml();
       // 📧 13/11 22:49 (χρήστης: «αν το έχεις βρει από το Kerio, μην εμφανίζεις του φακέλου»)
@@ -25377,7 +25415,7 @@ window.CLS_MODE='A';
       }));
       // 🫁 17/11 15:14 (χρήστης: «στο πρόγραμμα που κάναμε τώρα δεν βλέπω ακτινογραφίες»): και στο ανεβασμένο πρόγραμμα, όπως στον επεξεργαστή
       const XP = (st.o && st.o.pts && st.o.pts.length ? st.o.pts : (st.cu && st.cu.list) || []); window.__orsXP = XP; const nX = XP.length;
-      return h2 + (P.length ? '<button class="ors-btn" data-or="print" style="background:#1D4E80;color:#fff"'+(st.prbusy?' disabled style="opacity:.5"':'')+'>'+(st.prbusy ? '⏳ '+esc(st.prbusy) : '🖨 Εκτύπωση προγράμματος με καλλιέργειες')+'</button>' : '') + (st.prmsg ? '<div class="ios-f">'+esc(st.prmsg)+'</div>' : '') + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
+      return h2 + (P.length ? '<button class="ors-btn" data-or="print" style="background:#1D4E80;color:#fff"'+(st.prbusy?' disabled style="opacity:.5"':'')+'>'+(st.prbusy ? '⏳ '+esc(st.prbusy) : '🖨 Εκτύπωση προγράμματος με καλλιέργειες')+'</button>' : '') + (st.prmsg ? '<div class="ios-f">'+esc(st.prmsg)+'</div>' : '') + (P.length ? (st.pdfFile ? '<button class="ors-btn" data-or="share" style="background:#34C759;color:#fff">📤 Άνοιγμα PDF — εκτύπωση · αποθήκευση · αποστολή</button>' : '<button class="ors-btn" data-or="pdf"'+(st.pdfbusy?' disabled style="opacity:.5"':'')+'>'+(st.pdfbusy ? '⏳ Φτιάχνω το PDF…' : '📄 Εξαγωγή PDF')+'</button>') : '') + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
         + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
     // 🖨 17/11 16:13 (χρήστης: «κουμπί εκτύπωση προγράμματος με καλλιέργειες — νέο κελί δίπλα στον θάλαμο: αρνητική ή ο κωδικός αν εκκρεμεί·
     // να επιλέγω σε ποιον από τους εκτυπωτές Α4»): το Excel του φακέλου + στήλη «ΚΑΛΛΙΕΡΓΕΙΑ»· αν υπάρχει μόνο το PDF του Kerio → οι σελίδες του + πίνακας καλλιεργειών.
@@ -25504,11 +25542,24 @@ window.CLS_MODE='A';
         try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){}
         // 🎓 15/11: όταν η σελίδα είχε γυριστεί αυτόματα (90/270) και τη διορθώνεις με ↻ → μαθαίνει τη ΣΩΣΤΗ φορά για τα επόμενα (όλη η συσκευή)
         try{ const tot = ((f.auto||0) + rotGet(f)) % 360; if(f.auto && (tot===90 || tot===270)) localStorage.setItem('pdx_or_dir', String(tot)); }catch(x){} f.txt = (f.txt||[]).map(T=>window.pdxOrRotTxt(T, 90)); Promise.all(f.imgs.map(u=>rotUrl(u, 90))).then(L=>{ f.imgs = L; pg.redraw(); }); return; }
-      const z = e.target.closest('[data-orpz]'); if(z){ const i = +z.dataset.orpz; st.pz = st.pz===i ? null : i; pg.redraw(); return; } });
+      const z = e.target.closest('[data-orpz]'); if(z){ if(Date.now() - (st.pinchAt||0) < 600) return; const k = 'm'+z.dataset.orpz; st.zs = st.zs || {}; st.zs[k] = (st.zs[k]||1) > 1 ? 1 : 2.2; pg.redraw(); return; } });
+    // 🤏 pinch zoom (δύο δάχτυλα) στις σελίδες του PDF
+    { let P = null;
+      pg.el.addEventListener('touchstart', e=>{ const c = e.target.closest && e.target.closest('[data-pinch]'); if(!c || e.touches.length !== 2) return;
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); st.zs = st.zs || {};
+        const r = c.getBoundingClientRect(), mx = (e.touches[0].clientX + e.touches[1].clientX)/2 - r.left, my = (e.touches[0].clientY + e.touches[1].clientY)/2 - r.top;
+        P = {c, k:c.dataset.pinch, d0:d, s0:st.zs[c.dataset.pinch]||1, mx, my, sl:c.scrollLeft, stp:c.scrollTop}; }, {passive:true});
+      pg.el.addEventListener('touchmove', e=>{ if(!P || e.touches.length !== 2) return; e.preventDefault();
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), s = Math.max(1, Math.min(5, P.s0 * d / P.d0));
+        st.zs[P.k] = s; P.c.style.overflow = 'auto'; P.c.querySelectorAll('.pz-in').forEach(x=>{ x.style.width = Math.round(s*100)+'%'; });
+        const f = s / P.s0; P.c.scrollLeft = (P.sl + P.mx) * f - P.mx; }, {passive:false});
+      pg.el.addEventListener('touchend', e=>{ if(P && e.touches.length < 2){ st.pinchAt = Date.now(); P = null; } }, {passive:true}); }
     pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
       if(b.dataset.or==='cult') return cultLoad(true);
       if(b.dataset.or==='print') return printCult();
+      if(b.dataset.or==='pdf'){ if(st.pdfbusy) return; st.pdfbusy = true; pg.redraw(); window.pdxOrCultPdf(st, lbl(st.iso)).then(f=>{ st.pdfFile = f; setTimeout(()=>{ st.pdfFile = null; pg.redraw(); }, 5*60000); }).catch(er=>toast('⚠ '+(er.message||er))).finally(()=>{ st.pdfbusy = false; pg.redraw(); }); return; }
+      if(b.dataset.or==='share'){ if(st.pdfFile) window.pdxShareFile(st.pdfFile); return; }
       if(b.dataset.or==='xr'){ const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
         const recs = []; [typeof data!=='undefined'?data:{}, typeof extraPatients!=='undefined'?extraPatients:{}].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) recs.push({k, d}); }));
         const items = (window.__orsXP||[]).map(p=>{ const N = nz(p.name).split(' '); const r = recs.find(x=>{ const M = nz(x.d.name).split(' '); return M[0]===N[0] && (!N[1] || !M[1] || M[1].slice(0,3)===N[1].slice(0,3)); });
