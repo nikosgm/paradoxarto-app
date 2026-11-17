@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v555';
+const APP_VER = '2026-11-17-v556';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8585,7 +8585,8 @@ document.head.appendChild(st);
     ['ογκολογικό','🎗','Σύνοψη ογκολογικού + μητρώο','συμπληρώνεις με το χέρι'],
     ['βοηθός','🎙','Φωνητικός βοηθός (εντολές με επιβεβαίωση)','ο βοηθός δεν λειτουργεί — κάνεις τις ενέργειες από τα κουμπιά'],
     ['επισκευή bot','🛠','Bot: επισκευή αλλαγμένων σελίδων','το bot σταματά και αναφέρει το σφάλμα (όπως πριν)'],
-    ['πρόγραμμα χειρουργείου','📷','Πρόγραμμα χειρουργείου από φωτογραφία προχείρου','προσθέτεις τους ασθενείς με «＋ Ασθενής»']];
+    ['πρόγραμμα χειρουργείου','📷','Πρόγραμμα χειρουργείου από φωτογραφία προχείρου','προσθέτεις τους ασθενείς με «＋ Ασθενής»'],
+    ['στατιστικά','📊','Στατιστικά: ερώτηση με λόγια → φίλτρα (βλέπει ΜΟΝΟ την ερώτηση)','κατανόηση με λέξεις-κλειδιά ή επιλογή φίλτρων με το χέρι']];
   window.pdxAiPage = async function(){
     let st = null, msg = '';
     const ping = async ()=>{ try{ const ss = (await sb6.auth.getSession()).data.session; const r = await fetch(SB6_URL + '/functions/v1/pdx-ai', { method:'POST', headers:{ 'content-type':'application/json', apikey:SB6_KEY, Authorization:'Bearer ' + (ss ? ss.access_token : SB6_KEY) }, body:'{"ping":1}' }); st = await r.json().catch(()=>null); }catch(e){ st = { error:String(e.message||e) }; }
@@ -8973,6 +8974,7 @@ document.head.appendChild(st);
     ]);
     if(clin) h += G('Κλινική', [
       {ic:'🗂', t:'Βάση δεδομένων', sub:'Αρχείο Ασθενών · CD · αξονικές', on:"pdxDbPage()"},
+      {ic:'📊', t:'Στατιστικά', sub:'επεμβάσεις · νοσηλείες ανά μήνα/έτος — ρώτα με λόγια', on:"pdxStatsPage()"},
       {ic:'📷', t:'Σάρωση', sub:'σάρωση · πορίσματα για έλεγχο · συσκευές', v:(nb?'<b style="color:#FF3B30">'+nb+'</b>':''), on:"pdxScanHub()"}
     ]);
     // 🗂 17/11 18:58 (χρήστης: «κατάσταση συστημάτων, υπολογιστές, κέντρο εκτυπώσεων — όλα μαζί σε μία ενότητα»): ΕΝΑ στοιχείο → σελίδα «Συστήματα & bot»
@@ -15431,6 +15433,119 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   };
   // 🖨 17/11 18:45 (χρήστης: «κέντρο εκτυπώσεων: έγγραφα σε ουρά, να διαλέγω εκτυπωτές, να βλέπω αν είναι συνδεδεμένοι με τον υπολογιστή»)
   // Κάθε ανοιχτός υπολογιστής → οι εκτυπωτές του (κατάσταση, τοπικός/δικτύου, προεπιλογή Windows, ποιος είναι ο A4 του bot) + ουρά με ακύρωση ανά έγγραφο.
+  // 📊 17/11 (χρήστης: «το αρχείο… να βγάζει στατιστικά ό,τι θέλουμε — να ρωτάω στατιστικά για αυτά τα χειρουργεία για αυτό το χρόνο»)
+  // Στατιστικά από τη βάση στο Παράθυρο (/api/archstats). Ο server επιστρέφει ΜΟΝΟ αριθμούς. Η ερώτηση με λόγια → φίλτρα:
+  // πρώτα τοπικά (λέξεις-κλειδιά), και αν είναι ανοιχτό το AI, το AI βλέπει ΜΟΝΟ την ερώτηση + τη λίστα ομάδων (ποτέ δεδομένα ασθενών) και οι αριθμοί βγαίνουν από τη βάση.
+  window.pdxStatsPage = function(){
+    const Y = new Date().getFullYear(), iso = d=>d.toISOString().slice(0,10);
+    const st = { meta:null, res:null, err:'', busy:false, q:{what:'ops', from:Y+'-01-01', to:Y+'-12-31', by:'month', groups:[], approach:''}, per:'y0', ask:'', note:'', showAll:false };
+    const n = x=>Number(x||0).toLocaleString('el-GR'), dd = s=>{ const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; };
+    const MON = ['Ιαν','Φεβ','Μαρ','Απρ','Μάι','Ιουν','Ιουλ','Αυγ','Σεπ','Οκτ','Νοε','Δεκ'];
+    const WHAT = {ops:'Επεμβάσεις', admissions:'Νοσηλείες', discharges:'Εξιτήρια', biopsies:'Ιστολογικές'};
+    const PER = [['y0','Φέτος'],['y1','Πέρσι'],['m12','12 μήνες'],['all','Όλα']];
+    const setPer = p=>{ st.per = p; const q = st.q;
+      if(p==='y0'){ q.from = Y+'-01-01'; q.to = Y+'-12-31'; q.by = 'month'; }
+      else if(p==='y1'){ q.from = (Y-1)+'-01-01'; q.to = (Y-1)+'-12-31'; q.by = 'month'; }
+      else if(p==='m12'){ const a = new Date(); a.setMonth(a.getMonth()-12); a.setDate(a.getDate()+1); q.from = iso(a); q.to = iso(new Date()); q.by = 'month'; }
+      else { q.from = ''; q.to = ''; q.by = 'year'; } };
+    const nzl = s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+    // ── τοπική κατανόηση ερώτησης (χωρίς AI) ──
+    const KW = {turbt:/TURB|ΔΟΥΕ|ΟΓΚ\w* ΚΥΣΤ/, turp:/TURP|ΔΕΠ\b|ΕΚΤΟΜΗ ΠΡΟΣΤ/, holep:/HOLEP|LASER ΠΡΟΣΤ/, rarp:/ΡΙΖΙΚ\w* ΠΡΟΣΤ|RARP|ΠΡΟΣΤΑΤΕΚΤΟΜ/, cystectomy:/ΚΥΣΤΕΚΤΟΜ/, rn:/ΝΕΦΡΕΚΤΟΜ/, pn:/ΜΕΡΙΚ\w* ΝΕΦΡ/, nu:/ΝΕΦΡΟΟΥΡΗΤ/,
+      urs:/URS|RIRS|ΟΥΡΗΤΗΡΟΣΚΟΠ|ΟΛΨ|ΛΙΘΟΤΡΙΨ/, pcnl:/PCNL|ΔΙΑΔΕΡΜ/, eswl:/ESWL|ΕΞΩΣΩΜ/, dj:/DOUBLE|\bDJ\b|\bJJ\b|STENT|ΚΑΘΕΤΗΡ\w* J/, neph:/ΝΕΦΡΟΣΤΟΜ|ΝΦΣ/, prbx:/ΒΙΟΨΙ\w* ΠΡΟΣΤ/, cysto:/ΚΥΣΤΕΟΣΚΟΠ/,
+      orch:/ΟΡΧΕΚΤ|ΟΡΧΙΕΚΤ/, hydro:/ΥΔΡΟΚΗΛ/, varico:/ΚΙΡΣΟΚΗΛ/, circ:/ΠΕΡΙΤΟΜ|ΦΙΜΩΣ/, urethro:/ΟΥΡΗΘΡΟΤ|ΟΥΡΗΘΡΟΠΛ|ΣΤΕΝΩΜ/, incont:/ΑΚΡΑΤΕΙ|SLING|TVT|TOT\b/, pyelo:/ΠΥΕΛΟΠΛ/, adrenal:/ΕΠΙΝΕΦΡΙΔ/, botox:/BOTOX/, cystolith:/ΚΥΣΤΕΟΛΙΘ|ΚΥΣΤΟΛΙΘ/};
+    const localParse = txt=>{ const t = nzl(txt), q = {what:'ops', groups:[], approach:'', by:'month'}; let per = 'y0';
+      if(/ΝΟΣΗΛΕΙ|ΕΙΣΑΓΩΓ/.test(t)) q.what = 'admissions'; else if(/ΕΞΙΤΗΡΙ/.test(t)) q.what = 'discharges'; else if(/ΙΣΤΟΛΟΓ/.test(t)) q.what = 'biopsies';
+      for(const g in KW) if(KW[g].test(t)) q.groups.push(g);
+      if(q.groups.includes('pn')) q.groups = q.groups.filter(g=>g!=='rn'); if(q.groups.includes('nu')) q.groups = q.groups.filter(g=>g!=='rn');
+      if(/ΡΟΜΠΟΤ/.test(t)) q.approach = 'robot'; else if(/ΛΑΠΑΡΟΣΚ/.test(t)) q.approach = 'lap'; else if(/ΑΝΟΙΧΤ|ΑΝΟΙΚΤ/.test(t)) q.approach = 'open';
+      const yr = t.match(/\b(20\d\d)\b/g);
+      if(yr && yr.length>=2){ q.from = yr[0]+'-01-01'; q.to = yr[yr.length-1]+'-12-31'; q.by = 'year'; per = ''; }
+      else if(yr){ q.from = yr[0]+'-01-01'; q.to = yr[0]+'-12-31'; per = ''; }
+      else if(/ΠΕΡΣΙ|ΠΕΡΥΣΙ|ΠΕΡΣΙΝ/.test(t)) per = 'y1'; else if(/ΣΥΝΟΛΙΚΑ|ΟΛΑ ΤΑ ΧΡΟΝΙΑ|ΠΟΤΕ|ΑΠΟ ΤΗΝ ΑΡΧΗ|ΑΝΑ ΕΤΟΣ|ΑΝΑ ΧΡΟΝΟ/.test(t)) per = 'all'; else if(/12 ΜΗΝ|ΤΕΛΕΥΤΑΙΟ ΧΡΟΝΟ|ΤΕΛΕΥΤΑΙΟ ΕΤΟΣ/.test(t)) per = 'm12';
+      const mm = t.match(/ΤΕΛΕΥΤΑΙ\w* (\d+) ΜΗΝ/); if(mm){ const a = new Date(); a.setMonth(a.getMonth()-(+mm[1])); q.from = iso(a); q.to = iso(new Date()); per = ''; }
+      if(/ΑΝΔΡ/.test(t)) q.sex = 'M'; else if(/ΓΥΝΑΙΚ/.test(t)) q.sex = 'F';
+      const am = t.match(/(?:ΑΝΩ ΤΩΝ|ΠΑΝΩ ΑΠΟ|>=?|ΗΛΙΚΙΑΣ? ?≥?)\s*(\d{2})/); if(am) q.ageMin = +am[1];
+      const ax = t.match(/(?:ΚΑΤΩ ΤΩΝ|ΚΑΤΩ ΑΠΟ|<=?)\s*(\d{2})/); if(ax) q.ageMax = +ax[1];
+      return {q, per}; };
+    const load = async ()=>{ st.busy = true; st.err = ''; pg.redraw();
+      try{ const q = Object.assign({}, st.q); if(!q.groups || !q.groups.length) delete q.groups; const r = await pdxDbCall('POST', '/api/archstats', q); st.res = r; }
+      catch(e){ st.err = String(e && e.message || e); }
+      st.busy = false; pg.redraw(); };
+    const ask = async ()=>{ const txt = st.ask.trim(); if(!txt) return;
+      const L = localParse(txt); let q = L.q, per = L.per, how = 'λέξεις-κλειδιά';
+      if(window.pdxAiOn && pdxAiOn() && st.meta){ st.note = '🤖 κατανοώ την ερώτηση…'; pg.redraw();
+        const sys = 'Μετατρέπεις ερώτηση ουρολόγου για στατιστικά της κλινικής σε ΦΙΛΤΡΑ JSON. ΜΟΝΟ JSON, χωρίς κείμενο. Σήμερα: '+iso(new Date())+'.\n'
+          + 'Σχήμα: {"what":"ops|admissions|discharges|biopsies","groups":[κλειδιά],"approach":"robot|lap|open|","from":"ΕΕΕΕ-ΜΜ-ΗΗ","to":"ΕΕΕΕ-ΜΜ-ΗΗ","by":"month|quarter|year|","sex":"M|F|","ageMin":null,"ageMax":null,"text":"","explain":"σύντομα στα ελληνικά τι μετράς"}\n'
+          + 'ops=επεμβάσεις. «φέτος»= '+Y+'. Αν δεν λέει περίοδο: φέτος. Κλειδιά ομάδων (κενό = όλες): '+st.meta.groups.map(g=>g.g+'='+g.t).join('; ')+'.\n'
+          + 'Αν η επέμβαση δεν υπάρχει στις ομάδες, βάλε τη λέξη στο "text" (κεφαλαία, χωρίς τόνους).';
+        const r = await pdxAiJSON('στατιστικά', sys, txt, 400);
+        if(r && r.ok && r.json && WHAT[r.json.what]){ const j = r.json; q = {what:j.what, groups:(j.groups||[]).filter(g=>st.meta.groups.some(x=>x.g===g)), approach:/^(robot|lap|open)$/.test(j.approach||'')?j.approach:'', from:/^\d{4}-\d\d-\d\d$/.test(j.from||'')?j.from:'', to:/^\d{4}-\d\d-\d\d$/.test(j.to||'')?j.to:'', by:/^(month|quarter|year)$/.test(j.by||'')?j.by:'month', sex:/^[MF]$/.test(j.sex||'')?j.sex:'', ageMin:j.ageMin, ageMax:j.ageMax, text:j.text||''}; per = ''; how = '🤖 '+(j.explain||''); }
+      }
+      st.q = Object.assign({what:'ops', groups:[], approach:''}, q); if(per) setPer(per); else st.per = '';
+      st.note = 'Κατάλαβα: '+how; await load(); };
+    const pg = iosPage('Στατιστικά αρχείου', 'Εργαλεία', ()=>{
+      const q = st.q, r = st.res;
+      let h = '<div style="margin:12px 16px 0;display:flex;gap:8px"><input id="stAsk" value="'+esc(st.ask)+'" placeholder="Ρώτα: π.χ. πόσες TURBT φέτος; ρομποτικές ανά μήνα;" style="flex:1;font-size:16px;padding:10px 12px;border-radius:12px;border:1px solid rgba(120,120,128,.3);background:var(--card,#fff);color:inherit">'
+        + '<button data-st="ask" style="border:0;border-radius:12px;padding:0 14px;background:var(--acc,#0A84FF);color:#fff;font-size:15px;font-weight:600">Ρώτα</button></div>';
+      if(st.note) h += '<div style="margin:6px 18px 0;font-size:12.5px;color:#8E8E93">'+esc(st.note)+'</div>';
+      const chip = (on, data, t)=>'<button '+data+' style="border:0;border-radius:16px;padding:6px 12px;font-size:14px;margin:0 6px 6px 0;background:'+(on?'var(--acc,#0A84FF)':'rgba(120,120,128,.14)')+';color:'+(on?'#fff':'inherit')+'">'+t+'</button>';
+      h += '<div style="margin:10px 16px 0">'+Object.keys(WHAT).map(w=>chip(q.what===w, 'data-st="what" data-v="'+w+'"', WHAT[w])).join('')+'</div>';
+      h += '<div style="margin:0 16px">'+PER.map(p=>chip(st.per===p[0], 'data-st="per" data-v="'+p[0]+'"', p[1])).join('')
+        + '<span style="font-size:13px;color:#8E8E93">'+(q.from||q.to ? (dd(q.from)||'αρχή')+' – '+(dd(q.to)||'σήμερα') : 'όλα τα χρόνια')+'</span></div>';
+      if(q.what==='ops' && st.meta){
+        h += '<div style="margin:4px 16px 0;display:flex;gap:8px;flex-wrap:wrap"><select data-st="grp" style="flex:1;min-width:180px;font-size:15px;padding:8px;border-radius:10px;background:var(--card,#fff);color:inherit;border:1px solid rgba(120,120,128,.3)"><option value="">Όλες οι επεμβάσεις</option>'
+          + st.meta.groups.map(g=>'<option value="'+g.g+'"'+(q.groups.length===1&&q.groups[0]===g.g?' selected':'')+'>'+esc(g.t)+'</option>').join('')+(q.groups.length>1?'<option value="__m" selected>'+q.groups.length+' ομάδες (από ερώτηση)</option>':'')+'</select>'
+          + '<select data-st="ap" style="font-size:15px;padding:8px;border-radius:10px;background:var(--card,#fff);color:inherit;border:1px solid rgba(120,120,128,.3)"><option value="">κάθε προσπέλαση</option>'+st.meta.approach.map(a=>'<option value="'+a.a+'"'+(q.approach===a.a?' selected':'')+'>'+a.t+'</option>').join('')+'</select></div>';
+        const ex = []; if(q.sex) ex.push(q.sex==='M'?'άνδρες':'γυναίκες'); if(q.ageMin!=null&&q.ageMin!=='') ex.push('≥'+q.ageMin+' ετών'); if(q.ageMax!=null&&q.ageMax!=='') ex.push('≤'+q.ageMax+' ετών'); if(q.text) ex.push('«'+q.text+'»');
+        if(ex.length) h += '<div style="margin:6px 18px 0;font-size:13px">Επιπλέον φίλτρα: <b>'+esc(ex.join(' · '))+'</b> <a href="#" data-st="clrx" style="color:var(--acc,#0A84FF)">καθάρισμα</a></div>';
+      }
+      if(st.err) return h + iosGroup('', [{ic:'⚠', t:'Δεν απάντησε η βάση', sub:esc(st.err)+'<br>Η βάση είναι στο Παράθυρο — πρέπει να είναι ανοιχτό.'}, {t:'<span style="color:var(--acc,#0A84FF)">Ξανά</span>', on:'void 0', data:'data-st="reload"'}]);
+      if(!r) return h + '<div style="text-align:center;color:#8E8E93;margin:40px 16px">⏳ Ρωτάω τη βάση στο Παράθυρο…</div>';
+      const prevTxt = r.prev ? (()=>{ const d = r.total - r.prev.total, p = r.prev.total ? Math.round(d/r.prev.total*100) : null; return 'προηγούμενο ίδιο διάστημα: <b>'+n(r.prev.total)+'</b>'+(p!=null?' <span style="color:'+(d>=0?'#34C759':'#FF3B30')+'">('+(d>=0?'+':'')+p+'%)</span>':''); })() : '';
+      h += '<div style="margin:14px 16px 0;padding:14px 16px;border-radius:14px;background:var(--card,#fff)'+(st.busy?';opacity:.5':'')+'"><div style="font-size:13px;color:#8E8E93">'+esc(WHAT[r.what]||r.label)+'</div>'
+        + '<div style="font-size:40px;font-weight:700;line-height:1.1">'+n(r.total)+'</div><div style="font-size:13.5px;color:#8E8E93">σε '+n(r.patients)+' ασθενείς'+(prevTxt?' · '+prevTxt:'')+'</div></div>';
+      // ραβδόγραμμα
+      if(r.series && r.series.length){ let S = r.series;
+        if(r.by==='month' && q.from && q.to && q.to.slice(0,4)===q.from.slice(0,4)){ const m = {}; S.forEach(x=>m[x.k]=x.n); S = MON.map((_, i)=>{ const k = q.from.slice(0,4)+'-'+String(i+1).padStart(2,'0'); return {k, n:m[k]||0}; }); }
+        const mx = Math.max(1, ...S.map(x=>x.n)), lab = k=>/^\d{4}-\d{2}$/.test(k) ? MON[+k.slice(5)-1]+(S.length>12?' '+k.slice(2,4):'') : k.replace('-Q',' Τ');
+        h += '<div style="margin:12px 16px 0;padding:12px 10px 8px;border-radius:14px;background:var(--card,#fff);overflow-x:auto"><div style="display:flex;align-items:flex-end;gap:4px;height:150px;min-width:'+(S.length*26)+'px">'
+          + S.map(x=>'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%"><div style="font-size:11px;color:#8E8E93">'+(x.n||'')+'</div><div style="width:100%;max-width:34px;border-radius:5px 5px 0 0;background:var(--acc,#0A84FF);height:'+Math.max(x.n?3:0, Math.round(x.n/mx*120))+'px"></div></div>').join('')
+          + '</div><div style="display:flex;gap:4px;min-width:'+(S.length*26)+'px;margin-top:4px">'+S.map(x=>'<div style="flex:1;text-align:center;font-size:10.5px;color:#8E8E93">'+esc(lab(x.k))+'</div>').join('')+'</div></div>';
+      }
+      if(r.what==='ops'){
+        const G = r.groups||[], tot = r.total||1, L = st.showAll ? G : G.slice(0, 12);
+        if(G.length) h += iosGroup('Ανά επέμβαση', L.map(g=>({t:esc(g.t), v:'<b>'+n(g.n)+'</b> <span style="color:#8E8E93;font-size:13px">'+Math.round(g.n/tot*100)+'%</span>', on:'void 0', data:'data-st="g1" data-v="'+g.g+'"'}))
+          .concat(G.length>12 && !st.showAll ? [{t:'<span style="color:var(--acc,#0A84FF)">Όλες ('+G.length+')</span>', on:'void 0', data:'data-st="all"'}] : []), 'Πάτησε μια επέμβαση για να δεις μόνο αυτή ανά μήνα.');
+        const info = [];
+        if(r.approach && r.approach.length) info.push({ic:'🔧', t:'Προσπέλαση', sub:r.approach.map(a=>a.t+' <b>'+n(a.n)+'</b>').join(' · ')+' <span style="color:#8E8E93">(όσες το αναφέρουν)</span>'});
+        if(r.age) info.push({ic:'🎂', t:'Ηλικία', sub:'μέση <b>'+r.age.mean+'</b> · διάμεση '+r.age.median+' · '+r.age.min+'–'+r.age.max+' ετών'});
+        if(r.sex) info.push({ic:'⚥', t:'Φύλο', sub:'άνδρες <b>'+n(r.sex['Α']||0)+'</b> · γυναίκες <b>'+n(r.sex['Θ']||0)+'</b>'+(r.sex['?']?' · άγνωστο '+n(r.sex['?']):'')});
+        if(info.length) h += iosGroup('Ασθενείς', info);
+        if(r.unclassified && r.unclassified.length) h += '<details style="margin:14px 16px 0"><summary style="font-size:14px;color:#8E8E93">«Άλλη επέμβαση» — '+r.unclassified.length+' τίτλοι που δεν αναγνωρίστηκαν</summary><div style="font-size:13px;margin-top:6px;line-height:1.5">'
+          + r.unclassified.map(u=>esc(u.t)+' <b>'+u.n+'</b>').join('<br>')+'</div></details>';
+      }
+      h += '<div style="margin:16px 18px 30px;font-size:12.5px;color:#8E8E93;line-height:1.45">Πηγή: Αρχείο Ασθενών (Παράθυρο) — πράξεις, εντολές και πρακτικά ΝΠΣ + πρακτικά της εφαρμογής. Η ίδια επέμβαση από πολλές πηγές (±3 ημέρες) μετράει μία φορά. Μόνο αριθμοί — κανένα όνομα δεν φεύγει από το νοσοκομείο.'
+        + (st.meta && st.meta.opsFrom ? '<br>Επεμβάσεις στη βάση: '+n(st.meta.ops)+' ('+dd(st.meta.opsFrom)+' – '+dd(st.meta.opsTo)+').' : '')+'</div>';
+      return h;
+    });
+    pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-st]'); if(!b || b.tagName==='SELECT') return; const k = b.dataset.st, v = b.dataset.v;
+      if(k==='ask'){ const i = pg.el.querySelector('#stAsk'); st.ask = i ? i.value : ''; ask(); return; }
+      if(k==='what'){ st.q.what = v; st.showAll = false; load(); return; }
+      if(k==='per'){ setPer(v); load(); return; }
+      if(k==='g1'){ st.q.groups = [v]; st.q.what = 'ops'; load(); pg.inner.closest('.ios-body').scrollTop = 0; return; }
+      if(k==='all'){ st.showAll = true; pg.redraw(); return; }
+      if(k==='clrx'){ e.preventDefault(); delete st.q.sex; delete st.q.ageMin; delete st.q.ageMax; delete st.q.text; st.note = ''; load(); return; }
+      if(k==='reload'){ load(); return; } });
+    pg.el.addEventListener('change', e=>{ const s = e.target.closest('select[data-st]'); if(!s) return;
+      if(s.dataset.st==='grp'){ if(s.value!=='__m') st.q.groups = s.value ? [s.value] : []; }
+      if(s.dataset.st==='ap') st.q.approach = s.value;
+      load(); });
+    pg.el.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.id==='stAsk'){ e.preventDefault(); st.ask = e.target.value; e.target.blur(); ask(); } });
+    pg.el.addEventListener('input', e=>{ if(e.target.id==='stAsk') st.ask = e.target.value; });
+    (async ()=>{ try{ st.meta = await pdxDbCall('GET', '/api/archstats/meta'); }catch(e){} })();
+    load();
+    return pg;
+  };
   window.pdxSysHub = function(){ const L = window.__sysHubItems || []; const pg = iosPage('Συστήματα & bot', 'Πίσω', ()=>iosGroup('', L)); return pg; };
   window.pdxPrintCenter = async function(){
     const E2 = x=>esc(String(x==null?'':x)); const N = Object.assign({}, await pdxBotNames(true).catch(()=>({}))); const S = {}; let live = {};
