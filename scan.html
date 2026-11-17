@@ -415,7 +415,8 @@ function sqList(){ $('msg').dataset.sq = '1';
     + (x.rx ? '<a class="btn" style="min-width:0;padding:6px 10px;font-size:13px;text-decoration:none" href="/?scanrx=' + encodeURIComponent(x.rx) + '">Έγκριση</a>' : '') + (x.st==='fail' && x.srcs ? '<button class="btn sec" data-rt="' + i + '" style="min-width:0;padding:6px 10px;font-size:13px">↻</button>' : '') + '</div>').join('') + '</div>'
     + '<button class="btn" id="sqb">📷 Συνέχεια σάρωσης</button>' + (SQ.some(x=>x.st==='ok' || x.st==='fail') ? '<button class="btn sec" id="sqc" style="min-width:0">Καθάρισμα λίστας</button>' : ''));
   $('sqb').onclick = ()=>{ $('msg').dataset.sq = ''; if(stream) $('msg').style.display = 'none'; else camera(); };
-  if($('sqc')) $('sqc').onclick = ()=>{ for(let i = SQ.length - 1; i >= 0; i--) if(SQ[i].st==='ok' || (SQ[i].st==='fail' && !SQ[i].srcs)) SQ.splice(i, 1); sqPaint(); sqList(); };
+  // 17/11 18:20 (χρήστης: «αποτυχημένη σάρωση → Καθάρισμα λίστας δεν κάνει τίποτα»): σβήνει ΟΛΑ τα τελειωμένα (✅ και ⚠)· άδεια λίστα → πίσω στην κάμερα
+  if($('sqc')) $('sqc').onclick = ()=>{ for(let i = SQ.length - 1; i >= 0; i--) if(SQ[i].st==='ok' || SQ[i].st==='fail') SQ.splice(i, 1); sqPaint(); if(SQ.length) sqList(); else $('sqb').click(); };
   $('msg').querySelectorAll('[data-rt]').forEach(b=>b.onclick = ()=>{ const it = SQ[+b.dataset.rt]; if(it){ it.st = 'wait'; it.txt = ''; sqPaint(); sqWork(); sqList(); } }); }
 try{ $('qb').onclick = ()=>sqList(); }catch(e){}
 async function send(srcs, w0, h0){
