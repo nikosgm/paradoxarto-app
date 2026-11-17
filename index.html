@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v532';
+const APP_VER = '2026-11-17-v533';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18222,7 +18222,7 @@ Z99.2:C|αιμοκάθαρση
       const KK = allKeys().slice(); for(let i=KK.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=KK[i]; KK[i]=KK[j]; KK[j]=t; }
       KK.forEach(k=>{ if(sent>=4) return; const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived || !d.comorb || !Array.isArray(d.comorb.codes)) return;
         if(!inNow(d.name)) return;   // μόνο όσοι νοσηλεύονται τώρα — ποτέ ασθενείς που έφυγαν
-        if(FX.keys.has(nk(d.name)) && (d.comorbDxRt||0) < 3 && d.comorbDx){ d.comorbDxRt = (d.comorbDxRt||0) + 1; d.comorbDx = {codes: [], at: now}; FX.keys.delete(nk(d.name)); }
+        if(FX.keys.has(nk(d.name)) && (d.comorbDxRt||0) < 6 && d.comorbDx){ d.comorbDxRt = (d.comorbDxRt||0) + 1; d.comorbDx = {codes: [], at: now}; FX.keys.delete(nk(d.name)); }
         const done = (d.comorbDx && d.comorbDx.codes) || [];   // 17/11 00:41: → «Διάγνωση» ΔΕΥΤΕΡΕΥΟΥΣΑ (όχι Ατομικό Αναμνηστικό)
         const newC = d.comorb.codes.filter(x=>x && x.code && done.indexOf(String(x.code).toUpperCase())<0).map(x=>({code:String(x.code).toUpperCase(), desc:x.desc||''}));
         if(!newC.length) return;
