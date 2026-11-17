@@ -103,7 +103,7 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop
 const SETTINGS_OFF = true;
 const natOn = ()=>{ if(SETTINGS_OFF) return false; try{ return localStorage.getItem('pdx_scan_native') === '1'; }catch(e){ return false; } };
 let camGen = 0;   // 14/11: κάθε κλήση έχει αριθμό — μια παλιότερη που τελειώνει αργότερα ΔΕΝ ξαναβάζει τη ζωντανή κάμερα
-async function camera(){
+async function camera(){ try{ $('v').style.visibility = ''; }catch(e){}
   const gen = ++camGen;
   $('bar').style.visibility = 'visible';
   if(stream && stream.getVideoTracks().some(t=>t.readyState === 'live') && !natOn()){ $('msg').style.display = 'none'; camKick(); return; }
@@ -395,7 +395,9 @@ async function send(srcs, w0, h0){
   busy = true; const v = $('v'); const turn = rotOn(), land = turn || (!histOn() && isLand(srcs, w0, h0));
   // για «Δεν είναι πρόγραμμα → Claude»: κρατάμε τις πηγές (στιγμιότυπο του βίντεο σε καμβά)
   try{ window.__lastPages = { srcs: srcs.map(sr=>{ const w = w0 || sr.width, h = h0 || sr.height; const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(sr, 0, 0, w, h); return c; }), w:0, h:0 }; }catch(e){}
-  msg('<div class="spin"></div><div>Ανέβασμα…</div>');
+  // 📷 17/11 17:47 (χρήστης: «με το που πατάω κλικ να σβήνει η κάμερα — να καταλαβαίνω ότι φορτώνει· και να γράφει ότι μπορώ να κλείσω την εφαρμογή»)
+  camStop(); try{ $('v').style.visibility = 'hidden'; }catch(e){}
+  msg('<div class="spin"></div><div>Ανέβασμα…</div><div style="font-size:13px;opacity:.7">μην κλείσετε ακόμα — λίγα δευτερόλεπτα</div>');
   try{
     const raw = crypto.getRandomValues(new Uint8Array(16)), key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), pages = [];
     for(const src of srcs){
@@ -422,6 +424,7 @@ async function send(srcs, w0, h0){
     // Κλειστό AI / σφάλμα → ο παλιός δρόμος (συζήτηση Claude), χωρίς να χαθεί τίποτα (η σάρωση ξαναγίνεται διαθέσιμη).
     if(!op && !window.__scanNoAi){
       const khex = [...raw].map(b=>b.toString(16).padStart(2, '0')).join('');
+      msg('<div class="spin"></div><div>Διαβάζεται…</div><div style="max-width:300px;text-align:center;font-size:15px;margin-top:6px">✅ Ανέβηκε. Αν θέλετε, μπορείτε να <b>κλείσετε την εφαρμογή</b> — η ανάγνωση συνεχίζει και περνά μόνη της στον ασθενή.</div>');
       let ar = await aiScan(id, khex);
       if(ar && ar.fail){ await new Promise(r=>setTimeout(r, 1500)); ar = await aiScan(id, khex); }
       if(ar && ar.fail){
