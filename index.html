@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v546';
+const APP_VER = '2026-11-17-v547';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25721,10 +25721,13 @@ window.CLS_MODE='A';
     x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); }, {passive:true});
   document.addEventListener('touchend', e=>{ if(x0==null) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
     if(Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy)*2 || Date.now() - t0 > 900) return;
-    const L = order(), i = L.indexOf(cur()), j = dx < 0 ? Math.min(L.length-1, i+1) : Math.max(0, i-1);
-    if(j===i) return; if(L[j]==='mine' && !(window.pdxMine && pdxMine.rooms && pdxMine.rooms.length)) return;
+    // 🐞 17/11 16:49 (χρήστης: «στο ΝΠΣ κάνω swipe και με βγάζει στους θαλάμους μου αντί για Όλοι»): το swipe πατά ΑΚΡΙΒΩΣ την διπλανή
+    // καρτέλα της μπάρας (ό,τι κάνει και το δάχτυλο) — όχι δική του λογική κατάστασης που μπορούσε να διαφωνεί με τη μπάρα
+    const B = [...(seg() ? seg().querySelectorAll('button') : [])], i = B.findIndex(b=>b.classList.contains('on'));
+    if(i < 0) return; const j = dx < 0 ? i+1 : i-1; if(j < 0 || j >= B.length) return;
+    if(/θάλαμοί μου/i.test(B[j].textContent) && !(window.pdxMine && pdxMine.rooms && pdxMine.rooms.length)) return;
     try{ navigator.vibrate && navigator.vibrate(8); }catch(_){}
-    go(L[j]); }, {passive:true});
+    B[j].click(); }, {passive:true});
 })();
 
 // 🦓 11/11 20:43 (χρήστης: «πρέπει να τυπώνουμε στο Zebra νούμερα»): ετικέτα με αριθμό (barcode) + κείμενο → bot στον υπολογιστή του Zebra
