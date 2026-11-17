@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v552';
+const APP_VER = '2026-11-17-v553';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15470,6 +15470,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const ok = (b,t,bad)=>'<div style="display:flex;gap:8px;font-size:13.5px;padding:2px 0"><span style="flex:none">'+(b===true?'✅':b===false?'⚠️':'•')+'</span><span'+(b===false?' style="color:#B45309"':'')+'>'+t+(b===false&&bad?' — <b>'+bad+'</b>':'')+'</span></div>';
     const btn = (a,id,t)=>'<button data-act="'+a+'" data-id="'+E2(id)+'" style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 10px;font-size:13.5px;font-weight:600;min-height:38px">'+t+'</button>';
     window.__botsOpen = window.__botsOpen || {};
+    // 📊 17/11 18:50 (χρήστης: «φόρτος bot στην ενότητα υπολογιστές, και CPU/RAM σε MB»): εργασίες 24ώρου ανά υπολογιστή + χρόνος εργασίας (⏱ των σημειώσεων)
+    let LOAD = {}; (async ()=>{ try{ const r = await sb6.from('oncall_jobs').select('kind,status,note,bot:payload->>bot,only:payload->>only').gte('created_at', new Date(Date.now()-864e5).toISOString()).neq('status','new').limit(3000);
+      const KN = {epsine:'ΕΨΙΝΕ', epsinelist:'λίστα ΕΨΙΝΕ', npsdx:'διαγνώσεις', fsls:'φάκελοι απεικ.', imgget:'εικόνες', medlabs:'εργαστηριακά', discharge:'εξιτήρια', comorb:'συννοσηρότητες', ctremote:'ακτινογραφίες TV', kmail:'Kerio', evoradimg:'Evorad', npsops:'χειρουργεία ΝΠΣ', order:'παραγγελίες', orderprep:'προετοιμασία παραγγ.', npsdossier:'φάκελοι ΝΠΣ', rx:'συνταγές', rxname:'συνταγές', orcult:'καλλιέργειες'};
+      (r.data||[]).forEach(j=>{ const b = j.bot || j.only; if(!b || !/^b[a-z0-9]{10,16}$/.test(b)) return; const L = LOAD[b] = LOAD[b] || {n:0, sec:0, k:{}}; L.n++; const m = /⏱[^0-9]*(\d+)″/.exec(j.note||''); if(m) L.sec += +m[1]; const kn = KN[j.kind] || j.kind; L.k[kn] = (L.k[kn]||0) + 1; });
+      pg.redraw(); }catch(e){} })();
     document.addEventListener('toggle', e=>{ const d = e.target; if(d && d.dataset && d.dataset.bd) window.__botsOpen[d.dataset.bd] = d.open; }, true);
     const pg = iosPage('Κέντρο ελέγχου bot', 'Πίσω', ()=>{
       let h = '<div class="ios-h">Αυτό το κινητό</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:10px 14px">'
@@ -15496,7 +15501,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
             if(b.vault!=='dpapi') iss.push('βοηθητικό Windows'); if(b.upd && !b.upd.ok && b.upd.err) iss.push('αυτόματη ενημέρωση');
             const y = b.sys; if(y && y.ram > 0){ if(y.free/y.ram < .1) iss.push('λίγη μνήμη'); if(y.reboot) iss.push('θέλει επανεκκίνηση'); if(y.sk!=null && Math.abs(y.sk)>30) iss.push('ρολόι'); } }
           if(OFF[id]) iss.push('⏸ απενεργοποιημένο');
-          h += '<div style="font-size:14px;margin-top:6px;color:'+(iss.length?'#B45309':'#15803D')+'">'+(iss.length ? '⚠ '+E2(iss.join(' · ')) : '✓ όλα καλά')+'</div>'
+          h += '<div style="font-size:14px;margin-top:6px;color:'+(iss.length?'#B45309':'#15803D')+'">'+(iss.length ? '⚠ '+E2(iss.join(' · ')) : '✓ όλα καλά')+'</div>';
+          { const y = b.sys, L = LOAD[id];
+            if(y && y.ram > 0){ const usedMB = Math.round(y.ram - y.free), cpu = Math.round(+y.cpu||0), crMB = y.cr ? Math.round(y.cr.mb) : 0, col = v=>v>=90?'#B91C1C':v>=75?'#B45309':'#15803D', ru = Math.round(100*usedMB/y.ram);
+              h += '<div style="font-size:13.5px;margin-top:4px;color:#334155">⚙️ CPU <b style="color:'+col(cpu)+'">'+cpu+'%</b> · RAM <b style="color:'+col(ru)+'">'+usedMB.toLocaleString('el-GR')+' / '+Math.round(y.ram).toLocaleString('el-GR')+' MB</b>'+(crMB?' · Chrome '+crMB.toLocaleString('el-GR')+' MB':'')+' <span style="color:#94A3B8">· πριν '+ago(y.at)+'</span></div>'; }
+            if(L){ const top = Object.entries(L.k).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,n])=>E2(k)+' '+n).join(', '), hrs = L.sec/3600;
+              h += '<div style="font-size:13.5px;margin-top:2px;color:#334155">📊 24ω: <b>'+L.n+'</b> εργασίες · δούλευε <b>'+(hrs>=1?hrs.toFixed(1)+' ώρ.':Math.round(L.sec/60)+'′')+'</b>'+(top?' <span style="color:#6D6D72">('+top+')</span>':'')+'</div>'; } }
+          h += ''
             + '<details'+(window.__botsOpen && window.__botsOpen[id] ? ' open' : '')+' data-bd="'+E2(id)+'" style="margin-top:6px"><summary style="color:#1D4E80;font-weight:600;font-size:14px;cursor:pointer;min-height:32px;padding:4px 0">Λεπτομέρειες & ενέργειες</summary>'; }
         if(b.at){
           h += '<div style="margin-top:8px">'
