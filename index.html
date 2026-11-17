@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v558';
+const APP_VER = '2026-11-17-v559';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13891,7 +13891,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         // ↕ 10/11 (χρήστης): ταξινόμηση αλφαβητικά ή χρονολογικά — προεπιλογή: χρονολογικά, τα νεότερα πρώτα (η πιο πρόσφατη ημερομηνία της γραμμής)
         let bxS = 'new'; try{ bxS = localStorage.getItem('pdx_bx_sort') || 'new'; }catch(e){}
         const dOf = r=>{ let mx = 0; String(r||'').replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g, (m, d, mo, y)=>{ const t = new Date(+y, +mo-1, +d).getTime(); if(t > mx) mx = t; return m; }); return mx; };
-        const CF = CF0.slice().sort(bxS==='az' ? (a,b)=>String(a[0].row||'').localeCompare(String(b[0].row||''), 'el', {sensitivity:'base'}) : (a,b)=>dOf(b[0].row)-dOf(a[0].row));
+        const CF = CF0.slice().sort(bxS==='az' ? (a,b)=>String(a[0].row||'').localeCompare(String(b[0].row||''), 'el', {sensitivity:'base'}) : (a,b)=>((b[0].uro?1:pdxHospRank(b[0].row).u)-(a[0].uro?1:pdxHospRank(a[0].row).u)) || (dOf(b[0].row)-dOf(a[0].row)) || (a[1]-b[1]));   // 17/11: ουρολογική πρώτα
         h += '<div style="display:flex;gap:2px;background:#E3E3E8;border-radius:9px;padding:2px;margin:10px 16px 0">'+[['new','🕘 Νεότερα πρώτα'],['az','Α–Ω']].map(([v,l])=>'<button type="button" data-bxs="'+v+'" style="flex:1;border:0;border-radius:7px;height:32px;font-size:14px;font-weight:600;background:'+(bxS===v?'#fff;box-shadow:0 1px 2px rgba(0,0,0,.12)':'transparent')+';color:#1C1C1E">'+l+'</button>').join('')+'</div>';
         h += iosGroup('Medilabi · «'+E2(st.slbl||st.sq||'')+'» · '+(CF.length!==CI.length ? CF.length+'/' : '')+st.cands.length+(st.spg && +st.spg.page > 1 ? ' · σελ. '+(+st.spg.page) : '')+(st.ms?' · '+(st.ms/1000).toFixed(1)+'″':''), CF.length ? CF.map(([c,i])=>({ic:c.uro?'🏥':'👤', t:'<b>'+E2(String(c.row||'').slice(0,70))+'</b>', sub:c.uro?'<span style="color:#15803D">✓ νοσηλεία ουρολογικής</span>':'<span style="color:#8E8E93">χωρίς ουρολογική νοσηλεία στο Medilabi</span>', data:'data-cand="'+i+'"'})) : [{t: CI.length ? 'Καμία γραμμή δεν ταιριάζει με τα φίλτρα κλινικής/ημερομηνίας' : 'Κανένας ασθενής με αυτό το όνομα στο Medilabi'}]);
         if(FL){ h += FL.note(CF.length, CI.length) + FL.pager(st.spg, !!st.busy); } }
@@ -15436,6 +15436,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 📊 17/11 (χρήστης: «το αρχείο… να βγάζει στατιστικά ό,τι θέλουμε — να ρωτάω στατιστικά για αυτά τα χειρουργεία για αυτό το χρόνο»)
   // Στατιστικά από τη βάση στο Παράθυρο (/api/archstats). Ο server επιστρέφει ΜΟΝΟ αριθμούς. Η ερώτηση με λόγια → φίλτρα:
   // πρώτα τοπικά (λέξεις-κλειδιά), και αν είναι ανοιχτό το AI, το AI βλέπει ΜΟΝΟ την ερώτηση + τη λίστα ομάδων (ποτέ δεδομένα ασθενών) και οι αριθμοί βγαίνουν από τη βάση.
+  // 🔎 17/11 19:33 (χρήστης: «όταν ψάχνω οτιδήποτε στο νοσοκομείο — βιοψίες, εργαστηριακά, MedLab — πρώτα οι ασθενείς με νοσηλεία στην ουρολογική,
+  // ιδανικά από την πιο πρόσφατη»): ΚΟΙΝΗ ταξινόμηση αποτελεσμάτων: ουρολογική πρώτα · μετά πιο πρόσφατη ημερομηνία της γραμμής · σταθερή για ισοπαλίες
+  window.pdxHospRank = function(row){ const t = String(Array.isArray(row) ? row.join(' ') : row || ''), z = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    let mx = 0; const re = /(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})|(\d{4})-(\d{2})-(\d{2})/g; let m;
+    while((m = re.exec(t))){ const v = m[3] ? Date.UTC(+m[3], +m[2]-1, +m[1]) : Date.UTC(+m[4], +m[5]-1, +m[6]); if(v > mx && v <= Date.now() + 864e5) mx = v; }
+    return { u: /ΟΥΡΟΛΟΓ|UROLOG/.test(z) ? 1 : 0, t: mx }; };
+  window.pdxHospSort = function(list, get){ if(!Array.isArray(list)) return list; const g = get || (x=>x);
+    return list.map((x, i)=>({x, i, r: window.pdxHospRank(g(x))})).sort((a, b)=>(b.r.u - a.r.u) || (b.r.t - a.r.t) || (a.i - b.i)).map(o=>o.x); };
   window.pdxStatsPage = function(){
     const Y = new Date().getFullYear(), iso = d=>d.toISOString().slice(0,10);
     const st = { meta:null, res:null, err:'', busy:false, q:{what:'ops', from:Y+'-01-01', to:Y+'-12-31', by:'month', groups:[], approach:''}, per:'y0', ask:'', note:'', showAll:false };
@@ -20022,7 +20030,7 @@ Z99.2:C|αιμοκάθαρση
         // 10/11 βράδυ (χρήστης): ΟΧΙ δικά της κουμπιά — ισχύει η ίδια λίστα «Νεότερα ⌄» της κλινικής (Α–Ω → αλφαβητικά, όλα τα άλλα → νεότερα πρώτα)
         const xS = mSort==='az' ? 'az' : 'new';
         const dOf = r=>{ let mx = 0; String(r||'').replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g, (m, d, mo, y)=>{ const t = new Date(+y, +mo-1, +d).getTime(); if(t > mx) mx = t; return m; }); return mx; };
-        const XI = ext.pts.map((x,i)=>[x,i]), XF = EF.filter(XI, y=>y[0].row).slice().sort(xS==='az' ? (a,b)=>String(a[0].row||'').localeCompare(String(b[0].row||''), 'el', {sensitivity:'base'}) : (a,b)=>(dOf(b[0].row)-dOf(a[0].row)) || (a[1]-b[1]));
+        const XI = ext.pts.map((x,i)=>[x,i]), XF = EF.filter(XI, y=>y[0].row).slice().sort(xS==='az' ? (a,b)=>String(a[0].row||'').localeCompare(String(b[0].row||''), 'el', {sensitivity:'base'}) : (a,b)=>(pdxHospRank(b[0].row).u-pdxHospRank(a[0].row).u) || (dOf(b[0].row)-dOf(a[0].row)) || (a[1]-b[1]));   // 17/11: ουρολογική πρώτα
         // (χωρίς κουμπιά ταξινόμησης)
         h += XF.length ? '<div class="lm-xl">'+XF.map(([x,i])=>'<button class="lm-xr" data-lxp="'+i+'">'+E(x.row)+'</button>').join('')+'</div>' : '<div class="lm-msg">'+(XI.length ? 'Καμία γραμμή δεν ταιριάζει με τα φίλτρα κλινικής/ημερομηνίας.' : 'Κανένας ασθενής στο Medilabi.')+'</div>';
         h += EF.note(XF.length, XI.length) + EF.pager(ext.pg, ext.busy);
@@ -20067,7 +20075,7 @@ Z99.2:C|αιμοκάθαρση
     const pl = {q: '', scope:'all'}, f2 = pdxQF(q.length>=3 ? q : '', f); if(f2) pl.f = f2; if(+page > 1) pl.page = +page;   // ΑΜΚΑ/ΑΜ/όνομα στα σωστά πεδία
     Object.assign(ext, {q, f: f || null, fsig: JSON.stringify(f || {}), busy:true, msg:'Στάλθηκε στο bot…'+(+page > 1 ? ' (σελίδα '+page+')' : ''), pts:null, pg:null}); mobRedraw();
     try{ const j = await botJob('medfind', pl, '🔎 Medilabi: '+(q.length>=3 ? q : EF.label()).slice(0,20));
-      ext.pts = j.status==='done' ? (((j.payload||{}).result||{}).pts || []) : [];
+      ext.pts = j.status==='done' ? pdxHospSort((((j.payload||{}).result||{}).pts || []), c=>c && c.row) : [];
       ext.pg = j.status==='done' ? (((j.payload||{}).result||{}).pg || null) : null;
       ext.msg = j.status==='done' ? '' : String(j.note || 'απέτυχε').slice(0,160);
     }catch(e){ ext.pts = null; ext.msg = '⚠ '+String(e && e.message || e).slice(0,140); }
@@ -21918,7 +21926,7 @@ window.pdxNpsFind = async function(q){
     for(let k=0;k<75;k++){ await new Promise(r=>setTimeout(r, 2000)); const r = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); const x = r && r.data; if(!x) continue;
       if(/new|seen|running/.test(x.status)){ if(x.note) { st.busy = String(x.note).slice(0,100); pg.redraw(); } continue; }
       st.busy = ''; if(x.status!=='done' || !x.payload || !x.payload.result || !x.payload.result.enc){ st.msg = '⚠ '+(x.note||x.status); break; }
-      await pdxCK.ready(); st.res = await pdxCK.decrypt(x.payload.result.enc); break; }
+      await pdxCK.ready(); st.res = await pdxCK.decrypt(x.payload.result.enc); if(st.res && Array.isArray(st.res.rows)) st.res.rows = pdxHospSort(st.res.rows); break; }
     if(st.busy){ st.busy=''; st.msg='⚠ το bot δεν απάντησε σε 2′'; }
   }catch(e){ st.busy=''; st.msg='⚠ '+(e.message||e); }
   pg.redraw();
@@ -23506,8 +23514,8 @@ async function botFind(pl, label){
     await new Promise(r=>setTimeout(r, 600)); if(M.jobId!==id) return null;   // νεότερη αναζήτηση
     const x = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = x.data; if(!j) continue;
     if(j.status==='done'){ const res = (j.payload||{}).result || {};
-      if(kind==='bxfind'){ const d = await pdxCK.decrypt(res.enc); return {list:(d.cands||[]).map(c=>({pid:c.pid, row:c.row, uro:!!c.uro})), pg:d.pg||null}; }
-      return {list:(res.pts||[]).map(c=>({pid:c.pid, row:c.row, uro:/ΟΥΡΟΛΟΓ/.test(NZ(c.row))})), pg:res.pg||null}; }
+      if(kind==='bxfind'){ const d = await pdxCK.decrypt(res.enc); return {list:pdxHospSort((d.cands||[]).map(c=>({pid:c.pid, row:c.row, uro:!!c.uro})), c=>c.row), pg:d.pg||null}; }
+      return {list:pdxHospSort((res.pts||[]).map(c=>({pid:c.pid, row:c.row, uro:/ΟΥΡΟΛΟΓ/.test(NZ(c.row))})), c=>c.row), pg:res.pg||null}; }
     if(/^(failed|cancelled|dismissed)$/.test(j.status)) throw new Error(j.note || 'απέτυχε');
     if(j.status==='new' && Date.now()-t0 > 4000 && M.busy.indexOf('περιμένει')<0){ M.busy = 'Ο υπολογιστής του νοσοκομείου δεν απάντησε ακόμα — περιμένει…'; redraw(); }
   }
