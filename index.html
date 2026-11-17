@@ -387,14 +387,14 @@ input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and
 /* κύρια μπάρα (λίστα) και island του ασθενή: ΙΔΙΟ ύψος (η κύρια λίγο πιο πάνω από πριν, του ασθενή λίγο πιο κάτω) */
 /* «html body» = μεγαλύτερη ισχύς: αλλιώς τα στυλ που προσθέτει ο κώδικας αργότερα (γλασέ θέμα) τα ακύρωναν */
 html body #mobView .mtabs{bottom:max(calc(env(safe-area-inset-bottom) + 30px), 44px)!important}   /* 7/11: λίγο πιο πάνω */
-html body #mobView .isl{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px) + 74px)!important}
+html body #mobView .isl{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px) + 74px)!important}
 html body #mobView .isl.solo,html body #chIsl{bottom:max(calc(env(safe-area-inset-bottom) + 46px), 60px)!important}   /* 8/11: πιο ψηλά — μακριά από τη γραμμή Home/Siri του iPhone */
 html body #mobView.desk .mtabs{bottom:10px!important}
 html body #mobView.desk .isl,html body #mobView.desk .isl.solo{bottom:12px!important}
 /* «👀 για έγκριση»: πάνω από την κάτω μπάρα (και πάνω από το island στην καρτέλα ασθενή), όχι πάνω τους */
-body:has(#mobView.on:not(.desk)) #pdxReviewPill{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px) + 60px)!important}
-body:has(#mobView.on:not(.desk) .isl:not(.solo)) #pdxReviewPill{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px) + 146px)!important}
-body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px) + 88px)!important}
+body:has(#mobView.on:not(.desk)) #pdxReviewPill{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px) + 60px)!important}
+body:has(#mobView.on:not(.desk) .isl:not(.solo)) #pdxReviewPill{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px) + 146px)!important}
+body:has(#mobView.on:not(.desk) .isl.solo) #pdxReviewPill{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px) + 88px)!important}
 /* υπολογιστής: η «Αναίρεση» πάνω δεξιά, μικρή, για να μη σκεπάζει τα κουμπιά στο κάτω μέρος */
 @media (min-width:900px) and (hover:hover){
   #undoToast,#mobToast{left:auto!important;right:20px!important;top:84px!important;bottom:auto!important;width:auto!important;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v562';
+const APP_VER = '2026-11-17-v563';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -7178,7 +7178,7 @@ document.head.appendChild(st);
   #mobView .mbd.clin{padding:0}#mobView .mbd.clin span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10.5px;font-weight:800;letter-spacing:.3px;line-height:1;white-space:nowrap;max-height:100%;overflow:hidden}
   #mobView .mbd.air span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;font-weight:800;letter-spacing:.5px;line-height:1}
   #mobView .mbd{position:absolute;left:0;top:0;bottom:8px;width:24px;z-index:1;background:var(--mp,#1B4B66);color:#fff;border-radius:16px 0 0 16px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
-  #mobView .isl{position:fixed;left:50%;bottom:calc(max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px) + 28px);transform:translateX(-50%);z-index:3;display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(255,255,255,.28);-webkit-backdrop-filter:blur(22px) saturate(190%);backdrop-filter:blur(22px) saturate(190%);border:1px solid rgba(255,255,255,.65);box-shadow:0 10px 30px rgba(20,40,60,.22),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(255,255,255,.25)}
+  #mobView .isl{position:fixed;left:50%;bottom:calc(max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px) + 28px);transform:translateX(-50%);z-index:3;display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(255,255,255,.28);-webkit-backdrop-filter:blur(22px) saturate(190%);backdrop-filter:blur(22px) saturate(190%);border:1px solid rgba(255,255,255,.65);box-shadow:0 10px 30px rgba(20,40,60,.22),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(255,255,255,.25)}
   #mobView .isl button{display:flex;align-items:center;gap:7px;border:0;border-radius:999px;padding:11px 18px;font-size:15px;font-weight:700;color:#12384F;background:rgba(255,255,255,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.85);-webkit-tap-highlight-color:transparent;white-space:nowrap}
   #mobView .isl button.mqe{background:rgba(27,75,102,.82);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
   #mobView .isl button:active{transform:scale(.96)}#mobView .isl i{font-style:normal}
@@ -7309,7 +7309,7 @@ document.head.appendChild(st);
   #mobView .mm{background:rgba(29,78,128,.07)!important;border:0!important;border-radius:18px!important}
   #mobView .mgrid{gap:6px!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%;box-sizing:border-box}#mobView .mm{display:flex!important;flex-direction:column;align-items:center;justify-content:center;min-width:0}#mobView .mm{padding:5px 6px!important;border-radius:14px!important}#mobView .mm b{font-size:18px!important;line-height:1.15}#mobView .mm span,#mobView .mm i{font-size:10.5px!important;text-align:center}#mobView .ti{font-size:10px!important;margin-right:2px}
   #mobView .madd button,#mobView .mbtn,#mobView .mchartbtn{background:var(--mp,#1D4E80)!important;border-radius:999px!important}
-  #mobView .isl{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px) + 64px)!important}
+  #mobView .isl{bottom:calc(max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px) + 64px)!important}
   #mobView .isl.solo{bottom:max(calc(env(safe-area-inset-bottom) + 14px), 30px)!important}
   #mobView .isl button.mqe{background:var(--mp,#1D4E80)!important}
   #mobView .mtag{background:rgba(29,78,128,.12)!important}
@@ -9524,7 +9524,7 @@ document.head.appendChild(st);
   #mobView .nv-chs{display:flex;gap:6px;flex-wrap:wrap}
   #mobView .nv-ch{font-size:13px;font-weight:600;padding:6px 10px;border-radius:14px;background:#fff;color:#1C1C1E;border:0;font-family:inherit;line-height:1.2}
   #mobView button.nv-ch{cursor:pointer}#mobView .nv-ch.w{background:#FFF4E0;color:#8A5300}#mobView .nv-ch.on{box-shadow:inset 0 0 0 1.5px currentColor}
-  #mobView .nv-tb{position:fixed;left:12px;right:12px;bottom:max(calc(env(safe-area-inset-bottom,0px) - 10px), 12px);height:62px;border-radius:31px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-around;z-index:50;max-width:520px;margin:0 auto}
+  #mobView .nv-tb{position:fixed;left:12px;right:12px;bottom:max(calc(env(safe-area-inset-bottom,0px) + 2px), 14px);height:62px;border-radius:31px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:0 6px 24px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-around;z-index:50;max-width:520px;margin:0 auto}
   #mobView .nv-tb button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:#6B6B70;background:none;border:0;cursor:pointer;position:relative;padding:4px 10px;font-family:inherit}
   #mobView .nv-tb button.on{color:#1D4E80;font-weight:700}
   #mobView .nv-tb em{position:absolute;top:-2px;right:2px;min-width:18px;height:18px;border-radius:9px;background:#1D4E80;color:#fff;font-size:11px;font-style:normal;display:flex;align-items:center;justify-content:center;padding:0 4px;box-sizing:border-box}
