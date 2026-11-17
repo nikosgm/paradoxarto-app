@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v538';
+const APP_VER = '2026-11-17-v539';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25279,7 +25279,10 @@ window.CLS_MODE='A';
           sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+esc(p.pid ? c.t : 'δεν βρέθηκε στο Medilabi της κλινικής')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
             + (u ? '<div style="margin-top:2px">🔬 '+(u.fun?'<b style="color:#C62828">🍄 Μύκητες '+esc(u.fun)+'</b> · ':'')+esc(u.txt)+(u.d?' <span style="color:#8E8E93">('+esc(u.d)+')</span>':'')+'</div>' : (p.pid ? '<div style="color:#8E8E93">🔬 χωρίς γενική ούρων</div>' : ''))};
       }));
-      return h2 + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
+      // 🫁 17/11 15:14 (χρήστης: «στο πρόγραμμα που κάναμε τώρα δεν βλέπω ακτινογραφίες»): και στο ανεβασμένο πρόγραμμα, όπως στον επεξεργαστή
+      const XP = (st.o && st.o.pts && st.o.pts.length ? st.o.pts : (st.cu && st.cu.list) || []); window.__orsXP = XP; const nX = XP.length;
+      return h2 + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
+        + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
     // ανανέωση κάθε 20′ όσο είναι ανοιχτή η σελίδα του προγράμματος
     const cuTimer = setInterval(()=>{ if(!document.body.contains(pg.el)) return clearInterval(cuTimer); if(st.cu && Date.now() - (st.cuAt||0) > 20*60000) cultLoad(); }, 60000);
     // 💾 15/11 20:55 (χρήστης: «γιατί οι καλλιέργειες, ενώ είχαν φορτωθεί, χάθηκαν όταν ξαναμπήκα; cache παντού»): η τελευταία λίστα ΚΡΥΠΤΟΓΡΑΦΗΜΕΝΗ στη συσκευή
@@ -25390,6 +25393,11 @@ window.CLS_MODE='A';
     pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-od],[data-or]'); if(!b || st.busy) return;
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
       if(b.dataset.or==='cult') return cultLoad(true);
+      if(b.dataset.or==='xr'){ const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
+        const recs = []; [typeof data!=='undefined'?data:{}, typeof extraPatients!=='undefined'?extraPatients:{}].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) recs.push({k, d}); }));
+        const items = (window.__orsXP||[]).map(p=>{ const N = nz(p.name).split(' '); const r = recs.find(x=>{ const M = nz(x.d.name).split(' '); return M[0]===N[0] && (!N[1] || !M[1] || M[1].slice(0,3)===N[1].slice(0,3)); });
+          const d = r ? r.d : null; return {key: r ? r.k : '', name: d ? d.name : String(p.name||'').trim(), am: (d && d.am) || ((/\b(\d{8})\b/.exec(p.name||'')||[])[1]||''), amka: (d && d.amka) || '', ad: (d && d.admitDate) || '', label: String(p.room||'')}; });
+        return window.pdxXrQueue(items); }
       if(b.dataset.or==='fresh') return load(true);
       if(b.dataset.or==='mail') return st.mbusy ? null : loadMail(true);
       const k = +b.dataset.od; if(k===0) st.iso = orIso(pdxOrTarget()); else { const x = new Date(st.iso+'T12:00:00'); do{ x.setDate(x.getDate()+k); }while([1,3,5].indexOf(x.getDay())<0); st.iso = orIso(x); } st.cu = null; st.cuerr = ""; st.cuAt = 0;
