@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v539';
+const APP_VER = '2026-11-17-v540';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14155,7 +14155,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const isXr = m=>/^(DX|CR|XR)$/i.test(m||''), isChest = x=>/θ[ωώ]ρακ|thorax|chest|πνευμ/i.test(String(x.desc||''));
     const dnum = s=>{ const m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')) || /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(s||'')); if(!m) return 0; return m[1].length===4 ? Date.UTC(+m[1],+m[2]-1,+m[3]) : Date.UTC(+m[3],+m[2]-1,+m[1]); };
     const admT = ad=>{ const m = /(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/.exec(String(ad||'')); if(!m) return 0; const y = m[3] ? (+m[3]<100?2000+ +m[3]:+m[3]) : new Date().getFullYear(); return Date.UTC(y,+m[2]-1,+m[1]); };
-    const pickChest = (L, ad)=>{ const xr = L.filter(x=>isXr(x.mod)).sort((a,b)=>dnum(b.date)-dnum(a.date)); const ch = xr.filter(isChest); const a = admT(ad); const cur = arr=>a ? arr.filter(x=>dnum(x.date) >= a-864e5) : arr; return cur(ch)[0] || ch[0] || cur(xr)[0] || xr[0] || null; };
+    // 🫁 17/11 15:25 (χρήστης: «να μη μπερδεύεται — να δείχνει πάντα ακτινογραφία θώρακα ΦΑ»): ΜΟΝΟ θώρακας (ποτέ άλλη ακτινογραφία)· ίδια μέρα → ΦΑ πριν από πλάγια
+    const isPA = x=>/(^|[^Α-ΩA-Z])(Φ\.?\s?Α|PA|P\.A)([^Α-ΩA-Z]|$)|ΟΠΙΣΘΟΠΡΟΣΘ|ΟΡΘΙΑ|ΟΡΘΙΑ|ΠΡΟΣΘΙΟΠΙΣΘ/i.test(String(x.desc||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')), isLat = x=>/ΠΛΑΓ|LAT/i.test(String(x.desc||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')) && !isPA(x);
+    const pickChest = (L, ad)=>{ const ch = L.filter(x=>isXr(x.mod) && isChest(x)).sort((a,b)=>(dnum(b.date)-dnum(a.date)) || ((isPA(b)?1:0)-(isPA(a)?1:0)) || ((isLat(a)?1:0)-(isLat(b)?1:0))); const a = admT(ad); const cur = a ? ch.filter(x=>dnum(x.date) >= a-864e5) : ch; return cur[0] || ch[0] || null; };
     const Q = items.map(x=>({...x, st:'wait', ex:null, err:''}));
     let cur = -1, busy = false;
     const old = document.getElementById('xrQOv'); if(old) old.remove();
@@ -14180,7 +14182,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         while(Date.now()-t0 < 150000){ await new Promise(r=>setTimeout(r,1500));
           const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id',ins.data.id).maybeSingle(); const j = q && q.data; if(!j) continue;
           if(j.status==='failed' || j.status==='cancelled') throw new Error(j.note || 'δεν βρέθηκαν εξετάσεις');
-          if(j.status==='done'){ const ex = pickChest(((j.payload||{}).result||{}).exams || [], x.ad); if(!ex) throw new Error('καμία ακτινογραφία'); x.ex = ex; x.st = 'ok'; draw(); return; } }
+          if(j.status==='done'){ const ex = pickChest(((j.payload||{}).result||{}).exams || [], x.ad); if(!ex) throw new Error('χωρίς ακτινογραφία θώρακα'); x.ex = ex; x.st = 'ok'; draw(); return; } }
         throw new Error('το bot δεν απάντησε');
       }catch(e){ x.st = 'err'; x.err = String(e.message||e).slice(0,90); draw(); }
     };
@@ -14206,7 +14208,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     });
     draw(); document.body.appendChild(ov);
     // όλες οι αναζητήσεις στη σειρά (η πρώτη πρώτα — ανοίγει μόλις βρεθεί)
-    (async ()=>{ for(let i=0;i<Q.length && document.body.contains(ov);i++) await find(i); })();
+    // ⚡ 17/11 15:25 (χρήστης: «να τις βγάζει πιο γρήγορα»): 4 αναζητήσεις ταυτόχρονα (μοιράζονται στους υπολογιστές), όχι μία-μία
+    (async ()=>{ let nx = 0; const worker = async ()=>{ while(nx < Q.length && document.body.contains(ov)){ const i = nx++; await find(i); } }; await Promise.all([worker(), worker(), worker(), worker()]); })();
   };
 
   // 📱 8/11: κλειδί τηλεχειριστηρίου ανά υπολογιστή (μένει στο κινητό· ο υπολογιστής το παίρνει με το άνοιγμα από το κινητό)
