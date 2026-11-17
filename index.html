@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v564';
+const APP_VER = '2026-11-17-v565';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12523,6 +12523,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     Object.keys(e.s).forEach(st=>Object.keys(e.v[st]||{}).forEach(v=>{ const [d,f,dy] = v.split('|'); L.push({s:st, dose:d, freq:+f, days:+dy, n:e.v[st][v], key:k+'|'+st+'|'+v, hidden:rxlHid(k, st, v)}); }));
     return {name:rxlNice(k), n:L.reduce((a,x)=>a+x.n,0), L:L.sort((a,b)=>b.n-a.n)}; }).filter(x=>x.L.length).sort((a,b)=>b.n-a.n); };
   // 🧠 15/11: ΑΡΧΕΙΟ μνήμης — τι έμαθε ανά φάρμακο (✕ = να μην το ξαναπροτείνει) + εξετάσεις που πάνε μαζί
+  // ⭐ 17/11 20:35 (χρήστης: «αυτά τα αγαπημένα δεν είναι δικά μου — να βάζω ΕΓΩ αγαπημένα με δοσολογία»): οι προτάσεις δοσολογίας και η λίστα
+  // όταν γράφεις όνομα φαρμάκου έρχονται ΜΟΝΟ από τα αγαπημένα του χρήστη (user_metadata.rxFav.add) — όχι από τη μνήμη όλων των συνταγών της κλινικής
+  window.pdxRxFavLines = ()=>{ let c = null; try{ c = (window.__pdxUser && window.__pdxUser.user_metadata && window.__pdxUser.user_metadata.rxFav) || JSON.parse(localStorage.getItem('pdx_rx_fav')||'null'); }catch(e){} return (c && Array.isArray(c.add)) ? c.add.slice(0, 30) : []; };
+  let FAVP = false;
+  const favParsed = ()=>{ if(FAVP) return []; FAVP = true; try{ return window.pdxRxFavLines().map(l=>{ const r = window.pdxRxSmart ? pdxRxSmart(l) : null; return r && r.name && r.freq && r.days ? {l, name:r.name, s:r.strength||'', dose:String(r.dose||'1'), freq:+r.freq, days:+r.days} : null; }).filter(Boolean); } finally { FAVP = false; } };
+  window.pdxRxLearned = function(name, strength){ if(FAVP) return null; const K = rxlK(name); if(!K) return null; const ts = rxlS(strength);
+    const L = favParsed().filter(x=>rxlK(x.name)===K); const f = L.find(x=>ts && rxlS(x.s)===ts) || (ts ? null : L[0]); return f ? {s: ts ? strength : f.s, dose:f.dose, freq:f.freq, days:f.days, n:1} : null; };
+  window.pdxRxLearnedTop = function(q, n){ const w = String(q||'').toUpperCase().replace(/[^A-Z0-9\-]/g,' ').trim().split(/\s+/)[0]||''; if(w.length < 2) return [];
+    return favParsed().filter(x=>rxlK(x.name).indexOf(w)===0).slice(0, n||5).map(x=>({name:x.name, s:x.s, dose:x.dose, freq:x.freq, days:x.days, n:1, key:x.l})); };
   window.pdxRxMemOpen = async function(){ await window.pdxRxLearnLoad(); let ex = false;
     const ov = document.createElement('div'); ov.className = 'pkx full'; ov.style.zIndex = '9700';
     ov.innerHTML = '<div class="pane" style="max-width:none"><div class="nav"><button data-x>‹ Πίσω</button><div class="tt">🧠 Μνήμη</div></div><div class="body" data-b></div></div>'; document.body.appendChild(ov);
@@ -16614,7 +16623,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 🗑 17/11 20:24 (χρήστης: «σβήσε την υπαγόρευση στη συνταγογράφηση, δεν μου αρέσει — άσε μόνο ένα μικρό κουμπάκι για τη σάρωση, μόνο φωτογραφική μηχανή»)
       if(S.qBusy || S.qMsg) h += '<div class="rxq">'+(S.qBusy ? '<div class="rxq-m">⏳ Καταλαβαίνω…</div>' : '<div class="rxq-m">'+E(S.qMsg)+'</div>')+'</div>';
       // 3) Φάρμακα
-      h += '<div class="h">💊 Φάρμακα'+(S.meds.length?' · '+S.meds.length:'')+'<span style="display:flex;gap:16px"><button data-a="again" style="display:none">Ίδια με την προηγούμενη</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:32px">📦 Πακέτα</button>':'')+(window.pdxPackFrom?'<button data-a="packsave" style="min-height:32px'+(S.meds.length||S.ex.length?'':';display:none')+'">💾 Πακέτο από αυτά</button>':'')+'<button data-a="rxmem" style="min-height:32px" aria-label="Μνήμη δοσολογίας">🧠</button></span></div><div class="g" data-meds></div>';
+      h += '<div class="h">💊 Φάρμακα'+(S.meds.length?' · '+S.meds.length:'')+'<span style="display:flex;gap:16px"><button data-a="again" style="display:none">Ίδια με την προηγούμενη</button>'+(window.pdxPacksApply?'<button data-a="packs" style="min-height:32px">📦 Πακέτα</button>':'')+(window.pdxPackFrom?'<button data-a="packsave" style="min-height:32px'+(S.meds.length||S.ex.length?'':';display:none')+'">💾 Πακέτο από αυτά</button>':'')+'</span></div><div class="g" data-meds></div>';
       const opt = (L, v)=>L.map(x=>'<option value="'+E(x[0])+'"'+(String(x[0])===String(v)?' selected':'')+'>'+E(x[1])+'</option>').join('');
       h += '<div class="h" style="margin-top:14px'+(S.addMed?'':';display:none')+'" data-nmh>Νέο φάρμακο</div><div class="g mf"'+(S.addMed?'':' style="display:none"')+'><div class="r"><input class="t" data-medq type="search" autocomplete="off" placeholder="🔎 Φάρμακο (π.χ. Ciproxin)" enterkeyhint="done"></div><div data-mres class="exl"></div>'
         + '<div class="r"><span class="l">Περιεκτικότητα</span><input data-mf="strength" class="t v" placeholder="π.χ. 500mg" autocomplete="off"></div>'
@@ -16728,17 +16737,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     function drawFavs(){
       const box = root.querySelector('[data-favs]'); if(!box) return;
       const cnt = {}, C = favCfg(), hid = new Set(C.hide);
-      C.add.forEach(l=>{ const k = l.toUpperCase(); cnt[k] = {l, n:1e6}; });
-      S.hist.forEach(j=>((j.payload||{}).meds||[]).forEach(m=>{ const l = mLineH(m); if(!l) return; const k = l.toUpperCase(); cnt[k] = cnt[k] || {l, n:0}; cnt[k].n++; }));
+      // ⭐ 17/11 20:35 (χρήστης: «αυτά τα αγαπημένα δεν είναι δικά μου — βάλε επιλογή να βάζω ΕΓΩ αγαπημένα φάρμακα με δοσολογία»): ΜΟΝΟ τα δικά του (όχι τα πιο συχνά της κλινικής)
+      C.add.forEach((l, i)=>{ const k = l.toUpperCase(); cnt[k] = {l, n:1e6 - i}; });
       const epOk = l=>{ const r = window.pdxRxSmart ? pdxRxSmart(l) : null; return !(r && r.name && window.pdxEpCatHas && pdxEpCatHas(r.name, r.strength)===false); };
-      const top = Object.keys(cnt).filter(k=>!hid.has(k) && epOk(cnt[k].l)).sort((a,b)=>cnt[b].n-cnt[a].n).slice(0,14);
+      const top = Object.keys(cnt).filter(k=>!hid.has(k)).sort((a,b)=>cnt[b].n-cnt[a].n).slice(0,30);
       if(window.pdxEpCatLoad && !box._epl){ box._epl = 1; pdxEpCatLoad().then(()=>{ try{ drawFavs(); }catch(e){} }); }
       const inRx = new Set(S.meds.map(m=>(m.name+'|'+m.strength).toUpperCase())), ed = !!S.favEd;
       box.innerHTML = top.map(k=>{ const on = inRx.has(favKey(cnt[k].l));
           return '<button class="ch'+(on?' on':'')+'" data-fav="'+E(cnt[k].l)+'">⭐ '+E(cnt[k].l.replace(/\s+για\s+(\d+)\s+ημέρες/,' · $1ημ.'))+(ed?' <span data-favx="'+E(k)+'" style="margin-left:4px;font-weight:700;color:#C62828">✕</span>':'')+'</button>'; }).join('')
-        + '<button class="ch" data-favedit style="opacity:.85">'+(ed?'✓ Τέλος':'✎ Αγαπημένα')+'</button>'
-        + (ed && S.meds.length ? '<button class="ch" data-favadd>＋ τα τωρινά ('+S.meds.length+')</button>' : '')
-        + (ed && C.hide.length ? '<button class="ch" data-favreset style="opacity:.8">↺ επαναφορά κρυμμένων ('+C.hide.length+')</button>' : '');
+        + (!top.length ? '<div style="font-size:13.5px;color:#8E8E93;margin:2px 4px 6px;width:100%">⭐ Τα αγαπημένα σου: πρόσθεσε ένα φάρμακο με τη δοσολογία του και πάτα «⭐ Αποθήκευση στα αγαπημένα».</div>' : '')
+        + (S.meds.some(m=>!cnt[(mLineH(m)||'').toUpperCase()]) ? '<button class="ch" data-favadd style="font-weight:700">⭐ Αποθήκευση στα αγαπημένα ('+S.meds.filter(m=>!cnt[(mLineH(m)||'').toUpperCase()]).length+')</button>' : '')
+        + (top.length ? '<button class="ch" data-favedit style="opacity:.85">'+(ed?'✓ Τέλος':'✎ Αφαίρεση')+'</button>' : '');
     }
     const rxHid = ()=>{ try{ return new Set(JSON.parse(localStorage.getItem('pdx_rx_hid')||'[]').map(String)); }catch(e){ return new Set(); } };
     function drawHist(){
@@ -16830,7 +16839,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const item = (attr, a, b)=>'<button type="button" class="exl-it" '+attr+'><span>'+a+'</span><small>'+b+'</small></button>';
       // 🧠 15/11 00:02 (χρήστης: «σε αυτά που θυμάσαι να μου βγάζεις drop-down επιλογές ολοκληρωμένες· στα άλλα επιλέγω εγώ»): πρώτα οι ΟΛΟΚΛΗΡΕΣ γραμμές της μνήμης → ένα πάτημα = μέσα
       const lrn = window.pdxRxLearnedTop ? pdxRxLearnedTop(qAll0, 5) : []; res._lrn = lrn;
-      const lrnH = lrn.length ? '<div class="exl-h">🧠 Όπως το γράφετε</div>'+lrn.map((x,i)=>item('data-dlrn="'+i+'"', '<b>'+E(x.name)+'</b> '+E(x.s), (x.dose&&x.dose!=='1'?String(x.dose).replace('.',',')+' × ':'')+'1×'+x.freq+' · '+x.days+(x.days===1?' ημέρα':' ημ.')+' · '+x.n+'×')).join('') : '';
+      const lrnH = lrn.length ? '<div class="exl-h">⭐ Τα αγαπημένα μου</div>'+lrn.map((x,i)=>item('data-dlrn="'+i+'"', '<b>'+E(x.name)+'</b> '+E(x.s), (x.dose&&x.dose!=='1'?String(x.dose).replace('.',',')+' × ':'')+'1×'+x.freq+' · '+x.days+(x.days===1?' ημέρα':' ημ.'))).join('') : '';
       const paint = st=>{ let h = lrnH + (loc.length ? '<div class="exl-h">Κατάλογος κλινικής</div>'+loc.map(d=>item('data-dloc="'+E(d.name)+'"', '<b>'+E(d.name)+'</b> '+E(d.s), '1×'+d.f+' · '+d.d+' ημ.')).join('') :'');
         if(mem.length && !(st && (st.items||[]).length)) h += '<div class="exl-h">Από προηγούμενες αναζητήσεις</div>'+mem.map(n=>item('data-dmem="'+E(n)+'"', E(n), '')).join('');
         if(w0.length>=3 || (st && st.cat)){ h += '<div class="exl-h">e-prescription · συσκευασίες'+(st && st.cat ? ' · ⚡' : '')+'</div>';
