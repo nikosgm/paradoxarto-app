@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v540';
+const APP_VER = '2026-11-17-v541';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14176,10 +14176,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     };
     const find = async i=>{ const x = Q[i]; if(!x || x.st!=='wait') return; x.st = 'find'; draw();
       try{
-        const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_evoradlist', name:x.name, room:null, kind:'evoradimg', payload:{name:x.name, ad:x.ad||'', am:x.am||'', amka:x.amka||'', listOnly:true, quiet:true}, status:'new'}).select('id').single();
+        // 17/11 15:49 (χρήστης: «δεν θέλω να είναι μοιρασμένες — μόνο στον Μεσαίο»): η αναζήτηση ΜΟΝΟ στον υπολογιστή που δείχνει (κανένα παράθυρο Evorad αλλού)
+        const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_evoradlist', name:x.name, room:null, kind:'evoradimg', payload:Object.assign({name:x.name, ad:x.ad||'', am:x.am||'', amka:x.amka||'', listOnly:true, quiet:true}, pc ? {only:pc, bot:pc} : {}), status:'new'}).select('id').single();
         if(ins.error) throw new Error(ins.error.message);
         const t0 = Date.now();
-        while(Date.now()-t0 < 150000){ await new Promise(r=>setTimeout(r,1500));
+        while(Date.now()-t0 < 60000){ await new Promise(r=>setTimeout(r,1000));
           const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id',ins.data.id).maybeSingle(); const j = q && q.data; if(!j) continue;
           if(j.status==='failed' || j.status==='cancelled') throw new Error(j.note || 'δεν βρέθηκαν εξετάσεις');
           if(j.status==='done'){ const ex = pickChest(((j.payload||{}).result||{}).exams || [], x.ad); if(!ex) throw new Error('χωρίς ακτινογραφία θώρακα'); x.ex = ex; x.st = 'ok'; draw(); return; } }
@@ -14189,9 +14190,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const open = async i=>{
       if(!pc){ toast('Διάλεξε υπολογιστή'); return; }
       cur = i; draw(); const x = Q[i];
-      for(let k=0;k<200 && (x.st==='wait'||x.st==='find');k++) await new Promise(r=>setTimeout(r,500));
+      if(x.st==='wait') find(i);   // 17/11: ΑΜΕΣΩΣ αυτός, όχι αναμονή της σειράς («πατούσα να μου δείξει έναν και δεν τον έδειχνε»)
+      for(let k=0;k<140 && (x.st==='wait'||x.st==='find');k++) await new Promise(r=>setTimeout(r,500));
       if(cur!==i) return;
-      if(x.st!=='ok'){ toast('✗ '+x.name+': '+(x.err||'χωρίς ακτινογραφία')); return; }
+      // 17/11: χωρίς ακτινογραφία → μήνυμα και ΑΥΤΟΜΑΤΑ ο επόμενος που έχει (όχι «ψάχνει» για πάντα)
+      if(x.st!=='ok'){ toast('✗ '+x.name+': '+(x.err||'χωρίς ακτινογραφία θώρακα')+' → επόμενος'); const j = Q.findIndex((y,k)=>k>i && y.st!=='err'); if(j>=0) return open(j); return; }
       const sur = String(x.name||'').trim().split(/\s+/)[0] || '';
       const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_ctremote', name:'🫁 '+x.name, room:null, kind:'ctremote', payload:{only:pc, examid:String(x.ex.examid), sur, fn:'PDXRC'+pdxRcTok(pc), amka:x.amka||'', desc:(x.ex.mod+' '+(x.ex.desc||'')).trim(), quiet:true}, status:'new'}).select('id').single();
       if(ins.error){ toast('Σφάλμα: '+ins.error.message); return; }
@@ -14209,7 +14212,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     draw(); document.body.appendChild(ov);
     // όλες οι αναζητήσεις στη σειρά (η πρώτη πρώτα — ανοίγει μόλις βρεθεί)
     // ⚡ 17/11 15:25 (χρήστης: «να τις βγάζει πιο γρήγορα»): 4 αναζητήσεις ταυτόχρονα (μοιράζονται στους υπολογιστές), όχι μία-μία
-    (async ()=>{ let nx = 0; const worker = async ()=>{ while(nx < Q.length && document.body.contains(ov)){ const i = nx++; await find(i); } }; await Promise.all([worker(), worker(), worker(), worker()]); })();
+    // ένας υπολογιστής → με τη σειρά, αλλά όποιον πατήσεις ψάχνεται ΑΜΕΣΩΣ (προτεραιότητα)· 2 ταυτόχρονα στην ουρά του ίδιου υπολογιστή
+    (async ()=>{ const worker = async ()=>{ while(document.body.contains(ov)){ const i = Q.findIndex(x=>x.st==='wait'); if(i<0) break; await find(i); } }; await Promise.all([worker(), worker()]); })();
   };
 
   // 📱 8/11: κλειδί τηλεχειριστηρίου ανά υπολογιστή (μένει στο κινητό· ο υπολογιστής το παίρνει με το άνοιγμα από το κινητό)
