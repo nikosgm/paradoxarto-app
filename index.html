@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v560';
+const APP_VER = '2026-11-17-v561';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15446,15 +15446,18 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     return list.map((x, i)=>({x, i, r: window.pdxHospRank(g(x))})).sort((a, b)=>(b.r.u - a.r.u) || (b.r.t - a.r.t) || (a.i - b.i)).map(o=>o.x); };
   window.pdxStatsPage = function(){
     const Y = new Date().getFullYear(), iso = d=>d.toISOString().slice(0,10);
-    const st = { meta:null, res:null, err:'', busy:false, q:{what:'ops', from:Y+'-01-01', to:Y+'-12-31', by:'month', groups:[], approach:''}, per:'y0', ask:'', note:'', showAll:false };
+    const st = { meta:null, res:null, err:'', busy:false, q:{what:'ops', from:Y+'-01-01', to:Y+'-12-31', by:'month', groups:[], approach:''}, per:'y0', ask:'', note:'', showAll:false, full:'' };
     const n = x=>Number(x||0).toLocaleString('el-GR'), dd = s=>{ const m = String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; };
     const MON = ['Ιαν','Φεβ','Μαρ','Απρ','Μάι','Ιουν','Ιουλ','Αυγ','Σεπ','Οκτ','Νοε','Δεκ'];
     const WHAT = {ops:'Επεμβάσεις', admissions:'Νοσηλείες', discharges:'Εξιτήρια', biopsies:'Ιστολογικές'};
-    const PER = [['y0','Φέτος'],['y1','Πέρσι'],['m12','12 μήνες'],['all','Όλα'],['cus','📅 Εύρος']];
+    const PER = [['full','✓ Πλήρη δεδομένα'],['y0','Φέτος'],['y1','Πέρσι'],['m12','12 μήνες'],['all','Όλα'],['cus','📅 Εύρος']];
+    // 📅 17/11 19:45 (χρήστης: «να ξεκινάει από τη μέρα που είχαμε όλους τους ασθενείς από το ΝΠΣ — το πιο αντιπροσωπευτικό»): st.full = πρώτη ημέρα πλήρους κάλυψης (από τη βάση)
+    const mx = (a, b)=> !a ? b : !b ? a : (a > b ? a : b);
     const setPer = p=>{ st.per = p; const q = st.q;
-      if(p==='y0'){ q.from = Y+'-01-01'; q.to = Y+'-12-31'; q.by = 'month'; }
+      if(p==='full'){ q.from = st.full || Y+'-01-01'; q.to = iso(new Date()); q.by = autoBy(q.from, q.to); }
+      else if(p==='y0'){ q.from = mx(Y+'-01-01', st.full); q.to = Y+'-12-31'; q.by = 'month'; }
       else if(p==='y1'){ q.from = (Y-1)+'-01-01'; q.to = (Y-1)+'-12-31'; q.by = 'month'; }
-      else if(p==='m12'){ const a = new Date(); a.setMonth(a.getMonth()-12); a.setDate(a.getDate()+1); q.from = iso(a); q.to = iso(new Date()); q.by = 'month'; }
+      else if(p==='m12'){ const a = new Date(); a.setMonth(a.getMonth()-12); a.setDate(a.getDate()+1); q.from = mx(iso(a), st.full); q.to = iso(new Date()); q.by = 'month'; }
       else if(p==='cus'){ if(!q.from){ q.from = Y+'-01-01'; } if(!q.to){ q.to = iso(new Date()); } q.by = autoBy(q.from, q.to); }
       else { q.from = ''; q.to = ''; q.by = 'year'; } };
     // 📅 17/11 19:27 (χρήστης: «φίλτρο προσαρμοσμένο εύρος ημερών»): ανά μήνα έως ~2 έτη, αλλιώς ανά έτος· έως 45 ημέρες → ανά ημέρα
@@ -15464,7 +15467,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const KW = {turbt:/TURB|ΔΟΥΕ|ΟΓΚ\w* ΚΥΣΤ/, turp:/TURP|ΔΕΠ\b|ΕΚΤΟΜΗ ΠΡΟΣΤ/, holep:/HOLEP|LASER ΠΡΟΣΤ/, rarp:/ΡΙΖΙΚ\w* ΠΡΟΣΤ|RARP|ΠΡΟΣΤΑΤΕΚΤΟΜ/, cystectomy:/ΚΥΣΤΕΚΤΟΜ/, rn:/ΝΕΦΡΕΚΤΟΜ/, pn:/ΜΕΡΙΚ\w* ΝΕΦΡ/, nu:/ΝΕΦΡΟΟΥΡΗΤ/,
       urs:/URS|RIRS|ΟΥΡΗΤΗΡΟΣΚΟΠ|ΟΛΨ|ΛΙΘΟΤΡΙΨ/, pcnl:/PCNL|ΔΙΑΔΕΡΜ/, eswl:/ESWL|ΕΞΩΣΩΜ/, dj:/DOUBLE|\bDJ\b|\bJJ\b|STENT|ΚΑΘΕΤΗΡ\w* J/, neph:/ΝΕΦΡΟΣΤΟΜ|ΝΦΣ/, prbx:/ΒΙΟΨΙ\w* ΠΡΟΣΤ/, cysto:/ΚΥΣΤΕΟΣΚΟΠ/,
       orch:/ΟΡΧΕΚΤ|ΟΡΧΙΕΚΤ/, hydro:/ΥΔΡΟΚΗΛ/, varico:/ΚΙΡΣΟΚΗΛ/, circ:/ΠΕΡΙΤΟΜ|ΦΙΜΩΣ/, urethro:/ΟΥΡΗΘΡΟΤ|ΟΥΡΗΘΡΟΠΛ|ΣΤΕΝΩΜ/, incont:/ΑΚΡΑΤΕΙ|SLING|TVT|TOT\b/, pyelo:/ΠΥΕΛΟΠΛ/, adrenal:/ΕΠΙΝΕΦΡΙΔ/, botox:/BOTOX/, cystolith:/ΚΥΣΤΕΟΛΙΘ|ΚΥΣΤΟΛΙΘ/};
-    const localParse = txt=>{ const t = nzl(txt), q = {what:'ops', groups:[], approach:'', by:'month'}; let per = 'y0';
+    const localParse = txt=>{ const t = nzl(txt), q = {what:'ops', groups:[], approach:'', by:'month'}; let per = st.full ? 'full' : 'y0';
       if(/ΝΟΣΗΛΕΙ|ΕΙΣΑΓΩΓ/.test(t)) q.what = 'admissions'; else if(/ΕΞΙΤΗΡΙ/.test(t)) q.what = 'discharges'; else if(/ΙΣΤΟΛΟΓ/.test(t)) q.what = 'biopsies';
       for(const g in KW) if(KW[g].test(t)) q.groups.push(g);
       if(q.groups.includes('pn')) q.groups = q.groups.filter(g=>g!=='rn'); if(q.groups.includes('nu')) q.groups = q.groups.filter(g=>g!=='rn');
@@ -15472,7 +15475,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const yr = t.match(/\b(20\d\d)\b/g);
       if(yr && yr.length>=2){ q.from = yr[0]+'-01-01'; q.to = yr[yr.length-1]+'-12-31'; q.by = 'year'; per = ''; }
       else if(yr){ q.from = yr[0]+'-01-01'; q.to = yr[0]+'-12-31'; per = ''; }
-      else if(/ΠΕΡΣΙ|ΠΕΡΥΣΙ|ΠΕΡΣΙΝ/.test(t)) per = 'y1'; else if(/ΣΥΝΟΛΙΚΑ|ΟΛΑ ΤΑ ΧΡΟΝΙΑ|ΠΟΤΕ|ΑΠΟ ΤΗΝ ΑΡΧΗ|ΑΝΑ ΕΤΟΣ|ΑΝΑ ΧΡΟΝΟ/.test(t)) per = 'all'; else if(/12 ΜΗΝ|ΤΕΛΕΥΤΑΙΟ ΧΡΟΝΟ|ΤΕΛΕΥΤΑΙΟ ΕΤΟΣ/.test(t)) per = 'm12';
+      else if(/ΦΕΤΟΣ|ΦΕΤΙΝ/.test(t)) per = 'y0'; else if(/ΠΕΡΣΙ|ΠΕΡΥΣΙ|ΠΕΡΣΙΝ/.test(t)) per = 'y1'; else if(/ΣΥΝΟΛΙΚΑ|ΟΛΑ ΤΑ ΧΡΟΝΙΑ|ΠΟΤΕ|ΑΠΟ ΤΗΝ ΑΡΧΗ|ΑΝΑ ΕΤΟΣ|ΑΝΑ ΧΡΟΝΟ/.test(t)) per = 'all'; else if(/12 ΜΗΝ|ΤΕΛΕΥΤΑΙΟ ΧΡΟΝΟ|ΤΕΛΕΥΤΑΙΟ ΕΤΟΣ/.test(t)) per = 'm12';
       const mm = t.match(/ΤΕΛΕΥΤΑΙ\w* (\d+) ΜΗΝ/); if(mm){ const a = new Date(); a.setMonth(a.getMonth()-(+mm[1])); q.from = iso(a); q.to = iso(new Date()); per = ''; }
       if(/ΑΝΔΡ/.test(t)) q.sex = 'M'; else if(/ΓΥΝΑΙΚ/.test(t)) q.sex = 'F';
       const am = t.match(/(?:ΑΝΩ ΤΩΝ|ΠΑΝΩ ΑΠΟ|>=?|ΗΛΙΚΙΑΣ? ?≥?)\s*(\d{2})/); if(am) q.ageMin = +am[1];
@@ -15490,7 +15493,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(window.pdxAiOn && pdxAiOn() && st.meta){ st.note = '🤖 κατανοώ την ερώτηση…'; pg.redraw();
         const sys = 'Μετατρέπεις ερώτηση ουρολόγου για στατιστικά της κλινικής σε ΦΙΛΤΡΑ JSON. ΜΟΝΟ JSON, χωρίς κείμενο. Σήμερα: '+iso(new Date())+'.\n'
           + 'Σχήμα: {"what":"ops|admissions|discharges|biopsies","groups":[κλειδιά],"approach":"robot|lap|open|","from":"ΕΕΕΕ-ΜΜ-ΗΗ","to":"ΕΕΕΕ-ΜΜ-ΗΗ","by":"day|month|quarter|year|","sex":"M|F|","ageMin":null,"ageMax":null,"text":"","explain":"σύντομα στα ελληνικά τι μετράς"}\n'
-          + 'ops=επεμβάσεις. «φέτος»= '+Y+'. Αν δεν λέει περίοδο: φέτος. Κλειδιά ομάδων (κενό = όλες): '+st.meta.groups.map(g=>g.g+'='+g.t).join('; ')+'.\n'
+          + 'ops=επεμβάσεις. «φέτος»= '+Y+'. Τα δεδομένα είναι πλήρη από '+(st.full||Y+'-01-01')+': αν δεν λέει περίοδο, from='+(st.full||Y+'-01-01')+' έως σήμερα.'+' Κλειδιά ομάδων (κενό = όλες): '+st.meta.groups.map(g=>g.g+'='+g.t).join('; ')+'.\n'
           + 'Αν η επέμβαση δεν υπάρχει στις ομάδες, βάλε τη λέξη στο "text" (κεφαλαία, χωρίς τόνους).';
         const r = await pdxAiJSON('στατιστικά', sys, txt, 400);
         if(r && r.ok && r.json && WHAT[r.json.what]){ const j = r.json; q = {what:j.what, groups:(j.groups||[]).filter(g=>st.meta.groups.some(x=>x.g===g)), approach:/^(robot|lap|open)$/.test(j.approach||'')?j.approach:'', from:/^\d{4}-\d\d-\d\d$/.test(j.from||'')?j.from:'', to:/^\d{4}-\d\d-\d\d$/.test(j.to||'')?j.to:'', by:/^(day|month|quarter|year)$/.test(j.by||'')?j.by:'month', sex:/^[MF]$/.test(j.sex||'')?j.sex:'', ageMin:j.ageMin, ageMax:j.ageMax, text:j.text||''}; per = ''; how = '🤖 '+(j.explain||''); }
@@ -15504,7 +15507,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(st.note) h += '<div style="margin:6px 18px 0;font-size:12.5px;color:#8E8E93">'+esc(st.note)+'</div>';
       const chip = (on, data, t)=>'<button '+data+' style="border:0;border-radius:16px;padding:6px 12px;font-size:14px;margin:0 6px 6px 0;background:'+(on?'var(--acc,#0A84FF)':'rgba(120,120,128,.14)')+';color:'+(on?'#fff':'inherit')+'">'+t+'</button>';
       h += '<div style="margin:10px 16px 0">'+Object.keys(WHAT).map(w=>chip(q.what===w, 'data-st="what" data-v="'+w+'"', WHAT[w])).join('')+'</div>';
-      h += '<div style="margin:0 16px">'+PER.map(p=>chip(st.per===p[0], 'data-st="per" data-v="'+p[0]+'"', p[1])).join('')
+      h += '<div style="margin:0 16px">'+PER.filter(p=>p[0]!=='full' || st.full).map(p=>chip(st.per===p[0], 'data-st="per" data-v="'+p[0]+'"', p[0]==='full' ? '✓ Από '+dd(st.full).slice(0,5) : p[1])).join('')
         + (st.per==='cus' ? '' : '<span style="font-size:13px;color:#8E8E93">'+(q.from||q.to ? (dd(q.from)||'αρχή')+' – '+(dd(q.to)||'σήμερα') : 'όλα τα χρόνια')+'</span>')+'</div>';
       if(st.per==='cus'){ const di = 'font-size:16px;padding:7px 8px;border-radius:10px;border:1px solid rgba(120,120,128,.3);background:var(--card,#fff);color:inherit;min-width:0;flex:1';
         h += '<div style="margin:2px 16px 4px;display:flex;gap:8px;align-items:center"><span style="font-size:14px">από</span><input type="date" data-st="d1" value="'+esc(q.from||'')+'" max="'+esc(q.to||'')+'" style="'+di+'">'
@@ -15516,6 +15519,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const ex = []; if(q.sex) ex.push(q.sex==='M'?'άνδρες':'γυναίκες'); if(q.ageMin!=null&&q.ageMin!=='') ex.push('≥'+q.ageMin+' ετών'); if(q.ageMax!=null&&q.ageMax!=='') ex.push('≤'+q.ageMax+' ετών'); if(q.text) ex.push('«'+q.text+'»');
         if(ex.length) h += '<div style="margin:6px 18px 0;font-size:13px">Επιπλέον φίλτρα: <b>'+esc(ex.join(' · '))+'</b> <a href="#" data-st="clrx" style="color:var(--acc,#0A84FF)">καθάρισμα</a></div>';
       }
+      if(st.full && (!q.from || q.from < st.full)) h += '<div style="margin:6px 16px 0;padding:8px 12px;border-radius:10px;background:rgba(255,159,10,.14);font-size:13.5px;line-height:1.4">⚠ Πριν από τις <b>'+dd(st.full)+'</b> η βάση είχε μόνο τους ασθενείς του Παραδόχαρτου — τα νούμερα εκείνης της περιόδου <b>δεν είναι πλήρη</b>. <a href="#" data-st="per" data-v="full" style="color:var(--acc,#0A84FF)">Μόνο πλήρη</a></div>';
       if(st.err) return h + iosGroup('', [{ic:'⚠', t:'Δεν απάντησε η βάση', sub:esc(st.err)+'<br>Η βάση είναι στο Παράθυρο — πρέπει να είναι ανοιχτό.'}, {t:'<span style="color:var(--acc,#0A84FF)">Ξανά</span>', on:'void 0', data:'data-st="reload"'}]);
       if(!r) return h + '<div style="text-align:center;color:#8E8E93;margin:40px 16px">⏳ Ρωτάω τη βάση στο Παράθυρο…</div>';
       const prevTxt = r.prev ? (()=>{ const d = r.total - r.prev.total, p = r.prev.total ? Math.round(d/r.prev.total*100) : null; return 'προηγούμενο ίδιο διάστημα: <b>'+n(r.prev.total)+'</b>'+(p!=null?' <span style="color:'+(d>=0?'#34C759':'#FF3B30')+'">('+(d>=0?'+':'')+p+'%)</span>':''); })() : '';
@@ -15543,11 +15547,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(r.unclassified && r.unclassified.length) h += '<details style="margin:14px 16px 0"><summary style="font-size:14px;color:#8E8E93">«Άλλη επέμβαση» — '+r.unclassified.length+' τίτλοι που δεν αναγνωρίστηκαν</summary><div style="font-size:13px;margin-top:6px;line-height:1.5">'
           + r.unclassified.map(u=>esc(u.t)+' <b>'+u.n+'</b>').join('<br>')+'</div></details>';
       }
-      h += '<div style="margin:16px 18px 30px;font-size:12.5px;color:#8E8E93;line-height:1.45">Πηγή: Αρχείο Ασθενών (Παράθυρο) — πράξεις, εντολές και πρακτικά ΝΠΣ + πρακτικά της εφαρμογής. Η ίδια επέμβαση από πολλές πηγές (±3 ημέρες) μετράει μία φορά. Μόνο αριθμοί — κανένα όνομα δεν φεύγει από το νοσοκομείο.'
+      h += '<div style="margin:16px 18px 30px;font-size:12.5px;color:#8E8E93;line-height:1.45">'+(st.full ? 'Πλήρη δεδομένα (όλοι οι ασθενείς της κλινικής από το ΝΠΣ) από <b>'+dd(st.full)+'</b>.<br>' : '')+'Πηγή: Αρχείο Ασθενών (Παράθυρο) — πράξεις, εντολές και πρακτικά ΝΠΣ + πρακτικά της εφαρμογής. Η ίδια επέμβαση από πολλές πηγές (±3 ημέρες) μετράει μία φορά. Μόνο αριθμοί — κανένα όνομα δεν φεύγει από το νοσοκομείο.'
         + (st.meta && st.meta.opsFrom ? '<br>Επεμβάσεις στη βάση: '+n(st.meta.ops)+' ('+dd(st.meta.opsFrom)+' – '+dd(st.meta.opsTo)+').' : '')+'</div>';
       return h;
     });
-    pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-st]'); if(!b || b.tagName==='SELECT') return; const k = b.dataset.st, v = b.dataset.v;
+    pg.el.addEventListener('click', e=>{ const b = e.target.closest('[data-st]'); if(!b || b.tagName==='SELECT' || b.tagName==='INPUT') return; if(b.tagName==='A') e.preventDefault(); const k = b.dataset.st, v = b.dataset.v;
       if(k==='ask'){ const i = pg.el.querySelector('#stAsk'); st.ask = i ? i.value : ''; ask(); return; }
       if(k==='what'){ st.q.what = v; st.showAll = false; load(); return; }
       if(k==='per'){ setPer(v); load(); return; }
@@ -15564,8 +15568,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       load(); });
     pg.el.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.id==='stAsk'){ e.preventDefault(); st.ask = e.target.value; e.target.blur(); ask(); } });
     pg.el.addEventListener('input', e=>{ if(e.target.id==='stAsk') st.ask = e.target.value; });
-    (async ()=>{ try{ st.meta = await pdxDbCall('GET', '/api/archstats/meta'); }catch(e){} })();
-    load();
+    // πρώτα η ημερομηνία πλήρους κάλυψης (meta), μετά η 1η ερώτηση — αν αργήσει >20″, ξεκινά με «φέτος»
+    (async ()=>{ let done = false; const t = setTimeout(()=>{ if(!done){ done = true; st.per = 'y0'; setPer('y0'); load(); } }, 20000);
+      try{ st.meta = await pdxDbCall('GET', '/api/archstats/meta'); st.full = (st.meta && st.meta.fullFrom) || ''; }catch(e){}
+      clearTimeout(t); if(!done){ done = true; setPer(st.full ? 'full' : 'y0'); load(); } else pg.redraw(); })();
     return pg;
   };
   window.pdxSysHub = function(){ const L = window.__sysHubItems || []; const pg = iosPage('Συστήματα & bot', 'Πίσω', ()=>iosGroup('', L)); return pg; };
