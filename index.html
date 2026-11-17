@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v553';
+const APP_VER = '2026-11-17-v554';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15498,7 +15498,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           if(!b.at) iss.push('δεν στέλνει σήμα'); else {
             if(!(b.ck==='On' && b.npt>0)) iss.push(b.ck==='On' ? 'δεν βλέπει ασθενείς' : 'χωρίς κλειδί κλινικής');
             if(!(b.acc>0)) iss.push('χωρίς κωδικό ΝΠΣ'); if(!(b.ep>0)) iss.push('χωρίς κωδικό e-prescription');
-            if(b.vault!=='dpapi') iss.push('βοηθητικό Windows'); if(b.upd && !b.upd.ok && b.upd.err) iss.push('αυτόματη ενημέρωση');
+            if(b.vault!=='dpapi') iss.push('βοηθητικό Windows'); if(b.upd && !b.upd.ok && b.upd.err && Date.now() - (+b.upd.at||0) < 2*864e5) iss.push('αυτόματη ενημέρωση');   // 17/11: παλιό σφάλμα (εβδομάδων, από v0.21.195) δεν μετράει
             const y = b.sys; if(y && y.ram > 0){ if(y.free/y.ram < .1) iss.push('λίγη μνήμη'); if(y.reboot) iss.push('θέλει επανεκκίνηση'); if(y.sk!=null && Math.abs(y.sk)>30) iss.push('ρολόι'); } }
           if(OFF[id]) iss.push('⏸ απενεργοποιημένο');
           h += '<div style="font-size:14px;margin-top:6px;color:'+(iss.length?'#B45309':'#15803D')+'">'+(iss.length ? '⚠ '+E2(iss.join(' · ')) : '✓ όλα καλά')+'</div>';
