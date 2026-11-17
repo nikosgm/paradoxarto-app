@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v537';
+const APP_VER = '2026-11-17-v538';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25123,7 +25123,9 @@ window.CLS_MODE='A';
     fileDate: (name, y)=>{ const m = String(name||'').match(/(\d{1,2})[.\-_ ](\d{1,2})(?:[.\-_ ](\d{2,4}))?/); if(!m || +m[2] > 12 || +m[1] > 31) return '';
       const yy = m[3] ? (m[3].length===2 ? '20'+m[3] : m[3]) : String(y); return yy+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'); },
     files: (files, iso)=>{ const y = iso.slice(0,4); const X = (files||[]).filter(f=>/\.xlsx?$/i.test(f.name) && !/^~\$/.test(f.name));
-      const exact = X.filter(f=>window.pdxOrPick.fileDate(f.name, y)===iso).sort((a,b)=>(b.t||0)-(a.t||0));
+      // 📅 17/11 14:53 (χρήστης: «σήμερα βάλαμε όνομα 17.11 αντί για 18.11 — μόνο για σήμερα λάβε το 17.11 ως 18.11»): εξαίρεση μίας φοράς, λήγει 19/11
+      const ALIAS = (Date.now() < new Date('2026-11-19T23:59:00').getTime()) ? {'2026-11-18':'2026-11-17'} : {};
+      const exact = X.filter(f=>{ const fd = window.pdxOrPick.fileDate(f.name, y); return fd===iso || (ALIAS[iso] && fd===ALIAS[iso]); }).sort((a,b)=>(b.t||0)-(a.t||0));
       const undated = X.filter(f=>!window.pdxOrPick.fileDate(f.name, y)).sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,3);
       return {exact, undated, all: X.sort((a,b)=>(b.t||0)-(a.t||0))}; }
   };
