@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v551';
+const APP_VER = '2026-11-17-v552';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8982,6 +8982,7 @@ document.head.appendChild(st);
       adm && {ic:'⚡', t:'Αυτόματη έγκριση', v:(window.__pdxAutoN||''), on:"pdxAutoApprove()"},
       adm && {ic:'🤖', t:'Λειτουργίες AI', v:(window.pdxAiOn && window.pdxAiOn() ? 'Ανοιχτές' : 'Κλειστές'), on:"pdxAiPage()"},
       adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
+      {ic:'🖨', t:'Κέντρο εκτυπώσεων', sub:'εκτυπωτές κάθε υπολογιστή · ουρές · ακύρωση', on:"pdxPrintCenter()"},
       adm && {ic:'🗺', t:'Χάρτες & σφάλματα συστημάτων', sub:'αυτόματα αρχεία ανά σύστημα · νυχτερινή σάρωση', on:"pdxSysDocs()"}
     ]);
     h += G('Εμφάνιση & ασφάλεια', [
@@ -15424,6 +15425,39 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     try{ const r = await sb6.from('oncall_labs').select('data').eq('name_key', key).maybeSingle(); if(r.error) throw new Error(r.error.message); St.md = String((r.data && r.data.data && r.data.data.md) || 'Δεν υπάρχει ακόμα.'); }catch(e){ St.err = e.message; }
     if(pg.el.isConnected) pg.redraw();
   };
+  // 🖨 17/11 18:45 (χρήστης: «κέντρο εκτυπώσεων: έγγραφα σε ουρά, να διαλέγω εκτυπωτές, να βλέπω αν είναι συνδεδεμένοι με τον υπολογιστή»)
+  // Κάθε ανοιχτός υπολογιστής → οι εκτυπωτές του (κατάσταση, τοπικός/δικτύου, προεπιλογή Windows, ποιος είναι ο A4 του bot) + ουρά με ακύρωση ανά έγγραφο.
+  window.pdxPrintCenter = async function(){
+    const E2 = x=>esc(String(x==null?'':x)); const N = Object.assign({}, await pdxBotNames(true).catch(()=>({}))); const S = {}; let live = {};
+    try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); (h.data||[]).forEach(r=>{ live[r.name_key.slice(9)] = Date.now()-Date.parse(r.updated_at) < 180000; }); }catch(e){}
+    const ids = Object.keys(N).filter(id=>/^b[a-z0-9]{10,16}$/.test(id)).sort((a,b)=>(live[b]?1:0)-(live[a]?1:0) || String(N[a]).localeCompare(String(N[b]),'el'));
+    const job = async (kind, payload, ms)=>{ const ins = await sb6.from('oncall_jobs').insert({kind, name:'🖨 Κέντρο εκτυπώσεων', name_key:'zzz_print', status:'new', payload:Object.assign({quiet:true}, payload)}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
+      for(let i = 0; i < (ms||40000)/1500; i++){ await new Promise(r=>setTimeout(r, 1500)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', ins.data.id).maybeSingle(); const j = q.data; if(j && /^(done|failed|dismissed|cancelled)$/.test(j.status)) return j; } return {status:'failed', note:'ο υπολογιστής δεν απάντησε'}; };
+    const load = id=>{ S[id] = {busy:true}; pg.redraw(); job('printcenter', {only:id}, 45000).then(j=>{ S[id] = j.status==='done' ? Object.assign({}, (j.payload||{}).result||{}) : {err: j.note||'σφάλμα'}; pg.redraw(); }).catch(e=>{ S[id] = {err:e.message}; pg.redraw(); }); };
+    const pg = iosPage('Κέντρο εκτυπώσεων', 'Πίσω', ()=>{
+      let h = '<div style="margin:8px 16px;color:#6D6D72;font-size:13.5px">Κάθε εκτυπωτής τυπώνει από τον υπολογιστή στον οποίο είναι συνδεδεμένος. Εδώ βλέπεις ανά υπολογιστή τους εκτυπωτές, τι περιμένει στην ουρά, και ποιον χρησιμοποιεί το bot για A4.</div>';
+      ids.forEach(id=>{ const st = S[id];
+        h += '<div class="ios-h">🖥 '+E2(N[id]||id.slice(-5))+(live[id]?'':' · <span style="color:#B91C1C">κλειστός</span>')+'</div>';
+        if(!live[id]){ h += iosGroup('', [{t:'<span style="color:#8E8E93">Ο υπολογιστής δεν απαντά — δεν φαίνονται οι εκτυπωτές του</span>'}]); return; }
+        if(!st || st.busy){ h += '<div class="ios-g"><div class="pdx-load"><span class="pdx-spin"></span><b>Ρωτάω τον υπολογιστή…</b></div></div>'; return; }
+        if(st.err){ h += iosGroup('', [{t:'<span style="color:#B91C1C">⚠ '+E2(st.err)+'</span>', on:"pdxPcReload('"+id+"')"}]); return; }
+        const P = (st.printers||[]).slice().sort((a,b)=>(a.label?1:0)-(b.label?1:0));
+        h += iosGroup('', P.map(pr=>{ const ok = !pr.off && /normal|idle|printing|0|3|4/i.test(String(pr.st)), jobs = pr.jobs||[];
+          const a4 = !pr.label && (st.a4 ? st.a4===pr.name : st.def===pr.name);
+          return {t:'<b>'+(pr.label?'🦓 ':'📄 ')+E2(pr.name)+'</b>'+(a4?' <span style="background:#1D4E80;color:#fff;border-radius:6px;padding:0 6px;font-size:11.5px">A4 του bot</span>':'')+(st.def===pr.name?' <span style="color:#8E8E93;font-size:12px">★ προεπιλογή Windows</span>':''),
+            sub:'<span style="color:'+(ok?'#15803D':'#B91C1C')+'">'+(pr.off?'⚠ εκτός σύνδεσης':ok?'● έτοιμος':'⚠ '+E2(pr.st))+'</span> · '+(pr.net?'δικτύου':'συνδεδεμένος σε αυτόν τον υπολογιστή')+' · '+(jobs.length?'<b>'+jobs.length+' στην ουρά</b>':'άδεια ουρά')
+              + jobs.map(j=>'<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span style="flex:1;font-size:13px">'+E2(j.st||'')+' · '+E2(String(j.at||'').replace(/^.*?(\d{1,2}:\d{2}).*$/,'$1'))+(j.pages?' · '+j.pages+' σελ.':'')+'</span><button data-pcx="'+E2(id)+'|'+E2(pr.name)+'|'+(+j.id)+'" style="border:0;background:#FEE2E2;color:#B91C1C;border-radius:8px;padding:6px 10px;font-weight:700">✕ Ακύρωση</button></div>').join('')
+              + (!pr.label && !a4 ? '<div style="margin-top:6px"><button data-pca="'+E2(id)+'|'+E2(pr.name)+'" style="border:1.5px solid #1D4E80;background:#fff;color:#1D4E80;border-radius:8px;padding:5px 10px;font-weight:700;font-size:13px">Να τυπώνει εδώ τα A4 του bot</button></div>' : '')}; }));
+        h += '<div style="margin:-6px 16px 6px"><button onclick="pdxPcReload(\''+id+'\')" style="border:0;background:none;color:#0A84FF;font-size:14px">↻ Ανανέωση</button></div>'; });
+      return h + '<div style="height:40px"></div>'; });
+    window.pdxPcReload = id=>load(id);
+    pg.el.addEventListener('click', async e=>{
+      const x = e.target.closest('[data-pcx]'); if(x){ const [id, pr, jid] = x.dataset.pcx.split('|'); x.disabled = true; x.textContent = '⏳';
+        const j = await job('printcancel', {only:id, printer:pr, ids:[+jid]}, 30000).catch(er=>({status:'failed', note:er.message})); toast(j.status==='done' ? '✓ ακυρώθηκε' : '⚠ '+(j.note||'')); load(id); return; }
+      const a = e.target.closest('[data-pca]'); if(a){ const [id, pr] = a.dataset.pca.split('|'); a.disabled = true; a.textContent = '⏳';
+        const j = await job('printset', {only:id, a4:pr}, 30000).catch(er=>({status:'failed', note:er.message})); toast(j.status==='done' ? '✓ '+pr+' για A4' : '⚠ '+(j.note||'')); load(id); return; } });
+    ids.filter(id=>live[id]).forEach(load);
+    return pg; };
   window.pdxBotsPage = async function(){
     // 🎛 6/11: Κέντρο ελέγχου bot — υγεία κάθε υπολογιστή (σήμα ζωής efbot|hb|<id>), επικοινωνία, ενέργειες, ρυθμίσεις
     const E2 = x=>esc(String(x==null?'':x));
@@ -15435,6 +15469,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const ago = t=>{ if(!t) return '—'; const s = Math.round((Date.now()-t)/1000); return s<60 ? s+'″' : s<3600 ? Math.round(s/60)+'′' : Math.round(s/3600)+' ώρ.'; };
     const ok = (b,t,bad)=>'<div style="display:flex;gap:8px;font-size:13.5px;padding:2px 0"><span style="flex:none">'+(b===true?'✅':b===false?'⚠️':'•')+'</span><span'+(b===false?' style="color:#B45309"':'')+'>'+t+(b===false&&bad?' — <b>'+bad+'</b>':'')+'</span></div>';
     const btn = (a,id,t)=>'<button data-act="'+a+'" data-id="'+E2(id)+'" style="border:0;background:#EEF2F6;border-radius:10px;padding:8px 10px;font-size:13.5px;font-weight:600;min-height:38px">'+t+'</button>';
+    window.__botsOpen = window.__botsOpen || {};
+    document.addEventListener('toggle', e=>{ const d = e.target; if(d && d.dataset && d.dataset.bd) window.__botsOpen[d.dataset.bd] = d.open; }, true);
     const pg = iosPage('Κέντρο ελέγχου bot', 'Πίσω', ()=>{
       let h = '<div class="ios-h">Αυτό το κινητό</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:10px 14px">'
         + ok(phone ? phone.rt : null, 'Ζωντανή σύνδεση (ping υπολογιστών)'+(phone ? ' · απάντησαν '+phone.n : ' · έλεγχος…'), 'κανένας δεν απάντησε')
@@ -15451,6 +15487,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           + '<span style="font-size:12.5px;color:#6D6D72">'+(b.v?'v'+E2(b.v):'')+(b.at?' · πριν '+ago(b.at):' · κανένα σήμα')+'</span></div>'
           + (b.lease ? '<div style="font-size:12.5px;color:#1D4E80;margin-top:2px">⭐ κεντρικός (μοιράζει εργασίες)</div>' : '')
           + (b.cur ? '<div style="font-size:12.5px;color:#6D6D72">⏳ τρέχει: '+E2(b.cur.k||'')+' #'+E2(b.cur.id)+'</div>' : '');
+        // 🧹 17/11 18:45 (χρήστης: «η ενότητα υπολογιστές είναι πολύ μπουκωμένη, δεν καταλαβαίνω τίποτα»): μία γραμμή κατάστασης ανά υπολογιστή·
+        // όλες οι λεπτομέρειες/κουμπιά σε «Λεπτομέρειες» (κλειστό)
+        { const iss = [];
+          if(!b.at) iss.push('δεν στέλνει σήμα'); else {
+            if(!(b.ck==='On' && b.npt>0)) iss.push(b.ck==='On' ? 'δεν βλέπει ασθενείς' : 'χωρίς κλειδί κλινικής');
+            if(!(b.acc>0)) iss.push('χωρίς κωδικό ΝΠΣ'); if(!(b.ep>0)) iss.push('χωρίς κωδικό e-prescription');
+            if(b.vault!=='dpapi') iss.push('βοηθητικό Windows'); if(b.upd && !b.upd.ok && b.upd.err) iss.push('αυτόματη ενημέρωση');
+            const y = b.sys; if(y && y.ram > 0){ if(y.free/y.ram < .1) iss.push('λίγη μνήμη'); if(y.reboot) iss.push('θέλει επανεκκίνηση'); if(y.sk!=null && Math.abs(y.sk)>30) iss.push('ρολόι'); } }
+          if(OFF[id]) iss.push('⏸ απενεργοποιημένο');
+          h += '<div style="font-size:14px;margin-top:6px;color:'+(iss.length?'#B45309':'#15803D')+'">'+(iss.length ? '⚠ '+E2(iss.join(' · ')) : '✓ όλα καλά')+'</div>'
+            + '<details'+(window.__botsOpen && window.__botsOpen[id] ? ' open' : '')+' data-bd="'+E2(id)+'" style="margin-top:6px"><summary style="color:#1D4E80;font-weight:600;font-size:14px;cursor:pointer;min-height:32px;padding:4px 0">Λεπτομέρειες & ενέργειες</summary>'; }
         if(b.at){
           h += '<div style="margin-top:8px">'
             + ok(b.ck==='On' && b.npt>0, 'Παραδόχαρτο στον υπολογιστή: '+E2(b.host||'—')+(b.npt>=0?' · '+b.npt+' ασθενείς':''), b.ck==='On' ? 'δεν βλέπει ασθενείς' : 'χωρίς κλειδί κλινικής (Κρυπτογράφηση → έγκριση συσκευής)')
@@ -15494,7 +15541,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           + (busyIds[id] ? '<div style="font-size:13px;color:#1D4E80;margin-top:6px;white-space:pre-line">'+E2(busyIds[id])+'</div>' : '')
           + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px"><span style="color:#475569">🌙 Νυχτερινή επανεκκίνηση (04:00):</span>'+[['','Όχι'],['need','Όταν χρειάζεται'],['sun','Κάθε Κυριακή']].map(([v,l])=>'<button data-nrb="'+v+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;background:'+((NRB[id]||'')===v?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+l+'</button>').join('')+'</div>'
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+E2(nm)+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+E2(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+E2(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div>'
-          + '</div>'; });
+          + '</details></div>'; });
       h += '<div class="ios-h">Λογαριασμοί ΝΠΣ για τις εργασίες (σειρά προτίμησης)</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:10px 14px"><input data-pref value="'+E2(PREF.join(', '))+'" placeholder="CHTHEODOROLEAS, ADAMAKIS" style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px"><button data-act="pref" data-id="" style="margin-top:8px;width:100%;height:42px;border:0;border-radius:10px;background:#1D4E80;color:#fff;font-weight:600">Αποθήκευση</button><div class="ios-f" style="margin:6px 0 0">Ο KDOUROUMIS μένει για το Ουρολογικό Ημέρας. Αλλαγή ισχύει σε ≤5′, όταν το bot είναι ελεύθερο.</div></div>';
       return h + (msg?'<div style="margin:10px 16px;color:#B91C1C">'+E2(msg)+'</div>':'') + '<div style="height:60px"></div>';
     });
