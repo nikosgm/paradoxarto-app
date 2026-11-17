@@ -46,7 +46,8 @@
   function sheetXml(prog) {
     const d = D(), rows = [], merges = ["A1:H1", "A2:C3", "D2:D3", "E2:E3", "F2:H2", "F3:H3"];
     const side = {};   // δεξιά (K:N): τα έτοιμα σετ, όπως στα αρχεία της κλινικής
-    { let r = 2; const groups = []; for (const x of [...(d.lib || []), ...(d.extra || [])]) { let g = groups.find((y) => y.g === x.g); if (!g) groups.push(g = { g: x.g, L: [] }); g.L.push(x); }
+    { let r = 2; const groups = []; const nz0 = (v) => String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-ZΑ-Ω0-9]/g, ""), seen0 = [];   // 17/11: χωρίς διπλά (όπως η λίστα επιλογής)
+      for (const x of [...(d.lib || []), ...(d.extra || [])]) { const t0 = nz0(x.t), d0 = nz0(x.dx); if (seen0.some((y) => y[0] === t0 && (y[1] === d0 || y[1].startsWith(d0) || d0.startsWith(y[1])))) continue; seen0.push([t0, d0]); let g = groups.find((y) => y.g === x.g); if (!g) groups.push(g = { g: x.g, L: [] }); g.L.push(x); }
       for (const g of groups) { (side[r] = side[r] || []).push(plain("K" + r, g.g)); r += 2; for (const x of g.L) { (side[r] = side[r] || []).push(plain("K" + r, x.dx), plain("L" + r, x.an), plain("M" + r, x.bl), plain("N" + r, x.ca)); (side[r + 1] = side[r + 1] || []).push(plain("K" + (r + 1), x.t)); merges.push("K" + (r + 1) + ":N" + (r + 1)); r += 3; } r++; } }
     const row = (r, ht, cells) => rows.push('<row r="' + r + '"' + (ht ? ' ht="' + ht + '" customHeight="1"' : "") + ">" + cells.join("") + (side[r] || []).join("") + "</row>");
     row(1, 13.5, COLS.split("").map((c, i) => cell(c + 1, S.a1, i ? "" : d.a1 || 'Γ Ν Α  "Λ Α Ϊ  Κ Ο"')));
@@ -147,7 +148,14 @@
   const ROOMS_ALL = ["10", "9", "8", "8Α"];
   const RESIDENTS = ["ΓΑΡΥΦΑΛΛΟΣ", "ΓΙΑΓΚΟΣ", "ΘΕΟΔΩΡΟΛΕΑΣ", "ΚΑΛΦΑΣ", "ΚΑΛΦΟΥΝΤΖΟΣ", "ΜΑΝΟΣ", "ΜΑΥΡΟΥΔΗΣ", "ΠΑΝΑΓΟΠΟΥΛΟΣ"];
   const ANS = ["ΓΕΝΙΚΗ", "ΤΟΠΙΚΗ"], BLOOD = ["", "300", "600", "900", "1200", "1500"], SIDES = ["", "ΑΡ", "ΔΕ", "ΑΜΦΩ"];
-  const PK = () => { const d = window.ORP_DATA || {}; return [...(d.lib || []), ...(d.extra || [])]; };
+  // 🧹 17/11 19:37 (χρήστης: «όταν επιλέγω χειρουργείο, έχεις πάρει στη λίστα και κάποια duplicate — σβήσ' τα»): ίδια επέμβαση (χωρίς κενά/παύλες/τόνους)
+  // με ίδια διάγνωση (ή η μία συνέχεια της άλλης, π.χ. «CA ΚΥΣΤΗΣ» ↔ «CA ΚΥΣΤΗΣ-ΓΥΝΑΙΚΑ») → ΜΙΑ φορά (κρατά το πρώτο = έτοιμα σετ πριν από τα «επιπλέον»)
+  let PKc = null, PKsrc = null;
+  const PK = () => { const d = window.ORP_DATA || {}; if (PKc && PKsrc === d) return PKc; const out = [];
+    for (const x of [...(d.lib || []), ...(d.extra || [])]) { const t = NZ(x.t), dx = NZ(x.dx);
+      if (out.some((y) => NZ(y.t) === t && (NZ(y.dx) === dx || NZ(y.dx).startsWith(dx) || dx.startsWith(NZ(y.dx))))) continue; out.push(x); }
+    PKsrc = d; PKc = out; return out; };
+  window.__orpPK = () => PK(); window.__orpFind = (q, n) => pkFind(q, n);   // για τις δοκιμές
   // 🔎 16/11 (χρήστης: «αναζήτηση χειρουργείων με drop-down»): ταίριασμα ΑΝΑ ΛΕΞΗ (οποιαδήποτε σειρά, χωρίς τόνους) + συντομογραφίες της κλινικής
   const PKSYN = { TURB: ["ΔΙΟΥΡΗΘΡ", "ΚΥΣΤ"], TURBT: ["ΔΙΟΥΡΗΘΡ", "ΚΥΣΤ"], TUR: ["ΔΙΟΥΡΗΘΡ"], TURP: ["ΔΙΟΥΡΗΘΡ", "ΠΡΟΣΤΑΤ"], HOLEP: ["ΠΡΟΣΤΑΤ"], RIRS: ["ΟΥΡΗΤΗΡΟΣΚΟΠ"], URS: ["ΟΥΡΗΤΗΡΟΣΚΟΠ"], ΟΛΥ: ["ΟΥΡΗΤΗΡΟΛΙΘΟΤΡΙΨ"], ΟΝΥ: ["ΟΥΡΗΤΗΡΟΛΙΘΟΤΡΙΨ"],
     PCNL: ["ΔΙΑΔΕΡΜ", "ΝΕΦΡΟΛΙΘ"], PCN: ["ΝΕΦΡΟΣΤΟΜ"], RC: ["ΚΥΣΤΕΚΤΟΜ"], RP: ["ΠΡΟΣΤΑΤΕΚΤΟΜ"], RARP: ["ΠΡΟΣΤΑΤΕΚΤΟΜ"], NX: ["ΝΕΦΡΕΚΤΟΜ"], PN: ["ΜΕΡΙΚΗ", "ΝΕΦΡΕΚΤΟΜ"], NUX: ["ΝΕΦΡΟΟΥΡΗΤΗΡΕΚΤΟΜ"], NU: ["ΝΕΦΡΟΟΥΡΗΤΗΡΕΚΤΟΜ"],
@@ -161,7 +169,8 @@
   const pkFind = (q, max) => { const toks = pkTok(q); if (!toks.length) return []; const out = [];
     for (const x of PK()) { const sc = pkHit(toks, x.dx + " " + x.t + " " + x.g); if (sc >= 0) out.push({ x, sc: sc + 2 }); }
     for (const c of ((window.ORP_DATA || {}).codes || [])) { const sc = pkHit(toks, c.d + " " + c.c + " " + c.s); if (sc >= 0) out.push({ x: { dx: "", t: UP(c.d) + " " + c.c, code: c.c, sub: c.s }, sc }); }
-    return out.sort((a, b) => b.sc - a.sc).slice(0, max || 40).map((o) => o.x); };
+    // κωδικός που γράφεται ΙΔΙΟΣ με έτοιμο σετ ή με άλλον κωδικό → μία φορά
+    const seen = new Set(); return out.sort((a, b) => b.sc - a.sc).filter((o) => { const k = NZ(o.x.t) + "|" + NZ(o.x.dx); if (seen.has(k) || (!o.x.dx && [...seen].some((s0) => s0.split("|")[0] === NZ(o.x.t)))) return false; seen.add(k); return true; }).slice(0, max || 40).map((o) => o.x); };
   const FULL = () => window.THERAPIST_FULL || { "Αν": "Αναστασίου", "Αδ": "Αδαμάκης", "Στρ": "Στραβοδήμος", "Φρ": "Φραγκιάδης", "Μουλ": "Μουλαβασίλης", "Λεβ": "Λεβής", "Δουρ": "Δουρούμης" };
   const surgeonOf = (t) => { const f = FULL()[t]; return f ? "κ " + UP(f) : ""; };
   const SURGEONS = () => Object.values(FULL()).map((f) => "κ " + UP(f));
