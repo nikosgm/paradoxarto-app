@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v554';
+const APP_VER = '2026-11-17-v555';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8975,7 +8975,8 @@ document.head.appendChild(st);
       {ic:'🗂', t:'Βάση δεδομένων', sub:'Αρχείο Ασθενών · CD · αξονικές', on:"pdxDbPage()"},
       {ic:'📷', t:'Σάρωση', sub:'σάρωση · πορίσματα για έλεγχο · συσκευές', v:(nb?'<b style="color:#FF3B30">'+nb+'</b>':''), on:"pdxScanHub()"}
     ]);
-    h += G('Bot', [
+    // 🗂 17/11 18:58 (χρήστης: «κατάσταση συστημάτων, υπολογιστές, κέντρο εκτυπώσεων — όλα μαζί σε μία ενότητα»): ΕΝΑ στοιχείο → σελίδα «Συστήματα & bot»
+    window.__sysHubItems = [
       bot ? {ic:'🤖', t:'Bot υπολογιστή · ενέργειες', v: S.ok===true?'Ενεργό':S.ok===false?'Εκτός':'', on:"pdxDo('bot')"} : {ic:'🤖', t:'Ενέργειες bot', on:"pdxDo('botlog')"},
       {ic:'🩺', t:'Κατάσταση συστημάτων', on:"pdxHealth()"},
       (adm || bot) && {ic:'🔐', t:'Κωδικοί', sub: adm ? 'νέος κωδικός (ΝΠΣ · e-prescription · Medilabi · Kerio…) · έλεγχος' : 'έλεγχος', on: adm ? "pdxCredHub()" : "pdxCredCheck()"},
@@ -8984,6 +8985,9 @@ document.head.appendChild(st);
       adm && {ic:'🎛', t:'Υπολογιστές bot', sub:'κέντρο ελέγχου · ενημέρωση bot', on:"pdxBotsPage()"},
       {ic:'🖨', t:'Κέντρο εκτυπώσεων', sub:'εκτυπωτές κάθε υπολογιστή · ουρές · ακύρωση', on:"pdxPrintCenter()"},
       adm && {ic:'🗺', t:'Χάρτες & σφάλματα συστημάτων', sub:'αυτόματα αρχεία ανά σύστημα · νυχτερινή σάρωση', on:"pdxSysDocs()"}
+    ].filter(Boolean);
+    h += G('Bot', [
+      {ic:'🖥', t:'Συστήματα · bot · υπολογιστές', sub:'κατάσταση · υπολογιστές & φόρτος · εκτυπώσεις · ενέργειες bot · κωδικοί', on:"pdxSysHub()"}
     ]);
     h += G('Εμφάνιση & ασφάλεια', [
       {ic:'🎨', t:'Εμφάνιση', sub:'θέμα · γράμματα · χρώμα · συχνά κουμπιά · αρχική', on:"pdxAppearance()"},
@@ -15427,6 +15431,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   };
   // 🖨 17/11 18:45 (χρήστης: «κέντρο εκτυπώσεων: έγγραφα σε ουρά, να διαλέγω εκτυπωτές, να βλέπω αν είναι συνδεδεμένοι με τον υπολογιστή»)
   // Κάθε ανοιχτός υπολογιστής → οι εκτυπωτές του (κατάσταση, τοπικός/δικτύου, προεπιλογή Windows, ποιος είναι ο A4 του bot) + ουρά με ακύρωση ανά έγγραφο.
+  window.pdxSysHub = function(){ const L = window.__sysHubItems || []; const pg = iosPage('Συστήματα & bot', 'Πίσω', ()=>iosGroup('', L)); return pg; };
   window.pdxPrintCenter = async function(){
     const E2 = x=>esc(String(x==null?'':x)); const N = Object.assign({}, await pdxBotNames(true).catch(()=>({}))); const S = {}; let live = {};
     try{ const h = await sb6.from('oncall_labs').select('name_key,updated_at').like('name_key','efbot|hb|%'); (h.data||[]).forEach(r=>{ live[r.name_key.slice(9)] = Date.now()-Date.parse(r.updated_at) < 180000; }); }catch(e){}
@@ -15547,12 +15552,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           }
         }
         h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'
-          + btn('who', id, '👋 Ποιος;') + btn('sys', id, '📊 Μέτρηση') + btn('health', id, '🩺 Υγεία Windows') + btn('printclear', id, '🖨 Καθάρισμα ουράς') + btn('tidy', id, '🧹 Καθάρισμα') + btn('printers', id, '🖨 Εκτυπωτές') + btn('eptest', id, '💊 Τεστ e-prescription') + btn('selftest', id, '🩺 Έλεγχος') + btn('appreload', id, '🔄 Παραδόχαρτο') + btn('emrrelog', id, '🔐 ΝΠΣ ξανά') + btn('update', id, '⬆ Ενημέρωση') + btn('restart', id, '♻ Επανεκκίνηση bot') + btn('reboot', id, '🔁 Επανεκκίνηση Windows') + btn('rebootcancel', id, '✋ Ακύρωση επανεκκίνησης')
+          // 🧹 17/11 18:57 (χρήστης: «πάρα πολλά κουμπιά — δεν καταλαβαίνω τι κάνουν»): 3 βασικές ενέργειες + «Περισσότερα» με εξήγηση σε κάθε μία
+          + btn('sys', id, '📊 Μέτρηση τώρα') + btn('selftest', id, '🩺 Έλεγχος συνδέσεων') + btn('restart', id, '♻ Επανεκκίνηση bot') + '</div>'
+          + '<details style="margin-top:8px"><summary style="color:#1D4E80;font-weight:600;font-size:13.5px;cursor:pointer;min-height:30px">Περισσότερα (σπάνια χρειάζονται)</summary><div style="display:grid;gap:6px;margin-top:6px">'
+          + [['tidy','🧹 Καθάρισμα μνήμης','κοιμίζει τις καρτέλες στο παρασκήνιο όταν ο υπολογιστής είναι αργός'],['emrrelog','🔐 Νέα σύνδεση ΝΠΣ','όταν το ΝΠΣ «κόλλησε» ή δείχνει λάθος λογαριασμό'],['appreload','🔄 Ξαναφόρτωση Παραδόχαρτου','όταν δεν βλέπει ασθενείς'],['update','⬆ Ενημέρωση τώρα','αν δεν πήρε μόνος του τη νέα έκδοση'],['health','🩺 Υγεία Windows','Defender, ενημερώσεις Windows, δίσκος'],['who','👋 Ποιος είναι;','αναβοσβήνει την οθόνη του για να τον βρεις'],['eptest','💊 Τεστ e-prescription','δοκιμαστική συνταγή ως τον έλεγχο (χωρίς καταχώριση)'],['printclear','🖨 Καθάρισμα κολλημένων εκτυπώσεων','όταν κάτι έχει κολλήσει στην ουρά'],['reboot','🔁 Επανεκκίνηση Windows','σε 2′ — ακυρώνεται'],['rebootcancel','✋ Ακύρωση επανεκκίνησης Windows','']]
+            .map(([a,t,d])=>'<button data-act="'+a+'" data-id="'+E2(id)+'" style="text-align:left;border:0;background:#F4F6F9;border-radius:10px;padding:8px 10px;min-height:40px"><b style="font-size:13.5px">'+t+'</b>'+(d?'<div style="font-size:12px;color:#6D6D72">'+d+'</div>':'')+'</button>').join('')
+          + '</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'
           + '<button data-off="'+E2(id)+'" style="border:0;border-radius:10px;padding:8px 10px;font-weight:600;min-height:38px;background:'+(OFF[id]?'#15803D':'#FEE2E2')+';color:'+(OFF[id]?'#fff':'#B91C1C')+'">'+(OFF[id]?'▶ Ενεργοποίηση':'⏸ Απενεργοποίηση')+'</button></div>'
           + (busyIds[id] ? '<div style="font-size:13px;color:#1D4E80;margin-top:6px;white-space:pre-line">'+E2(busyIds[id])+'</div>' : '')
           + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:13px"><span style="color:#475569">🌙 Νυχτερινή επανεκκίνηση (04:00):</span>'+[['','Όχι'],['need','Όταν χρειάζεται'],['sun','Κάθε Κυριακή']].map(([v,l])=>'<button data-nrb="'+v+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:600;background:'+((NRB[id]||'')===v?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+l+'</button>').join('')+'</div>'
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+NAMES.map(nm=>'<button data-nm="'+E2(nm)+'" data-id="'+E2(id)+'" style="border:1.5px solid #1D4E80;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;background:'+(N[id]===nm?'#1D4E80;color:#fff':'#fff;color:#1D4E80')+'">'+E2(nm)+'</button>').join('')+(N[id]?'<button data-nm="" data-id="'+E2(id)+'" style="border:0;background:none;color:#B91C1C">✕</button>':'')+'</div>'
-          + '</details></div>'; });
+          + '</details></details></div>'; });
       h += '<div class="ios-h">Λογαριασμοί ΝΠΣ για τις εργασίες (σειρά προτίμησης)</div><div style="background:var(--card,#fff);border-radius:12px;margin:0 16px;padding:10px 14px"><input data-pref value="'+E2(PREF.join(', '))+'" placeholder="CHTHEODOROLEAS, ADAMAKIS" style="width:100%;box-sizing:border-box;border:1px solid #D1D5DB;border-radius:10px;padding:9px 10px;font-size:16px"><button data-act="pref" data-id="" style="margin-top:8px;width:100%;height:42px;border:0;border-radius:10px;background:#1D4E80;color:#fff;font-weight:600">Αποθήκευση</button><div class="ios-f" style="margin:6px 0 0">Ο KDOUROUMIS μένει για το Ουρολογικό Ημέρας. Αλλαγή ισχύει σε ≤5′, όταν το bot είναι ελεύθερο.</div></div>';
       return h + (msg?'<div style="margin:10px 16px;color:#B91C1C">'+E2(msg)+'</div>':'') + '<div style="height:60px"></div>';
     });
