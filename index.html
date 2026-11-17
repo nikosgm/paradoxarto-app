@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-17-v536';
+const APP_VER = '2026-11-17-v537';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15684,7 +15684,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           if(q.status==='done'){ const old = rows || [], nr = ((q.payload||{}).result||{}).rows || [];
             // ανανέωση: οι επιλογές μένουν στους ΙΔΙΟΥΣ ασθενείς (ταίριασμα με όνομα), όχι με τη θέση στη λίστα
             const keyOf = r=>String((r && (r.name || (r.cells||[]).join(' '))) || '').trim(), byName = {}; old.forEach((r,i)=>{ if(sel[i]) byName[keyOf(r)] = sel[i]; });
-            rows = nr; sel = {}; nr.forEach((r,i)=>{ const o = byName[keyOf(r)]; if(o) sel[i] = o; }); selSave(); loadedAt = Date.now(); busy = ''; msg = ''; pg.redraw(); syncJobs(); return; }
+            rows = nr; sel = {}; nr.forEach((r,i)=>{ const o = byName[keyOf(r)]; if(o) sel[i] = o; });
+            // 17/11 14:30 (χρήστης: «τη βρίσκεις στο Ημέρας αλλά την έχεις ότι πήρε εξιτήριο — αφού είναι στη λίστα, ΔΕΝ πήρε»): ✅ + ακόμα στη λίστα → ⚠ ξανά
+            Object.keys(sel).forEach(k=>{ const s1 = sel[k]; if(s1 && /^✅/.test(s1.st||'')){ s1.st = '⚠ υπάρχει ακόμα στη λίστα του ΝΠΣ — το εξιτήριο ΔΕΝ βγήκε, ξαναστείλ\' το'; s1.on = true; } });
+            selSave(); loadedAt = Date.now(); busy = ''; msg = ''; pg.redraw(); syncJobs(); return; }
           if(['failed','cancelled','dismissed'].indexOf(q.status)>=0){ busy = ''; msg = String(q.note||'απέτυχε'); return pg.redraw(); }
           busy = (q.status==='new' ? 'περιμένει τον υπολογιστή…' : 'ΝΠΣ: '+String(q.note||'σε εξέλιξη').slice(0,60))+' · '+Math.round((Date.now()-t0)/1000)+'″'; pg.redraw(); }
         if(job===id){ busy = ''; msg = 'Ο υπολογιστής δεν απάντησε σε 4′ (χρειάζεται bot 0.20.71 ή νεότερο).'; pg.redraw(); } }
