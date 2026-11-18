@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v566';
+const APP_VER = '2026-11-18-v567';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21981,7 +21981,10 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
   const st = {pts:[], busy:true, sent:{}, nps:[], first:{}};
   const pts = ()=>{ const L = [], t0 = new Date(); t0.setHours(0,0,0,0); const y0 = new Date(t0.getTime()-864e5);
     try{ const D = typeof data!=='undefined' ? data : {}, X = typeof extraPatients!=='undefined' ? extraPatients : {};
-      [...Object.entries(D).map(e=>[e[0], e[1], false]), ...Object.entries(X).map(e=>[e[0], e[1], true])].forEach(([k, d, x])=>{ if(!d || !String(d.name||'').trim()) return; const x0 = enr[nz(d.name)] || {}; const ad = dayOf(d.admitDate) || dayOf(x0.adm && x0.adm.from) || dayOf(d.stay && d.stay.adm); if(!ad || ad < y0) return;
+      [...Object.entries(D).map(e=>[e[0], e[1], false]), ...Object.entries(X).map(e=>[e[0], e[1], true])].forEach(([k, d, x])=>{ if(!d || !String(d.name||'').trim()) return; const x0 = enr[nz(d.name)] || {};
+        // σειρά: ημ. εισαγωγής του ασθενή → στοιχεία ΝΠΣ → (ήταν ήδη στην παλιά λίστα ΝΠΣ → ΟΧΙ νέος) → πρώτη φορά στη λίστα ΝΠΣ → μέρα που μπήκε στο Παραδόχαρτο
+        const fs0 = st.first[nz(d.name)];
+        const ad = dayOf(d.admitDate) || dayOf(x0.adm && x0.adm.from) || ((st.oldN && st.oldN.has(nz(d.name))) ? null : (fs0 ? new Date(fs0) : dayOf(d.stay && d.stay.adm))); if(!ad || ad < y0) return;
         L.push({k, x, d, name:String(d.name).trim(), today: ad >= t0}); });
       // 🏥 13/11 23:47 (χρήστης: «λέει καμία εισαγωγή ενώ έγιναν»): οι νέοι ασθενείς είναι συχνά ΜΟΝΟ στη λίστα του ΝΠΣ (όχι ακόμα στο Παραδόχαρτο) και
       // η λίστα δεν δίνει ημ. εισαγωγής → ημ. = στοιχεία ΝΠΣ (npsenrich) ή η ΠΡΩΤΗ φορά που φάνηκε στη λίστα της κλινικής (λίστες 4 ημερών)
@@ -22013,11 +22016,13 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
     // 🐞 18/11 06:48 (χρήστης: «γράφεις καμία εισαγωγή σήμερα ή χθες, ενώ χθες έγιναν 10»): έπαιρνε τις 40 ΠΑΛΑΙΟΤΕΡΕΣ λίστες των 4 ημερών (50 πλέον) →
     // «τωρινή» λίστα = του 16/11 → οι χθεσινοί δεν υπήρχαν. Τώρα: οι 30 ΝΕΟΤΕΡΕΣ + η ΠΑΛΑΙΟΤΕΡΗ (για το «πρώτη φορά στη λίστα»), σε χρονική σειρά.
     try{ if(typeof sb6!=='undefined'){ const base = ()=>sb6.from('oncall_jobs').select('id,payload,created_at').eq('kind','npslist').in('status',['done','dismissed']).not('payload->result','is',null).gte('created_at', new Date(Date.now()-4*864e5).toISOString());
-        const [qa, qd] = await Promise.all([base().order('id',{ascending:true}).limit(1), base().order('id',{ascending:false}).limit(30)]);
+        const [qa, qd] = await Promise.all([base().order('id',{ascending:true}).limit(1), base().order('id',{ascending:false}).limit(90)]);   // 18/11 06:54: ΟΛΕΣ οι λίστες των 4 ημερών (όχι κενά στο «πρώτη φορά»)
         const all = [...(qa.data||[]), ...(qd.data||[])].filter((x,i,A)=>A.findIndex(y=>y.id===x.id)===i).sort((a,b)=>a.id-b.id);
         const Ls = all.filter(x=>{ const r = x.payload && x.payload.result; return r && Array.isArray(r.rows) && (r.dpt||'3449')==='3449'; });
         if(Ls.length){ const oldest = Ls[0]; const old = Date.now() - Date.parse(oldest.created_at) > 2.5*864e5;
           Ls.forEach((x, i)=>x.payload.result.rows.forEach(r=>{ const k = nz(r.name); if(!k || st.first[k]!=null) return; st.first[k] = (i===0 && old) ? 0 : Date.parse(x.created_at); }));
+          // 🐞 18/11 06:54 (χρήστης: «δεν είναι σημερινή εισαγωγή»): όσοι ήταν ΗΔΗ στην παλαιότερη λίστα (≥2,5 ημ.) = ΟΧΙ νέοι, ό,τι κι αν λέει το Παραδόχαρτο (μέρα που μπήκε σε θάλαμο)
+          st.oldN = new Set(old ? Ls[0].payload.result.rows.map(r=>nz(r.name)).filter(Boolean) : []);
           Object.keys(st.first).forEach(k=>{ if(!st.first[k] || !old) delete st.first[k]; });   // χωρίς λίστα ≥2,5 ημερών δεν ξέρουμε ποιοι είναι «νέοι»
           st.nps = Ls[Ls.length-1].payload.result.rows || []; } } }catch(e){}
     st.pts = pts();
