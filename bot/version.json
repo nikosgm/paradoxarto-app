@@ -1,1 +1,1 @@
-{"version": "0.21.561", "zip": "ef-bot-0.21.561.zip", "sha256": "cd6f8eca92b7a51a839f058932addd610ee43d2429413ce50d8d43c99bdb921e", "notes": "απευθείας παραπεμπτικό: αναζήτηση εξετάσεων όπως ο οδηγός + directMiss"}
+{"version": "0.21.562", "zip": "ef-bot-0.21.562.zip", "sha256": "dfe841eeda760d130f2196d25681c7db5fb90f333e1e958a805fa828cb478dc4", "notes": "ανάθεση rx/ref στον υπολογιστή που είναι ήδη μέσα με τον ζητούμενο λογαριασμό e-prescription"}
