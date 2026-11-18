@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v570';
+const APP_VER = '2026-11-18-v571';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25516,12 +25516,26 @@ window.CLS_MODE='A';
     // 15/11 20:55 (χρήστης: «μόνο το σήμα της καλλιέργειας: (-) ή (+) ή εκκρ — χωρίς "Uroquattro"»)
     // 15/11 22:29 (χρήστης: το 4ωρο τυπώνεται ΜΟΝΟ στο ίδιο το μηχάνημα — το Medilabi δείχνει μόνο το εγκεκριμένο των ~20 ωρών)
     //   → αφαιρέθηκε το «πρώιμο (-)/(+)»: δεν υπάρχει 4ωρο αποτέλεσμα εδώ να διαβαστεί. Θα επανέλθει αν αποκτήσουμε πρόσβαση στα αρχεία του μηχανήματος.
-    if(c.st==='pend' || c.st==='ord') return {t:(c.st==='ord'?'παραγγ.':'εκκρ.')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · '+dd : ''), cls:'pend'};
-    const r = [c.res, c.desc].filter(Boolean).join(' · ').replace(/\s+/g,' ').trim();
-    if(/αρνητ|στείρ|στειρ|δεν\s+αναπτ|no\s+growth|negative|<\s*10\^?3/i.test(r)) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};
-    // 15/11 20:30 (χάρτης cultsrc: ΑΝΑΛΥΤΗΣ «Uroquatro» στις 23/28, ΑΠΟΤΕΛΕΣΜΑ «OK»): «OK» = ένδειξη του ταχέος αναλυτή, ΟΧΙ μικρόβιο — ουδέτερο ως να επιβεβαιωθεί η σημασία του
-    if(/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim()) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};   // «OK» του αναλυτή = χωρίς σήμα ανάπτυξης
-    return {t:(r ? '(+) '+r.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
+    // 🚨 18/11 07:44 (χρήστης: «Bajo έχει ΘΕΤΙΚΗ και μου την έβγαλες αρνητική»): ΠΟΤΕ αρνητική από συμπέρασμα. Κανόνες ασφαλείας:
+    //  (1) ό,τι γράφει «θετική»/μικρόβιο/cfu σε ΟΠΟΙΑΔΗΠΟΤΕ γραμμή του δείγματος → (+) (υπερισχύει)  (2) (-) ΜΟΝΟ με ρητό «αρνητική/στείρα/δεν αναπτύχθηκε»
+    //  (3) «OK» του ταχέος αναλυτή ΔΕΝ είναι αποτέλεσμα → «βγήκε — δες Medilabi»  (4) εκκρεμεί νέα αλλά η προηγούμενη ήταν (+) → φαίνεται η (+)
+    const ev = window.pdxCultEval;
+    if(c.st==='pend' || c.st==='ord'){ const pv = c.prev ? ev(c.prev.rx, '', '') : null, pd = c.prev ? String(c.prev.date||'').replace(/^(\d{1,2}\/\d{1,2})\/\d{2,4}.*$/, '$1') : '';
+      if(pv && pv.k==='pos') return {t:(c.st==='ord'?'παραγγ.':'εκκρ.')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · '+dd : '')+' · ⚠ προηγ. (+) '+pv.txt+(pd?' '+pd:''), cls:'pos', pendPos:1, prevTxt:'(+) '+pv.txt};
+      return {t:(c.st==='ord'?'παραγγ.':'εκκρ.')+(c.aa ? ' · ΑΑ '+c.aa : '')+(dd ? ' · '+dd : ''), cls:'pend'}; }
+    const e = ev(c.rx, c.res, c.desc);
+    if(e.k==='pos') return {t:'(+) '+e.txt+(dd?' · '+dd:''), cls:'pos'};
+    if(e.k==='neg') return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};
+    return {t:'βγήκε — δες Medilabi'+(dd?' · '+dd:''), cls:'mut', unclear:1}; };
+  window.pdxCultEval = function(rx, res, desc){
+    const parts = [].concat((rx||[]).map(x=>String(x.v||'')), [res, desc].map(x=>String(x||''))).map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x && !/^ok$/i.test(x));
+    const all = parts.join(' · ');
+    const neg = /αρνητ|στε[ίι]ρ|δεν\s+αναπτ|δεν\s+απομον|no\s+growth|negative/i;
+    const pos = /θετικ|positive|cfu|10\^?[45]|100\.?000|αναπτ[υύ]χθηκ|απομον[ωώ]θηκ|coli|klebs|proteus|pseudom|enteroc|staph|strept|candida|acinet|serrat|morgan|citrob|enterob|μύκητ|μυκητ/i;
+    const posParts = parts.filter(x=>pos.test(x) && !/^(δεν|ουδεμ)/i.test(x) && !(neg.test(x) && !/θετικ|cfu|coli|klebs/i.test(x)));
+    if(posParts.length){ const bug = posParts.find(x=>!/^θετικ\S*$/i.test(x)) || posParts[0]; return {k:'pos', txt: bug.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) || 'θετική'}; }
+    if(parts.length && parts.some(x=>neg.test(x))) return {k:'neg'};
+    return {k:'?', txt: all.slice(0,60)}; };
   // ⌛ 18/11 07:01 (χρήστης: «αν κάποια καλλιέργεια είναι πάνω από 10 ημέρες να μας το λες»): ηλικία δείγματος (ημ/νία δείγματος ή στήλης) → «⚠ N ημερών»
   window.pdxCultDays = function(c){ if(!c) return null; const m = String(c.sampled || c.date || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m) return null;
     const d = new Date(+(m[3].length===2 ? '20'+m[3] : m[3]), +m[2]-1, +m[1]); const t0 = new Date(); t0.setHours(0,0,0,0); return Math.round((t0 - d)/864e5); };
@@ -25535,7 +25549,7 @@ window.CLS_MODE='A';
     return T.map(t=>({s:t.s, u: q===90 ? 1-t.v : q===180 ? 1-t.u : t.v, v: q===90 ? t.u : q===180 ? 1-t.v : 1-t.u})); };
   // κείμενο κουτιού: (-) · μόνο ο α/α αν εκκρεμεί · (+) μικρόβιο · + «Μύκητες»
   window.pdxOrMarkTxt = function(p){ if(!p) return null; let t = '', cls = 'mut';
-    if(!p.pid){ t = '?'; cls = 'pend'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*⚠ \d+ ημερών$/, '').replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); if(c.old) t += '⌛'; }   // ⌛ = καλλιέργεια >10 ημερών
+    if(!p.pid){ t = '?'; cls = 'pend'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.pendPos ? String(p.c.aa||'εκκρ.')+' · προηγ.(+)' : c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.unclear ? '? δες' : c.t.replace(/\s*·\s*⚠ \d+ ημερών$/, '').replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); if(c.old) t += '⌛'; }   // ⌛ = καλλιέργεια >10 ημερών
     const fun = !!(p.ua && p.ua.fun);     // 17/11 18:22 (χρήστης: «τη νεφροστομία δεν θα τη γράφεις νεφροστομία, θα γράφεις ΝΦΣ»)
     const ab = t=>String(t||'').replace(/νεφροστομ\S*/gi, 'ΝΦΣ').replace(/ουροκαθετ\S*|καθετήρ\S*|foley/gi, 'ΚΘ').replace(/κυστεοστομ\S*/gi, 'ΚΣ').replace(/\s+/g, ' ').trim();
     return {t, cls, fun, note: (p.c && p.c.note) ? ab(p.c.note).slice(0, 30) : ''}; };
