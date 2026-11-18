@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v577';
+const APP_VER = '2026-11-18-v578';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -18494,17 +18494,25 @@ Z99.2:C|αιμοκάθαρση
       // → ξανά όλοι οι κωδικοί τους, έως 3 φορές ανά ασθενή. Η λίστα αποτυχιών ανανεώνεται κάθε 5′ από τη βάση (για τον ΕΠΟΜΕΝΟ κύκλο).
       const nk = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/ς/g,'σ').replace(/\s+/g,' ').trim();
       const FX = window.__npsdxFX || (window.__npsdxFX = {at:0, keys:new Set()});
+      // 🛑 18/11 17:50 (διπλές διαγνώσεις 17/11: ίδιος ασθενής ξαναστελνόταν κάθε κύκλο — 56× σε 22 ώρες· ο μετρητής comorbDxRt δεν κρατιόταν και οι
+      // «cancelled» της παύσης δεν μετρούσαν → η παλιά αποτυχία έμενε «τελευταία» για πάντα). Τώρα ΑΠΟ ΤΗ ΒΑΣΗ: (1) παύση npsdx_off → τίποτα δεν στέλνεται,
+      // (2) ≤3 εργασίες «Διάγνωση» ανά ασθενή ανά 48 ώρες (ΟΛΕΣ μετράνε, και ακυρωμένες/αποτυχημένες) → ποτέ ατέρμονη επανάληψη.
       if(Date.now()-FX.at > 5*60000 && typeof sb6!=='undefined'){ FX.at = Date.now();
-        sb6.from('oncall_jobs').select('id,name_key,status,note').eq('kind','npsdx').gte('created_at', new Date(Date.now()-48*3600e3).toISOString()).order('id',{ascending:true}).limit(500).then(r=>{
-          const last = {}; (r.data||[]).forEach(j=>{ if(/^(done|approved|failed)$/.test(j.status) && !/τρέχει ήδη|δοκιμή χωρίς αποθήκευση/.test(j.note||'')) last[j.name_key] = j; });
-          FX.keys = new Set(Object.values(last).filter(j=>j.status==='failed' && !/Δεν βρέθηκε .*σελίδες/.test(j.note||'')).map(j=>j.name_key)); }, ()=>{}); }
-      const KK = allKeys().slice(); for(let i=KK.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=KK[i]; KK[i]=KK[j]; KK[j]=t; }
+        sb6.from('oncall_config').select('value').eq('key','npsdx_off').maybeSingle().then(r=>{ const v = r && r.data && r.data.value; FX.off = !!(v && v!=='0' && v!==false); }, ()=>{});
+        sb6.from('oncall_jobs').select('id,name_key,status,note').eq('kind','npsdx').gte('created_at', new Date(Date.now()-48*3600e3).toISOString()).order('id',{ascending:true}).limit(1000).then(r=>{
+          const last = {}, cnt = {}; (r.data||[]).forEach(j=>{ cnt[j.name_key] = (cnt[j.name_key]||0) + 1; if(/^(done|approved|failed)$/.test(j.status) && !/τρέχει ήδη|δοκιμή χωρίς αποθήκευση/.test(j.note||'')) last[j.name_key] = j; });
+          FX.cnt = cnt; FX.cntAt = Date.now();
+          FX.keys = new Set(Object.values(last).filter(j=>j.status==='failed' && !/Δεν βρέθηκε .*σελίδες/.test(j.note||'') && (cnt[j.name_key]||0) < 3).map(j=>j.name_key)); }, ()=>{}); }
+      const dxHold = FX.off !== false || !FX.cntAt;   // παύση ή άγνωστη κατάσταση (δεν διαβάστηκε ακόμα η βάση) → καμία αποστολή σε αυτόν τον κύκλο (το υπόλοιπο τρέχει κανονικά)
+      const KK = dxHold ? [] : allKeys().slice(); for(let i=KK.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=KK[i]; KK[i]=KK[j]; KK[j]=t; }
       KK.forEach(k=>{ if(sent>=4) return; const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived || !d.comorb || !Array.isArray(d.comorb.codes)) return;
         if(!inNow(d.name)) return;   // μόνο όσοι νοσηλεύονται τώρα — ποτέ ασθενείς που έφυγαν
         if(FX.keys.has(nk(d.name)) && (d.comorbDxRt||0) < 6 && d.comorbDx){ d.comorbDxRt = (d.comorbDxRt||0) + 1; d.comorbDx = {codes: [], at: now}; FX.keys.delete(nk(d.name)); }
         const done = (d.comorbDx && d.comorbDx.codes) || [];   // 17/11 00:41: → «Διάγνωση» ΔΕΥΤΕΡΕΥΟΥΣΑ (όχι Ατομικό Αναμνηστικό)
         const newC = d.comorb.codes.filter(x=>x && x.code && done.indexOf(String(x.code).toUpperCase())<0).map(x=>({code:String(x.code).toUpperCase(), desc:x.desc||''}));
         if(!newC.length) return;
+        if((FX.cnt && FX.cnt[nk(d.name)]||0) >= 3) return;   // 🛑 ≤3 ανά 48 ώρες ανά ασθενή (από τη βάση)
+        FX.cnt[nk(d.name)] = (FX.cnt[nk(d.name)]||0) + 1;
         d.comorbDx = {codes: done.concat(newC.map(x=>x.code)), at: now};
         try{ window.pdxBotSend(k, 'npsdx', {codes: newC, type: '02', auto: true, quiet: true, avoid: ['bmw51w96b7zncz','bmwammethy0htb']}); /* 17/11 09:35: Παράθυρο/Εξωτερικά: ο λογαριασμός ΝΠΣ τους δεν έχει «Διάγνωση» */ sent++; saveRec(k, d); }catch(e){} }); } }catch(e){}
     if(sweepOnly) return out;
