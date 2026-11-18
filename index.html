@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v578';
+const APP_VER = '2026-11-18-v579';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12931,7 +12931,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const icd = [...new Set((d.dx||[]).map(x=>(String(x).toUpperCase().match(/\b[A-Z]\d{2}(?:\.\d{1,2})?\b/)||[])[0]).filter(Boolean))].slice(0, 6);
         if(!window.pdxRxStudio) return;
         if(type==='ref') pdxRxStudio({amka, mode:'ref', icd, ex:(d.exams||[]).map(x=>({n:x.name, ep:true}))});
-        else pdxRxStudio({amka, mode:'rx', icd, medsExact:(d.meds||[]).map(m=>({name:m.name, short:m.short, content:m.content, bc:m.bc, freqId:m.freqId, doseNo:m.doseNo!=null?m.doseNo:parseFloat(String(m.dose||'1').replace(',','.'))||1, unit:m.unit, days:m.days, qty:m.qty, pct:m.pct})), lines:(d.meds||[]).some(m=>m.bc) ? [] : (d.meds||[]).map(m=>[m.name, m.content, m.dose, m.days ? 'για '+m.days+' ημέρες' : ''].filter(Boolean).join(' '))});
+        else pdxRxStudio({amka, mode:'rx', icd, copyBc:bc, medsExact:(d.meds||[]).map(m=>({name:m.name, short:m.short, content:m.content, bc:m.bc, freqId:m.freqId, doseNo:m.doseNo!=null?m.doseNo:parseFloat(String(m.dose||'1').replace(',','.'))||1, unit:m.unit, days:m.days, qty:m.qty, pct:m.pct})), lines:(d.meds||[]).some(m=>m.bc) ? [] : (d.meds||[]).map(m=>[m.name, m.content, m.dose, m.days ? 'για '+m.days+' ημέρες' : ''].filter(Boolean).join(' '))});
         toast('📋 Αντιγράφηκε — έλεγξε και πάτα «Ετοίμασε…»'); return; }
       if(e.target.closest('[data-ep=print]') && !S.busy){
         // 🖨 16/11 22:47 (χρήστης: «όταν πατάω εκτύπωση να διαλέγω υπολογιστή από λίστα — να πηγαίνει σε αυτόν που διαλέγω»): ο ΕΠΙΛΕΓΜΕΝΟΣ υπολογιστής
@@ -16616,6 +16616,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     if(Array.isArray(opt.icd) && opt.icd.length) S.icd = opt.icd.map(x=>String(x).toUpperCase().replace(/[^A-Z0-9.]/g,'')).filter(x=>/^[A-Z]\d/.test(x)).slice(0, 6);
     // 📋 18/11 16:30 (χρήστης: «αντιγραφή συνταγής — όλη η συνταγή, όπως το κουμπί του e-prescription· να μη γίνονται τέτοια λάθη»): από το ιστορικό
     // έρχονται ΔΟΜΗΜΕΝΑ φάρμακα (barcode, συχνότητα, δόση, ημέρες, κουτιά) → μπαίνουν ΑΥΤΟΥΣΙΑ, χωρίς ανάγνωση κειμένου· το bot βρίσκει το ίδιο φάρμακο με το barcode
+    // 📋 18/11 17:55: barcode της αρχικής συνταγής → το bot κάνει ό,τι το κουμπί «Αντιγραφή» του e-prescription (GET …/{bc}/copy)· μόνο για ΤΟΝ ΙΔΙΟ ΑΜΚΑ
+    if(opt.copyBc && /^\d{8,16}$/.test(String(opt.copyBc)) && /^\d{11}$/.test(String(opt.amka||''))){ S.copyBc = String(opt.copyBc); S.copyAmka = String(opt.amka); }
     if(Array.isArray(opt.medsExact)) opt.medsExact.forEach(m=>{ const full = String(m.name||'').trim(); if(!full) return;
       const short = (String(m.short||'').trim() || full.split(/\s+/)[0]).replace(/[^A-Za-z0-9\- ]/g, ' ').replace(/\s+/g,' ').trim().slice(0, 40) || full.split(/\s+/)[0];
       const fq = +m.freqId >= 1 && +m.freqId <= 4 ? +m.freqId : 1;
@@ -16956,17 +16958,19 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // + % συμμετοχής (25% «λοιπές ενδείξεις» ή 0%), κουτιά (0 = τα υπολογίζει το bot), τεμάχια/κουτί (προτιμώμενη συσκευασία)
       const epU = window.pdxEpAccGet ? pdxEpAccGet(root) : '', meds = S.meds.map(m=>({line:medLine(m), name:m.name, strength:m.strength, dose:m.dose, freq:m.freq, days:m.days, part:m.part==='0%'?'0%':'25%', boxes:boxesOf(m)||0, perBox:+m.perBox||0, bc:m.bc||'', freqId:m.freqId||0}));
       const rep = S.rep ? {repeat:{n:S.rep, every:S.every}} : {};
+      const cpA = S.k ? String((recOf(S.k)||{}).amka||'') : String(S.amka||'');
+      const cpy = S.copyBc && S.copyAmka && cpA === S.copyAmka && !S.rep ? {copyBc:S.copyBc} : {};   // 📋 αντιγραφή όπως το κουμπί του e-prescription (ίδιος ΑΜΚΑ, όχι επαναλαμβανόμενη)
       pdxIcdUse && pdxIcdUse(S.icd);
       let id = 0, label = '';
       try{
         if(S.k){ const d = recOf(S.k); label = d.name;
           const th = ((typeof DISCHARGE_CFG!=='undefined'&&DISCHARGE_CFG.therapists)||{})[d.therapist]||d.therapist||'';
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:S.k, kind:'rx', payload:Object.assign(await prepOnly(), epU?{epUser:epU}:{}, rep, {icd:S.icd, meds, mode:'review', therapist:th, quiet:true}, pdxRxDirect()), status:'new'}).select('id').single();
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(d.name), name:d.name, room:S.k, kind:'rx', payload:Object.assign(await prepOnly(), epU?{epUser:epU}:{}, rep, {icd:S.icd, meds, mode:'review', therapist:th, quiet:true}, pdxRxDirect(), cpy), status:'new'}).select('id').single();
           if(r.error) throw r.error; id = r.data.id;
         } else {
           const nm = S.who && S.who.name ? S.who.name : ('Α.Μ.Κ.Α. ··'+S.amka.slice(-2)); label = nm;
           if(S.pendRx){ sb6.from('oncall_jobs').update({status:'cancelled', note:'η συνταγή στάλθηκε πριν βρεθεί το όνομα'}).eq('id', S.pendRx).in('status',['new','seen','running']).then(()=>{}); S.pendRx = 0; }
-          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign(await prepOnly(), {amka:S.amka, icd:S.icd, meds, mode:'review', general:true, quiet:true}, pdxRxDirect(), rep, epU?{epUser:epU}:{}), status:'new'}).select('id').single();
+          const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:null, kind:'rx', payload:Object.assign(await prepOnly(), {amka:S.amka, icd:S.icd, meds, mode:'review', general:true, quiet:true}, pdxRxDirect(), rep, cpy, epU?{epUser:epU}:{}), status:'new'}).select('id').single();
           if(r.error) throw r.error; id = r.data.id;
         }
       }catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)); return; }
