@@ -1,1 +1,1 @@
-{"version": "0.21.551", "zip": "ef-bot-0.21.551.zip", "sha256": "4c36cb22bd1e8c0577cefca602b04fadf99e99903f51b942c9be6a7bc8f8fb76", "notes": "δοκιμή κουμπιού «Αντιγραφή» e-prescription (epcopyprobe)"}
+{"version": "0.21.552", "zip": "ef-bot-0.21.552.zip", "sha256": "e584673d974b1006c8a93a7dfc6b424bb07af77a148eecd837b762d566d62449", "notes": "ανοιχτή επίσκεψη άλλου ασθενή: κλείνει αν ≥5′ (συνταγή/παραπεμπτικό/αντιγραφή)"}
