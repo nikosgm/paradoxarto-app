@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v573';
+const APP_VER = '2026-11-18-v574';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25535,7 +25535,7 @@ window.CLS_MODE='A';
     const neg = /αρνητ|στε[ίι]ρ|δεν\s+αναπτ|δεν\s+απομον|no\s+growth|negative/i;
     const pos = /θετικ|positive|cfu|10\^?[45]|100\.?000|αναπτ[υύ]χθηκ|απομον[ωώ]θηκ|coli|klebs|proteus|pseudom|enteroc|staph|strept|candida|acinet|serrat|morgan|citrob|enterob|μύκητ|μυκητ/i;
     const posParts = parts.filter(x=>pos.test(x) && !/^(δεν|ουδεμ)/i.test(x) && !(neg.test(x) && !/θετικ|cfu|coli|klebs/i.test(x)));
-    if(posParts.length){ const bug = posParts.find(x=>!/^θετικ\S*$/i.test(x)) || posParts[0]; return {k:'pos', txt: bug.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) || 'θετική'}; }
+    if(posParts.length){ const bug = posParts.find(x=>!/^θετικ\S*$/i.test(x)) || posParts[0]; return {k:'pos', txt: bug.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').replace(/\s*\([^)]*cfu[^)]*\)/gi,'').replace(/[<>≥≤]?\s*[\d.,^]+\s*cfu(\s*\/\s*ml)?/gi,'').replace(/\s+/g,' ').trim().slice(0,90) || 'θετική'}; }   // 18/11 08:06 (χρήστης: «μη γράφεις τα cfu»)
     if(parts.length && parts.some(x=>neg.test(x))) return {k:'neg'};
     return {k:'?', txt: all.slice(0,60)}; };
   // ⌛ 18/11 07:01 (χρήστης: «αν κάποια καλλιέργεια είναι πάνω από 10 ημέρες να μας το λες»): ηλικία δείγματος (ημ/νία δείγματος ή στήλης) → «⚠ N ημερών»
