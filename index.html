@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v568';
+const APP_VER = '2026-11-18-v569';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -21988,6 +21988,12 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
         rows.forEach(r=>{ const nm = String(r.name||'').trim(), z = nz(nm); if(!nm || P.has(z) || L.some(p=>nz(p.name)===z)) return; const R = recs[z];
           L.push(R ? {k:R.k, x:R.x, d:R.d, name:String(R.d.name).trim(), today} : {k:'nps', x:true, nps:true, d:{name:nm, amka:r.amka||'', am:r.am||''}, name:nm, today}); }); };
       add(D[k0], D[k1], true); add(D[k1], D[k2], false);
+      // ✅ 18/11 07:01 (χρήστης: «να κοιτάς και τις ημερομηνίες εισαγωγής για να το επιβεβαιώνουμε»): ημ. εισαγωγής ΝΠΣ (στοιχεία ΝΠΣ), όπου υπάρχει,
+      // επιβεβαιώνει/διορθώνει: παλιότερη από χθες → ΟΧΙ νέος · σήμερα/χθες → στη σωστή ημέρα · και όσοι της τελευταίας λίστας με ημ. σήμερα/χθες
+      const tS = new Date(); tS.setHours(0,0,0,0); const yS = new Date(tS.getTime()-864e5), admOf = nm=>{ const x0 = enr[nz(nm)]; return x0 && x0.adm ? dayOf(x0.adm.from) : null; };
+      for(let j = L.length-1; j >= 0; j--){ const ad = admOf(L[j].name); if(!ad) continue; if(ad < yS){ L.splice(j, 1); continue; } L[j].today = ad >= tS; L[j].ad = ad; }
+      const last = D[k0] || D[k1] || []; last.forEach(r=>{ const nm = String(r.name||'').trim(), z = nz(nm); if(!nm || L.some(p=>nz(p.name)===z)) return; const ad = admOf(nm); if(!ad || ad < yS) return;
+        const R = recs[z]; L.push(R ? {k:R.k, x:R.x, d:R.d, name:String(R.d.name).trim(), today: ad >= tS, ad} : {k:'nps', x:true, nps:true, d:{name:nm, amka:r.amka||'', am:r.am||''}, name:nm, today: ad >= tS, ad}); });
       st.cmp = {today: !!(D[k0] && D[k1]), yest: !!(D[k1] && D[k2])}; }catch(e){}
     return L.sort((a,b)=>(b.today - a.today) || a.name.localeCompare(b.name, 'el')); };
   const chip = (ok, t)=>'<span style="display:inline-block;margin:3px 4px 0 0;padding:3px 9px;border-radius:12px;font-size:12.5px;font-weight:600;background:'+(ok===true?'#E8F5EC;color:#1A7F37':ok===false?'#FDECEC;color:#B42318':'#F2F2F7;color:#6B7280')+'">'+t+'</span>';
@@ -22003,7 +22009,7 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
       const miss = !(p.dos && p.dos.status==='done') || !(ca && ca.status==='ok');
       const sub = dos + ahfy + lab + (p.dos && p.dos.note && p.dos.status==='done' ? '<div style="margin-top:4px;font-size:12.5px;color:#6B7280">'+E3(String(p.dos.note).replace(/^.*?φάκελος νοσηλείας:\s*/,'').slice(0,140))+'</div>' : p.dos && p.dos.status==='failed' ? '<div style="margin-top:4px;font-size:12.5px;color:#B42318">'+E3(String(p.dos.note||'').slice(0,120))+'</div>' : '')
         + (miss ? '<div style="margin-top:6px"><button data-anow="'+idx+'" '+(st.sent[idx]?'disabled ':'')+'style="border:1px solid #0A84FF;background:#fff;color:#0A84FF;border-radius:10px;min-height:34px;padding:0 12px;font-weight:700">'+(st.sent[idx]?'⏳ Στάλθηκε':'↻ Φέρε τώρα ό,τι λείπει')+'</button></div>' : '');
-      return {t:'<b>'+E3(p.name)+'</b>'+(p.x?'':' <span style="color:#8E8E93;font-size:13px">'+E3(p.k)+'</span>')+'<div>'+sub+'</div>'}; })); });
+      return {t:'<b>'+E3(p.name)+'</b>'+(p.x?'':' <span style="color:#8E8E93;font-size:13px">'+E3(p.k)+'</span>')+(p.ad ? ' <span style="color:#1A7F37;font-size:12.5px">✓ εισ. ΝΠΣ '+p.ad.getDate()+'/'+(p.ad.getMonth()+1)+'</span>' : '')+'<div>'+sub+'</div>'}; })); });
     return h + '<div style="height:40px"></div>'; };
   const pg = iosPage('Νέες εισαγωγές', 'Εργαλεία', draw);
   const load = async ()=>{
@@ -25516,6 +25522,11 @@ window.CLS_MODE='A';
     // 15/11 20:30 (χάρτης cultsrc: ΑΝΑΛΥΤΗΣ «Uroquatro» στις 23/28, ΑΠΟΤΕΛΕΣΜΑ «OK»): «OK» = ένδειξη του ταχέος αναλυτή, ΟΧΙ μικρόβιο — ουδέτερο ως να επιβεβαιωθεί η σημασία του
     if(/^ok$/i.test(String(c.res||'').trim()) && !String(c.desc||'').trim()) return {t:'(-)'+(dd?' · '+dd:''), cls:'ok'};   // «OK» του αναλυτή = χωρίς σήμα ανάπτυξης
     return {t:(r ? '(+) '+r.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').slice(0,90) : 'βγήκε (χωρίς κείμενο)')+(dd?' · '+dd:''), cls: r ? 'pos' : 'mut'}; };
+  // ⌛ 18/11 07:01 (χρήστης: «αν κάποια καλλιέργεια είναι πάνω από 10 ημέρες να μας το λες»): ηλικία δείγματος (ημ/νία δείγματος ή στήλης) → «⚠ N ημερών»
+  window.pdxCultDays = function(c){ if(!c) return null; const m = String(c.sampled || c.date || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m) return null;
+    const d = new Date(+(m[3].length===2 ? '20'+m[3] : m[3]), +m[2]-1, +m[1]); const t0 = new Date(); t0.setHours(0,0,0,0); return Math.round((t0 - d)/864e5); };
+  { const base = window.pdxCultTxt; window.pdxCultTxt = function(c){ const r = base(c); const d = window.pdxCultDays(c);
+      if(r && d!=null && d>10 && c && !c.none && !(c.err && !c.st)){ r.t += ' · ⚠ '+d+' ημερών'; r.old = d; } return r; }; }
   // 🧫🖨 17/11 16:29 (χρήστης: «μη βάζεις στήλες — το PDF λίγο πιο μικρό πάνω στο Α4 και τέρμα αριστερά text boxes δίπλα σε κάθε όνομα·
   // και "μύκητες" αν έχει· το ίδιο και στην προεπισκόπηση, να αλλάζει μόνο του όταν αλλάζει καλλιέργεια»)
   const ORN = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[0-9]+/g,' ').replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
@@ -25524,7 +25535,7 @@ window.CLS_MODE='A';
     return T.map(t=>({s:t.s, u: q===90 ? 1-t.v : q===180 ? 1-t.u : t.v, v: q===90 ? t.u : q===180 ? 1-t.v : 1-t.u})); };
   // κείμενο κουτιού: (-) · μόνο ο α/α αν εκκρεμεί · (+) μικρόβιο · + «Μύκητες»
   window.pdxOrMarkTxt = function(p){ if(!p) return null; let t = '', cls = 'mut';
-    if(!p.pid){ t = '?'; cls = 'pend'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); }
+    if(!p.pid){ t = '?'; cls = 'pend'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.t.replace(/\s*·\s*⚠ \d+ ημερών$/, '').replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); if(c.old) t += '⌛'; }   // ⌛ = καλλιέργεια >10 ημερών
     const fun = !!(p.ua && p.ua.fun);     // 17/11 18:22 (χρήστης: «τη νεφροστομία δεν θα τη γράφεις νεφροστομία, θα γράφεις ΝΦΣ»)
     const ab = t=>String(t||'').replace(/νεφροστομ\S*/gi, 'ΝΦΣ').replace(/ουροκαθετ\S*|καθετήρ\S*|foley/gi, 'ΚΘ').replace(/κυστεοστομ\S*/gi, 'ΚΣ').replace(/\s+/g, ' ').trim();
     return {t, cls, fun, note: (p.c && p.c.note) ? ab(p.c.note).slice(0, 30) : ''}; };
