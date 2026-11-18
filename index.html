@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v583';
+const APP_VER = '2026-11-18-v584';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8968,7 +8968,7 @@ document.head.appendChild(st);
       {ic:'🔔', t:'Ειδοποιήσεις', v: push?'Ναι':'Όχι', on:"pdxNotifPage()"},
       {ic:'🛏', t:'Οι θάλαμοί μου', v:(M.rooms&&M.rooms.length?esc(M.rooms.join(', ')):''), on:"pdxDo('mine')"},
       typeof window.pdxPacks==='function' && {ic:'📦', t:'Πακέτα', on:"window.pdxPacks && pdxPacks()"},
-      typeof window.pdxExBtnPage==='function' && {ic:'🧾', t:'Κουμπιά εξετάσεων', sub:'ποιες εξετάσεις φαίνονται με ένα πάτημα στη συνταγογράφηση', on:"pdxExBtnPage()"},
+      typeof window.pdxExBtnPage==='function' && {ic:'🧾', t:'Ομάδες εξετάσεων', sub:'οι ομάδες (Βιοχημικές, Υπέρηχοι…) της συνταγογράφησης — φτιάξε τις δικές σου', on:"pdxExBtnPage()"},
       {ic:'☑', t:'Εκκρεμότητες', on:"pdxDo('todoopts')"},
       att && {ic:'📞', t:'Κλήσεις για εκτίμηση', on:"pdxDo('consult')"},
       {ic:'⚠', t:'Όρια εργαστηριακών', on:"pdxDo('labwarn')"}
@@ -16232,7 +16232,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs .ch.on{background:#1D4E80;color:#fff}.rxs .ch small{font-weight:400;opacity:.7;margin-left:4px}
   .rxs .med{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;position:relative}
   .rxs .med+.med:before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid #E1E1E6}
-  .rxs .g.xbg{display:flex;flex-wrap:wrap;gap:8px;padding:12px}.rxs .g.xbg .ch{min-height:40px;font-size:15px;white-space:normal;text-align:left;max-width:100%;flex:0 1 auto}.rxs .g.xbg .ch.xbo{background:transparent;border:1.5px dashed #C7C7CC;color:#007AFF}.rxs .go.vcl{background:#34C759;margin-top:8px}.rxs .med.jr{flex-wrap:wrap}.rxs .med.jr .m{flex:1 1 70%}.rxs .med.jr>button{flex:1 1 100%!important;margin-left:22px;min-height:40px}
+  .rxs .g.xbg{padding:10px 12px}.rxs .g.xbg .ch{min-height:38px;font-size:15px;white-space:normal;text-align:left;max-width:100%;flex:0 1 auto}.rxs .g.xbg .ch.xbo{background:transparent;border:1.5px dashed #C7C7CC;color:#007AFF}.rxs .xbsel{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px;margin-bottom:10px;border-bottom:.5px solid #E5E5EA}.rxs .xbsel .ch{font-size:14px;min-height:34px}.rxs .xbx{opacity:.7;margin-left:2px}.rxs .xbgr{display:flex;flex-wrap:wrap;gap:7px}.rxs .xbgr .ch{flex:none;white-space:nowrap;padding:7px 11px}.rxs .ch.xbgc{background:#fff;border:1.5px solid #D1D1D6;color:#1C1C1E}.rxs .ch.xbgc.has{border-color:#007AFF;color:#007AFF}.rxs .ch.xbgc.op{background:#007AFF;border-color:#007AFF;color:#fff}.rxs .ch.xbgc b{background:#007AFF;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:2px}.rxs .ch.xbgc.op b{background:#fff;color:#007AFF}.rxs .xbch{opacity:.6;font-size:11px}.rxs .xbl{margin-top:10px;border-radius:12px;background:#F7F7FA;overflow:hidden}.rxs .xbi{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;border:0;border-bottom:.5px solid #E5E5EA;background:none;padding:6px 12px;text-align:left;font:inherit;font-size:16px;color:#1C1C1E;cursor:pointer}.rxs .xbc{flex:none;width:24px;height:24px;border-radius:12px;border:1.5px solid #C7C7CC;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}.rxs .xbi.on .xbc{background:#007AFF;border-color:#007AFF}.rxs .xbi.on .xbn{font-weight:600}.rxs .xbdone{width:100%;min-height:44px;border:0;background:none;color:#007AFF;font:inherit;font-size:16px;font-weight:600;cursor:pointer}.rxs .xbe{padding:14px;color:#8E8E93;font-size:14px}html.pdx-night .rxs .ch.xbgc{background:#1C1C1E;border-color:#3A3A3C;color:#fff}html.pdx-night .rxs .xbl{background:#1C1C1E}html.pdx-night .rxs .xbi{color:#fff;border-color:#38383A}.rxs .go.vcl{background:#34C759;margin-top:8px}.rxs .med.jr{flex-wrap:wrap}.rxs .med.jr .m{flex:1 1 70%}.rxs .med.jr>button{flex:1 1 100%!important;margin-left:22px;min-height:40px}
   .rxs .med .m{flex:1;min-width:0}.rxs .med .m b{font-size:17px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rxs .med .m span{font-size:14px;color:#6B6B70}
   .rxs .stp{display:flex;align-items:center;background:#F2F2F7;border-radius:9px;flex:none}
@@ -16508,43 +16508,55 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     });
     document.body.appendChild(ov); draw();
   };
-  // 🧾 18/11 19:10 (χρήστης: «τα λιγότερα κλικ για εξετάσεις — και να διαλέγω σε ρυθμίσεις ποια κουμπιά να εμφανίζονται»)
-  // ΠΡΟΣΩΠΙΚΑ κουμπιά εξετάσεων της συνταγογράφησης: [[όνομα, είδος, ep]] στο localStorage + oncall_labs «exbtn|<uid>» (κάθε γιατρός τα δικά του).
-  // Χωρίς ρύθμιση → οι 9 πρώτες «Συχνές στην κλινική».
-  const XB = {items:null, at:0};
-  try{ const c = JSON.parse(localStorage.getItem('pdx_exbtn')||'null'); if(c && Array.isArray(c.items)) XB.items = rfClean(c.items); }catch(e){}
-  window.pdxExBtns = ()=>(XB.items || window.pdxRefFav.slice(0,9)).map(x=>{ const f = window.pdxRefFav.find(y=>rfN(y[0])===rfN(x[0])); return [x[0], x[1]||(f&&f[1])||'', (x[2]||(f&&f[2]))?1:0]; });
+  // 🧾 18/11 19:20 (χρήστης: «αντί για κουμπιά που πιάνουν όλη την οθόνη → ΟΜΑΔΕΣ: πατάω Βιοχημικές και βγάζει τις επιλογές· Υπέρηχοι → λίστα, διαλέγω όσα θέλω·
+  // φτιάχνω εγώ ό,τι ομάδες θέλω στις ρυθμίσεις»). ΠΡΟΣΩΠΙΚΕΣ ομάδες: {groups:[{g, ic, items:[[όνομα, είδος, ep]]}]} στο localStorage pdx_exgrp + oncall_labs «exbtn|<uid>».
+  // Χωρίς ρύθμιση → ομάδες από τις «Συχνές στην κλινική» ανά είδος (οι υπέρηχοι χωριστά).
+  const XB = {groups:null, at:0};
+  const xbIc = g=>(g = rfN(g), 0) || /βιοχημ/i.test(g)?'🧪':/μικροβ|καλλιέργ/i.test(g)?'🧫':/αιματ|^αιμα/i.test(g)?'🩸':/ουρων/i.test(g)?'💧':/υπερηχ|u\/s/i.test(g)?'🔊':/απεικον|αξονικ|ct|mri|μαγνητ|ακτινο/i.test(g)?'🩻':/ενδοσκ|κυστεοσκ/i.test(g)?'🔭':/ορμον/i.test(g)?'⚗️':/λειτουργ|ουροροο/i.test(g)?'📈':'📋';
+  const xbClean = G=>(G||[]).filter(x=>x && String(x.g||'').trim()).map(x=>({g:String(x.g).trim().slice(0,40), ic:String(x.ic||xbIc(x.g)).slice(0,4), items:rfClean(x.items)})).slice(0,20);
+  const xbDef = ()=>{ const G = [], by = {}; window.pdxRefFav.forEach(x=>{ const n = rfN(x[0]), k = /u\/s|υπερηχ/.test(n) ? 'Υπέρηχοι' : /ουρων/.test(n) ? 'Ούρων' : /βιοχημ|αιματολ|ορμον/i.test(x[1]||'') ? 'Αίματος' : /απεικον/i.test(x[1]||'') ? 'Απεικονιστικές' : 'Άλλες'; if(!by[k]){ by[k] = {g:k, ic:xbIc(k), items:[]}; G.push(by[k]); } by[k].items.push(x.slice()); }); return G; };
+  try{ const c = JSON.parse(localStorage.getItem('pdx_exgrp')||'null'); if(c && Array.isArray(c.groups)) XB.groups = xbClean(c.groups); }catch(e){}
+  window.pdxExGroups = ()=>JSON.parse(JSON.stringify(XB.groups || xbDef()));
+  window.pdxExBtns = ()=>[].concat(...window.pdxExGroups().map(g=>g.items));   // όλες οι εξετάσεις των ομάδων (για ep/είδος)
   window.pdxExBtnLoad = async function(){ if(Date.now()-XB.at < 60000) return; XB.at = Date.now();
     try{ const me = await rfMe(); if(!me) return; const r = await sb6.from('oncall_labs').select('data').eq('name_key','exbtn|'+me).maybeSingle(); const d = r && r.data && r.data.data;
-      if(d && Array.isArray(d.items)){ XB.items = rfClean(d.items); try{ localStorage.setItem('pdx_exbtn', JSON.stringify({items:XB.items})); }catch(e){} } }catch(e){} };
-  async function xbSave(items){ XB.items = rfClean(items); try{ localStorage.setItem('pdx_exbtn', JSON.stringify({items:XB.items})); }catch(e){}
-    try{ const me = await rfMe(); if(!me) return {err:'δεν βρέθηκε ο χρήστης'}; const r = await sb6.from('oncall_labs').upsert({name_key:'exbtn|'+me, name:'Κουμπιά εξετάσεων (συνταγογράφηση)', pid:null, data:{items:XB.items, updated:Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); if(r && r.error) return {err:r.error.message}; }catch(e){ return {err:String(e.message||e)}; }
+      if(d && Array.isArray(d.groups)){ XB.groups = xbClean(d.groups); try{ localStorage.setItem('pdx_exgrp', JSON.stringify({groups:XB.groups})); }catch(e){} } }catch(e){} };
+  async function xbSave(G){ XB.groups = G ? xbClean(G) : null; try{ G ? localStorage.setItem('pdx_exgrp', JSON.stringify({groups:XB.groups})) : localStorage.removeItem('pdx_exgrp'); }catch(e){}
+    try{ const me = await rfMe(); if(!me) return {ok:true, local:true}; const r = await sb6.from('oncall_labs').upsert({name_key:'exbtn|'+me, name:'Ομάδες εξετάσεων (συνταγογράφηση)', pid:null, data:{groups:XB.groups || xbDef(), updated:Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); if(r && r.error) return {err:r.error.message}; }catch(e){ return {err:String(e.message||e)}; }
     return {ok:true}; }
   window.pdxExBtnPage = async function(after){
     await Promise.all([window.pdxRefFavLoad(), window.pdxExBtnLoad()]);
     const ov = document.createElement('div'); ov.className = 'rxs rfed';
     ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#F2F2F7;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:40px;font-family:-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif';
+    let op = -1;   // ανοιχτή ομάδα για επεξεργασία
     const close = ()=>{ ov.remove(); if(after) after(); };
-    const save = async L=>{ const r = await xbSave(L); if(r.err) toast('Δεν αποθηκεύτηκε: '+r.err); draw(); };
+    const save = async G=>{ const r = await xbSave(G); if(r.err) toast('Δεν αποθηκεύτηκε: '+r.err); draw(); };
+    const IB = 'border:0;background:none;color:#007AFF;font-size:17px;min-width:44px;min-height:44px;cursor:pointer';
     const draw = ()=>{
-      const L = window.pdxExBtns(), have = n=>L.some(y=>rfN(y[0])===rfN(n));
-      const rest = window.pdxRefFav.filter(x=>!have(x[0]));
-      let h = '<div style="position:sticky;top:0;z-index:2;background:rgba(242,242,247,.94);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);display:flex;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 6px;border-bottom:.5px solid rgba(60,60,67,.18)"><button data-xbx style="border:0;background:none;color:#007AFF;font-size:17px;min-height:44px;padding:0 8px;cursor:pointer">‹ Πίσω</button><b style="flex:1;text-align:center;font-size:17px">Κουμπιά εξετάσεων</b><span style="width:70px"></span></div>';
-      h += '<div class="f">Αυτά φαίνονται στη <b>Συνταγογράφηση</b> — ένα πάτημα = ✓ στην εξέταση. Η σειρά εδώ είναι η σειρά των κουμπιών.</div>';
-      h += '<div class="h">Τα κουμπιά μου · '+L.length+'</div><div class="g">'+(L.length ? L.map((x,i)=>'<div class="med" style="min-height:50px"><div class="m"><b style="font-size:16px;white-space:normal">'+E(x[0])+'</b><span>'+(x[2]?'<b style="color:#1F6F43">✓ κατάλογος</b> · ':'')+E(x[1]||'—')+'</span></div>'+(i?'<button data-xbu="'+i+'" aria-label="Πιο πάνω" style="border:0;background:none;color:#007AFF;font-size:18px;min-width:44px;min-height:44px">↑</button>':'')+'<button class="del" data-xbd="'+i+'" aria-label="Αφαίρεση" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('') : '<div class="r" style="color:#8E8E93">Κανένα κουμπί</div>')+'</div>';
-      if(rest.length) h += '<div class="h">Πρόσθεσε από τις συχνές της κλινικής</div><div class="g" style="padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px">'+rest.map(x=>'<button class="ch" data-xba="'+E(x[0])+'" style="min-height:40px">＋ '+E(x[0])+'</button>').join('')+'</div>';
-      h += '<div class="h">Ή οποιαδήποτε από τον κατάλογο</div><div class="g"><div class="r"><input class="t" data-xbq type="search" autocomplete="off" placeholder="🔎 π.χ. υπέρηχος κοιλίας, PSA…" enterkeyhint="search"></div><div data-xbres></div></div>';
-      h += '<div class="r" style="justify-content:center;margin-top:14px"><button data-xbr style="border:0;background:none;color:#8E8E93;font-size:14px;min-height:44px">Επαναφορά (συχνές της κλινικής)</button></div>';
+      const G = window.pdxExGroups();
+      let h = '<div style="position:sticky;top:0;z-index:2;background:rgba(242,242,247,.94);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);display:flex;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 6px;border-bottom:.5px solid rgba(60,60,67,.18)"><button data-xbx style="'+IB+';padding:0 8px">‹ Πίσω</button><b style="flex:1;text-align:center;font-size:17px">Ομάδες εξετάσεων</b><span style="width:70px"></span></div>';
+      h += '<div class="f">Στη <b>Συνταγογράφηση</b> πατάς μια ομάδα και διαλέγεις όσες εξετάσεις θέλεις. Πάτα μια ομάδα εδώ για να αλλάξεις τις εξετάσεις της.</div>';
+      h += '<div class="h">Οι ομάδες μου · '+G.length+'</div><div class="g">'+G.map((g,i)=>{
+        let r = '<div class="med" style="min-height:52px"><div class="m" data-xbo="'+i+'" style="cursor:pointer"><b style="font-size:16px">'+E(g.ic+' '+g.g)+'</b><span>'+g.items.length+(g.items.length===1?' εξέταση':' εξετάσεις')+(op===i?'':' · πάτα για αλλαγές')+'</span></div>'+(i?'<button data-xbu="'+i+'" aria-label="Πιο πάνω" style="'+IB+'">↑</button>':'')+'<button data-xbn="'+i+'" aria-label="Μετονομασία" style="'+IB+'">✎</button><button class="del" data-xbgd="'+i+'" aria-label="Διαγραφή ομάδας" style="width:44px;height:44px;border-radius:22px">✕</button></div>';
+        if(op===i) r += '<div style="padding:4px 12px 12px 22px;background:#F7F7FA">'+g.items.map((x,j)=>'<div class="r" style="display:flex;align-items:center;gap:6px;min-height:44px;border-bottom:.5px solid #E5E5EA"><span style="flex:1;font-size:15px">'+E(x[0])+(x[2]?' <b style="color:#1F6F43;font-size:12px">✓</b>':'')+'</span>'+(j?'<button data-xbiu="'+i+'|'+j+'" style="'+IB+'">↑</button>':'')+'<button data-xbid="'+i+'|'+j+'" style="'+IB+';color:#FF3B30">✕</button></div>').join('')
+          + '<div class="r" style="margin-top:8px"><input class="t" data-xbq type="search" autocomplete="off" placeholder="🔎 Πρόσθεσε εξέταση στο «'+E(g.g)+'»…" enterkeyhint="search" style="width:100%"></div><div data-xbres></div></div>';
+        return r; }).join('')+'</div>';
+      h += '<div class="g" style="margin-top:12px"><div class="r" style="display:flex;gap:8px;padding:10px 12px"><input class="t" data-xbng autocomplete="off" placeholder="Νέα ομάδα (π.χ. Ορμονικές, Προεγχειρητικός)" style="flex:1;min-width:0"><button class="addb" data-xbadd style="height:44px">＋ Ομάδα</button></div></div>';
+      h += '<div class="r" style="justify-content:center;margin-top:14px;display:flex"><button data-xbr style="border:0;background:none;color:#8E8E93;font-size:14px;min-height:44px">Επαναφορά (ομάδες από τις συχνές της κλινικής)</button></div>';
       ov.innerHTML = h;
-      window.pdxExamLive(ov.querySelector('[data-xbq]'), ov.querySelector('[data-xbres]'), x=>{ const L0 = window.pdxExBtns(); if(!L0.some(y=>rfN(y[0])===rfN(x.n))) L0.push([x.n, x.k||'', x.ep?1:0]); save(L0); toast('✓ Νέο κουμπί «'+x.n+'»'); }, {have:()=>window.pdxExBtns().map(y=>y[0]), noFav:true});
+      const q = ov.querySelector('[data-xbq]');
+      if(q) window.pdxExamLive(q, ov.querySelector('[data-xbres]'), x=>{ const G0 = window.pdxExGroups(), g = G0[op]; if(!g) return; if(!g.items.some(y=>rfN(y[0])===rfN(x.n))) g.items.push([x.n, x.k||'', x.ep?1:0]); save(G0).then(()=>{ const q2 = ov.querySelector('[data-xbq]'); q2 && q2.focus(); }); toast('✓ «'+x.n+'» → '+g.g); }, {have:()=>{ const g = window.pdxExGroups()[op]; return g ? g.items.map(y=>y[0]) : []; }, noFav:true});
     };
-    ov.addEventListener('click', e=>{ const t = e.target;
+    ov.addEventListener('click', e=>{ const t = e.target, G = window.pdxExGroups();
       if(t.closest('[data-xbx]')){ close(); return; }
-      const L = window.pdxExBtns();
-      const a = t.closest('[data-xba]'); if(a){ const f = window.pdxRefFav.find(y=>y[0]===a.dataset.xba); if(f){ L.push(f.slice()); save(L); } return; }
-      const d = t.closest('[data-xbd]'); if(d){ L.splice(+d.dataset.xbd, 1); save(L); return; }
-      const u = t.closest('[data-xbu]'); if(u){ const i = +u.dataset.xbu; const y = L[i]; L[i] = L[i-1]; L[i-1] = y; save(L); return; }
-      if(t.closest('[data-xbr]')){ XB.items = null; try{ localStorage.removeItem('pdx_exbtn'); }catch(er){} save(window.pdxRefFav.slice(0,9)); return; }
+      const o = t.closest('[data-xbo]'); if(o){ const i = +o.dataset.xbo; op = op===i ? -1 : i; draw(); return; }
+      const u = t.closest('[data-xbu]'); if(u){ const i = +u.dataset.xbu; [G[i-1], G[i]] = [G[i], G[i-1]]; if(op===i) op = i-1; else if(op===i-1) op = i; save(G); return; }
+      const n = t.closest('[data-xbn]'); if(n){ const g = G[+n.dataset.xbn]; const v = prompt('Όνομα ομάδας:', g.g); if(!v || !v.trim()) return; g.g = v.trim(); g.ic = xbIc(g.g); save(G); return; }
+      const gd = t.closest('[data-xbgd]'); if(gd){ const i = +gd.dataset.xbgd; if(!confirm('Διαγραφή της ομάδας «'+G[i].g+'»;')) return; G.splice(i,1); op = -1; save(G); return; }
+      const iu = t.closest('[data-xbiu]'); if(iu){ const [i,j] = iu.dataset.xbiu.split('|').map(Number), L = G[i].items; [L[j-1], L[j]] = [L[j], L[j-1]]; save(G); return; }
+      const id = t.closest('[data-xbid]'); if(id){ const [i,j] = id.dataset.xbid.split('|').map(Number); G[i].items.splice(j,1); save(G); return; }
+      if(t.closest('[data-xbadd]')){ const v = (ov.querySelector('[data-xbng]').value||'').trim(); if(!v) return; G.push({g:v, ic:xbIc(v), items:[]}); op = G.length-1; save(G).then(()=>{ const q = ov.querySelector('[data-xbq]'); q && q.focus(); }); return; }
+      if(t.closest('[data-xbr]')){ if(!confirm('Επαναφορά των ομάδων στις προεπιλογές;')) return; op = -1; save(null); return; }
     });
     document.body.appendChild(ov); draw();
   };
@@ -16752,15 +16764,19 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     function drawEx(){
       exPairs();
       const box = root.querySelector('[data-exl]');
-      // 🧾 18/11 19:10 (χρήστης: «Α+Γ — τα λιγότερα δυνατά κλικ για εξετάσεις»): ΚΟΥΜΠΙΑ με ένα πάτημα (✓/όχι) — τα δικά σου (⚙ Ρυθμίσεις → Κουμπιά εξετάσεων)·
-      // ό,τι μπήκε αλλιώς (αναζήτηση, σάρωση, πακέτο, «μαζί με») φαίνεται κι αυτό ως ✓ κουμπί
-      if(box && window.pdxExBtns){ box.style.display = ''; box.classList.add('xbg');
+      // 🧾 18/11 19:20 (χρήστης: «αντί για κουμπιά σε όλη την οθόνη → ΟΜΑΔΕΣ»): επάνω οι επιλεγμένες (✓ … ✕), από κάτω μία γραμμή ομάδες·
+      // πάτημα ομάδας → ανοίγει λίστα με τις εξετάσεις της, διαλέγεις όσες θέλεις (μένει ανοιχτή). Ομάδες: ⚙ Ρυθμίσεις → Ομάδες εξετάσεων
+      if(box && window.pdxExGroups){ box.style.display = ''; box.classList.add('xbg');
         const xbL = n=>{ n = String(n||''); return /αντιβιόγραμμα|test ευαισθησ/i.test(n) ? 'Αντιβιόγραμμα' : n.split(' - ')[0].slice(0,48); };
-        const B = window.pdxExBtns(), on = n=>S.ex.find(x=>x.n.toLowerCase()===String(n).toLowerCase());
-        const extra = S.ex.filter(x=>!B.some(b=>b[0].toLowerCase()===x.n.toLowerCase()));
-        box.innerHTML = extra.map(x=>'<button class="ch on" data-exf="'+E(x.n)+'" title="'+E(x.src||'')+'">✓ '+E(xbL(x.n))+(x.ep?'':' <b style="color:#FFD60A">⚠</b>')+'</button>').join('')
-          + B.map(b=>{ const x = on(b[0]); return '<button class="ch'+(x?' on':'')+'" data-exf="'+E(b[0])+'">'+(x?'✓ ':'')+E(b[0])+'</button>'; }).join('')
-          + '<button class="ch xbo" data-a="addex">🔎 άλλη…</button><button class="ch xbo" data-a="xbset" aria-label="Ποια κουμπιά φαίνονται">⚙︎ κουμπιά</button>';
+        const G = window.pdxExGroups(), lo = s=>String(s).toLowerCase(), on = n=>S.ex.some(x=>lo(x.n)===lo(n));
+        if(!(S.xg >= 0 && S.xg < G.length)) S.xg = -1;
+        let h = S.ex.length ? '<div class="xbsel">'+S.ex.map(x=>'<button class="ch on" data-exf="'+E(x.n)+'" title="'+E(x.src||x.n)+'">'+E(xbL(x.n))+(x.ep || window.pdxExBtns().some(b=>lo(b[0])===lo(x.n)) ? '' : ' <b style="color:#FFD60A" title="όχι από τον κατάλογο">⚠</b>')+' <span class="xbx">✕</span></button>').join('')+'</div>' : '';
+        h += '<div class="xbgr">'+G.map((g,i)=>{ const n = g.items.filter(x=>on(x[0])).length; return '<button class="ch xbgc'+(S.xg===i?' op':'')+(n?' has':'')+'" data-xg="'+i+'">'+E(g.ic)+' '+E(g.g)+(n?' <b>'+n+'</b>':'')+' <span class="xbch">'+(S.xg===i?'▴':'▾')+'</span></button>'; }).join('')
+          + '<button class="ch xbo" data-a="addex">🔎 άλλη</button><button class="ch xbo" data-a="xbset" aria-label="Ρύθμιση ομάδων">⚙︎</button></div>';
+        if(S.xg >= 0){ const g = G[S.xg];
+          h += '<div class="xbl">'+(g.items.length ? g.items.map(x=>{ const o = on(x[0]); return '<button class="xbi'+(o?' on':'')+'" data-exf="'+E(x[0])+'"><span class="xbc">'+(o?'✓':'')+'</span><span class="xbn">'+E(x[0])+'</span></button>'; }).join('') : '<div class="xbe">Κενή ομάδα — ⚙︎ για να βάλεις εξετάσεις</div>')
+            + '<button class="xbdone" data-xg="'+S.xg+'">Τέλος</button></div>'; }
+        box.innerHTML = h;
       } else if(box){ box.style.display = '';
         box.innerHTML = S.ex.map((x,i)=>'<div class="med"><div class="aic ref">'+(/καλλιέργ/i.test(x.n)?'🧫':/υπερηχ|u\/s|αξονικ|ct|mri|μαγνητ|ακτινογρ/i.test(x.n)?'🩻':'🧪')+'</div><div class="m"><b style="white-space:normal">'+E(x.n)+'</b><span>'+(x.src && x.src.toLowerCase()!==x.n.toLowerCase() ? 'γράφτηκε «'+E(x.src)+'»' : E(((String(x.k||'').match(/\(([^)]+)\)/)||[])[1]) || String(x.k||'Εξέταση').split(' ').slice(0,3).join(' ')))+'</span></div>'+(x.ep?'<span class="aok">✓</span>':'<span class="aok warn" title="όχι από τον κατάλογο">⚠</span>')+'<button class="del" data-exdel="'+i+'" aria-label="Αφαίρεση">✕</button></div>').join('') + '<div class="aadd" data-a="addex">＋ Εξέταση</div>'; }
       const fb = root.querySelector('[data-exfavs]'); if(fb) fb.innerHTML = REF_FAV.map(f=>'<button class="ch'+(S.ex.some(x=>x.n.toLowerCase()===f[0].toLowerCase())?' on':'')+'" data-exf="'+E(f[0])+'" style="min-height:40px">'+(f[2]?'✓ ':'⭐ ')+E(f[0])+'</button>').join('');
@@ -17088,6 +17104,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     root.addEventListener('click', e=>{
       const t = e.target;
       const md = t.closest('[data-mode]'); if(md){ if(S.mode!==md.dataset.mode){ S.mode = md.dataset.mode; draw(); } return; }
+      const xg = t.closest('[data-xg]'); if(xg){ const i = +xg.dataset.xg; S.xg = S.xg===i ? -1 : i; drawEx(); if(S.xg>=0) setTimeout(()=>{ const l = root.querySelector('[data-exl] .xbl'); if(l) l.scrollIntoView({block:'nearest', behavior:'smooth'}); }, 30); return; }
       const xf = t.closest('[data-exf]'); if(xf){ const n = xf.dataset.exf, i = S.ex.findIndex(x=>x.n.toLowerCase()===n.toLowerCase()), f0 = (window.pdxExBtns ? pdxExBtns() : []).concat(REF_FAV).find(f=>f[0]===n); if(i>=0) S.ex.splice(i,1); else S.ex.push({n, k:exKind(n), ep:!!(f0&&f0[2])}); drawEx(); return; }
       const rdl = t.closest('[data-rdel]'); if(rdl){ rHide([rdl.dataset.rdel]); drawRecent(); return; }
       if(t.closest('[data-rclr]')){ if(!confirm('Καθαρισμός της λίστας «Πρόσφατοι»; (μόνο για εσένα — οι συνταγές δεν σβήνονται)')) return; rHide(recentAmka().map(x=>x.amka)); drawRecent(); return; }
