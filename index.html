@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v572';
+const APP_VER = '2026-11-18-v573';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25485,7 +25485,8 @@ window.CLS_MODE='A';
     ptcBusy = true;
     try{
       const cur = await window.pdxPtCultGet();
-      if(!force && cur && Date.now() - cur.at < PTC_TTL) return;
+      const stale = cur && Object.values(cur.by||{}).some(c=>c && !c.none && !Array.isArray(c.rx));   // 18/11: παλιά μορφή (χωρίς γραμμές αποτελέσματος) → ξανά τώρα
+      if(!force && !stale && cur && Date.now() - cur.at < PTC_TTL) return;
       const rj = await sb6.from('oncall_jobs').select('id').eq('kind','orcult').in('status',['new','seen','running']).gte('created_at', new Date(Date.now()-10*60000).toISOString()).limit(1);
       if(!force && (rj.data||[]).length) return;
       const r = await sb6.from('oncall_labs').select('pid').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%').gte('updated_at', new Date(Date.now()-5*864e5).toISOString());
@@ -25745,9 +25746,13 @@ window.CLS_MODE='A';
       let prevBy = {}; try{ const r0 = await sb6.from('oncall_labs').select('data').eq('name_key','orcult|'+st.iso).maybeSingle(); const e0 = r0 && r0.data && r0.data.data && r0.data.data.enc;
         if(e0){ const P0 = await pdxCK.decrypt(e0); (P0.pts||[]).forEach(c=>{ prevBy[c.pid] = c; }); list.forEach(x=>{ if(x.pid && prevBy[x.pid] && !x.c) x.c = prevBy[x.pid]; }); st.cuAt = P0.at || 0; pg.redraw(); } }catch(e){}
       // 🧫 16/11: ό,τι έχει ήδη φέρει η αθόρυβη προ-φόρτωση (<2 ώρες) → ΑΜΕΣΑ, χωρίς νέο ψάξιμο στο Medilabi (μόνο «Ξανά έλεγχος» ξαναψάχνει)
-      let need = pids;
-      try{ const PC = await window.pdxPtCultGet(); if(PC && PC.by){ list.forEach(x=>{ const c = x.pid && PC.by[x.pid]; if(c && (!x.c || (c.at||0) >= (x.c.at||0))) x.c = c; });
-          if(!force && Date.now() - PC.at < 2*3600e3) need = pids.filter(pid=>!PC.by[pid]); if(need.length < pids.length){ st.cuAt = Math.max(st.cuAt||0, PC.at); pg.redraw(); } } }catch(e){}
+      // 🐞 18/11 08:01 (χρήστης: «πάλι δείχνει δες»): παλιές αποθηκευμένες καλλιέργειες (χωρίς γραμμές αποτελέσματος «rx») ΠΑΤΟΥΣΑΝ πάνω στις νέες
+      // (σύγκριση c.at που δεν υπήρχε → 0>=0). Τώρα: ό,τι δεν έχει rx = ΠΑΛΙΟ → δεν χρησιμοποιείται για αποτέλεσμα και ξαναδιαβάζεται.
+      const fresh = c=>!!(c && (Array.isArray(c.rx) || c.none));
+      list.forEach(x=>{ if(x.c && !fresh(x.c) && x.c.st!=='pend') x.c = null; });
+      let need = pids.filter(pid=>{ const x = list.find(y=>y.pid===pid); return force || !x || !fresh(x.c); });
+      try{ const PC = await window.pdxPtCultGet(); if(PC && PC.by){ list.forEach(x=>{ const c = x.pid && PC.by[x.pid]; if(c && fresh(c) && (!fresh(x.c) || (c.at||PC.at||0) >= (x.c.at||0))){ x.c = Object.assign({}, c, {at:c.at||PC.at||0}); } });
+          if(!force && Date.now() - PC.at < 2*3600e3) need = pids.filter(pid=>{ const x = list.find(y=>y.pid===pid); return !x || !fresh(x.c); }); if(need.length < pids.length){ st.cuAt = Math.max(st.cuAt||0, PC.at); pg.redraw(); } } }catch(e){}
       if(!pids.length || !need.length){ if(pids.length){ cultLocalPut({at:st.cuAt||Date.now(), list}); } st.cubusy = ''; pg.redraw(); return; }
       st.cubusy = 'Καλλιέργειες από το Medilabi ('+need.length+')…'; pg.redraw();
       try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες χειρουργείου', name_key:'zzz_orcult', status:'new', payload:{pids:need, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
@@ -25756,7 +25761,7 @@ window.CLS_MODE='A';
         if(!j || j.status!=='done') throw new Error((j && j.note) || 'το bot δεν απάντησε σε 3′');
         const D = await pdxCK.decrypt(j.payload.result.enc); const by = {}; (D.pts||[]).forEach(c=>{ by[c.pid] = c; });
         const sig = c=>c ? [c.st||'', c.aa||'', c.date||'', c.res||''].join('|') : '';
-        list.forEach(x=>{ if(!x.pid || need.indexOf(x.pid)<0) return; const nw = by[x.pid] || {err:1}, old = prevBy[x.pid]; if(old && sig(old) !== sig(nw) && !nw.err) nw.isNew = 1; else if(old && old.isNew && sig(old) === sig(nw) && Date.now() - (old.newAt||0) < 12*3600e3){ nw.isNew = 1; nw.newAt = old.newAt; } if(nw.isNew && !nw.newAt) nw.newAt = Date.now(); x.c = nw; });
+        list.forEach(x=>{ if(!x.pid || need.indexOf(x.pid)<0) return; const nw = by[x.pid] || {err:1}, old = prevBy[x.pid]; if(old && sig(old) !== sig(nw) && !nw.err) nw.isNew = 1; else if(old && old.isNew && sig(old) === sig(nw) && Date.now() - (old.newAt||0) < 12*3600e3){ nw.isNew = 1; nw.newAt = old.newAt; } if(nw.isNew && !nw.newAt) nw.newAt = Date.now(); if(!nw.at) nw.at = Date.now(); x.c = nw; });
         st.cuAt = Date.now(); st.cuerr = ''; cultLocalPut({at:st.cuAt, list});
         try{ const enc = await pdxCK.encrypt({at:st.cuAt, pts:list.filter(x=>x.pid && x.c && !x.c.err).map(x=>x.c)}); await sb6.from('oncall_labs').upsert({name_key:'orcult|'+st.iso, name:'καλλιέργειες χειρουργείου', pid:null, data:{enc, at:st.cuAt}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){}
         sb6.from('oncall_jobs').update({payload:{pids:need, quiet:true, read:true}}).eq('id', id).then(()=>{}, ()=>{});   // το κρυπτογραφημένο αποτέλεσμα σβήνεται μόλις διαβαστεί
