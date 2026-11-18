@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v582';
+const APP_VER = '2026-11-18-v583';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8968,6 +8968,7 @@ document.head.appendChild(st);
       {ic:'🔔', t:'Ειδοποιήσεις', v: push?'Ναι':'Όχι', on:"pdxNotifPage()"},
       {ic:'🛏', t:'Οι θάλαμοί μου', v:(M.rooms&&M.rooms.length?esc(M.rooms.join(', ')):''), on:"pdxDo('mine')"},
       typeof window.pdxPacks==='function' && {ic:'📦', t:'Πακέτα', on:"window.pdxPacks && pdxPacks()"},
+      typeof window.pdxExBtnPage==='function' && {ic:'🧾', t:'Κουμπιά εξετάσεων', sub:'ποιες εξετάσεις φαίνονται με ένα πάτημα στη συνταγογράφηση', on:"pdxExBtnPage()"},
       {ic:'☑', t:'Εκκρεμότητες', on:"pdxDo('todoopts')"},
       att && {ic:'📞', t:'Κλήσεις για εκτίμηση', on:"pdxDo('consult')"},
       {ic:'⚠', t:'Όρια εργαστηριακών', on:"pdxDo('labwarn')"}
@@ -16231,7 +16232,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs .ch.on{background:#1D4E80;color:#fff}.rxs .ch small{font-weight:400;opacity:.7;margin-left:4px}
   .rxs .med{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;position:relative}
   .rxs .med+.med:before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid #E1E1E6}
-  .rxs .med.jr{flex-wrap:wrap}.rxs .med.jr .m{flex:1 1 70%}.rxs .med.jr>button{flex:1 1 100%!important;margin-left:22px;min-height:40px}
+  .rxs .g.xbg{display:flex;flex-wrap:wrap;gap:8px;padding:12px}.rxs .g.xbg .ch{min-height:40px;font-size:15px;white-space:normal;text-align:left;max-width:100%;flex:0 1 auto}.rxs .g.xbg .ch.xbo{background:transparent;border:1.5px dashed #C7C7CC;color:#007AFF}.rxs .go.vcl{background:#34C759;margin-top:8px}.rxs .med.jr{flex-wrap:wrap}.rxs .med.jr .m{flex:1 1 70%}.rxs .med.jr>button{flex:1 1 100%!important;margin-left:22px;min-height:40px}
   .rxs .med .m{flex:1;min-width:0}.rxs .med .m b{font-size:17px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rxs .med .m span{font-size:14px;color:#6B6B70}
   .rxs .stp{display:flex;align-items:center;background:#F2F2F7;border-radius:9px;flex:none}
@@ -16479,7 +16480,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     await window.pdxRefFavLoad();
     if(!(await window.pdxRefFavCanEdit())){ toast('✏️ Τη λίστα την αλλάζει ο διαχειριστής ή ο υπεύθυνός της'); return; }
     const ov = document.createElement('div'); ov.className = 'rxs rfed';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:9750;background:#F2F2F7;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:40px;font-family:-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#F2F2F7;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:40px;font-family:-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif';
     let ed = -1, msg = '';
     const close = ()=>{ ov.remove(); if(after) after(); };
     const draw = ()=>{
@@ -16504,6 +16505,46 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         if(r.err) msg = 'Δεν αποθηκεύτηκε: '+r.err; else { ed = -1; toast('✓ Αποθηκεύτηκε'); } draw(); return; }
       const dd = t.closest('[data-rfd]'); if(dd){ const old = window.pdxRefFav[+dd.dataset.rfd]; if(!old || !confirm('Διαγραφή της «'+old[0]+'» από τις συχνές της κλινικής;')) return;
         const r = await rfPatch(L0=>L0.filter(y=>rfN(y[0])!==rfN(old[0]))); if(r.err) msg = 'Δεν αποθηκεύτηκε: '+r.err; else toast('Διαγράφηκε'); draw(); return; }
+    });
+    document.body.appendChild(ov); draw();
+  };
+  // 🧾 18/11 19:10 (χρήστης: «τα λιγότερα κλικ για εξετάσεις — και να διαλέγω σε ρυθμίσεις ποια κουμπιά να εμφανίζονται»)
+  // ΠΡΟΣΩΠΙΚΑ κουμπιά εξετάσεων της συνταγογράφησης: [[όνομα, είδος, ep]] στο localStorage + oncall_labs «exbtn|<uid>» (κάθε γιατρός τα δικά του).
+  // Χωρίς ρύθμιση → οι 9 πρώτες «Συχνές στην κλινική».
+  const XB = {items:null, at:0};
+  try{ const c = JSON.parse(localStorage.getItem('pdx_exbtn')||'null'); if(c && Array.isArray(c.items)) XB.items = rfClean(c.items); }catch(e){}
+  window.pdxExBtns = ()=>(XB.items || window.pdxRefFav.slice(0,9)).map(x=>{ const f = window.pdxRefFav.find(y=>rfN(y[0])===rfN(x[0])); return [x[0], x[1]||(f&&f[1])||'', (x[2]||(f&&f[2]))?1:0]; });
+  window.pdxExBtnLoad = async function(){ if(Date.now()-XB.at < 60000) return; XB.at = Date.now();
+    try{ const me = await rfMe(); if(!me) return; const r = await sb6.from('oncall_labs').select('data').eq('name_key','exbtn|'+me).maybeSingle(); const d = r && r.data && r.data.data;
+      if(d && Array.isArray(d.items)){ XB.items = rfClean(d.items); try{ localStorage.setItem('pdx_exbtn', JSON.stringify({items:XB.items})); }catch(e){} } }catch(e){} };
+  async function xbSave(items){ XB.items = rfClean(items); try{ localStorage.setItem('pdx_exbtn', JSON.stringify({items:XB.items})); }catch(e){}
+    try{ const me = await rfMe(); if(!me) return {err:'δεν βρέθηκε ο χρήστης'}; const r = await sb6.from('oncall_labs').upsert({name_key:'exbtn|'+me, name:'Κουμπιά εξετάσεων (συνταγογράφηση)', pid:null, data:{items:XB.items, updated:Date.now()}, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); if(r && r.error) return {err:r.error.message}; }catch(e){ return {err:String(e.message||e)}; }
+    return {ok:true}; }
+  window.pdxExBtnPage = async function(after){
+    await Promise.all([window.pdxRefFavLoad(), window.pdxExBtnLoad()]);
+    const ov = document.createElement('div'); ov.className = 'rxs rfed';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#F2F2F7;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:40px;font-family:-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif';
+    const close = ()=>{ ov.remove(); if(after) after(); };
+    const save = async L=>{ const r = await xbSave(L); if(r.err) toast('Δεν αποθηκεύτηκε: '+r.err); draw(); };
+    const draw = ()=>{
+      const L = window.pdxExBtns(), have = n=>L.some(y=>rfN(y[0])===rfN(n));
+      const rest = window.pdxRefFav.filter(x=>!have(x[0]));
+      let h = '<div style="position:sticky;top:0;z-index:2;background:rgba(242,242,247,.94);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);display:flex;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 6px;border-bottom:.5px solid rgba(60,60,67,.18)"><button data-xbx style="border:0;background:none;color:#007AFF;font-size:17px;min-height:44px;padding:0 8px;cursor:pointer">‹ Πίσω</button><b style="flex:1;text-align:center;font-size:17px">Κουμπιά εξετάσεων</b><span style="width:70px"></span></div>';
+      h += '<div class="f">Αυτά φαίνονται στη <b>Συνταγογράφηση</b> — ένα πάτημα = ✓ στην εξέταση. Η σειρά εδώ είναι η σειρά των κουμπιών.</div>';
+      h += '<div class="h">Τα κουμπιά μου · '+L.length+'</div><div class="g">'+(L.length ? L.map((x,i)=>'<div class="med" style="min-height:50px"><div class="m"><b style="font-size:16px;white-space:normal">'+E(x[0])+'</b><span>'+(x[2]?'<b style="color:#1F6F43">✓ κατάλογος</b> · ':'')+E(x[1]||'—')+'</span></div>'+(i?'<button data-xbu="'+i+'" aria-label="Πιο πάνω" style="border:0;background:none;color:#007AFF;font-size:18px;min-width:44px;min-height:44px">↑</button>':'')+'<button class="del" data-xbd="'+i+'" aria-label="Αφαίρεση" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('') : '<div class="r" style="color:#8E8E93">Κανένα κουμπί</div>')+'</div>';
+      if(rest.length) h += '<div class="h">Πρόσθεσε από τις συχνές της κλινικής</div><div class="g" style="padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px">'+rest.map(x=>'<button class="ch" data-xba="'+E(x[0])+'" style="min-height:40px">＋ '+E(x[0])+'</button>').join('')+'</div>';
+      h += '<div class="h">Ή οποιαδήποτε από τον κατάλογο</div><div class="g"><div class="r"><input class="t" data-xbq type="search" autocomplete="off" placeholder="🔎 π.χ. υπέρηχος κοιλίας, PSA…" enterkeyhint="search"></div><div data-xbres></div></div>';
+      h += '<div class="r" style="justify-content:center;margin-top:14px"><button data-xbr style="border:0;background:none;color:#8E8E93;font-size:14px;min-height:44px">Επαναφορά (συχνές της κλινικής)</button></div>';
+      ov.innerHTML = h;
+      window.pdxExamLive(ov.querySelector('[data-xbq]'), ov.querySelector('[data-xbres]'), x=>{ const L0 = window.pdxExBtns(); if(!L0.some(y=>rfN(y[0])===rfN(x.n))) L0.push([x.n, x.k||'', x.ep?1:0]); save(L0); toast('✓ Νέο κουμπί «'+x.n+'»'); }, {have:()=>window.pdxExBtns().map(y=>y[0]), noFav:true});
+    };
+    ov.addEventListener('click', e=>{ const t = e.target;
+      if(t.closest('[data-xbx]')){ close(); return; }
+      const L = window.pdxExBtns();
+      const a = t.closest('[data-xba]'); if(a){ const f = window.pdxRefFav.find(y=>y[0]===a.dataset.xba); if(f){ L.push(f.slice()); save(L); } return; }
+      const d = t.closest('[data-xbd]'); if(d){ L.splice(+d.dataset.xbd, 1); save(L); return; }
+      const u = t.closest('[data-xbu]'); if(u){ const i = +u.dataset.xbu; const y = L[i]; L[i] = L[i-1]; L[i-1] = y; save(L); return; }
+      if(t.closest('[data-xbr]')){ XB.items = null; try{ localStorage.removeItem('pdx_exbtn'); }catch(er){} save(window.pdxRefFav.slice(0,9)); return; }
     });
     document.body.appendChild(ov); draw();
   };
@@ -16649,11 +16690,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 10/11 βράδυ (χρήστης): ΠΡΩΤΑ ο ΑΜΚΑ (ασθενής) και από κάτω επιλογή Συνταγή / Παραπεμπτικό — ΜΙΑ κοινή επίσκεψη (χωρίς διακόπτη «μαζί με τη συνταγή»)
       // 1) Ασθενής
       // 🎨 14/11 23:29 (χρήστης: «θέλω ακριβώς το UI του Α»)
-      let h = '<div class="rxa-top"><a href="/scan" class="rxq-cam" aria-label="Σάρωση με φωτογραφία" title="Σάρωση">📷</a><button data-a="ephist">🗂 Ιστορικό</button><button onclick="window.pdxMyRx&&pdxMyRx()">🧾 Οι συνταγές μου</button><button data-a="vclose" class="pb-okc">✅ Κλείσιμο επίσκεψης</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
+      let h = '<div class="rxa-top"><a href="/scan" class="rxq-cam" aria-label="Σάρωση με φωτογραφία" title="Σάρωση">📷</a><button data-a="ephist">🗂 Ιστορικό</button><button onclick="window.pdxMyRx&&pdxMyRx()">🧾 Οι συνταγές μου</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
       if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka)+aylB(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
       else h += '<div class="r" style="display:flex;align-items:center;gap:8px"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'" style="flex:1;min-width:0"><span data-aylin style="flex:none">'+(S.amka && /^\d{11}$/.test(S.amka) ? aylB(S.amka) : '')+'</span></div><div class="who" data-who></div>';
       h += '</div></div>';
-      if(!d) h += '<div data-recent></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
+      if(!d) h += '<div data-recent></div>';
+      // 🎨 18/11 19:10 (χρήστης: «Γ με το Α»): η ΚΑΤΑΣΤΑΣΗ (συνταγή/παραπεμπτικό/επίσκεψη) αμέσως κάτω από τον ασθενή — όχι στο τέλος της σελίδας
+      h += '<div class="h" data-jobsh style="display:none">Κατάσταση</div><div class="g" data-jobs style="display:none"></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
       // 2) Λογαριασμός
 
       // 🎨 14/11 23:20 (χρήστης: «Α + Β + Δ» — πανεύκολο, λιγότερα κλικ): ΜΙΑ σελίδα (φάρμακα + εξετάσεις μαζί, όχι καρτέλες) + ΜΙΑ γραμμή «γράψε ή πες»
@@ -16686,14 +16729,14 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const icdDefs = ['N39','N40','N20','R31','N30'].concat(S.icdSurg && S.icdSurg!=='N39' ? [S.icdSurg] : []);
       h += '<div class="h">Διάγνωση ICD-10</div><div class="g icdw" data-icdw>'+window.pdxIcdChips(icdDefs, S.icd, RX_ICD_PIN)+'</div>';
       // 5) αποστολή + κατάσταση
-      h += '<div class="g" data-jobs style="margin-top:22px;display:none"></div>';
       h += '<div class="h" style="display:flex;justify-content:space-between;align-items:center">Πρόσφατες συνταγές<button class="pb pb-lnk pb-dngc pb-sm" data-hclr>Καθαρισμός</button></div><div class="g hist" data-hist><div class="r" style="color:#8E8E93">Φόρτωση…</div></div>';
       h += '<div class="f">Το bot ανοίγει επίσκεψη στο e-prescription, γράφει τη συνταγή και <b>σταματά πριν την «Καταχώριση»</b>· την ελέγχεις και την καταχωρίζεις εσύ.</div>';
-      h += '<div class="bar"><button class="go" data-a="goall">Ετοίμασε</button><button data-a="go" style="display:none"></button><button data-a="goref" style="display:none"></button><div class="sum"><select data-epsel2 class="acc" aria-label="Λογαριασμός e-prescription"><option value="">⏳ λογαριασμός…</option></select> · <span data-sum></span></div></div>';
+      h += '<div class="bar"><button class="go" data-a="goall">Ετοίμασε</button><button class="go vcl" data-a="vclose" style="display:none">✅ Κλείσιμο επίσκεψης</button><button data-a="go" style="display:none"></button><button data-a="goref" style="display:none"></button><div class="sum"><select data-epsel2 class="acc" aria-label="Λογαριασμός e-prescription"><option value="">⏳ λογαριασμός…</option></select> · <span data-sum></span></div></div>';
       root.innerHTML = h;
       window.pdxEpAccFill && pdxEpAccFill();
       window.pdxIcdAttach && pdxIcdAttach(root);
-      drawMeds(); drawFavs(); drawHist(); drawRecent(); drawEx(); refresh();
+      drawMeds(); drawFavs(); drawHist(); drawRecent(); drawEx(); drawJobs(); refresh();
+      if(window.pdxExBtnLoad) pdxExBtnLoad().then(()=>{ try{ if(root.isConnected) drawEx(); }catch(e){} });
       window.pdxRxLearnLoad && pdxRxLearnLoad();   // 🧠 μνήμη δοσολογίας (μία φορά)
       { const tq = root.querySelector('[data-rxq]'); if(tq) tq.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); rxQuick(); } }); }   // γραπτά: Enter = μέσα
       { const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
@@ -16708,7 +16751,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(add.length){ S.ex.forEach(x=>{ x.__pp = 1; }); toast('🧪 Μπήκαν και: '+add.map(n=>/Αντιβιόγραμμα/.test(n)?'Αντιβιόγραμμα':n).join(', ')+' (πάνε μαζί)'); } }
     function drawEx(){
       exPairs();
-      const box = root.querySelector('[data-exl]'); if(box){ box.style.display = '';
+      const box = root.querySelector('[data-exl]');
+      // 🧾 18/11 19:10 (χρήστης: «Α+Γ — τα λιγότερα δυνατά κλικ για εξετάσεις»): ΚΟΥΜΠΙΑ με ένα πάτημα (✓/όχι) — τα δικά σου (⚙ Ρυθμίσεις → Κουμπιά εξετάσεων)·
+      // ό,τι μπήκε αλλιώς (αναζήτηση, σάρωση, πακέτο, «μαζί με») φαίνεται κι αυτό ως ✓ κουμπί
+      if(box && window.pdxExBtns){ box.style.display = ''; box.classList.add('xbg');
+        const xbL = n=>{ n = String(n||''); return /αντιβιόγραμμα|test ευαισθησ/i.test(n) ? 'Αντιβιόγραμμα' : n.split(' - ')[0].slice(0,48); };
+        const B = window.pdxExBtns(), on = n=>S.ex.find(x=>x.n.toLowerCase()===String(n).toLowerCase());
+        const extra = S.ex.filter(x=>!B.some(b=>b[0].toLowerCase()===x.n.toLowerCase()));
+        box.innerHTML = extra.map(x=>'<button class="ch on" data-exf="'+E(x.n)+'" title="'+E(x.src||'')+'">✓ '+E(xbL(x.n))+(x.ep?'':' <b style="color:#FFD60A">⚠</b>')+'</button>').join('')
+          + B.map(b=>{ const x = on(b[0]); return '<button class="ch'+(x?' on':'')+'" data-exf="'+E(b[0])+'">'+(x?'✓ ':'')+E(b[0])+'</button>'; }).join('')
+          + '<button class="ch xbo" data-a="addex">🔎 άλλη…</button><button class="ch xbo" data-a="xbset" aria-label="Ποια κουμπιά φαίνονται">⚙︎ κουμπιά</button>';
+      } else if(box){ box.style.display = '';
         box.innerHTML = S.ex.map((x,i)=>'<div class="med"><div class="aic ref">'+(/καλλιέργ/i.test(x.n)?'🧫':/υπερηχ|u\/s|αξονικ|ct|mri|μαγνητ|ακτινογρ/i.test(x.n)?'🩻':'🧪')+'</div><div class="m"><b style="white-space:normal">'+E(x.n)+'</b><span>'+(x.src && x.src.toLowerCase()!==x.n.toLowerCase() ? 'γράφτηκε «'+E(x.src)+'»' : E(((String(x.k||'').match(/\(([^)]+)\)/)||[])[1]) || String(x.k||'Εξέταση').split(' ').slice(0,3).join(' ')))+'</span></div>'+(x.ep?'<span class="aok">✓</span>':'<span class="aok warn" title="όχι από τον κατάλογο">⚠</span>')+'<button class="del" data-exdel="'+i+'" aria-label="Αφαίρεση">✕</button></div>').join('') + '<div class="aadd" data-a="addex">＋ Εξέταση</div>'; }
       const fb = root.querySelector('[data-exfavs]'); if(fb) fb.innerHTML = REF_FAV.map(f=>'<button class="ch'+(S.ex.some(x=>x.n.toLowerCase()===f[0].toLowerCase())?' on':'')+'" data-exf="'+E(f[0])+'" style="min-height:40px">'+(f[2]?'✓ ':'⭐ ')+E(f[0])+'</button>').join('');
       const hh = root.querySelectorAll('.h'); hh.forEach(x=>{ if(/Εξετάσεις/.test(x.textContent) && !x.querySelector('button')) x.textContent = '🧾 Εξετάσεις'+(S.ex.length?' · '+S.ex.length:''); });
@@ -16817,6 +16870,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const gr = root.querySelector('[data-a="goref"]'), ga = root.querySelector('[data-a="goall"]');
         const m0 = !okP ? 'Γράψε ΑΜΚΑ ή διάλεξε ασθενή' : !(S.meds.length || S.ex.length) ? 'Πρόσθεσε φάρμακο ή εξέταση' : !icd.length ? 'Διάλεξε διάγνωση' : (S.ex.length && !window.PDX_REF_ON) ? 'Το παραπεμπτικό δεν είναι ακόμα ενεργό' : '';
         if(go) go.disabled = !!m0 || S.sending || !S.meds.length; if(gr) gr.disabled = !!m0 || S.sending || !S.ex.length;
+        { const vc = root.querySelector('.bar [data-a="vclose"]'), emp = !(S.meds.length || S.ex.length) && !S.sending; if(vc) vc.style.display = (S.jobs.length && okP) ? '' : 'none'; if(ga) ga.style.display = (S.jobs.length && okP && emp) ? 'none' : ''; if(vc) vc.style.marginTop = (ga && ga.style.display==='none') ? '0' : ''; }
         if(ga){ ga.disabled = !!m0 || S.sending; ga.textContent = S.sending ? 'Στέλνω…' : S.meds.length && S.ex.length ? 'Ετοίμασε συνταγή + παραπεμπτικό' : S.ex.length ? 'Ετοίμασε παραπεμπτικό' : 'Ετοίμασε συνταγή'; }
         if(sum) sum.textContent = m0 || [S.meds.length ? S.meds.length+' '+(S.meds.length===1?'φάρμακο':'φάρμακα') : '', S.ex.length ? S.ex.length+' '+(S.ex.length===1?'εξέταση':'εξετάσεις') : '', icd.join(', ')].filter(Boolean).join(' · ') + ' · σταματά πριν την Καταχώριση';
         const ag = root.querySelector('[data-a="again"]'); if(ag){ const j = S.amka && S.hist.find(x=>String((x.payload||{}).amka||'')===S.amka); ag.style.display = j ? '' : 'none'; }
@@ -16940,12 +16994,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       }, 2500);
     }
     function drawJobs(){
-      const box = root.querySelector('[data-jobs]'); if(!box) return; box.style.display = S.jobs.length ? '' : 'none';
+      const box = root.querySelector('[data-jobs]'); if(!box) return; box.style.display = S.jobs.length ? '' : 'none'; { const jh = root.querySelector('[data-jobsh]'); if(jh) jh.style.display = S.jobs.length ? '' : 'none'; }
       const T = {new:['Στάλθηκε · περιμένει υπολογιστή',''], seen:['Τη βρήκε υπολογιστής',''], running:['Ετοιμάζεται στο e-prescription…','run'], done:['Έτοιμη — έλεγξε και πάτα «Καταχώριση» στον υπολογιστή','ok'], review:['Έτοιμη για έλεγχο','ok'], approve:['Εγκρίθηκε — καταχωρίζεται…','run'], approved:['✅ Καταχωρίστηκε','ok'], dismissed:['Έκλεισε',''], failed:['Δεν ολοκληρώθηκε','bad'], cancelled:['Ακυρώθηκε','']};
       // 🎨 18/11 18:45 (χρήστης, στιγμιότυπο: μία λέξη ανά γραμμή): το κουμπί δίπλα στο κείμενο το στρίμωχνε → κουμπιά σε δική τους γραμμή (jr)·
       // σύντομο μήνυμα: μόνο τα ουσιώδη (✅/⚠ + barcode/άυλη), όχι ολόκληρο το κείμενο του e-prescription
       const shortN = (n, st)=>{ n = String(n||''); if(st==='approved'){ const bc = (n.match(/barcode\s*(\d{6,})/)||[])[1]; return (/^⚠/.test(n) ? n.split(' — ')[0].slice(0,110) : '✅ καταχωρίστηκε') + (bc ? ' · '+bc : '') + (/άυλη/.test(n) ? ' · 📲 άυλη' : ''); } return n.replace(/\s*·\s*⏱.*$/,'').slice(0,160); };
       box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = T[x.st]||[x.st,'']; return '<div class="med jr"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;white-space:normal;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(shortN(x.note, x.st))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again pb pb-pri" data-rev="'+x.id+'">👀 Έλεγχος</button>':'')+((x.st==='approved' || x.vc) && x.amka ? '<button class="again pb pb-ok" data-vclose="'+E(x.amka)+'" style="flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
+      refresh();
     }
     async function loadHist(){
       try{ const since = new Date(Date.now()-60*864e5).toISOString();
@@ -17033,7 +17088,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     root.addEventListener('click', e=>{
       const t = e.target;
       const md = t.closest('[data-mode]'); if(md){ if(S.mode!==md.dataset.mode){ S.mode = md.dataset.mode; draw(); } return; }
-      const xf = t.closest('[data-exf]'); if(xf){ const n = xf.dataset.exf, i = S.ex.findIndex(x=>x.n.toLowerCase()===n.toLowerCase()), f0 = REF_FAV.find(f=>f[0]===n); if(i>=0) S.ex.splice(i,1); else S.ex.push({n, k:exKind(n), ep:!!(f0&&f0[2])}); drawEx(); return; }
+      const xf = t.closest('[data-exf]'); if(xf){ const n = xf.dataset.exf, i = S.ex.findIndex(x=>x.n.toLowerCase()===n.toLowerCase()), f0 = (window.pdxExBtns ? pdxExBtns() : []).concat(REF_FAV).find(f=>f[0]===n); if(i>=0) S.ex.splice(i,1); else S.ex.push({n, k:exKind(n), ep:!!(f0&&f0[2])}); drawEx(); return; }
       const rdl = t.closest('[data-rdel]'); if(rdl){ rHide([rdl.dataset.rdel]); drawRecent(); return; }
       if(t.closest('[data-rclr]')){ if(!confirm('Καθαρισμός της λίστας «Πρόσφατοι»; (μόνο για εσένα — οι συνταγές δεν σβήνονται)')) return; rHide(recentAmka().map(x=>x.amka)); drawRecent(); return; }
       if(t.closest('[data-tg0]')){ S.f.part = S.f.part==='0%' ? '25%' : '0%'; syncForm(); return; }
@@ -17122,6 +17177,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           delete a.dataset.busy; a.textContent = t0; toast(msg); })(); }
       else if(a.dataset.a==='ephist'){ const d0 = S.k ? recOf(S.k) : null, am = String((d0 && d0.amka) || S.amka || '').replace(/\D/g,''); if(!/^\d{11}$/.test(am)){ alert('Γράψε πρώτα τον ΑΜΚΑ (11 ψηφία)'); return; } window.__pdxTapPg = pg.el; pdxEpHist(am, (d0 && d0.name) || (S.who && S.who.name) || ''); }
       else if(a.dataset.a==='refedit'){ window.pdxRefFavEdit(()=>drawEx()); }
+      else if(a.dataset.a==='xbset' && window.pdxExBtnPage){ pdxExBtnPage(()=>drawEx()); }
       else if(a.dataset.a==='packsave' && window.pdxPackFrom){ pdxPackFrom('rx', S.meds.map(m=>({t:'med', n:m.name, s:m.strength, dose:String(m.dose||'1'), freq:+m.freq||1, days:+m.days||1, u:m.unit||'δισκίο'})).concat(S.ex.map(x=>({t:'ref', n:x.n, k:x.k||''})))); }
       else if(a.dataset.a==='rxmem' && window.pdxRxMemOpen){ pdxRxMemOpen(); }
       else if(a.dataset.a==='packs' && window.pdxPacksApply){ const d = S.k ? recOf(S.k) : null;   // 📦 πακέτο → μόνο προσθήκη στη λίστα· η αποστολή μένει στο «Ετοίμασε…» (έλεγχος στο κινητό)
