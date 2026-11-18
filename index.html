@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v579';
+const APP_VER = '2026-11-18-v580';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17148,10 +17148,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxRxOut = ()=>window.pdxRxStudio();
   // 📷💊 14/11: συνταγές/παραπεμπτικά που διαβάστηκαν από σάρωση ή Συντόμευση iPhone (oncall_jobs kind «scanrx») → φύλλο «Από σάρωση» → η φόρμα προσυμπληρωμένη
   // 📲 14/11 23:01 (χρήστης: «μόλις ανεβάσω συνταγή/παραπεμπτικό, κουμπί που με πάει κατευθείαν στην έγκριση»): άνοιγμα ενός «📷 Από σάρωση» απευθείας
-  window.pdxScanRxOpen = function(x){ const p = x.payload || {};
+  window.pdxScanRxOpen = async function(x){ const p = x.payload || {};
     // 🗓 16/11: χειρόγραφο πρόχειρο προγράμματος από τη Σάρωση → πρόγραμμα χειρουργείου της ημέρας (γραφόμενης ή επόμενης εργάσιμης) με τους ασθενείς
     if(p.mode==='ordraft'){ const o = p.ordraft || {}, m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(o.date||'').trim()); const iso = m ? (m[3].length===2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : undefined; return window.pdxOrProgOpen(iso, {rows: o.rows||[]}); }
     if(p.mode==='opnote') return window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:p.patient||{}, opnote:p.opnote||{}});
+    // 🔁 18/11 18:25 (χρήστης: «έστειλα παραπεμπτικό και δεν το κατάλαβε καθόλου» — έλειπε ο κατάλογος e-prescription → ΟΛΑ «δεν βρέθηκαν» και πετιούνταν):
+    // ό,τι δεν αντιστοιχίστηκε (ή όλα, αν η αντιστοίχιση δεν έτρεξε) ξαναπερνά ΤΩΡΑ από τον κατάλογο πριν ανοίξει η Συνταγογράφηση
+    const reM = (p.meds||[]).filter(m=>m && (m.miss || !m.ep)), reE = (p.exams||[]).filter(e=>e && typeof e!=='string' && (e.miss || !e.ep));
+    if(!x._rematched && (reM.length || reE.length) && window.pdxAI && window.pdxAiOn && pdxAiOn()){ x._rematched = true;
+      try{ toast('🔎 Αντιστοίχιση με τον κατάλογο e-prescription…'); const m = await pdxAI('συνταγή-κατάλογος', {epmatch:{meds:reM.map(z=>({line:z.src||z.line||z.name, name:z.name||z.line, dose:z.dose, freq:z.freq, days:z.days})), exams:reE.map(z=>z.n)}});
+        if(m && m.ok){ const mm = m.meds||[], ee = m.exams||[]; let i = 0, j = 0;
+          p.meds = (p.meds||[]).map(z=>z && (z.miss || !z.ep) ? (mm[i++] || z) : z); p.exams = (p.exams||[]).map(z=>z && typeof z!=='string' && (z.miss || !z.ep) ? (ee[j++] || z) : z); } }catch(e){} }
     const allOk = p.amka_sure !== false && /^\d{11}$/.test(String(p.amka||'')) && ![].concat(p.meds||[], p.exams||[]).some(x=>!x || x.miss || x.ep===0 || typeof x==='string');
     window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[], autoGo: false});   // 15/11 00:44 (χρήστης: «να πατάω έγκριση ΠΡΙΝ ξεκινήσει να ετοιμάζει συνταγογράφηση από σάρωση»): ΠΟΤΕ αυτόματη έναρξη — μόνο όταν πατήσεις «Ετοίμασε»
     if(allOk) setTimeout(()=>toast('📷 Από τη σάρωση: έλεγξε και πάτα «Ετοίμασε» για να ξεκινήσει το bot'), 500);

@@ -405,10 +405,13 @@ async function sqOne(it){
   return ar; }
 async function sqWork(){ if(sqRun) return; sqRun = true;
   try{ for(;;){ const it = SQ.find(x=>x.st==='wait'); if(!it) break; it.st = 'up'; sqPaint();
-      try{ const ar = await sqOne(it); if(ar && ar.ok){ it.st = 'ok'; it.txt = (WHAT[ar.doc_type] || '🩺 Ιστορικό') + (ar.name ? ' ' + ar.name : ''); it.rx = /^(rx|ref|opnote|ordraft)$/.test(ar.doc_type) ? (ar.rxid || '1') : ''; }
+      try{ const ar = await sqOne(it); if(ar && ar.ok){ it.st = 'ok'; it.txt = (WHAT[ar.doc_type] || '🩺 Ιστορικό') + (ar.name ? ' ' + ar.name : ''); it.rx = /^(rx|ref|opnote|ordraft)$/.test(ar.doc_type) ? (ar.rxid || '1') : ''; it.isRx = /^(rx|ref)$/.test(ar.doc_type); }
         else { it.st = 'fail'; it.txt = ar && ar.msg ? ar.msg : ar && ar.error ? 'Δεν διαβάστηκε: ' + ar.error : 'Δεν διαβάστηκε (AI κλειστό;)'; } }
       catch(e){ it.st = 'fail'; it.txt = String((e && e.message) || e).slice(0, 140); }
-      it.srcs = it.st === 'fail' ? it.srcs : null; sqPaint(); if($('msg').dataset.sq === '1') sqList(); } }
+      it.srcs = it.st === 'fail' ? it.srcs : null; sqPaint(); if($('msg').dataset.sq === '1') sqList();
+      // ➡ 18/11 18:25 (χρήστης: «όταν βάζω συνταγή και την καταλαβαίνει να με πετάει κατευθείαν στη συνταγογράφηση»): συνταγή/παραπεμπτικό
+      // διαβάστηκε ΚΑΙ δεν περιμένει άλλη σάρωση στη σειρά → κατευθείαν στη «Συνταγή» για έλεγχο (το bot ΠΟΤΕ δεν ξεκινά μόνο του)
+      if(it.st === 'ok' && it.rx && it.isRx && !SQ.some(x=>x.st==='wait' || x.st==='up')){ msg('<div style="font-size:54px">✅</div><b style="font-size:20px">' + E(it.txt) + '</b><div>Άνοιγμα Συνταγογράφησης…</div>'); setTimeout(()=>{ location.href = '/?scanrx=' + encodeURIComponent(it.rx); }, 700); return; } } }
   finally{ sqRun = false; } }
 function sqList(){ $('msg').dataset.sq = '1';
   msg('<b style="font-size:18px">📚 Σαρώσεις</b><div style="width:100%;max-width:360px;max-height:55vh;overflow:auto">' + SQ.map((x, i)=>'<div style="display:flex;gap:8px;align-items:center;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.15)"><span style="flex:1;text-align:left">' + (x.st==='ok' ? '✅ ' : x.st==='fail' ? '⚠ ' : '⏳ ') + E(x.txt || (x.st==='up' ? 'ανεβαίνει…' : 'σε αναμονή')) + '</span>'
@@ -485,6 +488,8 @@ async function send(srcs, w0, h0){
           + (/^(rx|ref|opnote|ordraft)$/.test(ar.doc_type) ? '<a class="btn" id="goap" href="/?scanrx=' + encodeURIComponent(ar.rxid || '1') + '" style="text-decoration:none;text-align:center;display:block">✅ Άνοιγμα για έγκριση</a>' : '')   // 14/11 23:01 (χρήστης): κατευθείαν στην έγκριση
           + '<button class="btn' + (/^(rx|ref|opnote|ordraft)$/.test(ar.doc_type) ? ' sec' : '') + '" id="nx">Νέα σάρωση</button>');
         $('nx').onclick = ()=>{ $('msg').style.display = stream ? 'none' : 'flex'; if(!stream) camera(); };
+        // ➡ 18/11 18:25 (χρήστης): συνταγή/παραπεμπτικό → κατευθείαν στη Συνταγογράφηση (έλεγχος· τίποτα δεν στέλνεται μόνο του)
+        if(/^(rx|ref)$/.test(ar.doc_type) && ar.rxid) setTimeout(()=>{ location.href = '/?scanrx=' + encodeURIComponent(ar.rxid); }, 900);
         busy = false; return;
       }
       // πρακτικό / πρόγραμμα: ο παλιός δρόμος τα χειρίζεται (σελίδα πρακτικού, email προγράμματος) → συνέχεια παρακάτω
