@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v569';
+const APP_VER = '2026-11-18-v570';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25426,7 +25426,7 @@ window.CLS_MODE='A';
     for(const f of F.exact.slice(0,2)){ hit = await tryF(f); if(hit) break; }
     if(!hit) for(const f of F.undated){ const x = await tryF(f); if(x.date===iso){ hit = x; break; } }
     if(!hit) return {iso, none:true, list:F.all.slice(0,8).map(f=>f.name), month: mo ? mo.name : ''};
-    return {iso, name:hit.f.name, mt:hit.f.t||0, html:pdxOrSched.render(XLSX, hit.wb).html, pts:pdxOrSched.patients(XLSX, hit.wb).map(p=>({room:p.room, name:p.name, op:p.op||p.dx, surgeon:p.surgeon})), at:Date.now()};
+    return {iso, name:hit.f.name, mt:hit.f.t||0, ri:hit.f.ri, rel:hit.f.rel, html:pdxOrSched.render(XLSX, hit.wb).html, pts:pdxOrSched.patients(XLSX, hit.wb).map(p=>({room:p.room, name:p.name, op:p.op||p.dx, surgeon:p.surgeon})), at:Date.now()};
   };
   // κοινή κρυπτογραφημένη μνήμη
   // ⚡ 15/11 20:24 (χρήστης: «λίστα ΝΠΣ: τα χειρουργεία αργούν να φορτώσουν»): κοινή μνήμη ανά ημέρα (2′) — 31 ασθενείς × ~20 ημέρες ζητούσαν ΤΟ ΙΔΙΟ πρόγραμμα ξανά και ξανά
@@ -25673,10 +25673,34 @@ window.CLS_MODE='A';
     // 🖨 17/11 16:13 (χρήστης: «κουμπί εκτύπωση προγράμματος με καλλιέργειες — νέο κελί δίπλα στον θάλαμο: αρνητική ή ο κωδικός αν εκκρεμεί·
     // να επιλέγω σε ποιον από τους εκτυπωτές Α4»): το Excel του φακέλου + στήλη «ΚΑΛΛΙΕΡΓΕΙΑ»· αν υπάρχει μόνο το PDF του Kerio → οι σελίδες του + πίνακας καλλιεργειών.
     // Εκτύπωση: επιλογή υπολογιστή (ο Α4 εκτυπωτής του) → εργασία orsubmit hOnly (κρυπτογραφημένο HTML, κανένα αρχείο στο δίκτυο).
+    // το ίδιο το .xlsx του φακέλου + σε ποια γραμμή του Excel είναι κάθε ασθενής (για τα κουτάκια)
+    async function cultXlsx(){ let ri = st.o.ri, rel = st.o.rel;
+      if(ri==null || !rel){ st.prbusy = 'Βρίσκω το Excel στον φάκελο…'; pg.redraw(); const o2 = await window.pdxOrSchedFetch(st.iso, t=>{ st.prbusy = t; pg.redraw(); });
+        if(!o2 || o2.none || o2.ri==null || !o2.rel) return null; ri = o2.ri; rel = o2.rel; st.o = Object.assign({}, st.o, {ri, rel}); window.pdxOrSchedPut(Object.assign({}, o2)); }
+      st.prbusy = 'Λήψη του Excel…'; pg.redraw();
+      const b = await orGetFile(ri, rel); await orLibs(); const wb = XLSX.read(b, {type:'array'});
+      const rows = pdxOrSched.patients(XLSX, wb), P = (st.cu && st.cu.list) || [], used = new Set(), marks = [];
+      for(const r of rows){ const j = orPick(P, ORN(r.name+' '+(r.father||'')).split(' '), used); if(j < 0) continue; used.add(j);
+        const k = window.pdxOrMarkTxt(P[j]); if(!k) continue; marks.push({row:r.row, t:k.t, cls:k.cls, note:k.note||'', fun:!!k.fun}); }
+      return {b: b instanceof Uint8Array ? b : new Uint8Array(b), marks, sheet: pdxOrSched.printArea(XLSX, wb).sheet}; }
     async function printCult(){ if(st.prbusy) return; const P = (st.cu && st.cu.list) || []; if(!P.length) return toast('Δεν υπάρχουν καλλιέργειες ακόμα');
       const at = await window.pdxPrintPick(); if(!at) return;
       st.prbusy = 'Ετοιμάζω τη σελίδα…'; st.prmsg = ''; pg.redraw();
-      try{ const html = await window.pdxOrCultPrintHtml(st, lbl(st.iso));
+      try{
+        // 🖨 18/11 07:24 (χρήστης: «θέλω να είναι ολόιδιο με το άμα το εκτυπώνουμε με Excel»): όταν η πηγή είναι το Excel του φακέλου →
+        // ο υπολογιστής ανοίγει ΤΟ ΙΔΙΟ .xlsx στο Excel, βάζει τα κουτάκια καλλιέργειας σε μία στενή στήλη αριστερά και το τυπώνει με τις ρυθμίσεις σελίδας του αρχείου
+        const mailOk = !!(st.m && st.m.files && st.m.files.length);
+        if(!mailOk && st.o && st.o.html){ let xr = null; try{ xr = await cultXlsx(); }catch(e){ xr = null; }
+          if(xr && xr.marks.length){ const xs = await pdxCK.sealBytes(xr.b); let bx = ''; for(let i = 0; i < xs.length; i += 0x8000) bx += String.fromCharCode.apply(null, xs.subarray(i, i+0x8000));
+            const html0 = await window.pdxOrCultPrintHtml(st, lbl(st.iso)); const hs = await pdxCK.sealBytes(new TextEncoder().encode(html0)); let bh = ''; for(let i = 0; i < hs.length; i += 0x8000) bh += String.fromCharCode.apply(null, hs.subarray(i, i+0x8000));
+            st.prbusy = 'Στέλνω στον '+(at.name||'υπολογιστή')+' (Excel)…'; pg.redraw();
+            const ins = await sb6.from('oncall_jobs').insert({name_key:'orprint', name:'🖨 Πρόγραμμα + καλλιέργειες '+lbl(st.iso), room:null, kind:'orsubmit', status:'new', payload:{cultX:true, x:btoa(bx), h:btoa(bh), marks:xr.marks, sheet:xr.sheet, name:'cult', dir:'-', only:at.id, quiet:true}}).select('id').single();
+            if(ins.error) throw new Error(ins.error.message);
+            let j = null; for(let i = 0; i < 60; i++){ await new Promise(r=>setTimeout(r, 1500)); const q = await sb6.from('oncall_jobs').select('status,note').eq('id', ins.data.id).maybeSingle(); j = q.data; if(j && /^(done|failed|cancelled|dismissed)$/.test(j.status)) break; }
+            sb6.from('oncall_jobs').update({payload:{wiped:true}}).eq('id', ins.data.id).then(()=>{}, ()=>{});
+            st.prmsg = !j ? '⚠ ο υπολογιστής δεν απάντησε ακόμα' : (j.status==='done' ? (j.note||'🖨 Τυπώθηκε').replace(/\s*·\s*⏱.*$/,'')+' · 💻 '+(at.name||'') : '⚠ '+(j.note||'η εκτύπωση απέτυχε'));
+            st.prbusy = ''; pg.redraw(); return; } }
+        const html = await window.pdxOrCultPrintHtml(st, lbl(st.iso));
         const u8 = await pdxCK.sealBytes(new TextEncoder().encode(html)); let b = ''; for(let i = 0; i < u8.length; i += 0x8000) b += String.fromCharCode.apply(null, u8.subarray(i, i+0x8000));
         st.prbusy = 'Στέλνω στον '+(at.name||'υπολογιστή')+'…'; pg.redraw();
         const ins = await sb6.from('oncall_jobs').insert({name_key:'orprint', name:'🖨 Πρόγραμμα + καλλιέργειες '+lbl(st.iso), room:null, kind:'orsubmit', status:'new', payload:{hOnly:true, h:btoa(b), name:'cult', dir:'-', only:at.id, quiet:true}}).select('id').single();
