@@ -1,7 +1,7 @@
 // Παραδόχαρτο service worker — pdx-shell-v3 (2026-11-02)
 // Κέλυφος: πάντα πρώτα το δίκτυο (για να μην κολλάει παλιά έκδοση), με αντίγραφο στην cache για χωρίς σήμα.
 // Μόνο τα δικά μας αρχεία· Supabase/CDN περνούν απευθείας. Web Push: {title, body} από τη send-reminders.
-const CACHE = 'pdx-shell-v8';   // (ίδιο όνομα: η cache κρατιέται — v8 μόνο η λογική)
+const CACHE = 'pdx-shell-v8';   // sw 2026-11-18b: focus σε try (ειδοποιήσεις → σωστή σελίδα)   // (ίδιο όνομα: η cache κρατιέται — v8 μόνο η λογική)
 const SHELL = /\/(index\.html|ct\.html|ct|manifest\.json|ct-manifest\.json|icon-\d+\.png|ct-icon-\d+\.png)?$/;
 // 7/11: ο server κάνει ct.html → /ct (307). Μια απάντηση «με ανακατεύθυνση» ΔΕΝ επιτρέπεται για άνοιγμα σελίδας (σφάλμα «δεν είναι δυνατή η πρόσβαση»)
 // → κρατάμε/δίνουμε πάντα «καθαρό» αντίγραφο.
@@ -111,7 +111,7 @@ self.addEventListener('notificationclick', (e) => {
     // 10/11 βράδυ: το iPhone συχνά ΧΑΝΕΙ το #hash/το μήνυμα όταν ξυπνά η εφαρμογή → «σημείωμα» στην κρυφή μνήμη· η εφαρμογή το διαβάζει μόλις ανοίξει/φανεί
     if (nd.kind) { try { const ch = await caches.open('pdx-nav'); await ch.put('/__pdxnav', new Response(JSON.stringify({ kind: nd.kind, t: Date.now(), title: nd.title || '' }), { headers: { 'content-type': 'application/json' } })); } catch (err) {} }
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of all) { if (c.url.startsWith(self.location.origin)) { await c.focus(); if (nd.kind) c.postMessage({ type: 'pdx-nav', kind: nd.kind }); if (rev) c.postMessage({ type: 'pdx-open-review' }); else if (jobs) c.postMessage({ type: 'pdx-open-jobs' }); else if (nt) c.postMessage({ type: 'pdx-open-notif' }); return; } }
+    for (const c of all) { if (c.url.startsWith(self.location.origin)) { try { await c.focus(); } catch (err) {} /* 18/11: το iPhone συχνά ΑΡΝΕΙΤΑΙ το focus → πριν χανόταν και το μήνυμα */ if (nd.kind) c.postMessage({ type: 'pdx-nav', kind: nd.kind }); if (rev) c.postMessage({ type: 'pdx-open-review' }); else if (jobs) c.postMessage({ type: 'pdx-open-jobs' }); else if (nt) c.postMessage({ type: 'pdx-open-notif' }); return; } }
     await self.clients.openWindow(target);
   })());
 });
