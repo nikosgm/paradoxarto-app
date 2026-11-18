@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v586';
+const APP_VER = '2026-11-18-v587';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16780,7 +16780,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const xbL = window.pdxExShort;
         const G = window.pdxExGroups(), lo = s=>String(s).toLowerCase(), on = n=>S.ex.some(x=>lo(x.n)===lo(n));
         if(!(S.xg >= 0 && S.xg < G.length)) S.xg = -1;
-        let h = S.ex.length ? '<div class="xbsel">'+S.ex.map(x=>'<button class="ch on" data-exf="'+E(x.n)+'" title="'+E(x.src||x.n)+'">'+E(xbL(x.n))+(x.ep || window.pdxExBtns().some(b=>lo(b[0])===lo(x.n)) ? '' : ' <b style="color:#FFD60A" title="όχι από τον κατάλογο">⚠</b>')+' <span class="xbx">✕</span></button>').join('')+'</div>' : '';
+        // 18/11 19:35 (χρήστης: «να μένουν διαλεγμένα στη λίστα, να μη γεμίζει η οθόνη»): επάνω ΜΟΝΟ όσες δεν ανήκουν σε ομάδα (αναζήτηση/σάρωση/πακέτο)·
+        // των ομάδων φαίνονται ✓ μέσα στη λίστα + αριθμός πάνω στην ομάδα
+        const inG = n=>G.some(g=>g.items.some(y=>lo(y[0])===lo(n))), EXT = S.ex.filter(x=>!inG(x.n));
+        let h = EXT.length ? '<div class="xbsel">'+EXT.map(x=>'<button class="ch on" data-exf="'+E(x.n)+'" title="'+E(x.src||x.n)+'">'+E(xbL(x.n))+(x.ep || window.pdxExBtns().some(b=>lo(b[0])===lo(x.n)) ? '' : ' <b style="color:#FFD60A" title="όχι από τον κατάλογο">⚠</b>')+' <span class="xbx">✕</span></button>').join('')+'</div>' : '';
         h += '<div class="xbgr">'+G.map((g,i)=>{ const n = g.items.filter(x=>on(x[0])).length; return '<button class="ch xbgc'+(S.xg===i?' op':'')+(n?' has':'')+'" data-xg="'+i+'">'+E(g.ic)+' '+E(g.g)+(n?' <b>'+n+'</b>':'')+' <span class="xbch">'+(S.xg===i?'▴':'▾')+'</span></button>'; }).join('')
           + '<button class="ch xbo" data-a="addex">🔎 άλλη</button><button class="ch xbo" data-a="xbset" aria-label="Ρύθμιση ομάδων">⚙︎</button></div>';
         if(S.xg >= 0){ const g = G[S.xg];
