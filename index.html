@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v584';
+const APP_VER = '2026-11-18-v585';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16512,6 +16512,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // φτιάχνω εγώ ό,τι ομάδες θέλω στις ρυθμίσεις»). ΠΡΟΣΩΠΙΚΕΣ ομάδες: {groups:[{g, ic, items:[[όνομα, είδος, ep]]}]} στο localStorage pdx_exgrp + oncall_labs «exbtn|<uid>».
   // Χωρίς ρύθμιση → ομάδες από τις «Συχνές στην κλινική» ανά είδος (οι υπέρηχοι χωριστά).
   const XB = {groups:null, at:0};
+  const XB_IC = ['🧪','🩸','💧','🧫','🔊','🩻','🧲','🔭','📈','⚗️','💉','🫀','🫁','🧠','🦴','🩺','🏥','⭐','📋'];
   const xbIc = g=>(g = rfN(g), 0) || /βιοχημ/i.test(g)?'🧪':/μικροβ|καλλιέργ/i.test(g)?'🧫':/αιματ|^αιμα/i.test(g)?'🩸':/ουρων/i.test(g)?'💧':/υπερηχ|u\/s/i.test(g)?'🔊':/απεικον|αξονικ|ct|mri|μαγνητ|ακτινο/i.test(g)?'🩻':/ενδοσκ|κυστεοσκ/i.test(g)?'🔭':/ορμον/i.test(g)?'⚗️':/λειτουργ|ουροροο/i.test(g)?'📈':'📋';
   const xbClean = G=>(G||[]).filter(x=>x && String(x.g||'').trim()).map(x=>({g:String(x.g).trim().slice(0,40), ic:String(x.ic||xbIc(x.g)).slice(0,4), items:rfClean(x.items)})).slice(0,20);
   const xbDef = ()=>{ const G = [], by = {}; window.pdxRefFav.forEach(x=>{ const n = rfN(x[0]), k = /u\/s|υπερηχ/.test(n) ? 'Υπέρηχοι' : /ουρων/.test(n) ? 'Ούρων' : /βιοχημ|αιματολ|ορμον/i.test(x[1]||'') ? 'Αίματος' : /απεικον/i.test(x[1]||'') ? 'Απεικονιστικές' : 'Άλλες'; if(!by[k]){ by[k] = {g:k, ic:xbIc(k), items:[]}; G.push(by[k]); } by[k].items.push(x.slice()); }); return G; };
@@ -16538,7 +16539,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       h += '<div class="f">Στη <b>Συνταγογράφηση</b> πατάς μια ομάδα και διαλέγεις όσες εξετάσεις θέλεις. Πάτα μια ομάδα εδώ για να αλλάξεις τις εξετάσεις της.</div>';
       h += '<div class="h">Οι ομάδες μου · '+G.length+'</div><div class="g">'+G.map((g,i)=>{
         let r = '<div class="med" style="min-height:52px"><div class="m" data-xbo="'+i+'" style="cursor:pointer"><b style="font-size:16px">'+E(g.ic+' '+g.g)+'</b><span>'+g.items.length+(g.items.length===1?' εξέταση':' εξετάσεις')+(op===i?'':' · πάτα για αλλαγές')+'</span></div>'+(i?'<button data-xbu="'+i+'" aria-label="Πιο πάνω" style="'+IB+'">↑</button>':'')+'<button data-xbn="'+i+'" aria-label="Μετονομασία" style="'+IB+'">✎</button><button class="del" data-xbgd="'+i+'" aria-label="Διαγραφή ομάδας" style="width:44px;height:44px;border-radius:22px">✕</button></div>';
-        if(op===i) r += '<div style="padding:4px 12px 12px 22px;background:#F7F7FA">'+g.items.map((x,j)=>'<div class="r" style="display:flex;align-items:center;gap:6px;min-height:44px;border-bottom:.5px solid #E5E5EA"><span style="flex:1;font-size:15px">'+E(x[0])+(x[2]?' <b style="color:#1F6F43;font-size:12px">✓</b>':'')+'</span>'+(j?'<button data-xbiu="'+i+'|'+j+'" style="'+IB+'">↑</button>':'')+'<button data-xbid="'+i+'|'+j+'" style="'+IB+';color:#FF3B30">✕</button></div>').join('')
+        if(op===i) r += '<div style="padding:4px 12px 12px 22px;background:#F7F7FA"><div style="font-size:13px;color:#8E8E93;margin:6px 0 2px">Εικονίδιο</div><div style="display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px">'+XB_IC.map(c=>'<button data-xbis="'+i+'|'+c+'" style="border:0;border-radius:10px;width:40px;height:40px;font-size:21px;cursor:pointer;background:'+(c===g.ic?'#D6E8FF':'transparent')+'">'+c+'</button>').join('')+'</div>'+g.items.map((x,j)=>'<div class="r" style="display:flex;align-items:center;gap:6px;min-height:44px;border-bottom:.5px solid #E5E5EA"><span style="flex:1;font-size:15px">'+E(x[0])+(x[2]?' <b style="color:#1F6F43;font-size:12px">✓</b>':'')+'</span>'+(j?'<button data-xbiu="'+i+'|'+j+'" style="'+IB+'">↑</button>':'')+'<button data-xbid="'+i+'|'+j+'" style="'+IB+';color:#FF3B30">✕</button></div>').join('')
           + '<div class="r" style="margin-top:8px"><input class="t" data-xbq type="search" autocomplete="off" placeholder="🔎 Πρόσθεσε εξέταση στο «'+E(g.g)+'»…" enterkeyhint="search" style="width:100%"></div><div data-xbres></div></div>';
         return r; }).join('')+'</div>';
       h += '<div class="g" style="margin-top:12px"><div class="r" style="display:flex;gap:8px;padding:10px 12px"><input class="t" data-xbng autocomplete="off" placeholder="Νέα ομάδα (π.χ. Ορμονικές, Προεγχειρητικός)" style="flex:1;min-width:0"><button class="addb" data-xbadd style="height:44px">＋ Ομάδα</button></div></div>';
@@ -16551,8 +16552,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(t.closest('[data-xbx]')){ close(); return; }
       const o = t.closest('[data-xbo]'); if(o){ const i = +o.dataset.xbo; op = op===i ? -1 : i; draw(); return; }
       const u = t.closest('[data-xbu]'); if(u){ const i = +u.dataset.xbu; [G[i-1], G[i]] = [G[i], G[i-1]]; if(op===i) op = i-1; else if(op===i-1) op = i; save(G); return; }
-      const n = t.closest('[data-xbn]'); if(n){ const g = G[+n.dataset.xbn]; const v = prompt('Όνομα ομάδας:', g.g); if(!v || !v.trim()) return; g.g = v.trim(); g.ic = xbIc(g.g); save(G); return; }
+      const n = t.closest('[data-xbn]'); if(n){ const g = G[+n.dataset.xbn]; const v = prompt('Όνομα ομάδας:', g.g); if(!v || !v.trim()) return; g.g = v.trim(); save(G); return; }   // 18/11 19:26 (χρήστης): η μετονομασία ΚΡΑΤΑ το εικονίδιο
       const gd = t.closest('[data-xbgd]'); if(gd){ const i = +gd.dataset.xbgd; if(!confirm('Διαγραφή της ομάδας «'+G[i].g+'»;')) return; G.splice(i,1); op = -1; save(G); return; }
+      const is = t.closest('[data-xbis]'); if(is){ const k = is.dataset.xbis, j = k.indexOf('|'); G[+k.slice(0,j)].ic = k.slice(j+1); save(G); return; }
       const iu = t.closest('[data-xbiu]'); if(iu){ const [i,j] = iu.dataset.xbiu.split('|').map(Number), L = G[i].items; [L[j-1], L[j]] = [L[j], L[j-1]]; save(G); return; }
       const id = t.closest('[data-xbid]'); if(id){ const [i,j] = id.dataset.xbid.split('|').map(Number); G[i].items.splice(j,1); save(G); return; }
       if(t.closest('[data-xbadd]')){ const v = (ov.querySelector('[data-xbng]').value||'').trim(); if(!v) return; G.push({g:v, ic:xbIc(v), items:[]}); op = G.length-1; save(G).then(()=>{ const q = ov.querySelector('[data-xbq]'); q && q.focus(); }); return; }
