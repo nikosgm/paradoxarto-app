@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v581';
+const APP_VER = '2026-11-18-v582';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -16231,6 +16231,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs .ch.on{background:#1D4E80;color:#fff}.rxs .ch small{font-weight:400;opacity:.7;margin-left:4px}
   .rxs .med{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;position:relative}
   .rxs .med+.med:before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid #E1E1E6}
+  .rxs .med.jr{flex-wrap:wrap}.rxs .med.jr .m{flex:1 1 70%}.rxs .med.jr>button{flex:1 1 100%!important;margin-left:22px;min-height:40px}
   .rxs .med .m{flex:1;min-width:0}.rxs .med .m b{font-size:17px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rxs .med .m span{font-size:14px;color:#6B6B70}
   .rxs .stp{display:flex;align-items:center;background:#F2F2F7;border-radius:9px;flex:none}
@@ -16941,7 +16942,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     function drawJobs(){
       const box = root.querySelector('[data-jobs]'); if(!box) return; box.style.display = S.jobs.length ? '' : 'none';
       const T = {new:['Στάλθηκε · περιμένει υπολογιστή',''], seen:['Τη βρήκε υπολογιστής',''], running:['Ετοιμάζεται στο e-prescription…','run'], done:['Έτοιμη — έλεγξε και πάτα «Καταχώριση» στον υπολογιστή','ok'], review:['Έτοιμη για έλεγχο','ok'], approve:['Εγκρίθηκε — καταχωρίζεται…','run'], approved:['✅ Καταχωρίστηκε','ok'], dismissed:['Έκλεισε',''], failed:['Δεν ολοκληρώθηκε','bad'], cancelled:['Ακυρώθηκε','']};
-      box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = T[x.st]||[x.st,'']; return '<div class="med"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(String(x.note).slice(0,200))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again pb pb-pri" data-rev="'+x.id+'">👀 Έλεγχος</button>':'')+((x.st==='approved' || x.vc) && x.amka ? '<button class="again pb pb-ok" data-vclose="'+E(x.amka)+'" style="flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
+      // 🎨 18/11 18:45 (χρήστης, στιγμιότυπο: μία λέξη ανά γραμμή): το κουμπί δίπλα στο κείμενο το στρίμωχνε → κουμπιά σε δική τους γραμμή (jr)·
+      // σύντομο μήνυμα: μόνο τα ουσιώδη (✅/⚠ + barcode/άυλη), όχι ολόκληρο το κείμενο του e-prescription
+      const shortN = (n, st)=>{ n = String(n||''); if(st==='approved'){ const bc = (n.match(/barcode\s*(\d{6,})/)||[])[1]; return (/^⚠/.test(n) ? n.split(' — ')[0].slice(0,110) : '✅ καταχωρίστηκε') + (bc ? ' · '+bc : '') + (/άυλη/.test(n) ? ' · 📲 άυλη' : ''); } return n.replace(/\s*·\s*⏱.*$/,'').slice(0,160); };
+      box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = T[x.st]||[x.st,'']; return '<div class="med jr"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;white-space:normal;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(shortN(x.note, x.st))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again pb pb-pri" data-rev="'+x.id+'">👀 Έλεγχος</button>':'')+((x.st==='approved' || x.vc) && x.amka ? '<button class="again pb pb-ok" data-vclose="'+E(x.amka)+'" style="flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
     }
     async function loadHist(){
       try{ const since = new Date(Date.now()-60*864e5).toISOString();
