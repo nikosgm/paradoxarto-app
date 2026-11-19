@@ -1,1 +1,1 @@
-{"version": "0.21.571", "zip": "ef-bot-0.21.571.zip", "sha256": "e8f72b0905197a3677cd09877a67cbe6541d454618efd17a51fdd81419af8cca", "notes": "e-prescription σύνδεση: καταγραφή φάσεων (αλλαγή λογαριασμού ~60″)"}
+{"version": "0.21.572", "zip": "ef-bot-0.21.572.zip", "sha256": "72100b68f6ac958883e3cac74d83c669e350f0a2b07cbf3e97b9b863403b44eb", "notes": "e-prescription αλλαγή λογαριασμού: αναγνώριση σελίδας εισόδου Keycloak (−60″)"}
