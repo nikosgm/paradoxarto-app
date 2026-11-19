@@ -1,1 +1,1 @@
-{"version": "0.21.585", "zip": "ef-bot-0.21.585.zip", "sha256": "06ae2e336f0d4dfa6ca1aa6f6bacbe5b69df32f4251d5ca258c276ef220b2fcd", "notes": "✕ consultcancel: ακύρωση κλήσης για εκτίμηση με ακριβή αριθμό αιτήματος (probe πρώτα · επαλήθευση «Ακυρωμένη»)"}
+{"version": "0.21.586", "zip": "ef-bot-0.21.586.zip", "sha256": "22ff6769d97dbd4a5b28732bd89fc5b046634b89903a13b659ef9ce2da745213", "notes": "✕ consultcancel: επιλογή γραμμής + κουμπί σελίδας «Ακύρωση αιτήματος» (probe)"}
