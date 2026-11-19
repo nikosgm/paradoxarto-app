@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v602';
+const APP_VER = '2026-11-19-v603';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17326,6 +17326,29 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       try{ toast('🔎 Αντιστοίχιση με τον κατάλογο e-prescription…'); const m = await pdxAI('συνταγή-κατάλογος', {epmatch:{meds:reM.map(z=>({line:z.src||z.line||z.name, name:z.name||z.line, dose:z.dose, freq:z.freq, days:z.days})), exams:reE.map(z=>z.n)}});
         if(m && m.ok){ const mm = m.meds||[], ee = m.exams||[]; let i = 0, j = 0;
           p.meds = (p.meds||[]).map(z=>z && (z.miss || !z.ep) ? (mm[i++] || z) : z); p.exams = (p.exams||[]).map(z=>z && typeof z!=='string' && (z.miss || !z.ep) ? (ee[j++] || z) : z); } }catch(e){} }
+    // 💊 19/11 16:40 (χρήστης: «ανέβασα φωτογραφία για Diovan και ένα άλλο και δεν μπόρεσε να τα συμπληρώσει — αν έχεις απορία, βγάλε μου παράθυρο να διαλέξω»):
+    // η φωτογραφία είχε μόνο όνομα + mg (χωρίς δοσολογία) → πριν ανοίξει η Συνταγογράφηση: ΠΑΡΑΘΥΡΟ επιλογής δοσολογίας/ημερών ανά φάρμακο
+    // (προεπιλογή: ό,τι έχουμε γράψει ξανά για αυτό το φάρμακο, αλλιώς 1×1 · 30 ημ.). Όνομα = το ΠΡΑΓΜΑΤΙΚΟ του e-prescription (όχι το «Dioval» της ανάγνωσης).
+    if(!x._dosed && (p.meds||[]).some(m=>m && !m.miss && !(+m.freq>0 && +m.days>0))){ x._dosed = true;
+      const ok = await new Promise(res=>{ const M = (p.meds||[]).filter(m=>m && !m.miss);
+        const brand = m=>{ const en = String(m.epName||'').trim(); const b = en ? en.split(/\s+/)[0] : ''; return b || String(m.name||m.line||'').split(/\s+/)[0]; };
+        M.forEach(m=>{ const nm = brand(m), L = window.pdxRxLearned ? pdxRxLearned(nm, m.strength||'') : null; m._nm = nm; m._f = +m.freq>0 ? +m.freq : (L && L.freq) || 1; m._d = +m.days>0 ? +m.days : (L && L.days) || 30; m._ds = String(m.dose||'') || (L && String(L.dose||'')) || '1'; m._L = !!L; });
+        const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;font-family:-apple-system,system-ui,sans-serif';
+        const pill = (on, attr, t)=>'<button '+attr+' style="border:0;border-radius:999px;padding:8px 14px;font-size:15px;font-weight:600;margin:0 6px 6px 0;background:'+(on?'#0A84FF':'#F2F2F7')+';color:'+(on?'#fff':'#1C1C1E')+'">'+t+'</button>';
+        const draw = ()=>{ ov.innerHTML = '<div style="background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto">'
+          + '<div style="font-size:20px;font-weight:700;margin-bottom:2px">Δοσολογία</div><div style="font-size:14px;color:#8E8E93;margin-bottom:12px">Η φωτογραφία δεν έγραφε πώς παίρνεται — διάλεξε.</div>'
+          + M.map((m,i)=>'<div style="background:#F9F9FB;border-radius:14px;padding:12px 14px;margin-bottom:10px"><div style="font-size:17px;font-weight:700">'+String(m._nm).replace(/[<>&]/g,'')+' <span style="font-weight:500;color:#3C3C43">'+String(m.strength||'').replace(/[<>&]/g,'')+'</span></div>'
+            + (m._L ? '<div style="font-size:12.5px;color:#34C759;margin:2px 0 6px">✓ όπως το έχουμε γράψει ξανά</div>' : '<div style="height:8px"></div>')
+            + '<div>'+[['1',1,'1×1'],['1',2,'1×2'],['1',3,'1×3']].map(([ds,f,t])=>pill(m._ds===ds && m._f===f, 'data-df="'+i+'|'+ds+'|'+f+'"', t)).join('')+'</div>'
+            + '<div>'+[7,10,14,30,60,90].map(d=>pill(m._d===d, 'data-dd="'+i+'|'+d+'"', d+' ημ.')).join('')+'</div></div>').join('')
+          + '<div style="display:flex;gap:10px;margin-top:6px"><button data-x style="flex:1;border:0;border-radius:14px;height:50px;font-size:17px;font-weight:600;background:#F2F2F7;color:#1C1C1E">Ακύρωση</button><button data-ok style="flex:2;border:0;border-radius:14px;height:50px;font-size:17px;font-weight:700;background:#0A84FF;color:#fff">Συνέχεια</button></div></div>'; };
+        draw(); document.body.appendChild(ov);
+        ov.addEventListener('click', e=>{ const t = e.target.closest('button'); if(!t) return;
+          if(t.dataset.df){ const [i,ds,f] = t.dataset.df.split('|'); M[+i]._ds = ds; M[+i]._f = +f; draw(); return; }
+          if(t.dataset.dd){ const [i,d] = t.dataset.dd.split('|'); M[+i]._d = +d; draw(); return; }
+          if(t.hasAttribute('data-x')){ ov.remove(); res(false); return; }
+          if(t.hasAttribute('data-ok')){ M.forEach(m=>{ m.name = m._nm; m.dose = m._ds; m.freq = m._f; m.days = m._d; m.line = m._nm+' '+String(m.strength||'').toUpperCase()+' '+(m._ds==='1/2'?'1/2':m._ds)+'x'+m._f+' '+m._d+' ημέρες'; }); ov.remove(); res(true); } }); });
+      if(!ok) return; }
     const allOk = p.amka_sure !== false && /^\d{11}$/.test(String(p.amka||'')) && ![].concat(p.meds||[], p.exams||[]).some(x=>!x || x.miss || x.ep===0 || typeof x==='string');
     window.pdxRxStudio({amka:p.amka, mode:(p.meds||[]).length?'rx':'ref', lines:(p.meds||[]).filter(m=>!m.miss).map(m=>m.line||[m.name,m.strength].join(' ')), ex:(p.exams||[]).filter(x=>!(x && x.miss)).map(x=>typeof x==='string' ? {n:x} : x), icd:p.icd||[], autoGo: false});   // 15/11 00:44 (χρήστης: «να πατάω έγκριση ΠΡΙΝ ξεκινήσει να ετοιμάζει συνταγογράφηση από σάρωση»): ΠΟΤΕ αυτόματη έναρξη — μόνο όταν πατήσεις «Ετοίμασε»
     if(allOk) setTimeout(()=>toast('📷 Από τη σάρωση: έλεγξε και πάτα «Ετοίμασε» για να ξεκινήσει το bot'), 500);
