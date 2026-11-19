@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v613';
+const APP_VER = '2026-11-19-v614';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26237,7 +26237,7 @@ window.CLS_MODE='A';
     const d2u = async u=>{ if(/^data:/.test(u)) return u; try{ const bl = await (await fetch(u)).blob(); return await new Promise(ok=>{ const fr = new FileReader(); fr.onload = ()=>ok(fr.result); fr.onerror = ()=>ok(''); fr.readAsDataURL(bl); }); }catch(e){ return ''; } };
     const dim = u=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>ok([im.naturalWidth, im.naturalHeight]); im.onerror = ()=>ok([1414, 1000]); im.src = u; });
     let pages = '';
-    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra')) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
       // διαθέσιμο 285×197mm· με το αριστερό περιθώριο (15%) το ύψος της σελίδας = πλάτος·0.85·h/w
       const W = Math.min(285, 197 / (0.945 * h / w));
       pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])+'</div></div>'; }
@@ -26283,7 +26283,7 @@ window.CLS_MODE='A';
         lines.forEach(([t, col], i)=>{ x.fillStyle = col; x.fillText(t, bx + bw/2, by + 5 + lh*(i+0.5)); }); }
       return c; };
     const pages = [];
-    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra')) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])); }
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])); }
     if(!pages.length && st.o && st.o.html && typeof html2canvas!=='undefined'){ const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff'; d.innerHTML = '<style>'+window.pdxOrSchedCss()+'</style>'+st.o.html; document.body.appendChild(d);
       try{ const cv = await html2canvas(d.querySelector('table'), {scale:1.4, backgroundColor:'#fff', logging:false}); pages.push(page(cv, window.pdxOrMarksXl(st.o.html, P))); } finally { d.remove(); } }
     if(!pages.length) throw new Error('δεν υπάρχει πρόγραμμα (PDF ή Excel) για εξαγωγή');
@@ -26291,6 +26291,52 @@ window.CLS_MODE='A';
     pages.forEach((c, i)=>{ if(i) pdf.addPage('a4', 'landscape'); pdf.addImage(c.toDataURL('image/jpeg', .82), 'JPEG', 0, 0, 297, 210, undefined, 'FAST'); });
     const nm = 'Πρόγραμμα χειρουργείου '+String(title||'').replace(/[\/\\:*?"<>|]/g,'-')+'.pdf', blob = pdf.output('blob'), file = new File([blob], nm, {type:'application/pdf'});
     return file; };
+  // 🖋 19/11 23:15 (χρήστης: «η εκτύπωση με τις καλλιέργειες στο PDF με τη σφραγίδα — σαν text boxes πάνω στο PDF»): το ΠΡΩΤΟΤΥΠΟ PDF του mail
+  // μπαίνει ΔΙΑΝΥΣΜΑΤΙΚΑ (pdf-lib embedPage — σφραγίδα/υπογραφή όπως είναι, όχι φωτογραφία) στη δεξιά πλευρά Α4 οριζόντιας, και τα κουτάκια καλλιέργειας
+  // μπαίνουν ΧΩΡΙΣΤΑ από πάνω (ένα αντικείμενο ανά ασθενή, στη στενή στήλη αριστερά, στο ύψος του ονόματος). Ίδια γεωμετρία με την προεπισκόπηση.
+  const orLoadJs = (u, g)=>new Promise((ok, no)=>{ if(window[g]) return ok(); const sc = document.createElement('script'); sc.src = u; sc.onload = ok; sc.onerror = ()=>no(new Error('δεν φορτώθηκε '+g)); document.head.appendChild(sc); });
+  window.pdxOrCultPdfVec = async function(st, title){ const files = ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old && f.pdf && f.pdf.length); if(!files.length) return null;
+    await orLoadJs('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'PDFLib'); const { PDFDocument, degrees } = window.PDFLib;
+    const P = (st.cu && st.cu.list) || [], W = 1600, H = 1131, M = 30, SW = 0.06, PW = 841.89, PH = 595.28, k = PW / W, fs = 13, COL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666666'};
+    const out = await PDFDocument.create(); const mc = document.createElement('canvas').getContext('2d'); let nPg = 0;
+    for(const f of files){ const src = await PDFDocument.load(f.pdf, {ignoreEncryption:true}); const n = Math.min(src.getPageCount(), (f.imgs||[]).length || src.getPageCount(), 8);
+      for(let i = 0; i < n; i++){ const sp = src.getPage(i), emb = await out.embedPage(sp), w0 = emb.width, h0 = emb.height;
+        const R = ((((sp.getRotation() || {}).angle || 0) + ((f.degs || [])[i] || 0) + (f.extraRot || 0)) % 360 + 360) % 360, sw = R % 180 !== 0, rw = sw ? h0 : w0, rh = sw ? w0 : h0;
+        const aw = W - 2*M, ah = H - 2*M; let tw = aw, iw = tw*(1-SW), ih = iw*rh/rw; if(ih > ah){ ih = ah; iw = ih*rw/rh; tw = iw/(1-SW); }
+        const ox = M + (aw - tw)/2, ix = ox + tw*SW, iy = M, bx = ix*k, bw = iw*k, by = PH - (iy + ih)*k, s = bw / rw, A = (360 - R) % 360;
+        const pgo = out.addPage([PW, PH]); nPg++;
+        const pos = A === 90 ? {x:bx + s*h0, y:by} : A === 180 ? {x:bx + s*w0, y:by + s*h0} : A === 270 ? {x:bx, y:by + s*w0} : {x:bx, y:by};
+        pgo.drawPage(emb, {x:pos.x, y:pos.y, xScale:s, yScale:s, rotate:degrees(A)});
+        if(!(f.kind==='normal' || !f.kind)) continue;
+        const marks = window.pdxOrMarksPdf((f.txt||[])[i], P), cbw = tw*SW - 6; let yEnd = -1e9;
+        for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const kk = window.pdxOrMarkTxt(m.p); if(!kk) continue; const L = [[kk.t, COL[kk.cls]||'#000']]; if(kk.note) L.push([kk.note, '#333']); if(kk.fun) L.push(['Μύκητες', '#C62828']);
+          mc.font = '700 '+fs+'px Arial'; const lines = []; for(const [t, col] of L){ let cur = ''; for(const w of String(t).split(' ')){ const t2 = cur ? cur+' '+w : w; if(mc.measureText(t2).width > cbw - 10 && cur){ lines.push([cur, col]); cur = w; } else cur = t2; } if(cur) lines.push([cur, col]); }
+          const lh = fs*1.18, cbh = lines.length*lh + 10, cby = Math.max(iy + m.v*ih - cbh/2, yEnd + 4); yEnd = cby + cbh;
+          const Z = 3, c = document.createElement('canvas'); c.width = Math.ceil(cbw*Z); c.height = Math.ceil(cbh*Z); const x = c.getContext('2d'); x.scale(Z, Z);
+          x.fillStyle = '#fff'; x.strokeStyle = L[0][1]; x.lineWidth = 3; x.beginPath(); if(x.roundRect) x.roundRect(1.5, 1.5, cbw-3, cbh-3, 8); else x.rect(1.5, 1.5, cbw-3, cbh-3); x.fill(); x.stroke();
+          x.font = '700 '+fs+'px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; lines.forEach(([t, col], li)=>{ x.fillStyle = col; x.fillText(t, cbw/2, 5 + lh*(li+0.5)); });
+          const png = await out.embedPng(c.toDataURL('image/png')); pgo.drawImage(png, {x:ox*k, y:PH - (cby + cbh)*k, width:cbw*k, height:cbh*k}); } } }
+    if(!nPg) return null;
+    const bytes = await out.save(), nm = 'Πρόγραμμα χειρουργείου '+String(title||'').replace(/[\/\\:*?"<>|]/g,'-')+'.pdf';
+    return new File([bytes], nm, {type:'application/pdf'}); };
+  // καλύτερο διαθέσιμο: διανυσματικό με σφραγίδα (PDF του mail) → αλλιώς το παλιό (εικόνα/Excel)
+  window.pdxOrCultPdfBest = async function(st, title){ try{ const f = await window.pdxOrCultPdfVec(st, title); if(f) return f; }catch(e){ console.warn('pdf vec', e); } return window.pdxOrCultPdf(st, title); };
+  // 👁 19/11 23:15 (χρήστης: «όταν πατάω εξαγωγή PDF να ανοίγει η ΠΡΟΕΠΙΣΚΟΠΗΣΗ και μετά να πατάω εκτύπωση, να βλέπω πώς βγαίνει»):
+  // σελίδες του ΙΔΙΟΥ αρχείου (pdf.js) σε δική μας σελίδα· «🖨 Εκτύπωση / Κοινοποίηση» = φύλλο του iPhone (πάτημα χρήστη → επιτρέπεται)
+  window.pdxPdfPreview = async function(file){ const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const S = {imgs:[], busy:'Φόρτωση προεπισκόπησης…', err:''};
+    const pg = iosPage('Προεπισκόπηση PDF', 'Πίσω', ()=>'<div class="ios-f" style="margin-top:6px">'+E3(file.name)+'</div>'
+      + '<button data-pvprint style="display:block;width:calc(100% - 32px);margin:10px 16px;height:48px;border:0;border-radius:14px;background:#1D4E80;color:#fff;font-size:16px;font-weight:700">🖨 Εκτύπωση / Κοινοποίηση</button>'
+      + (S.busy ? '<div class="ios-g"><div class="pdx-load"><span class="pdx-spin"></span><b>'+E3(S.busy)+'</b></div></div>' : '') + (S.err ? '<div class="ios-f" style="color:#FF3B30">⚠ '+E3(S.err)+'</div>' : '')
+      + S.imgs.map((u, i)=>'<div style="margin:10px 12px;background:#fff;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.18);overflow:hidden"><img src="'+u+'" style="display:block;width:100%" alt="σελίδα '+(i+1)+'"></div>').join('')
+      + (S.imgs.length ? '<div class="ios-f" style="text-align:center">'+S.imgs.length+' '+(S.imgs.length===1?'σελίδα':'σελίδες')+' · Α4 οριζόντιο</div>' : '') + '<div style="height:40px"></div>');
+    pg.el.addEventListener('click', e=>{ if(e.target.closest('[data-pvprint]')) window.pdxShareFile(file); });
+    try{ await orLoadJs('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib'); pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const doc = await pdfjsLib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
+      for(let i = 1; i <= doc.numPages; i++){ const p = await doc.getPage(i), v0 = p.getViewport({scale:1}), v = p.getViewport({scale:Math.min(3, 1800/v0.width)}); const c = document.createElement('canvas'); c.width = v.width; c.height = v.height;
+        await p.render({canvasContext:c.getContext('2d'), viewport:v}).promise; S.imgs.push(c.toDataURL('image/jpeg', .85)); pg.redraw(); }
+      S.busy = ''; }catch(e){ S.busy = ''; S.err = (e.message||e)+' — πάτα «Εκτύπωση / Κοινοποίηση» για το αρχείο'; }
+    pg.redraw(); return pg; };
   // το iPhone επιτρέπει «κοινοποίηση» μόνο ΑΜΕΣΑ μετά από πάτημα → το PDF φτιάχνεται πρώτα, και το 2ο πάτημα ανοίγει το φύλλο κοινοποίησης
   window.pdxShareFile = async function(file){ if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file], title:file.name}); return 'shared'; }catch(e){ if(e && e.name==='AbortError') return 'cancel'; } }
     const blob = file, nm = file.name, u = URL.createObjectURL(blob); const w = window.open(u, '_blank'); if(!w){ const a = document.createElement('a'); a.href = u; a.download = nm; document.body.appendChild(a); a.click(); a.remove(); } setTimeout(()=>URL.revokeObjectURL(u), 120000); return 'opened'; };
@@ -26310,7 +26356,9 @@ window.CLS_MODE='A';
       const KL = {normal:'🗓 Κανονικό πρόγραμμα', local:'💉 Τοπικές', extra:'➕ Έκτακτα'};
       const nEx = st.m && st.m.files ? st.m.files.filter(f=>f.kind==='extra').length : 0;
       if(nEx) h += '<div class="ios-f" style="margin-top:6px;opacity:.75;font-size:14px">➕ Έκτακτα: '+nEx+' — δεν εμφανίζονται (δεν αλλάζουν το κανονικό) <button data-orex="1" style="border:0;background:none;color:#0A84FF;font-size:14px;padding:0 4px">'+(st.showEx?'απόκρυψη':'εμφάνιση')+'</button></div>';
-      if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ if(f.kind==='extra' && !st.showEx) return; h += '<div class="ios-f" style="margin-top:8px"><button data-orkind="'+i+'" style="border:1px solid #C7C7CC;background:#F2F2F7;border-radius:10px;font-size:14px;padding:2px 8px;margin-right:6px">'+(KL[f.kind]||KL.normal)+' ▾</button><b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
+      const nOld = st.m && st.m.files ? st.m.files.filter(f=>f.old && f.kind!=='extra').length : 0;
+      if(nOld) h += '<div class="ios-f" style="margin-top:6px;opacity:.75;font-size:14px">🕘 Παλαιότερα μηνύματα: '+nOld+' — κρατιέται μόνο το τελευταίο ανά είδος <button data-orold="1" style="border:0;background:none;color:#0A84FF;font-size:14px;padding:0 4px">'+(st.showOld?'απόκρυψη':'εμφάνιση')+'</button></div>';
+      if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ if(f.kind==='extra' && !st.showEx) return; if(f.old && !st.showOld) return; h += '<div class="ios-f" style="margin-top:8px"><button data-orkind="'+i+'" style="border:1px solid #C7C7CC;background:#F2F2F7;border-radius:10px;font-size:14px;padding:2px 8px;margin-right:6px">'+(KL[f.kind]||KL.normal)+' ▾</button><b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
         // 🤏 17/11 16:58 (χρήστης: «zoom με τα δύο δάχτυλα στην προεπισκόπηση»): pinch → πλάτος ×1–5 (μένει μετά τις ανανεώσεις)· πάτημα = ×1 ↔ ×2.2
         + '<div class="ors-pdf" data-orpz="'+i+'" data-pinch="m'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+((st.zs&&st.zs['m'+i]>1)?'auto':'hidden')+';-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y">'+(f.imgs||[]).map((u,pi)=>'<div class="pz-in" style="width:'+Math.round(((st.zs&&st.zs['m'+i])||1)*100)+'%">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[pi], (st.cu && st.cu.list) || []) : [])+'</div>').join('')+'</div>'; });   // 🧫 καλλιέργειες ΜΟΝΟ στο κανονικό
       h += '<button class="ors-btn" data-or="mail"'+(st.mbusy?' disabled style="opacity:.5"':'')+'>📧 Ξανά από το mail</button>';
@@ -26338,7 +26386,7 @@ window.CLS_MODE='A';
       }));
       // 🫁 17/11 15:14 (χρήστης: «στο πρόγραμμα που κάναμε τώρα δεν βλέπω ακτινογραφίες»): και στο ανεβασμένο πρόγραμμα, όπως στον επεξεργαστή
       const XP = (st.o && st.o.pts && st.o.pts.length ? st.o.pts : (st.cu && st.cu.list) || []); window.__orsXP = XP; const nX = XP.length;
-      return h2 + (P.length ? '<button class="ors-btn" data-or="print" style="background:#1D4E80;color:#fff"'+(st.prbusy?' disabled style="opacity:.5"':'')+'>'+(st.prbusy ? '⏳ '+esc(st.prbusy) : '🖨 Εκτύπωση προγράμματος με καλλιέργειες')+'</button>' : '') + (st.prmsg ? '<div class="ios-f">'+esc(st.prmsg)+'</div>' : '') + (P.length ? (st.pdfFile ? '<button class="ors-btn" data-or="share" style="background:#34C759;color:#fff">📤 PDF — εκτύπωση · αποθήκευση · αποστολή</button>' : '<button class="ors-btn" data-or="pdf"'+(st.pdfbusy?' disabled style="opacity:.5"':'')+'>'+(st.pdfbusy ? '⏳ Φτιάχνω το PDF…' : '📄 Εξαγωγή PDF')+'</button>') : '') + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
+      return h2 + (P.length ? '<button class="ors-btn" data-or="print" style="background:#1D4E80;color:#fff"'+(st.prbusy?' disabled style="opacity:.5"':'')+'>'+(st.prbusy ? '⏳ '+esc(st.prbusy) : '🖨 Εκτύπωση προγράμματος με καλλιέργειες')+'</button>' : '') + (st.prmsg ? '<div class="ios-f">'+esc(st.prmsg)+'</div>' : '') + (P.length ? (st.pdfFile ? '<button class="ors-btn" data-or="share" style="background:#34C759;color:#fff">📄 Προεπισκόπηση PDF → εκτύπωση</button>' : '<button class="ors-btn" data-or="pdf"'+(st.pdfbusy?' disabled style="opacity:.5"':'')+'>'+(st.pdfbusy ? '⏳ Φτιάχνω το PDF…' : '📄 Εξαγωγή PDF')+'</button>') : '') + (nX && window.pdxXrQueue ? '<button class="ors-btn" data-or="xr" style="background:#0F172A;color:#fff">🫁 Ακτινογραφίες θώρακα ('+nX+') → CT Viewer</button>' : '')
         + '<button class="ors-btn" data-or="cult"'+(st.cubusy?' disabled style="opacity:.5"':'')+'>🧫 Ξανά έλεγχος καλλιεργειών</button>'; }
     // 🖨 17/11 16:13 (χρήστης: «κουμπί εκτύπωση προγράμματος με καλλιέργειες — νέο κελί δίπλα στον θάλαμο: αρνητική ή ο κωδικός αν εκκρεμεί·
     // να επιλέγω σε ποιον από τους εκτυπωτές Α4»): το Excel του φακέλου + στήλη «ΚΑΛΛΙΕΡΓΕΙΑ»· αν υπάρχει μόνο το PDF του Kerio → οι σελίδες του + πίνακας καλλιεργειών.
@@ -26460,7 +26508,7 @@ window.CLS_MODE='A';
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const doc = await pdfjsLib.getDocument({data: bytes}).promise, out = [], txt = [];
       for(let i=1;i<=Math.min(doc.numPages, 8);i++){ const pgx = await doc.getPage(i), v0 = pgx.getViewport({scale:1}), sc = Math.min(3, 2000/Math.max(v0.width, v0.height)), v = pgx.getViewport({scale:sc});
-        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = window.pdxOrLandDeg(c); deg = await orRotAi(orRotate(c, deg), deg);   /* 19/11 14:38 (χρήστης: «ήρθε ανεστραμμένο — θέλω σε ευθεία, οριζόντιος»): ΠΑΝΤΑ οριζόντιο */ if(i===1) window.__orAuto = deg; out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85));
+        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = window.pdxOrLandDeg(c); deg = await orRotAi(orRotate(c, deg), deg);   /* 19/11 14:38 (χρήστης: «ήρθε ανεστραμμένο — θέλω σε ευθεία, οριζόντιος»): ΠΑΝΤΑ οριζόντιο */ if(i===1) window.__orAuto = deg; (out.degs = out.degs || []).push(deg); out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85));
         // 🧫 17/11: θέσεις κειμένου της σελίδας (κανονικοποιημένες 0–1, μετά την περιστροφή) → κουτάκια καλλιέργειας δίπλα σε κάθε όνομα
         let T = []; try{ const tc = await pgx.getTextContent(); T = tc.items.filter(it=>it.str && it.str.trim()).map(it=>{ const q = v0.convertToViewportPoint(it.transform[4], it.transform[5]); return {s:it.str, u:q[0]/v0.width, v:(q[1] - (it.height||0)/2)/v0.height}; }); }catch(e){}
         txt.push(window.pdxOrRotTxt(T, deg)); }
@@ -26480,9 +26528,16 @@ window.CLS_MODE='A';
       return 'normal'; };   // «ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ»/«ΑΛΛΑΓΕΣ» (σημαία extra του bot) = μέρος του κανονικού· κρύβονται ΜΟΝΟ τα ρητά «ΕΚΤΑΚΤΑ»
     window.pdxOrKindRx = kindRx;
     const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
-      for(const f of (ix.files||[])){ window.__orAuto = 0; let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); let txt = imgs.txt || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt, kind: await orKind(f, txt, imgs)})); }
+      for(const f of (ix.files||[])){ window.__orAuto = 0; const pdfB = bytes.slice(f.o, f.o+f.l); let imgs = await pdfImgs(pdfB.slice()); let txt = imgs.txt || []; const degs = imgs.degs || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt, degs, extraRot:extra, pdf:pdfB, kind: await orKind(f, txt, imgs)})); }
       // σειρά: κανονικό → τοπικές → (έκτακτα κρυφά)
-      const KO = {normal:0, local:1, extra:2}; files.sort((a, b)=>(KO[a.kind]||0) - (KO[b.kind]||0)); st.m = {files}; };
+      const KO = {normal:0, local:1, extra:2}; files.sort((a, b)=>(KO[a.kind]||0) - (KO[b.kind]||0)); st.m = {files}; orMarkOld(); };
+    // 🗂 19/11 23:15 (χρήστης: «ανεβάσαμε ένα πρόγραμμα τοπικών και μετά άλλο — για το καθένα, κανονικό ή τοπικό, να κρατάς το ΤΕΛΕΥΤΑΙΟ μήνυμα, όχι όλα»):
+    // ανά είδος μένουν ΜΟΝΟ τα αρχεία του νεότερου μηνύματος (ίδιο «στάλθηκε»)· τα παλαιότερα κρύβονται (και από PDF/εκτύπωση) — «εμφάνιση» για έλεγχο
+    // ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ/ΑΛΛΑΓΕΣ (σημαία extra του bot ή όνομα) ΠΡΟΣΤΙΘΕΤΑΙ στο κύριο, δεν το αντικαθιστά → μένει αν είναι νεότερο από το κύριο που κρατήθηκε
+    function orMarkOld(){ const F = (st.m && st.m.files) || [], mx = {}, N = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+      const supp = f=>!!f.extra || /ΣΥΜΠΛΗΡ|ΑΛΛΑΓ/.test(N((f.subj||'')+' '+(f.n||'')));
+      F.forEach(f=>{ if(supp(f)) return; const kd = f.kind || 'normal', t = String(f.sent || ''); if(!mx[kd] || t > mx[kd]) mx[kd] = t; });
+      F.forEach(f=>{ f.old = String(f.sent || '') < (mx[f.kind || 'normal'] || ''); }); }
     const rotK = f=>'pdx_or_rot2|'+st.iso+'|'+(f.n||f.subj||''),   /* 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): παλιό ↻ (πριν το αυτόματο) ακύρωνε το αυτόματο ίσιωμα (270°+90°) → νέο κλειδί, οι παλιές τιμές αγνοούνται */ rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
     const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
     const loadMail = async (fresh)=>{ st.merr = ''; if(typeof sb6==='undefined') return; const ck = 'or|'+st.iso;
@@ -26507,15 +26562,16 @@ window.CLS_MODE='A';
       const z = (st.zs && st.zs.x) || 1, k = Math.min(1, pv.clientWidth / pa.offsetWidth) * z; pa.style.transform = 'scale('+k+')'; pv.style.height = Math.ceil(pa.offsetHeight * k)+'px'; if(z > 1){ pv.classList.add('zoom'); pv.style.height = Math.min(Math.ceil(pa.offsetHeight * k), Math.round(innerHeight * 0.75))+'px'; } };
     // ⚡ 17/11 18:22 (χρήστης: «η εξαγωγή PDF αργεί πάρα πολύ»): το PDF φτιάχνεται ΑΠΟ ΠΡΙΝ στο παρασκήνιο μόλις υπάρχουν πρόγραμμα + καλλιέργειες
     // (και ξανά όταν αλλάξει κάτι) → το κουμπί ανοίγει αμέσως την κοινοποίηση
-    const pdfSig = ()=>{ const P = (st.cu && st.cu.list) || []; return st.iso + '|' + ((st.m && st.m.files) || []).map(f=>(f.imgs||[]).length + ':' + String((f.imgs||[])[0]||'').length).join(',') + '|' + (st.o && st.o.html ? st.o.html.length : 0) + '|' + P.map(p=>[p.pid, p.c ? [p.c.st, p.c.aa, p.c.res, p.c.note].join('~') : '', p.ua && p.ua.fun ? 1 : 0].join(':')).join(';'); };
+    const pdfSig = ()=>{ const P = (st.cu && st.cu.list) || []; return st.iso + '|' + ((st.m && st.m.files) || []).map(f=>(f.imgs||[]).length + ':' + String((f.imgs||[])[0]||'').length + ':' + (f.kind||'') + (f.old?'o':'') + ':' + (f.extraRot||0)).join(',') + '|' + (st.o && st.o.html ? st.o.html.length : 0) + '|' + P.map(p=>[p.pid, p.c ? [p.c.st, p.c.aa, p.c.res, p.c.note].join('~') : '', p.ua && p.ua.fun ? 1 : 0].join(':')).join(';'); };
     let pdfT = null; const pdfPre = ()=>{ clearTimeout(pdfT); pdfT = setTimeout(async ()=>{ if(!pg.el.isConnected || st.cubusy || st.pdfbusy || !(st.cu && st.cu.list && st.cu.list.length)) return; const sg = pdfSig(); if(st.pdfFile && st.pdfSigOk === sg) return;
-        try{ const f = await window.pdxOrCultPdf(st, lbl(st.iso)); if(pdfSig() === sg){ st.pdfFile = f; st.pdfSigOk = sg; rd0(); requestAnimationFrame(fit); } }catch(e){} }, 1500); };
+        try{ const f = await window.pdxOrCultPdfBest(st, lbl(st.iso)); if(pdfSig() === sg){ st.pdfFile = f; st.pdfSigOk = sg; rd0(); requestAnimationFrame(fit); } }catch(e){} }, 1500); };
     const rd0 = pg.redraw; pg.redraw = ()=>{ if(st.pdfFile && st.pdfSigOk && st.pdfSigOk !== pdfSig()) st.pdfFile = null; rd0(); requestAnimationFrame(fit); pdfPre(); }; window.addEventListener('resize', ()=>{ if(pg.el.isConnected) fit(); });
     pg.el.addEventListener('click', e=>{ if(e.target.closest('[data-orszoom]')){ if(Date.now() - (st.pinchAt||0) < 600) return; st.zs = st.zs || {}; if((st.zs.x||1) > 1){ st.zs.x = 1; st.zoom = false; } else st.zoom = !st.zoom; pg.redraw(); return; }
-      const kb = e.target.closest('[data-orkind]'); if(kb){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+kb.dataset.orkind]; if(!f) return; const nx = {normal:'local', local:'extra', extra:'normal'}[f.kind||'normal']; f.kind = nx; try{ localStorage.setItem(kindK(f), nx); }catch(_){} pg.redraw(); return; }
+      const kb = e.target.closest('[data-orkind]'); if(kb){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+kb.dataset.orkind]; if(!f) return; const nx = {normal:'local', local:'extra', extra:'normal'}[f.kind||'normal']; f.kind = nx; try{ localStorage.setItem(kindK(f), nx); }catch(_){} orMarkOld(); pg.redraw(); return; }
       if(e.target.closest('[data-orex]')){ e.stopPropagation(); st.showEx = !st.showEx; pg.redraw(); return; }
+      if(e.target.closest('[data-orold]')){ e.stopPropagation(); st.showOld = !st.showOld; pg.redraw(); return; }
       const rr = e.target.closest('[data-orrot]'); if(rr){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+rr.dataset.orrot]; if(!f) return;
-        try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){}
+        try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){} f.extraRot = ((f.extraRot||0) + 90) % 360;
         // 🎓 15/11: όταν η σελίδα είχε γυριστεί αυτόματα (90/270) και τη διορθώνεις με ↻ → μαθαίνει τη ΣΩΣΤΗ φορά για τα επόμενα (όλη η συσκευή)
         try{ const tot = ((f.auto||0) + rotGet(f)) % 360; if(f.auto && (tot===90 || tot===270)) localStorage.setItem('pdx_or_dir', String(tot)); }catch(x){} f.txt = (f.txt||[]).map(T=>window.pdxOrRotTxt(T, 90)); Promise.all(f.imgs.map(u=>rotUrl(u, 90))).then(L=>{ f.imgs = L; pg.redraw(); }); return; }
       const z = e.target.closest('[data-orpz]'); if(z){ if(Date.now() - (st.pinchAt||0) < 600) return; const k = 'm'+z.dataset.orpz; st.zs = st.zs || {}; st.zs[k] = (st.zs[k]||1) > 1 ? 1 : 2.2; pg.redraw(); return; } });
@@ -26541,8 +26597,8 @@ window.CLS_MODE='A';
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
       if(b.dataset.or==='cult') return cultLoad(true);
       if(b.dataset.or==='print') return printCult();
-      if(b.dataset.or==='pdf'){ if(st.pdfbusy) return; st.pdfbusy = true; pg.redraw(); window.pdxOrCultPdf(st, lbl(st.iso)).then(f=>{ st.pdfFile = f; st.pdfSigOk = pdfSig(); }).catch(er=>toast('⚠ '+(er.message||er))).finally(()=>{ st.pdfbusy = false; pg.redraw(); }); return; }
-      if(b.dataset.or==='share'){ if(st.pdfFile) window.pdxShareFile(st.pdfFile); return; }
+      if(b.dataset.or==='pdf'){ if(st.pdfbusy) return; st.pdfbusy = true; pg.redraw(); window.pdxOrCultPdfBest(st, lbl(st.iso)).then(f=>{ st.pdfFile = f; st.pdfSigOk = pdfSig(); window.pdxPdfPreview(f); }).catch(er=>toast('⚠ '+(er.message||er))).finally(()=>{ st.pdfbusy = false; pg.redraw(); }); return; }
+      if(b.dataset.or==='share'){ if(st.pdfFile) window.pdxPdfPreview(st.pdfFile); return; }
       if(b.dataset.or==='xr'){ const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
         const recs = []; [typeof data!=='undefined'?data:{}, typeof extraPatients!=='undefined'?extraPatients:{}].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) recs.push({k, d}); }));
         const items = (window.__orsXP||[]).map(p=>{ const N = nz(p.name).split(' '); const r = recs.find(x=>{ const M = nz(x.d.name).split(' '); return M[0]===N[0] && (!N[1] || !M[1] || M[1].slice(0,3)===N[1].slice(0,3)); });
