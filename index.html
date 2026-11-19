@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v610';
+const APP_VER = '2026-11-19-v611';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22417,9 +22417,9 @@ window.pdxDosSlice = function(D, from, to){ const out = {}; if(!D || !D.sec) ret
   return out; };
 // 🔪 19/11 (χρήστης: «Επέμβαση = ΕΝΑ γεγονός (εντολή + πρακτικό) στον φάκελο νοσηλείας»): κάθε «Εντολή για επέμβαση» ενώνεται με το πρακτικό της
 // (πρώτο αχρησιμοποίητο πρακτικό ίδια μέρα … +7 ημέρες, προτίμηση ίδιου ονόματος επέμβασης) → ΕΝΑ γεγονός. ord/note = [{r: κελιά, v: προβολή}]
-window.pdxDosOps = function(ord, note){ ord = ord || []; note = note || [];
+window.pdxDosOps = function(ord, note, acts){ ord = ord || []; note = note || []; acts = acts || [];   // 🔪 20:17 (χρήστης): + ιατρικές πράξεις ίδιας ημέρας ΜΕΣΑ στην επέμβαση
   const iso = r=>{ for(const c of (r||[])){ const m = /(\d{2})[\/-](\d{2})[\/-](\d{4})/.exec(String(c||'')); if(m) return m[3]+'-'+m[2]+'-'+m[1]; const m2 = /^(\d{4}-\d{2}-\d{2})/.exec(String(c||'')); if(m2) return m2[1]; } return ''; };
-  const plain = c=>{ c = String(c||'').trim(); return c && !/^\d{1,4}$/.test(c) && !/\d{2}[\/-]\d{2}[\/-]\d{4}|^\d{4}-\d{2}-\d{2}/.test(c) && !/^(Οριστικοποιημ|Προσωριν|Ενεργ|Ακυρωμ|Ναι$|Όχι$)/i.test(c); };
+  const plain = c=>{ c = String(c||'').trim(); return c && !/^\d{1,4}$/.test(c) && !/\d{2}[\/-]\d{2}[\/-]\d{4}|^\d{4}-\d{2}-\d{2}/.test(c) && !/^(Οριστικοποιημ|Προσωριν|Ενεργ|Ακυρωμ|Καταχ[ωώ]ρ|Ολοκληρ|Εκκρεμ|Ναι$|Όχι$)/i.test(c); };   // 20:17: «Καταχώρηση» = κατάσταση, όχι τίτλος
   const fld = (v, re)=>{ const f = v && v.fields ? v.fields.find(x=>re.test(String(x.l||'')) && String(x.v||'').trim()) : null; return f ? String(f.v).trim() : ''; };
   const ttl = o=>fld(o.v, /^(Επέμβαση|Ονομασία επέμβασης|Τίτλος|Πράξη|Είδος επέμβασης)/i) || (o.r||[]).filter(plain).sort((a,b)=>String(b).length-String(a).length)[0] || '';
   const stOf = o=>(o.r||[]).map(c=>String(c||'').trim()).find(c=>/^(Οριστικοποιημ|Προσωριν)/i.test(c)) || '';
@@ -22435,15 +22435,24 @@ window.pdxDosOps = function(ord, note){ ord = ord || []; note = note || [];
     return {d: x.d || (best && best.d) || '', title: x.t || (best && best.t) || 'Επέμβαση', order: x.o, note: best ? best.o : null, noteD: best ? best.d : '', noteSt: best ? best.st : '',
       warn: best ? '' : (x.d && x.d < tIso ? 'nonote' : 'planned')}; });
   N.filter(n=>!n.used).forEach(n=>ev.push({d:n.d, title:n.t || 'Επέμβαση', order:null, note:n.o, noteD:n.d, noteSt:n.st, warn:'noorder'}));
+  // ⚕️ ιατρική πράξη ίδιας ημέρας (±1, ή ως το πρακτικό) → ΜΕΣΑ στο γεγονός· τίτλος = η πράξη αν η εντολή δεν δίνει όνομα επέμβασης
+  const aCode = o=>(o.r||[]).map(c=>String(c||'').trim()).find(c=>/^\d{2,3}(\.\d{1,3})+$/.test(c)) || '';
+  const aName = o=>(o.r||[]).map(c=>String(c||'').trim()).filter(c=>plain(c) && !/^\d{2,3}(\.\d{1,3})+$/.test(c)).sort((a,b)=>b.length-a.length)[0] || '';
+  acts.forEach(a=>{ const ad = iso(a.r); if(!ad) return; let best = null, bd = 99;
+    ev.forEach(e=>{ const lo = e.d || e.noteD, hi = e.noteD && e.noteD > (e.d||'') ? e.noteD : e.d; if(!lo) return; const d1 = days(lo, ad), d2 = hi ? days(hi, ad) : d1;
+      const dist = (d1 >= -1 && d2 <= 1) ? Math.min(Math.abs(d1), Math.abs(d2)) : 99; if(dist < bd){ bd = dist; best = e; } });
+    if(best && bd <= 1){ (best.acts = best.acts || []).push({o:a, d:ad, code:aCode(a), name:aName(a)}); a._op = true; } });
+  ev.forEach(e=>{ if(e.acts && e.acts.length && (!e.title || e.title==='Επέμβαση' || !(e.order && fld(e.order.v, /^(Επέμβαση|Ονομασία επέμβασης|Τίτλος|Είδος επέμβασης)/i)))) e.title = e.acts[0].name || e.title; });
   return ev.sort((a,b)=>(b.d||'').localeCompare(a.d||'')); };
 // 🔪 → στοιχεία iosGroup (ένα ανά επέμβαση)
-window.pdxDosOpsItems = function(ord, note){ const E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+window.pdxDosOpsItems = function(ord, note, acts){ const E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const dmy = d=>d ? d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4) : '';
   const chip = (ok, t)=>'<span style="display:inline-block;margin:4px 4px 0 0;padding:3px 9px;border-radius:12px;font-size:12.5px;font-weight:600;background:'+(ok===true?'rgba(52,199,89,.14);color:#1A7F37':ok===false?'rgba(255,59,48,.12);color:#B42318':'rgba(118,118,128,.12);color:#6B7280')+'">'+t+'</span>';
   const det = (lbl, v)=>v && v.fields && v.fields.length ? '<details style="margin-top:6px"><summary style="cursor:pointer;color:#0A84FF;font-size:13px">'+lbl+'</summary>'+v.fields.map(f=>'<div style="margin:6px 0;font-size:13.5px"><b style="color:#6B7280;font-weight:600">'+E3(f.l||'—')+'</b><div style="white-space:pre-wrap">'+E3(f.v)+'</div></div>').join('')+'</details>' : '';
-  return window.pdxDosOps(ord, note).map(e=>({t:'<div data-opev style="font-size:15px"><b>'+E3(e.title)+'</b>'+(e.d?' <span style="color:#6B7280;font-weight:400">· '+E3(dmy(e.d))+'</span>':'')+'</div>'
+  return window.pdxDosOps(ord, note, acts).map(e=>({t:'<div data-opev style="font-size:15px"><b>'+E3(e.title)+'</b>'+(e.d?' <span style="color:#6B7280;font-weight:400">· '+E3(dmy(e.d))+'</span>':'')+'</div>'
+    + (e.acts && e.acts.length ? e.acts.map(a=>'<div style="font-size:13.5px;color:#6B7280;margin-top:2px">⚕️ '+E3(a.code ? a.code+' · ' : '')+E3(a.name)+'</div>').join('') : '')
     + '<div>'+(e.order ? chip(true, 'Εντολή ✓') : chip(false, '⚠ χωρίς εντολή'))
-    + (e.note ? chip(true, 'Πρακτικό ✓'+(e.noteD && e.noteD!==e.d ? ' '+E3(dmy(e.noteD)) : '')+(e.noteSt && !/^Οριστικοποιημ/i.test(e.noteSt) ? ' · '+E3(e.noteSt) : '')) : e.warn==='nonote' ? chip(false, '⚠ λείπει πρακτικό') : chip(null, '⏳ προγραμματισμένη'))+'</div>'
+    + (e.acts && e.acts.length ? chip(true, 'Πράξη ✓') : '') + (e.note ? chip(true, 'Πρακτικό ✓'+(e.noteD && e.noteD!==e.d ? ' '+E3(dmy(e.noteD)) : '')+(e.noteSt && !/^Οριστικοποιημ/i.test(e.noteSt) ? ' · '+E3(e.noteSt) : '')) : e.warn==='nonote' ? chip(false, '⚠ λείπει πρακτικό') : chip(null, '⏳ προγραμματισμένη'))+'</div>'
     + det('Τι γράφει η εντολή', e.order && e.order.v) + det('Τι γράφει το πρακτικό', e.note && e.note.v)})); };
 window.pdxDosAdmHtml = function(D, from, to){ const E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   if(!D) return iosGroup('Φάκελος ΝΠΣ', [{t:'<span style="color:#8E8E93">Δεν υπάρχει ακόμα φάκελος ΝΠΣ για τον ασθενή.</span>'}], 'Έρχεται αυτόματα το βράδυ της εισαγωγής (23:00) — ή από «📂 Φάκελος νοσηλείας» → «Φέρε τώρα».');
@@ -22451,7 +22460,9 @@ window.pdxDosAdmHtml = function(D, from, to){ const E3 = s=>String(s==null?'':s)
   const when = D.at ? new Date(D.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
   if(!K.length) return iosGroup('Φάκελος ΝΠΣ', [{t:'<span style="color:#8E8E93">Τίποτα για αυτή τη νοσηλεία στον φάκελο'+(when?' της '+E3(when):'')+'.</span>'}]);
   // 🔪 19/11: εντολή + πρακτικό = ΕΝΑ γεγονός «Επέμβαση»
-  const K2 = K.filter(k=>!(k==='opNote' && S.orOrder)), opG = ki=>{ const it = window.pdxDosOpsItems(S.orOrder||[], S.opNote||[]); return iosGroup('🔪 Επέμβαση · '+it.length, it, ki===K2.length-1 && when ? 'ΝΠΣ · φάκελος της '+when : ''); };
+  const opIt = (S.orOrder || S.opNote) ? window.pdxDosOpsItems(S.orOrder||[], S.opNote||[], S.acts||[]) : [];   // ⚕️ σημαδεύει (_op) τις πράξεις που μπήκαν στην επέμβαση
+  if(S.acts){ S.acts = S.acts.filter(o=>!o._op); if(!S.acts.length) delete S.acts; }
+  const K2 = K.filter(k=>!(k==='opNote' && S.orOrder) && (k!=='acts' || S.acts)), opG = ki=>{ const it = opIt; return iosGroup('🔪 Επέμβαση · '+it.length, it, ki===K2.length-1 && when ? 'ΝΠΣ · φάκελος της '+when : ''); };
   return K2.map((k,ki)=>(k==='orOrder' || k==='opNote') ? opG(ki) : iosGroup(window.PDX_DOS_T[k]+' · '+S[k].length, S[k].map(o=>{ const v = o.v; const sub = v && v.fields && v.fields.length ? '<details style="margin-top:6px"><summary style="cursor:pointer;color:#0A84FF;font-size:13px">Τι γράφει</summary>'+v.fields.map(f=>'<div style="margin:6px 0;font-size:13.5px"><b style="color:#6B7280;font-weight:600">'+E3(f.l||'—')+'</b><div style="white-space:pre-wrap">'+E3(f.v)+'</div></div>').join('')+'</details>' : '';
     return {t:'<span style="font-size:14.5px">'+E3((o.r||[]).filter(Boolean).join(' · '))+'</span>'+sub}; }), ki===K2.length-1 && when ? 'ΝΠΣ · φάκελος της '+when : '')).join(''); };
 // 🌙 12/11 «Νέες εισαγωγές»: για κάθε ασθενή με εισαγωγή σήμερα/χθες — τι μαζεύτηκε αυτόματα (φάκελος ΝΠΣ 23:00, ΑΗΦΥ 00–03, εργαστηριακά) και τι λείπει (+ «Φέρε τώρα»)
@@ -22540,10 +22551,11 @@ window.pdxDossierOpen = async function(name, amka){
     if(st.d){ const S = st.d.sec || {};
       h += '<div style="margin:4px 16px 8px;font-size:13px;color:#6B7280">ΝΠΣ · '+new Date(st.d.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>';
       const asL = x=>(x && !x.miss ? (x.rows||[]).map((r,i)=>({r, v:(x.views||[])[i]})) : []);
+      const actL = asL(S.acts);   // ⚕️ 20:17: οι πράξεις που ανήκουν σε επέμβαση εμφανίζονται ΜΟΝΟ μέσα της
       Object.keys(T).forEach(k=>{ const x = S[k];
         // 🔪 19/11: εντολή + πρακτικό = ΕΝΑ γεγονός «Επέμβαση» (στη θέση των «Εντολές για επέμβαση»)
-        if(k==='orOrder' || k==='opNote'){ if(k==='opNote' && asL(S.orOrder).length) return; const it = window.pdxDosOpsItems(asL(S.orOrder), asL(S.opNote)); if(it.length) h += iosGroup('🔪 Επέμβαση · '+it.length, it); return; }
-        if(!x || x.miss) return; const R = x.rows||[]; if(!R.length) return;
+        if(k==='orOrder' || k==='opNote'){ if(k==='opNote' && asL(S.orOrder).length) return; const it = window.pdxDosOpsItems(asL(S.orOrder), asL(S.opNote), actL); if(it.length) h += iosGroup('🔪 Επέμβαση · '+it.length, it); return; }
+        if(!x || x.miss) return; let R = x.rows||[]; if(k==='acts'){ R = R.filter((r,i)=>!(actL[i] && actL[i]._op)); } if(!R.length) return;
         h += iosGroup(T[k]+' · '+R.length, R.map((r,i)=>{ const v = (x.views||[])[i]; const sub = v && v.fields && v.fields.length ? '<details style="margin-top:6px"><summary style="cursor:pointer;color:#0A84FF;font-size:13px">Τι γράφει</summary>'+v.fields.map(f=>'<div style="margin:6px 0;font-size:13.5px"><b style="color:#6B7280;font-weight:600">'+E3(f.l||'—')+'</b><div style="white-space:pre-wrap">'+E3(f.v)+'</div></div>').join('')+'</details>' : '';
           return {t:'<span style="font-size:14.5px">'+E3(r.filter(Boolean).join(' · '))+'</span>'+sub}; })); });
     }
