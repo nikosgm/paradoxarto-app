@@ -1262,7 +1262,7 @@ function _rtRebuild(){
     try{
       let mc = 0; Object.keys(extraPatients).forEach(k=>{ const n=parseInt(k.replace('extra-',''),10); if(!isNaN(n)&&n>mc) mc=n; });
       extraCounter = Math.max(extraCounter, mc);
-      buildGrid(); buildExtraList();
+      buildGrid(); buildExtraList(); try{ pdxDupScan(); }catch(e){}
       setSyncStatus('Ενημερώθηκε ζωντανά ✓ ' + new Date().toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}));
     }catch(e){ console.error('rt rebuild', e); }
   }, 250);
@@ -2268,7 +2268,14 @@ function saveToStorage(immediate){
 // μένει μόνο για «καθαρισμό όλων» και εισαγωγή αρχείου.
 function saveAllMerge(immediate){
   if(!fbReady){ setSyncStatus('Χωρίς σύνδεση cloud — τοπική αποθήκευση μόνο'); return; }
-  scheduleWrite(()=>{
+  scheduleWrite(async ()=>{
+    // 🛑 19/11 15:12 (χρήστης: «στο 346 ο ίδιος ασθενής σε δύο κρεβάτια»): συσκευή που κοιμόταν δεν έμαθε μια μετακίνηση/εξιτήριο
+    // και η ολική εγγραφή («όλοι οι ασθενείς της συσκευής») ξαναζωντάνευε την παλιά θέση. Τώρα: πρώτα ποιοι υπάρχουν ΤΩΡΑ στη βάση —
+    // όσοι η συσκευή τους ήξερε από τη βάση (_base) αλλά δεν υπάρχουν πια, σβήνονται τοπικά αντί να ξαναγραφτούν.
+    try{ const q = await sb6.from('oncall_patients').select('key').limit(5000);
+      if(!q.error && Array.isArray(q.data) && q.data.length){ const live = new Set(q.data.map(r=>r.key)); let n = 0;
+        [[data,false],[extraPatients,true]].forEach(([st])=>Object.keys(st||{}).forEach(k=>{ if(!live.has(k) && _base[k]){ delete st[k]; delete _base[k]; n++; } }));
+        if(n){ try{ buildGrid(); buildExtraList(); if(window.mobRefresh) mobRefresh(); }catch(e){} } } }catch(e){}
     const u = {};
     Object.keys(data||{}).forEach(k=>{ if(data[k]) u[fbEntryPath(k,false)] = data[k]; });
     Object.keys(extraPatients||{}).forEach(k=>{ if(extraPatients[k]) u[fbEntryPath(k,true)] = extraPatients[k]; });
@@ -2547,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v594';
+const APP_VER = '2026-11-19-v595';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -2710,7 +2717,7 @@ function loadFromStorage(){
       buildExtraList();
       try{ if(window.mobRefresh) window.mobRefresh(); }catch(e){}
       window.__dayReload = false;
-      window.pdxLoadOk = true; try{ const eb = document.getElementById('pdxLoadErr'); if(eb) eb.remove(); }catch(e){}
+      window.pdxLoadOk = true; setTimeout(()=>{ try{ pdxDupScan(); }catch(e){} }, 3000); try{ const eb = document.getElementById('pdxLoadErr'); if(eb) eb.remove(); }catch(e){}
       setSyncStatus('Συγχρονισμένο ✓');
       if(daysPassed > 0) saveAllMerge(); // persist the caught-up state so it doesn't re-advance on the next load
     })
@@ -5705,6 +5712,20 @@ function pdxDupName(name, exceptKey){
     if(k!==exceptKey && d && N(d.name)===n) return {k, name:String(d.name).trim(), where: x ? (d.assignedWard && !/^\d+$/.test(String(d.assignedWard)) ? d.assignedWard : 'Εκτός θαλάμου') : k}; }
   return null;
 }
+// 👥 19/11 15:12: ο ίδιος ασθενής (όνομα + ΑΜΚΑ αν υπάρχει) σε δύο θέσεις → ειδοποίηση μία φορά ανά ζεύγος, με επιλογή ποια θέση μένει
+function pdxDupScan(){ try{
+  if(window.__efbotSelf || document.hidden) return;   // ποτέ παράθυρο confirm στο Chrome του bot (θα το «πάγωνε»)
+  const N = x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim(), seen = {}, S = window.__pdxDupSeen || (window.__pdxDupSeen = {});
+  [[data,false],[extraPatients,true]].forEach(([st,x])=>Object.keys(st||{}).forEach(k=>{ const d = st[k]; if(!d || !N(d.name) || d._npsTemp) return; const id = N(d.name)+'|'+String(d.amka||'');
+    (seen[id] = seen[id] || []).push({k, x, d}); }));
+  Object.keys(seen).forEach(id=>{ const L = seen[id]; if(L.length<2) return; const sig = L.map(o=>o.k).sort().join(','); if(S[sig]) return; S[sig] = 1;
+    // προτεινόμενη να ΜΕΙΝΕΙ: αυτή με ιστορικό θέσεων (stay) και πιο πρόσφατη αλλαγή
+    L.sort((a,b)=>(!!(b.d.stay&&b.d.stay.rooms&&b.d.stay.rooms.length) - !!(a.d.stay&&a.d.stay.rooms&&a.d.stay.rooms.length)) || ((+b.d.touchedAt||0)-(+a.d.touchedAt||0)));
+    const lab = o=>o.x ? 'εκτός θαλάμου' : o.k, keep = L[0], drop = L.slice(1);
+    setTimeout(()=>{ if(confirm('⚠ Ο ίδιος ασθενής ('+String(keep.d.name).trim()+') εμφανίζεται σε '+L.length+' θέσεις: '+L.map(lab).join(', ')+'.\n\nΝα μείνει στο '+lab(keep)+' (πιο πρόσφατο) και να αφαιρεθεί από '+drop.map(lab).join(', ')+';')){
+      drop.forEach(o=>{ const st = o.x ? extraPatients : data; delete st[o.k]; try{ saveEntryToStorage(o.k, o.x, null, true); }catch(e){} });
+      try{ buildGrid(); buildExtraList(); if(window.mobRefresh) mobRefresh(); }catch(e){} } }, 800); });
+}catch(e){} }
 function pdxDupOk(name, exceptKey){ const h = pdxDupName(name, exceptKey); return !h || confirm('Υπάρχει ήδη '+h.name+' στο '+h.where+' — συνέχεια;'); }
 function persistCurrent(){
   if(!current) return;
@@ -23154,7 +23175,7 @@ function histPreview(f){ var t = historyText(recFromHist(f.hist, f.histExtra)); 
 
 function renderPlace(){
   var f = ctx.form; ctx.placing = true;
-  var where = !f.room ? '' : (f.room.extra ? 'εκτός θαλάμου' : f.room.label);
+  var where = !f.room ? '' : f.room.attach ? (f.room.name+' ('+f.room.label+')') : (f.room.extra ? 'εκτός θαλάμου' : f.room.label);
   barHtml([
     {title:'➕ Νέος ασθενής'},
     {label:'A−', fn:function(){ lsSet(CH_FS_LS, Math.max(.3, fsScale()-.15)); applyFs(); }},
@@ -23173,12 +23194,20 @@ function renderPlace(){
     h += '<div class="ch-room"><div class="rn">'+esc(room.num)+'</div><div class="rb">';
     for(var b=1; b<=room.beds; b++){
       var key = room.num+'-'+b, occ = hasContent(data[key]), sel = !!(f.room && f.room.key===key);
-      h += '<button class="ch-bed'+(sel?' sel':'')+(occ?' occ':'')+'" data-bed="'+esc(key)+'" data-num="'+esc(room.num)+'" data-b="'+b+'"'+(occ?' disabled':'')+'>'+b+
+      h += '<button class="ch-bed'+(sel?' sel':'')+(occ?' occ':'')+'" data-bed="'+esc(key)+'" data-num="'+esc(room.num)+'" data-b="'+b+'"'+(occ?' data-att="1"':'')+'>'+b+
            (occ ? '<small>'+esc((data[key] && data[key].name) || 'κατειλ.')+'</small>' : '')+'</button>';
     }
     h += '</div></div>';
   });
   h += '<button class="ch-bed wide'+(f.room && f.room.extra?' sel':'')+'" data-bed="__extra">Άφιξη εκτός θαλάμου</button></div>';
+  // 📎 19/11 15:15 (χρήστης: «να μπορώ να εναποθέτω ιστορικά σε όποιον ασθενή του ΝΠΣ θέλω» · «Ζουρνατζίδης διαβάστηκε Ζαρναζίδης»):
+  // ΥΠΑΡΧΩΝ ασθενής (κρεβάτι ή εκτός θαλάμου / λίστα ΝΠΣ) → το ιστορικό μπαίνει στην καρτέλα του· προτάσεις με ΠΑΡΟΜΟΙΟ όνομα πρώτες
+  var AT = chAttachList(f.name);
+  h += '<div class="ch-card"><h3>…ή σε ασθενή που ήδη υπάρχει</h3>';
+  if(AT.sug.length) h += '<div class="ch-lab">Μοιάζει με:</div><div class="ch-pills">'+AT.sug.map(function(o){ return '<button class="ch-pill'+(f.room&&f.room.attach&&f.room.key===o.k?' sel':'')+'" data-attk="'+esc(o.k)+'">📎 '+esc(o.name)+' · '+esc(o.where)+'</button>'; }).join('')+'</div>';
+  h += '<select class="ch-in" id="chp_att" style="margin-top:6px"><option value="">— όλοι οι ασθενείς ('+AT.all.length+') —</option>'+AT.all.map(function(o){ return '<option value="'+esc(o.k)+'"'+(f.room&&f.room.attach&&f.room.key===o.k?' selected':'')+'>'+esc(o.name)+' · '+esc(o.where)+'</option>'; }).join('')+'</select>';
+  if(f.room && f.room.attach) h += '<div class="ch-hint" style="color:#1D4E80;font-weight:700">📎 Το ιστορικό θα προστεθεί στην καρτέλα: '+esc(f.room.name)+' ('+esc(f.room.label)+'). Όνομα/θέση του δεν αλλάζουν· κενά πεδία συμπληρώνονται, το ιστορικό προστίθεται.</div>';
+  h += '</div>';
 
   // 2. Στοιχεία
   h += '<div class="ch-card"><h3>2 · Στοιχεία που περνάνε στα πεδία</h3>';
@@ -23221,6 +23250,7 @@ function renderPlace(){
   body.querySelectorAll('[data-bed]').forEach(function(btn){ btn.onclick = function(){
     readPlace();
     var k = btn.getAttribute('data-bed');
+    if(btn.getAttribute('data-att')){ chAttachPick(f, k); rerenderPlace(); return; }
     if(k==='__extra') f.room = { extra:true };
     else {
       var num = btn.getAttribute('data-num'), bed = +btn.getAttribute('data-b'), room = ROOMS.filter(function(r){ return String(r.num)===num; })[0];
@@ -23228,6 +23258,8 @@ function renderPlace(){
     }
     rerenderPlace();
   }; });
+  body.querySelectorAll('[data-attk]').forEach(function(btn){ btn.onclick = function(){ readPlace(); chAttachPick(f, btn.getAttribute('data-attk')); rerenderPlace(); }; });
+  var atS = $('chp_att'); if(atS) atS.onchange = function(){ readPlace(); if(atS.value) chAttachPick(f, atS.value); else if(f.room && f.room.attach) f.room = null; rerenderPlace(); };
   var stg=$('chSurgTog'); if(stg) stg.onclick=function(){ readPlace(); f.surgOpen=!f.surgOpen; rerenderPlace(); };
   body.querySelectorAll('[data-surg]').forEach(function(btn){ btn.onclick = function(){ readPlace(); var x=btn.getAttribute('data-surg'); f.surgery=(f.surgery===x?'':x); if(f.surgery) f.pod=false; rerenderPlace(); }; });
   body.querySelectorAll('[data-th]').forEach(function(btn){ btn.onclick = function(){ readPlace(); var t = btn.getAttribute('data-th'); f.therapist = (f.therapist===t ? '' : t); rerenderPlace(); }; });
@@ -23244,11 +23276,49 @@ function toast(msg){
   document.body.appendChild(t); setTimeout(function(){ t.remove(); }, 4000);
 }
 
+function chNz(x){ return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/Σ$|Σ\b/g,'Σ').replace(/[^A-ZΑ-Ω ]/g,'').replace(/\s+/g,' ').trim(); }
+function chLev(a, b){ var m = a.length, n = b.length, i, j, p, c = []; for(j=0;j<=n;j++) c[j]=j;
+  for(i=1;i<=m;i++){ p = c[0]; c[0] = i; for(j=1;j<=n;j++){ var t = c[j]; c[j] = Math.min(c[j]+1, c[j-1]+1, p + (a[i-1]===b[j-1]?0:1)); p = t; } } return c[n]; }
+// ομοιότητα επωνύμου (1 = ίδιο): ο χειρόγραφος/OCR μπερδεύει φωνήεντα και διπλά σύμφωνα → απόσταση Levenshtein σε σκελετό
+function chSim(a, b){ a = chNz(a); b = chNz(b); if(!a || !b) return 0; if(a===b) return 1;
+  var sa = a.split(' ')[0], sb = b.split(' ')[0], sk = function(x){ return x.replace(/ΟΥ/g,'U').replace(/[ΑΕΗΙΟΥΩ]/g,'').replace(/(.)\1/g,'$1'); };
+  var r1 = 1 - chLev(sa, sb)/Math.max(sa.length, sb.length), r2 = 1 - chLev(sk(sa), sk(sb))/Math.max(1, Math.max(sk(sa).length, sk(sb).length));
+  var r3 = 1 - chLev(a, b)/Math.max(a.length, b.length); return Math.max(r3, (r1*0.5 + r2*0.5)); }
+function chAttachList(name){ var all = [];
+  [[data,false],[extraPatients,true]].forEach(function(z){ var st = z[0]; Object.keys(st||{}).forEach(function(k){ var d = st[k]; if(!d || !String(d.name||'').trim()) return;
+    var where = z[1] ? (d._npsTemp ? 'λίστα ΝΠΣ' : 'εκτός θαλάμου') : k; all.push({k:k, x:z[1], name:String(d.name).trim(), where:where, s: chSim(name, d.name)}); }); });
+  all.sort(function(a,b){ return (b.s-a.s) || a.name.localeCompare(b.name,'el'); });
+  return { all: all.slice().sort(function(a,b){ return a.name.localeCompare(b.name,'el'); }), sug: name ? all.filter(function(o){ return o.s >= 0.6; }).slice(0,4) : [] }; }
+function chAttachPick(f, k){ var x = !(k in data) && (k in extraPatients), d = (x ? extraPatients : data)[k]; if(!d) return;
+  f.room = { attach:true, key:k, isExtra:x, name:String(d.name||'').trim(), label: x ? (d._npsTemp ? 'λίστα ΝΠΣ' : 'εκτός θαλάμου') : k }; }
+// προσθήκη ιστορικού σε ΥΠΑΡΧΟΝΤΑ: ενώνει κουμπιά ιστορικού, συμπληρώνει μόνο ΚΕΝΑ πεδία, δεν αλλάζει όνομα/θέση
+function chAttachApply(f){
+  var st = f.room.isExtra ? extraPatients : data, ex = st[f.room.key]; if(!ex) return alert('Ο ασθενής δεν υπάρχει πια σε αυτή τη θέση.');
+  var r = makeRecord(f), out = JSON.parse(JSON.stringify(ex));
+  var sel = (out.historySelected||[]).slice(); (r.historySelected||[]).forEach(function(b){ if(sel.indexOf(b)<0) sel.push(b); }); out.historySelected = sel;
+  ['historyCounts','historyNotes','historyStent','historyStentCount','historyTurbStage','historyTurbGrade','historyTurbCis','historyTurbBcg','historyLap','historySide'].forEach(function(fk){ out[fk] = Object.assign({}, r[fk]||{}, out[fk]||{}); });
+  var hc = String(out.historyCustom||'').trim(), nc = String(r.historyCustom||'').trim(); if(nc && hc.indexOf(nc)<0) out.historyCustom = hc ? hc+', '+nc : nc;
+  ['therapist','dx','allergy','surgery','surgeryCustom','side','anticoagCustom'].forEach(function(fk){ if(r[fk] && !String(out[fk]||'').trim()) out[fk] = r[fk]; });
+  if(r.anticoagList && !(out.anticoagList||[]).length) out.anticoagList = r.anticoagList;
+  if(r.surgery && !ex.surgery && r.pod && !ex.pod){ out.pod = r.pod; out.podCustom = ''; }
+  var imgId = ctx.h.imgId || null; out.caseHist = { v:1, at:Date.now(), imgId:imgId, d:ctx.h.d, reviewed:true, attached:true, ocrName: f.name||'' };
+  delete out._npsTemp;   // λίστα ΝΠΣ → γίνεται κανονική καρτέλα (εκτός θαλάμου)
+  var clean = JSON.parse(JSON.stringify(out)); st[f.room.key] = clean;
+  if(ctx.pendingImgs && imgId && typeof fbDb!=='undefined' && fbDb){ try{ fbDb.ref(CH_IMG_PATH+imgId).set(ctx.pendingImgs); }catch(e){ console.error(e); } }
+  saveEntryToStorage(f.room.key, f.room.isExtra, clean, true);
+  histInboxDone(ctx.inboxId);
+  var lab = f.room.name + ' (' + f.room.label + ')';
+  ctx.pendingImgs = null; ctx.placing = false; ctx.review = false; ctx.edit = false; ov.classList.remove('open'); ctx = null;
+  try{ buildGrid(); if(typeof buildExtraList==='function') buildExtraList(); }catch(e){}
+  try{ if(window.buildMobileView) window.buildMobileView(); }catch(e){}
+  toast('📎 Το ιστορικό προστέθηκε στην καρτέλα: ' + lab + '.');
+}
 function placePatient(){
   if(!ctx || !ctx.isNew || !ctx.form) return;
   readPlace();
   var f = ctx.form;
   if(!f.room){ alert('Διάλεξε πρώτα δωμάτιο/κρεβάτι.'); return; }
+  if(f.room.attach) return chAttachApply(f);
   var rec = makeRecord(f), key, isExtra = !!f.room.extra, label;
   if(!pdxDupOk(rec.name)) return;   // ίδιο όνομα ήδη στη λίστα
   if(isExtra){
