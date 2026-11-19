@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v593';
+const APP_VER = '2026-11-19-v594';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14542,6 +14542,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   if(location.hash === '#pdxjobs'){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('jobs'), 300); }
   if(location.hash === '#pdxeps'){ try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('eps'), 300); }
   if(location.hash === '#pdxrev'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('review'), 300); }   // 18/11: μέσω pdxNavGo (αναμονή σύνδεσης/ξεκλειδώματος + navlog)
+  // 📞 19/11 15:20: ρύθμιση κλήσεων για εκτίμηση — αυτόματη υποβολή (προεπιλογή) ή έγκριση από εδώ
+  window.pdxConsultAuto = function(v){ try{ if(v!==undefined) localStorage.setItem('pdx.consultAuto', v?'1':'0'); return localStorage.getItem('pdx.consultAuto')!=='0'; }catch(e){ return true; } };
   window.pdxBotReview = function(id){
     if(typeof sb6==='undefined') return;
     sb6.from('oncall_jobs').select('id,name,name_key,room,kind,status,note,payload,updated_at').eq('id', id).maybeSingle().then(r=>{
@@ -14904,19 +14906,29 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const s0 = specs[0];
     const depOpts = sp=>{ const c = cat.find(x=>x.spec===sp) || {deps:[]}; const D = c.deps.slice().sort((a,b)=>fq(b)-fq(a)); const cur = M.map[sp] || (D[0] && fq(D[0]) ? D[0] : ''); return opt('',cur,'— διάλεξε υποτμήμα —')+D.map(x=>opt(x,cur,x+(fq(x)?' · ×'+fq(x):''))).join(''); };
     sheet('📞 Κλήση για εκτίμηση · '+d.name,
-      lbl('Ειδικότητα (⭐ = αγαπημένες)')+'<select data-sp style="'+inp+'">'+specs.map(x=>opt(x,s0,(M.fav.indexOf(x)>=0?'⭐ ':'')+x)).join('')+'</select>'
+      '<div data-chist style="font-size:13px;color:#6B7686">⏳ αιτήματα ασθενή…</div>'+lbl('Ειδικότητα (⭐ = αγαπημένες)')+'<select data-sp style="'+inp+'">'+specs.map(x=>opt(x,s0,(M.fav.indexOf(x)>=0?'⭐ ':'')+x)).join('')+'</select>'
       +lbl('Υποτμήμα')+'<select data-dp style="'+inp+'">'+depOpts(s0)+'</select>'
       +lbl('Παραπέμπων ιατρός (θεράπων)')+'<input data-rf value="'+E(((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||'')+'" style="'+inp+'">'
       +lbl('Τι ζητάμε (π.χ. προεγχειρητική εκτίμηση)')+'<input data-why placeholder="π.χ. προεγχειρητική εκτίμηση" style="'+inp+'">'
       +'<div style="display:flex;align-items:center;margin:10px 0 5px"><div style="flex:1;font-size:12.5px;color:#6B7686;font-weight:700">Κλινικές πληροφορίες (γράφονται αυτόματα — διόρθωσέ τες ελεύθερα)</div><button data-regen style="border:0;background:#EEF2F6;border-radius:9px;padding:5px 9px;font-size:13px">↻ ξανά</button></div>'
       +'<textarea data-tx rows="7" style="'+inp+';line-height:1.4">'+E(pdxConsultText(d,''))+'</textarea>'
-      +'<div style="font-size:12.5px;color:#64748B;margin-top:6px;line-height:1.4">Το bot συμπληρώνει τη φόρμα στο ΝΠΣ και <b>σταματά πριν από την «Υποβολή αιτήματος»</b> — την πατάτε εσείς στον υπολογιστή.</div>',
+      +'<label style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:15px;font-weight:600"><input type="checkbox" data-auto '+(pdxConsultAuto()?'checked':'')+' style="width:22px;height:22px"> Αυτόματη υποβολή</label>'+'<div style="font-size:12.5px;color:#64748B;margin-top:4px;line-height:1.4">Το bot συμπληρώνει τη φόρμα και <b>ελέγχει ότι το τμήμα που στέλνεται είναι αυτό που διάλεξες</b>. Με «Αυτόματη»: υποβάλλει μόνο του. Χωρίς: σου έρχεται εδώ για <b>Έγκριση</b>. Αν το τμήμα δεν επιβεβαιωθεί, ΔΕΝ υποβάλλεται ποτέ.</div>',
       (v,ov)=>{
         const sp = ov.querySelector('[data-sp]').value, dp = ov.querySelector('[data-dp]').value, rf = (ov.querySelector('[data-rf]').value||'').trim(), tx = (ov.querySelector('[data-tx]').value||'').trim();
         if(!sp) return 'Διάλεξε ειδικότητα.'; if(!dp) return 'Διάλεξε υποτμήμα (ή όρισέ το στο ☰ → Κλήσεις για εκτίμηση).'; if(!tx) return 'Γράψε κλινικές πληροφορίες.';
-        return send(k,'consult',{spec:sp, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited: rf!==(((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''), text:tx, reason:(ov.querySelector('[data-why]').value||'').trim()});
+        const au = !!ov.querySelector('[data-auto]').checked; pdxConsultAuto(au);
+        return send(k,'consult',{spec:sp, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited: rf!==(((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''), text:tx, auto:au, submit:au, reason:(ov.querySelector('[data-why]').value||'').trim()});
       }, 'Συμπλήρωση στο ΝΠΣ');
     const ov = document.getElementById('mobSubPop'); if(!ov) return;
+    // 📞 19/11 15:25 (χρήστης: «να βλέπω κάπου τα αιτήματα σε κάθε ασθενή»): ό,τι στείλαμε από εδώ + η λίστα του ΝΠΣ (όπως τη διάβασε το bot την τελευταία φορά)
+    (async()=>{ const box = ov.querySelector('[data-chist]'); if(!box) return; let h = '';
+      try{ const [r1, r2] = await Promise.all([sb6.from('oncall_jobs').select('id,status,note,payload,created_at').eq('kind','consult').eq('name_key',nrm(d.name)).order('id',{ascending:false}).limit(10), sb6.from('oncall_labs').select('data').eq('name_key','consultpt|'+nrm(d.name)).maybeSingle()]);
+        const J = (r1.data||[]).filter(j=>!(j.payload||{}).test), N = r2 && r2.data && r2.data.data;
+        const stc = j=>{ const n = String(j.note||''); return j.status==='review' ? '❓ για έγκριση' : /ΛΑΘΟΣ ΤΜΗΜΑ|ΔΕΙΧΝΕΙ/.test(n) ? '⚠ έλεγξε τμήμα' : /✅ Υποβλήθηκε|Υπάρχει ήδη/.test(n) ? '✅ υποβλήθηκε' : /ΔΕΝ υποβλήθηκε/.test(n) ? '✋ δεν υποβλήθηκε' : j.status==='failed' ? '✕ απέτυχε' : /^(new|seen|running|approve)$/.test(j.status) ? '⏳ σε εξέλιξη' : j.status; };
+        if(J.length) h += '<div style="font-weight:700;margin-bottom:3px">Από το Παραδόχαρτο</div>' + J.map(j=>{ const p = j.payload||{}; return '<div style="padding:4px 0;border-bottom:.5px solid rgba(60,60,67,.15);color:#1F2933">'+E(new Date(j.created_at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+' · <b>'+E(p.spec||'')+'</b> → '+E(p.dept||'')+' · '+E(stc(j))+'</div>'; }).join('');
+        if(N && (N.rows||[]).length) h += '<div style="font-weight:700;margin:8px 0 3px">Στο ΝΠΣ ('+E(new Date(N.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+')</div>' + N.rows.slice(0,12).map(r=>'<div style="padding:3px 0;border-bottom:.5px solid rgba(60,60,67,.15);color:#1F2933">'+E(r.filter(Boolean).join(' · '))+'</div>').join('');
+      }catch(e){}
+      box.innerHTML = h ? '<details'+''+' style="background:#F7F9FB;border-radius:12px;padding:8px 10px;margin-bottom:8px"><summary style="font-weight:700;color:#1D4E80">📋 Αιτήματα ασθενή</summary>'+h+'</details>' : ''; })();
     let edited = false;
     ov.addEventListener('change', e=>{ if(e.target.matches('[data-sp]')) ov.querySelector('[data-dp]').innerHTML = depOpts(e.target.value); });
     ov.addEventListener('input', e=>{ if(e.target.matches('[data-tx]')) edited = true; if(e.target.matches('[data-why]') && !edited) ov.querySelector('[data-tx]').value = pdxConsultText(d, e.target.value); });
@@ -21042,7 +21054,7 @@ window.pdxVoice = function(seed){
     const k0 = a.pt.k; let k = k0; if(/^nps:/.test(k) && window.pdxNpsKey) k = pdxNpsKey(k, /^(drain|lab|todo)$/.test(a.type)); const d = recK(k);
     if(a.type==='order'){ const T0 = [].concat(a.tests||[], ...(a.packObjs||[]).map(x=>x.tests||[])).filter((t,i,A)=>t && A.indexOf(t)===i); const ok = await pdxBotSend(k, 'order', {tests:T0, packs:[], when:a.when==='Αύριο πρωί'?'Αύριο πρωί':'Τώρα', urgency:a.urgency==='Επείγον'?'Επείγον':'Ρουτίνας', note:''}); return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Καταχώρηση»)' : '⚠ δεν στάλθηκε'; }
     if(a.type==='consult'){ const M = window.pdxConsultMap ? await pdxConsultMap() : {map:{}}; const dp = (M.map||{})[a.spec]; if(!dp){ setTimeout(()=>mobAct(k,'consult'), 300); return '↪ άνοιξε η «Κλήση για εκτίμηση» (δεν έχει οριστεί υποτμήμα για «'+a.spec+'»)'; }
-      const rf = ((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''; const ok = await pdxBotSend(k, 'consult', {spec:a.spec, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited:false, text: window.pdxConsultText ? pdxConsultText(d, a.reason||'') : (a.reason||''), reason:a.reason||''});
+      const rf = ((window.THERAPIST_FULL||{})[d.therapist])||d.therapist||''; const ok = await pdxBotSend(k, 'consult', {spec:a.spec, dept:dp, referrer:rf, therapist:d.therapist||'', referrerEdited:false, text: window.pdxConsultText ? pdxConsultText(d, a.reason||'') : (a.reason||''), reason:a.reason||'', auto:pdxConsultAuto(), submit:pdxConsultAuto()});
       return ok ? '✓ στάλθηκε στο bot (σταματά πριν την «Υποβολή»)' : '⚠ δεν στάλθηκε'; }
     if(a.type==='drain' || a.type==='lab'){ if(!d) return '⚠ ο ασθενής δεν έχει καρτέλα';
       if(a.type==='drain'){ const f = +a.which===2 ? 'drain2Ml' : +a.which===3 ? 'drain3Ml' : 'drainMl'; d[f] = String(+a.ml); }
