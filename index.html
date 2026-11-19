@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v608';
+const APP_VER = '2026-11-19-v609';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14575,6 +14575,27 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxBotAsk = async function(j){
     const P = j.payload || {}, A = (P.result || {}).ask || {}, E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const KN = {discharge:'Εξιτήριο', order:'Παραγγελία εξετάσεων', orderprep:'Παραγγελία εξετάσεων', consult:'Κλήση για εκτίμηση', npsdx:'Διάγνωση ΝΠΣ', comorb:'Συννοσηρότητες', npsmedorder:'Φάρμακο ΝΠΣ', npsprog:'Πορεία νόσου', npsdossier:'Φάκελος ΝΠΣ', npspat:'Ασθενής ΝΠΣ', npsops:'Επεμβάσεις ΝΠΣ'};
+    // ❓ γενική ερώτηση ΕΠΙΛΟΓΗΣ (π.χ. ICD): A.opts [{v,l}] · A.skip (κείμενο «παράλειψης» → v "-") · απάντηση → payload.answers[key][sub] (ή answers[key] χωρίς sub)
+    if(A.type === 'choice'){
+      const O = Array.isArray(A.opts) ? A.opts : [], stc = {busy:false};
+      const drawC = ()=>'<div style="margin:12px 16px;background:#FFF4E5;border-radius:14px;padding:12px 14px"><div style="font-size:13px;color:#B26A00;font-weight:700">❓ ΤΟ BOT ΡΩΤΑ · '+E3(KN[j.kind]||j.kind)+'</div><div style="font-size:16px;margin-top:4px">'+E3(A.q||'Τι να κάνω;')+'</div><div style="font-size:13px;color:#6D6D72;margin-top:6px">'+E3(j.name||'')+' · μόλις απαντήσεις, η εργασία ξανατρέχει με την επιλογή σου.</div></div>'
+        + '<div style="margin:0 16px 12px;background:#fff;border-radius:14px;overflow:hidden">'+(O.length ? O.map((o,i)=>'<div data-askopt="'+i+'" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 16px;border-top:'+(i?'.5px solid rgba(60,60,67,.18)':'0')+';cursor:pointer"><div style="flex:1;font-size:15.5px">'+E3(o.l||o.v)+'</div><span style="color:#C7C7CC;font-size:20px">›</span></div>').join('') : '<div style="padding:14px 16px;color:#8E8E93">Δεν υπάρχουν επιλογές από το σύστημα.</div>')+'</div>'
+        + (A.skip ? '<div style="margin:0 16px 10px"><button data-askskip style="width:100%;height:50px;border:0;border-radius:14px;background:#fff;color:#0A84FF;font-size:17px;font-weight:600">'+E3(A.skip)+'</button></div>' : '')
+        + '<div style="margin:0 16px 30px"><button data-askno style="width:100%;height:50px;border:0;border-radius:14px;background:#fff;color:#FF3B30;font-size:17px;font-weight:600">Να μη γίνει</button></div>';
+      const pgc = iosPage('Το bot ρωτά', 'Πίσω', drawC);
+      const answer = async (v, lbl)=>{ if(stc.busy) return; if(!confirm((lbl||v)+'\n\nΗ εργασία θα ξανατρέξει με αυτή την επιλογή.')) return; stc.busy = true;
+        const ans = Object.assign({}, P.answers||{}); ans[A.key] = A.sub ? Object.assign({}, (typeof ans[A.key]==='object' && ans[A.key]) || {}, {[A.sub]: v}) : v;
+        const p2 = Object.assign({}, P, {answers: ans, notBefore: Date.now()}); delete p2.result; delete p2.bot; delete p2.assign; delete p2.assignAt;
+        const x = await sb6.from('oncall_jobs').update({status:'new', note:'❓→ ο γιατρός απάντησε — ξανατρέχει', payload:p2, updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
+        stc.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'+(x.error?' · '+x.error.message:'')); toast('✓ ξανατρέχει με την επιλογή σου'); pgc.close(); };
+      pgc.el.addEventListener('click', async e=>{
+        const op = e.target.closest('[data-askopt]'); if(op){ const o = O[+op.dataset.askopt]; if(o) answer(String(o.v), o.l); return; }
+        if(e.target.closest('[data-askskip]')) return answer('-', A.skip);
+        if(e.target.closest('[data-askno]')){ if(stc.busy || !confirm('Να μη γίνει η εργασία;')) return; stc.busy = true;
+          const x = await sb6.from('oncall_jobs').update({status:'cancelled', note:'❓ ακυρώθηκε από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
+          stc.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'); toast('✕ Δεν θα γίνει'); pgc.close(); } });
+      return pgc;
+    }
     if(A.type !== 'patient') return toast('❓ '+(A.q||'Ερώτηση')+' — άγνωστος τύπος ερώτησης (ενημέρωσε την εφαρμογή)');
     try{ await (window.pdxNpsRowsNow ? pdxNpsRowsNow() : null); }catch(e){}
     const want = String(A.want || j.name || ''), st = {q:'', busy:false};
