@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v592';
+const APP_VER = '2026-11-19-v593';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25743,10 +25743,10 @@ window.CLS_MODE='A';
     const d2u = async u=>{ if(/^data:/.test(u)) return u; try{ const bl = await (await fetch(u)).blob(); return await new Promise(ok=>{ const fr = new FileReader(); fr.onload = ()=>ok(fr.result); fr.onerror = ()=>ok(''); fr.readAsDataURL(bl); }); }catch(e){ return ''; } };
     const dim = u=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>ok([im.naturalWidth, im.naturalHeight]); im.onerror = ()=>ok([1414, 1000]); im.src = u; });
     let pages = '';
-    for(const f of ((st.m && st.m.files) || [])) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra')) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
       // διαθέσιμο 285×197mm· με το αριστερό περιθώριο (15%) το ύψος της σελίδας = πλάτος·0.85·h/w
       const W = Math.min(285, 197 / (0.945 * h / w));
-      pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', window.pdxOrMarksPdf((f.txt||[])[i], P))+'</div></div>'; }
+      pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])+'</div></div>'; }
     if(!pages && st.o && st.o.html){ const m = window.pdxOrMarksXl(st.o.html, P);
       pages = '<div class="pg"><div style="width:285mm">'+window.pdxOrMarked('<div style="zoom:var(--z,1)">'+st.o.html+'</div>', m)+'</div></div>';
       pages += '<script>(function(){var t=document.querySelector(".pg table");if(!t)return;var b=t.parentNode,W=b.parentNode.clientWidth;b.style.setProperty("--z",Math.min(1,W/t.offsetWidth));})()<\/script>'; }
@@ -25789,7 +25789,7 @@ window.CLS_MODE='A';
         lines.forEach(([t, col], i)=>{ x.fillStyle = col; x.fillText(t, bx + bw/2, by + 5 + lh*(i+0.5)); }); }
       return c; };
     const pages = [];
-    for(const f of ((st.m && st.m.files) || [])) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, window.pdxOrMarksPdf((f.txt||[])[i], P))); }
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra')) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])); }
     if(!pages.length && st.o && st.o.html && typeof html2canvas!=='undefined'){ const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff'; d.innerHTML = '<style>'+window.pdxOrSchedCss()+'</style>'+st.o.html; document.body.appendChild(d);
       try{ const cv = await html2canvas(d.querySelector('table'), {scale:1.4, backgroundColor:'#fff', logging:false}); pages.push(page(cv, window.pdxOrMarksXl(st.o.html, P))); } finally { d.remove(); } }
     if(!pages.length) throw new Error('δεν υπάρχει πρόγραμμα (PDF ή Excel) για εξαγωγή');
@@ -25813,9 +25813,12 @@ window.CLS_MODE='A';
       if(st.mbusy) h += '<div class="ios-g"><div class="pdx-load"><span class="pdx-spin"></span><b>'+esc(st.mbusy)+'</b></div></div>';
       if(st.merr) h += iosGroup('', [{t:'<span style="color:#FF3B30">⚠ '+esc(st.merr)+'</span>'}]);
       if(st.m && st.m.none) h += iosGroup('', [{t:'Δεν βρέθηκε mail προγράμματος για '+esc(lbl(st.iso)), sub: (st.m.seen||[]).length ? 'Τελευταία: '+esc(st.m.seen.join(' · ')) : ''}]);
-      if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ h += '<div class="ios-f" style="margin-top:8px">'+(f.extra?'➕ ':'')+'<b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
+      const KL = {normal:'🗓 Κανονικό πρόγραμμα', local:'💉 Τοπικές', extra:'➕ Έκτακτα'};
+      const nEx = st.m && st.m.files ? st.m.files.filter(f=>f.kind==='extra').length : 0;
+      if(nEx) h += '<div class="ios-f" style="margin-top:6px;opacity:.75;font-size:14px">➕ Έκτακτα: '+nEx+' — δεν εμφανίζονται (δεν αλλάζουν το κανονικό) <button data-orex="1" style="border:0;background:none;color:#0A84FF;font-size:14px;padding:0 4px">'+(st.showEx?'απόκρυψη':'εμφάνιση')+'</button></div>';
+      if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ if(f.kind==='extra' && !st.showEx) return; h += '<div class="ios-f" style="margin-top:8px"><button data-orkind="'+i+'" style="border:1px solid #C7C7CC;background:#F2F2F7;border-radius:10px;font-size:14px;padding:2px 8px;margin-right:6px">'+(KL[f.kind]||KL.normal)+' ▾</button><b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
         // 🤏 17/11 16:58 (χρήστης: «zoom με τα δύο δάχτυλα στην προεπισκόπηση»): pinch → πλάτος ×1–5 (μένει μετά τις ανανεώσεις)· πάτημα = ×1 ↔ ×2.2
-        + '<div class="ors-pdf" data-orpz="'+i+'" data-pinch="m'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+((st.zs&&st.zs['m'+i]>1)?'auto':'hidden')+';-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y">'+(f.imgs||[]).map((u,pi)=>'<div class="pz-in" style="width:'+Math.round(((st.zs&&st.zs['m'+i])||1)*100)+'%">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', window.pdxOrMarksPdf((f.txt||[])[pi], (st.cu && st.cu.list) || []))+'</div>').join('')+'</div>'; });
+        + '<div class="ors-pdf" data-orpz="'+i+'" data-pinch="m'+i+'" style="margin:6px 12px;background:#fff;border-radius:12px;overflow:'+((st.zs&&st.zs['m'+i]>1)?'auto':'hidden')+';-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y">'+(f.imgs||[]).map((u,pi)=>'<div class="pz-in" style="width:'+Math.round(((st.zs&&st.zs['m'+i])||1)*100)+'%">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[pi], (st.cu && st.cu.list) || []) : [])+'</div>').join('')+'</div>'; });   // 🧫 καλλιέργειες ΜΟΝΟ στο κανονικό
       h += '<button class="ors-btn" data-or="mail"'+(st.mbusy?' disabled style="opacity:.5"':'')+'>📧 Ξανά από το mail</button>';
       h += cultHtml();
       // 📧 13/11 22:49 (χρήστης: «αν το έχεις βρει από το Kerio, μην εμφανίζεις του φακέλου»)
@@ -25935,6 +25938,9 @@ window.CLS_MODE='A';
     // 🔄 13/11 22:49 (χρήστης: «αν είναι στραμμένο στο πλάι να το ισιώνεις»): οι γραμμές κειμένου ενός όρθιου εγγράφου δίνουν έντονες διακυμάνσεις
     // στο άθροισμα σκούρων ανά ΓΡΑΜΜΗ· όταν οι διακυμάνσεις είναι ανά ΣΤΗΛΗ, η σελίδα είναι γυρισμένη 90° → ίσιωμα. Κατεύθυνση: το κείμενο
     // ξεκινά αριστερά → η «βαριά» πλευρά (αρχές γραμμών) βρίσκεται πάνω ή κάτω· ↻ στη σελίδα για χειροκίνητη διόρθωση (μένει στη συσκευή).
+    // 🔄 19/11 14:38 (χρήστης: τοπικές από το mail «ήρθε ανεστραμμένο — θέλω σε ευθεία, οριζόντιος προσανατολισμός»): το πρόγραμμα είναι ΠΑΝΤΑ οριζόντιο →
+    // όρθια σελίδα = γυρισμένη 90° (φορά: όπως μάθαμε, προεπιλογή 270)· ήδη οριζόντια = 0. Μετά το AI ελέγχει μόνο «ανάποδα» (+180°).
+    window.pdxOrLandDeg = c=>{ if(!(c.height > c.width * 1.05)) return 0; try{ const pd = +localStorage.getItem('pdx_or_dir'); if(pd===90 || pd===270) return pd; }catch(e){} return 270; };
     const orRotGuess = (c)=>{ try{ const W = 240, H = Math.max(1, Math.round(c.height * W / c.width)), t = document.createElement('canvas'); t.width = W; t.height = H; const x = t.getContext('2d'); x.drawImage(c, 0, 0, W, H);
         const d = x.getImageData(0, 0, W, H).data, R = new Float64Array(H), C = new Float64Array(W); let tot = 0;
         for(let y=0;y<H;y++) for(let i=0;i<W;i++){ const k = (y*W+i)*4, dk = (d[k]+d[k+1]+d[k+2]) < 380 ? 1 : 0; R[y] += dk; C[i] += dk; tot += dk; }
@@ -25960,14 +25966,29 @@ window.CLS_MODE='A';
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const doc = await pdfjsLib.getDocument({data: bytes}).promise, out = [], txt = [];
       for(let i=1;i<=Math.min(doc.numPages, 8);i++){ const pgx = await doc.getPage(i), v0 = pgx.getViewport({scale:1}), sc = Math.min(3, 2000/Math.max(v0.width, v0.height)), v = pgx.getViewport({scale:sc});
-        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = orRotGuess(c); if(deg) deg = await orRotAi(orRotate(c, deg), deg); if(i===1) window.__orAuto = deg; out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85));
+        const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = window.pdxOrLandDeg(c); deg = await orRotAi(orRotate(c, deg), deg);   /* 19/11 14:38 (χρήστης: «ήρθε ανεστραμμένο — θέλω σε ευθεία, οριζόντιος»): ΠΑΝΤΑ οριζόντιο */ if(i===1) window.__orAuto = deg; out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85));
         // 🧫 17/11: θέσεις κειμένου της σελίδας (κανονικοποιημένες 0–1, μετά την περιστροφή) → κουτάκια καλλιέργειας δίπλα σε κάθε όνομα
         let T = []; try{ const tc = await pgx.getTextContent(); T = tc.items.filter(it=>it.str && it.str.trim()).map(it=>{ const q = v0.convertToViewportPoint(it.transform[4], it.transform[5]); return {s:it.str, u:q[0]/v0.width, v:(q[1] - (it.height||0)/2)/v0.height}; }); }catch(e){}
         txt.push(window.pdxOrRotTxt(T, deg)); }
       out.txt = txt; return out; };
+    // 🗂 19/11 14:38 (χρήστης: «τις Πέμπτες ανεβάζουμε ΔΥΟ προγράμματα — τοπικές και κανονικό — θέλω και τα δύο· καλλιέργειες μόνο στο κανονικό·
+    // τα έκτακτα να μην τα δείχνεις, δεν επηρεάζουν το κανονικό»). Τα mail έρχονται ΧΩΡΙΣ θέμα → είδος από: χειροκίνητη επιλογή (μένει στη συσκευή) →
+    // θέμα/όνομα αρχείου → κείμενο του PDF → AI (1 ερώτηση, μικρή εικόνα της 1ης σελίδας) → σημαία «έκτακτο» του bot → κανονικό.
+    const kindK = f=>'pdx_or_kind|'+st.iso+'|'+(f.n||'')+'|'+(f.sent||'');
+    const kindRx = t=>{ const x = String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); return /ΕΚΤΑΚΤ|EKTAKT/.test(x) ? 'extra' : /ΤΟΠΙΚ|TOPIK/.test(x) ? 'local' : ''; };
+    const orKind = async (f, txt, imgs)=>{ try{ const m = localStorage.getItem(kindK(f)); if(/^(normal|local|extra)$/.test(m||'')) return m; }catch(e){}
+      let k = kindRx((f.subj||'')+' '+(f.n||'')); if(k) return k;
+      k = kindRx((txt||[]).map(T=>(T||[]).map(x=>x.s).join(' ')).join(' ').slice(0, 4000)); if(k) return k;
+      try{ if(window.pdxAiOn && pdxAiOn() && window.pdxAI && imgs && imgs[0]){ const im = await new Promise(ok=>{ const i = new Image(); i.onload = ()=>ok(i); i.onerror = ()=>ok(null); i.src = imgs[0]; });
+          if(im){ const W = 900, t = document.createElement('canvas'); t.width = W; t.height = Math.round(im.naturalHeight*W/im.naturalWidth); t.getContext('2d').drawImage(im, 0, 0, t.width, t.height);
+            const r = await pdxAI('είδος προγράμματος', {model:'claude-haiku-5-5', max_tokens:8, messages:[{role:'user', content:[{type:'image', source:{type:'base64', media_type:'image/jpeg', data:t.toDataURL('image/jpeg', .75).split(',')[1]}}, {type:'text', text:'Πρόγραμμα χειρουργείου κλινικής. Τι είναι αυτή η σελίδα; Απάντησε ΜΟΝΟ με μία λέξη: ΚΑΝΟΝΙΚΟ (κανονικό πρόγραμμα αιθουσών), ΤΟΠΙΚΕΣ (επεμβάσεις με τοπική αναισθησία) ή ΕΚΤΑΚΤΑ (έκτακτα περιστατικά).'}]}]});
+            const a = String((r && r.text) || '').toUpperCase(); if(/ΕΚΤΑΚΤ/.test(a)) return 'extra'; if(/ΤΟΠΙΚ/.test(a)) return 'local'; if(/ΚΑΝΟΝΙΚ/.test(a)) return 'normal'; } } }catch(e){}
+      return 'normal'; };   // «ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ»/«ΑΛΛΑΓΕΣ» (σημαία extra του bot) = μέρος του κανονικού· κρύβονται ΜΟΝΟ τα ρητά «ΕΚΤΑΚΤΑ»
+    window.pdxOrKindRx = kindRx;
     const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
-      for(const f of (ix.files||[])){ window.__orAuto = 0; let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); let txt = imgs.txt || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt})); }
-      st.m = {files}; };
+      for(const f of (ix.files||[])){ window.__orAuto = 0; let imgs = await pdfImgs(bytes.slice(f.o, f.o+f.l)); let txt = imgs.txt || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt, kind: await orKind(f, txt, imgs)})); }
+      // σειρά: κανονικό → τοπικές → (έκτακτα κρυφά)
+      const KO = {normal:0, local:1, extra:2}; files.sort((a, b)=>(KO[a.kind]||0) - (KO[b.kind]||0)); st.m = {files}; };
     const rotK = f=>'pdx_or_rot2|'+st.iso+'|'+(f.n||f.subj||''),   /* 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): παλιό ↻ (πριν το αυτόματο) ακύρωνε το αυτόματο ίσιωμα (270°+90°) → νέο κλειδί, οι παλιές τιμές αγνοούνται */ rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
     const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
     const loadMail = async (fresh)=>{ st.merr = ''; if(typeof sb6==='undefined') return; const ck = 'or|'+st.iso;
@@ -25997,6 +26018,8 @@ window.CLS_MODE='A';
         try{ const f = await window.pdxOrCultPdf(st, lbl(st.iso)); if(pdfSig() === sg){ st.pdfFile = f; st.pdfSigOk = sg; rd0(); requestAnimationFrame(fit); } }catch(e){} }, 1500); };
     const rd0 = pg.redraw; pg.redraw = ()=>{ if(st.pdfFile && st.pdfSigOk && st.pdfSigOk !== pdfSig()) st.pdfFile = null; rd0(); requestAnimationFrame(fit); pdfPre(); }; window.addEventListener('resize', ()=>{ if(pg.el.isConnected) fit(); });
     pg.el.addEventListener('click', e=>{ if(e.target.closest('[data-orszoom]')){ if(Date.now() - (st.pinchAt||0) < 600) return; st.zs = st.zs || {}; if((st.zs.x||1) > 1){ st.zs.x = 1; st.zoom = false; } else st.zoom = !st.zoom; pg.redraw(); return; }
+      const kb = e.target.closest('[data-orkind]'); if(kb){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+kb.dataset.orkind]; if(!f) return; const nx = {normal:'local', local:'extra', extra:'normal'}[f.kind||'normal']; f.kind = nx; try{ localStorage.setItem(kindK(f), nx); }catch(_){} pg.redraw(); return; }
+      if(e.target.closest('[data-orex]')){ e.stopPropagation(); st.showEx = !st.showEx; pg.redraw(); return; }
       const rr = e.target.closest('[data-orrot]'); if(rr){ e.stopPropagation(); const f = st.m && st.m.files && st.m.files[+rr.dataset.orrot]; if(!f) return;
         try{ localStorage.setItem(rotK(f), String((rotGet(f)+90) % 360)); }catch(x){}
         // 🎓 15/11: όταν η σελίδα είχε γυριστεί αυτόματα (90/270) και τη διορθώνεις με ↻ → μαθαίνει τη ΣΩΣΤΗ φορά για τα επόμενα (όλη η συσκευή)
