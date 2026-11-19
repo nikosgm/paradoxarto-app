@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v605';
+const APP_VER = '2026-11-19-v606';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12998,6 +12998,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     try{ const recs=[].concat(Object.values((typeof data!=='undefined'&&data)||{}), Object.values((typeof extraPatients!=='undefined'&&extraPatients)||{}));
       const r = recs.find(d=>d && String(d.amka||'')===a && String(d.name||'').trim()); if(r) return {name:String(r.name).trim().toUpperCase(), src:'Παραδόχαρτο'}; }catch(e){}
     try{ const c=JSON.parse(localStorage.getItem('pdx_amka_names')||'{}'); if(c[a] && c[a].n) return {name:c[a].n, ayli:c[a].y, src:'πρόσφατη αναζήτηση'}; }catch(e){}
+    try{ const bn = window.pdxRxBook && pdxRxBook.nameOf(a); if(bn) return {name:bn, src:'επαφές'}; }catch(e){}   // 📇 19/11
     try{ const q=await sb6.from('oncall_jobs').select('payload').eq('kind','rxname').eq('payload->>amka',a).not('payload->result->>name','is',null).order('id',{ascending:false}).limit(1);
       const r=q.data&&q.data[0]&&q.data[0].payload&&q.data[0].payload.result; if(r&&r.name){ window.pdxAmkaNameSave(a,r.name,r.ayli); return {name:r.name, ayli:r.ayli, src:'προηγούμενη αναζήτηση'}; } }catch(e){}
     return null;
@@ -16344,6 +16345,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   .rxs select{border:0;outline:0;font-size:17px;width:100%;background:transparent;color:#1C1C1E;-webkit-appearance:none;appearance:none;font-family:inherit}
   .rxs .who{font-size:15px;color:#6B6B70;padding:0 16px 12px;margin-top:-4px}
   .rxs .who b{color:#1C1C1E}.rxs .who.ok b{color:#1F6F43}.rxs .who.err{color:#B42318}
+  /* 📇 19/11: βιβλίο επαφών + προτάσεις τύπου Google κάτω από τον ΑΜΚΑ */
+  .rxs .rxsug{margin:0 12px 10px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.12);border:1px solid rgba(60,60,67,.12)}
+  .rxs .rxsug:empty{display:none}
+  .rxs .rxsug .sg{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 6px 6px 14px;border-top:1px solid rgba(60,60,67,.1);cursor:pointer}
+  .rxs .rxsug .sg:first-child{border-top:0}.rxs .rxsug .sg:active{background:rgba(0,0,0,.05)}
+  .rxs .rxsug .sg .n{flex:1;min-width:0;display:flex;flex-direction:column}.rxs .rxsug .sg .n b{font-size:16px;color:#1C1C1E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rxs .rxsug .sg .n span{font-size:13px;color:#6B6B70}.rxs .rxsug .sg .n mark{background:none;color:#0A84FF;font-weight:700}
+  .rxs .rxsug .sg .x{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:none;color:#8E8E93;font-size:15px}
+  .rxs .rxsug .hd{font-size:12px;font-weight:600;color:#8E8E93;padding:8px 14px 4px;text-transform:uppercase;letter-spacing:.3px}
+  .rxs .kbd{flex:none;min-width:52px;height:44px;border-radius:12px;border:0;background:rgba(118,118,128,.12);color:#0A84FF;font-weight:600;font-size:15px}
+  html.pdx-night .rxs .rxsug{background:#2C2C2E;border-color:rgba(255,255,255,.1)}html.pdx-night .rxs .rxsug .sg .n b{color:#fff}
   .rxs .chs{display:flex;gap:7px;overflow-x:auto;padding:2px 16px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .rxs .chs::-webkit-scrollbar{display:none}
   .rxs .ch{flex:none;border:0;background:#E9E9EE;color:#1C1C1E;border-radius:16px;padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
@@ -16776,6 +16788,61 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           opt.onFail && opt.onFail('deaf'); }, (IOS && window.__pdxMicN > 1) ? 4000 : 6000);
         opt.onState && opt.onState(true); return true; } };
     return api; };
+  // 📇 19/11 (χρήστης: «βιβλίο επαφών + ιστορικό αναζητήσεων στη συνταγογράφηση — όνομα + ΑΜΚΑ, dropdown τύπου Google»):
+  // επαφές ΑΝΑ ΓΙΑΤΡΟ — μπαίνουν αυτόματα με κάθε συνταγή/παραπεμπτικό (όνομα, ΑΜΚΑ, πόσες φορές, πότε). Συσκευή: localStorage «pdx_rxbook|<uid>».
+  // Βάση: oncall_labs «rxbook|<uid>» ΜΟΝΟ κρυπτογραφημένο με το κλειδί κλινικής (pdxCK) — χωρίς κλειδί μένει μόνο στη συσκευή. Ποτέ ονόματα/ΑΜΚΑ σε logs.
+  window.pdxRxBook = (function(){
+    const B = {uid:'', items:[], at:0, syncT:0};
+    const uidOf = async ()=>{ if(B.uid) return B.uid; try{ const ss = (await sb6.auth.getSession()).data.session; B.uid = (ss && ss.user && ss.user.id) || ''; }catch(e){} return B.uid; };
+    const lk = ()=>'pdx_rxbook|'+(B.uid||'anon');
+    const clean = L=>{ const m = {}; (Array.isArray(L)?L:[]).forEach(x=>{ if(!x || !/^\d{11}$/.test(String(x.a||''))) return; const o = m[x.a]; const y = {a:String(x.a), n:String(x.n||'').trim().slice(0,80), t:+x.t||0, c:+x.c||0, del:+x.del||0};
+      if(!o) m[x.a] = y; else m[x.a] = {a:y.a, n:(y.t>=o.t ? y.n||o.n : o.n||y.n), t:Math.max(o.t,y.t), c:Math.max(o.c,y.c), del:Math.max(o.del,y.del)}; });
+      return Object.values(m).sort((p,q)=>q.t-p.t).slice(0,400); };
+    const live = ()=>B.items.filter(x=>!(x.del && x.del >= x.t));
+    const saveLocal = ()=>{ try{ localStorage.setItem(lk(), JSON.stringify(B.items)); }catch(e){} };
+    async function load(force){
+      await uidOf(); if(!force && Date.now()-B.at < 60000) return live(); B.at = Date.now();
+      try{ B.items = clean(JSON.parse(localStorage.getItem(lk())||'[]')); }catch(e){ B.items = []; }
+      try{ if(B.uid && window.pdxCK && await pdxCK.ready()){ const r = await sb6.from('oncall_labs').select('data').eq('name_key','rxbook|'+B.uid).maybeSingle(); const env = r && r.data && r.data.data;
+        if(env && env.e===1){ const d = await pdxCK.decrypt(env); if(d && Array.isArray(d.items)){ B.items = clean(B.items.concat(d.items)); saveLocal(); } } } }catch(e){}
+      // 1η φορά: από τις ΔΙΚΕΣ μου συνταγές/παραπεμπτικά 180 ημερών (created_by = εγώ)
+      try{ const sk = 'pdx_rxbook_seed|'+B.uid; if(B.uid && !localStorage.getItem(sk)){
+        const r = await sb6.from('oncall_jobs').select('name,payload,created_at').in('kind',['rx','ref']).eq('created_by', B.uid).gte('created_at', new Date(Date.now()-180*864e5).toISOString()).order('id',{ascending:false}).limit(500);
+        if(!r.error){ const add0 = []; (r.data||[]).forEach(j=>{ const a = String((j.payload||{}).amka||''); if(/^\d{11}$/.test(a)){ const n = /^Α\.Μ\.Κ\.Α\./.test(j.name||'') ? '' : String(j.name||''); const t = Date.parse(j.created_at)||0; const o = add0.find(x=>x.a===a); if(o){ o.c++; if(!o.n && n) o.n = n; } else add0.push({a, n, t, c:1}); } });
+          B.items = clean(B.items.concat(add0)); saveLocal(); localStorage.setItem(sk, '1'); if(add0.length) sync(); } } }catch(e){}
+      return live();
+    }
+    function sync(){ clearTimeout(B.syncT); B.syncT = setTimeout(async ()=>{ try{ if(!B.uid || !window.pdxCK || !(await pdxCK.ready())) return;
+      const env = await pdxCK.encrypt({items:B.items, v:1});
+      await sb6.from('oncall_labs').upsert({name_key:'rxbook|'+B.uid, name:'Επαφές συνταγογράφησης (κρυπτογραφημένο)', pid:null, data:env, updated_at:new Date().toISOString()}, {onConflict:'name_key'}); }catch(e){} }, 1500); }
+    async function add(a, n){ a = String(a||''); n = String(n||'').trim(); if(!/^\d{11}$/.test(a)) return; if(/^Α\.Μ\.Κ\.Α\./.test(n)) n = ''; await load();
+      const o = B.items.find(x=>x.a===a); if(o){ o.t = Date.now(); o.c = (o.c||0)+1; if(n) o.n = n; o.del = 0; } else B.items.unshift({a, n, t:Date.now(), c:1, del:0});
+      B.items = clean(B.items); saveLocal(); sync(); }
+    async function del(a){ await load(); const o = B.items.find(x=>x.a===String(a)); if(o){ o.del = Date.now(); saveLocal(); sync(); } }
+    // 🔤 ταίριασμα χωρίς τόνους/κεφαλαία, και greeklish (papad → ΠΑΠΑΔ)
+    const GL = [['th','Θ'],['ps','Ψ'],['ch','Χ'],['ks','Ξ'],['a','Α'],['b','Β'],['v','Β'],['g','Γ'],['d','Δ'],['e','Ε'],['z','Ζ'],['h','Η'],['i','Ι'],['k','Κ'],['l','Λ'],['m','Μ'],['n','Ν'],['x','Ξ'],['o','Ο'],['p','Π'],['r','Ρ'],['s','Σ'],['t','Τ'],['y','Υ'],['u','Υ'],['f','Φ'],['c','Χ'],['w','Ω'],['j','Ι'],['q','Κ']];
+    const nrmS = s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^0-9A-ZΑ-Ω ]+/g,' ').replace(/\s+/g,' ').trim();
+    const gr = s=>{ let o = String(s||'').toLowerCase(); GL.forEach(([l,g])=>{ o = o.split(l).join(g); }); return nrmS(o); };
+    const alt = s=>{ const v = nrmS(s).replace(/Ω/g,'Ο').replace(/[ΗΥ]/g,'Ι'); return v; };   // φωνητικά: Ω=Ο, Η/Υ=Ι
+    function hit(name, q){ const N = alt(name), W = N.split(' '); const tries = [...new Set([nrmS(q), gr(q)])].map(alt).filter(Boolean);
+      for(const t of tries){ const Q = t.split(' ').filter(Boolean); if(!Q.length) continue; if(Q.every(w=>W.some(x=>x.startsWith(w)))) return 2; if(Q.every(w=>N.includes(w))) return 1; } return 0; }
+    // προτάσεις: επαφές (⭐) + αναζητήσεις ΑΜΚΑ της συσκευής + πρόσφατες εργασίες → ένα ανά ΑΜΚΑ, το πολύ 8
+    function suggest(q, recent){ q = String(q||'').trim(); const dig = q.replace(/\D/g,''), isNum = /^\d[\d\s]*$/.test(q);
+      const pool = {}; const put = (a, n, src, sc)=>{ if(!/^\d{11}$/.test(a)) return; const p = pool[a] || (pool[a] = {a, n:'', src, sc:0}); if(n && !p.n && !/^Α\.Μ\.Κ\.Α\./.test(n)) p.n = n; p.sc = Math.max(p.sc, sc); if(src==='book') p.src = 'book'; };
+      live().forEach(x=>put(x.a, x.n, 'book', 1000 + Math.min(50, x.c||0)*5 + (x.t/1e12)));
+      try{ const c = JSON.parse(localStorage.getItem('pdx_amka_names')||'{}'); Object.keys(c).forEach(a=>put(a, c[a] && c[a].n, 'srch', 100 + (+(c[a]&&c[a].t)||0)/1e12)); }catch(e){}
+      (recent||[]).forEach((x,i)=>put(x.amka||x.a, x.name||x.n, 'rec', 500 - i));
+      const hid = {}; B.items.forEach(x=>{ if(x.del && x.del >= x.t) hid[x.a] = 1; });
+      let L = Object.values(pool).filter(p=>!hid[p.a]);
+      if(!q) L = L.filter(p=>p.src==='book');
+      else if(isNum){ if(dig.length < 2) return []; L = L.filter(p=>p.a.includes(dig)).map(p=>({...p, sc:p.sc + (p.a.startsWith(dig) ? 3000 : 0)})); }
+      else { if(nrmS(q).replace(/\s/g,'').length < 2) return []; L = L.map(p=>({...p, h:hit(p.n, q)})).filter(p=>p.h).map(p=>({...p, sc:p.sc + p.h*2000})); }
+      return L.sort((x,y)=>y.sc-x.sc).slice(0,8); }
+    const nameOf = a=>{ const o = live().find(x=>x.a===String(a)); return o && o.n ? o.n : ''; };
+    try{ B.items = clean(JSON.parse(localStorage.getItem('pdx_rxbook|anon')||'[]')); }catch(e){}
+    uidOf().then(()=>{ try{ B.items = clean(B.items.concat(JSON.parse(localStorage.getItem(lk())||'[]'))); }catch(e){} });
+    return {load, add, del, suggest, nameOf, nrm:nrmS, gr, hit};
+  })();
   window.pdxRxStudio = function(opt){
     opt = opt || {};
     if(!(window.pdxIsBotUser && window.pdxIsBotUser())){ toast('🤖 Η συνταγογράφηση μέσω bot είναι μόνο για ενεργούς γιατρούς'); return; }
@@ -16822,6 +16889,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const recentAmka = ()=>{ const out = [], seen = new Set(), hid = rHid(); S.hist.forEach(j=>{ const a = String((j.payload||{}).amka||''); if(/^\d{11}$/.test(a) && !seen.has(a)){ seen.add(a); if(!(hid[a] && new Date(j.created_at).getTime() <= hid[a])) out.push({amka:a, name:j.name||''}); } }); return out.slice(0,6); };
     function drawRecent(){ const box = root.querySelector('[data-recent]'); if(!box) return; const R = S.k ? [] : recentAmka();
       box.innerHTML = R.length ? '<div class="h" style="margin-top:12px">Πρόσφατοι<button data-rclr class="pb-dngc" style="min-height:44px">Καθαρισμός</button></div><div class="g">'+R.map(x=>'<div class="med" style="padding-top:4px;padding-bottom:4px"><div class="m" data-ra="'+E(x.amka)+'" style="cursor:pointer;min-height:44px;display:flex;flex-direction:column;justify-content:center"><b style="font-size:16px">'+E(/^Α\.Μ\.Κ\.Α\./.test(x.name)?'Ασθενής':(window.pdxNameClean?pdxNameClean(x.name):x.name))   /* 15/11 12:56: χωρίς «GR » και στους πρόσφατους */+'</b><span>ΑΜΚΑ ··'+E(x.amka.slice(-4))+'</span></div><button class="del" data-rdel="'+E(x.amka)+'" aria-label="Αφαίρεση από τους πρόσφατους" style="width:44px;height:44px;border-radius:22px">✕</button></div>').join('')+'</div>' : ''; }
+    // 📇 19/11: προτάσεις κάτω από το πεδίο (κενό + εστίαση → οι συχνότερες επαφές· ψηφία → ΑΜΚΑ που περιέχουν τα ψηφία· γράμματα → όνομα)
+    let sugT = 0;
+    function drawSug(q, show){ const box = root.querySelector('[data-sug]'); if(!box) return; clearTimeout(sugT);
+      const ia = root.querySelector('[data-amka]'); if(show===false || S.k || !ia){ box.innerHTML = ''; return; }
+      q = String(q==null ? ia.value : q).trim(); const isNum = /^\d[\d\s]*$/.test(q), dig = q.replace(/\D/g,'');
+      if(isNum && dig.length===11){ box.innerHTML = ''; return; }
+      const L = window.pdxRxBook ? pdxRxBook.suggest(q, recentAmka()) : [];
+      if(!L.length){ box.innerHTML = (q && !isNum && q.length>=2) ? '<div class="hd">Δεν βρέθηκε στις επαφές — γράψε τον ΑΜΚΑ</div>' : ''; return; }
+      const hl = (txt, d)=>{ txt = String(txt); const i = d ? txt.indexOf(d) : -1; return i<0 ? E(txt) : E(txt.slice(0,i))+'<mark>'+E(d)+'</mark>'+E(txt.slice(i+d.length)); };
+      const nm = n=>n ? (window.pdxNameClean ? pdxNameClean(n) : n) : 'Ασθενής (χωρίς όνομα)';
+      box.innerHTML = (q ? '' : '<div class="hd">📇 Οι επαφές μου</div>') + L.map(p=>'<div class="sg" data-sg="'+E(p.a)+'"><div class="n"><b>'+(p.src==='book'?'⭐ ':'')+E(nm(p.n))+'</b><span>ΑΜΚΑ '+(isNum ? hl(p.a, dig) : '··'+E(p.a.slice(-4)))+(p.src==='book'?' · επαφή':p.src==='rec'?' · πρόσφατος':' · αναζήτηση')+'</span></div>'+(p.src==='book'?'<button type="button" class="x" data-sgdel="'+E(p.a)+'" aria-label="Αφαίρεση από τις επαφές">✕</button>':'')+'</div>').join(''); }
     // 📲 15/11 01:43 (χρήστης: «όταν ο ασθενής έχει άυλη, δίπλα στον ΑΜΚΑ να γράφει άυλη με μπλε κεφαλαία» → «ΑΥΛΗ», χωρίς διαλυτικά): από την προετοιμασία (rxname → ayli) ή την πρόσφατη αναζήτηση
     const aylOf = a=>{ a = String(a||''); if(S.ayl && a in S.ayl) return S.ayl[a]; try{ const c = JSON.parse(localStorage.getItem('pdx_amka_names')||'{}'); return !!(c[a] && c[a].y); }catch(e){ return false; } };
     const aylB = a=>aylOf(a) ? ' <b data-ayl style="color:#0A84FF;font-weight:800;letter-spacing:.3px">ΑΥΛΗ</b>' : '';
@@ -16835,7 +16913,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 🎨 14/11 23:29 (χρήστης: «θέλω ακριβώς το UI του Α»)
       let h = '<div class="rxa-top"><a href="/scan" class="rxq-cam" aria-label="Σάρωση με φωτογραφία" title="Σάρωση">📷</a><button data-a="ephist">🗂 Ιστορικό</button><button onclick="window.pdxMyRx&&pdxMyRx()">🧾 Οι συνταγές μου</button>'+(S.k?'<button data-a="unk">Άλλος ασθενής</button>':'')+'</div><div class="g ptc"><div class="av">👤</div><div class="ptb">';
       if(d) h += '<div class="r"><div style="flex:1"><b style="font-size:19px">'+E(d.name)+'</b><div style="font-size:14px;color:#6B6B70">'+E(S.k.indexOf('extra')===0?(d.assignedWard||'Εκτός θαλάμου'):S.k)+(d.amka?' · ΑΜΚΑ '+E(d.amka)+aylB(d.amka):'')+(d.therapist?' · θεράπων '+E(d.therapist):'')+'</div></div></div>';
-      else h += '<div class="r" style="display:flex;align-items:center;gap:8px"><input class="big" data-amka inputmode="numeric" maxlength="11" autocomplete="off" placeholder="ΑΜΚΑ · 11 ψηφία" value="'+E(S.amka)+'" style="flex:1;min-width:0"><span data-aylin style="flex:none">'+(S.amka && /^\d{11}$/.test(S.amka) ? aylB(S.amka) : '')+'</span></div><div class="who" data-who></div>';
+      // 📇 19/11: ΑΜΚΑ ή όνομα → προτάσεις (επαφές/πρόσφατοι/αναζητήσεις)· «αβγ/123» αλλάζει το πληκτρολόγιο του iPhone
+      else h += '<div class="r" style="display:flex;align-items:center;gap:8px"><input class="big" data-amka type="search" inputmode="'+(S.kbd==='text'?'text':'numeric')+'" maxlength="40" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="ΑΜΚΑ ή όνομα" value="'+E(S.amkaQ!=null && S.amkaQ!=='' ? S.amkaQ : S.amka)+'" style="flex:1;min-width:0"><span data-aylin style="flex:none">'+(S.amka && /^\d{11}$/.test(S.amka) ? aylB(S.amka) : '')+'</span><button type="button" class="kbd" data-kbd aria-label="Αλλαγή πληκτρολογίου">'+(S.kbd==='text'?'123':'αβγ')+'</button></div><div class="who" data-who></div><div class="rxsug" data-sug></div>';
       h += '</div></div>';
       if(!d) h += '<div data-recent></div>';
       // 🎨 18/11 19:10 (χρήστης: «Γ με το Α»): η ΚΑΤΑΣΤΑΣΗ (συνταγή/παραπεμπτικό/επίσκεψη) αμέσως κάτω από τον ασθενή — όχι στο τέλος της σελίδας
@@ -16884,7 +16963,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       { const tq = root.querySelector('[data-rxq]'); if(tq) tq.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); rxQuick(); } }); }   // γραπτά: Enter = μέσα
       { const xq = root.querySelector('[data-exq]'); xq.addEventListener('keydown', e=>{ if(e.key==='Enter') e.preventDefault(); });
         window.pdxExamLive(xq, root.querySelector('[data-exres]'), x=>{ if(!S.ex.some(y=>y.n.toLowerCase()===x.n.toLowerCase())) S.ex.push({n:x.n, k:x.k||exKind(x.n), ep:!!x.ep}); drawEx(); }, {have:()=>S.ex.map(y=>y.n), noFav:true, free:false, multi:true, onUnpick:n=>{ S.ex = S.ex.filter(y=>y.n.toLowerCase()!==String(n).toLowerCase()); drawEx(); }}); }
-      const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka); if(S.amka) onAmka(); else pdxFocusNow(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
+      const ia = root.querySelector('[data-amka]'); if(ia){ ia.addEventListener('input', onAmka);
+        // 📇 19/11: εστίαση → επαφές· έξοδος → κλείνει (με καθυστέρηση, για να «πιάσει» το πάτημα σε πρόταση)
+        ia.addEventListener('focus', ()=>{ clearTimeout(sugT); if(window.pdxRxBook) pdxRxBook.load().then(()=>{ if(document.activeElement===ia) drawSug(); }); drawSug(); });
+        ia.addEventListener('blur', ()=>{ sugT = setTimeout(()=>drawSug('', false), 300); });
+        if(S.amka) onAmka(); else pdxFocusNow(()=>{ try{ ia.focus(); }catch(e){} }, 380); }
       const mq = root.querySelector('[data-medq]'); mq.value = S.f.q||''; mq.addEventListener('input', medPreview); mq.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFromInput(); } });
       syncForm();
     }
@@ -17114,8 +17197,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     let lastA = '';
     async function onAmka(){
       const ia = root.querySelector('[data-amka]'), w = root.querySelector('[data-who]'); if(!ia||!w) return;
-      const a = ia.value.replace(/\D/g,''); if(a!==ia.value) ia.value = a; S.amka = a; refresh();
-      if(a.length<11){ w.className='who'; w.textContent = a.length ? (11-a.length)+' ψηφία ακόμα' : ''; S.who=null; lastA=''; return; }
+      // 📇 19/11: γράμματα = αναζήτηση ονόματος στις επαφές (ο ΑΜΚΑ μπαίνει από την πρόταση)
+      if(/[^\d\s]/.test(ia.value)){ S.amkaQ = ia.value; S.amka = ''; S.who = null; lastA = ''; w.className = 'who'; w.textContent = ''; refresh(); drawSug(ia.value); return; }
+      S.amkaQ = '';
+      const a = ia.value.replace(/\D/g,'').slice(0,11); if(a!==ia.value) ia.value = a; S.amka = a; refresh();
+      if(a.length<11){ w.className='who'; w.textContent = a.length ? (11-a.length)+' ψηφία ακόμα' : ''; S.who=null; lastA=''; if(document.activeElement===ia) drawSug(a); return; }
+      drawSug('', false);
       // 15/11: μετά από κάθε draw() η γραμμή άδειαζε (ίδιος ΑΜΚΑ → return) → ξαναγράφεται από ό,τι ξέρουμε (όνομα + ΑΥΛΗ)
       if(a===lastA){ if(S.who && S.who.name && !w.textContent) paintWho(a); return; }
       lastA = a; S.who = null;
@@ -17184,6 +17271,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         }
       }catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)); return; }
       S.sending = false; watchJob(id, label); window.pdxRxLearnAdd && pdxRxLearnAdd(meds);   // 🧠 μαθαίνει αμέσως
+      try{ const bkA = S.k ? String((recOf(S.k)||{}).amka||'') : String(S.amka||''); if(window.pdxRxBook && /^\d{11}$/.test(bkA)) pdxRxBook.add(bkA, label); }catch(e){}   // 📇 19/11: στις επαφές μου
       // έτοιμο για την επόμενη συνταγή (το bot δουλεύει στο παρασκήνιο)
       S.meds = []; if(!S.k){ S.amka=''; S.who=null; lastA=''; const ia = root.querySelector('[data-amka]'); if(ia){ ia.value=''; } const w = root.querySelector('[data-who]'); if(w) w.textContent=''; }
       drawMeds(); refresh(); try{ root.closest('.ios-body').scrollTo({top:0, behavior:'smooth'}); }catch(e){}
@@ -17232,7 +17320,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
           const pl = Object.assign({cat:g, just:just.slice(0,2000), exams:byCat[g].map(x=>({name:x.n, kind:x.k||'', ep:!!x.ep})), icd:S.icd, urgent:S.urg, withRx:S.withRx, mode:'review', quiet:true}, d ? {} : {amka:S.amka, general:true}, epU ? {epUser:epU} : {});
           const r = await sb6.from('oncall_jobs').insert({name_key:nrm(nm), name:nm, room:d?S.k:null, kind:'ref', payload:Object.assign(await prepOnly(), pl, window.pdxRxDirect ? pdxRxDirect() : {}), status:'new'}).select('id').single(); if(r.error) throw r.error;   // ⚡ 18/11: απευθείας παραπεμπτικό (το bot πέφτει στον οδηγό όταν κάτι δεν ταιριάζει)
           nOk++; watchJob(r.data.id, nm+' · παραπεμπτικό'+(cats.length>1?' '+nOk+'/'+cats.length:'')); }
-        S.sending = false; if(cats.length>1) toast('📋 '+cats.length+' παραπεμπτικά (ένα ανά κατηγορία)'); S.ex = []; drawEx(); }
+        S.sending = false; if(cats.length>1) toast('📋 '+cats.length+' παραπεμπτικά (ένα ανά κατηγορία)'); S.ex = []; drawEx();
+        try{ const bkA = d ? String(d.amka||'') : String(S.amka||''); if(window.pdxRxBook && /^\d{11}$/.test(bkA)) pdxRxBook.add(bkA, nm); }catch(e){} }   // 📇 19/11: στις επαφές μου
       catch(e){ S.sending = false; refresh(); toast('Σφάλμα: '+(e.message||e)+(nOk?' (στάλθηκαν '+nOk+'/'+cats.length+')':'')); }
     }
     root.addEventListener('click', e=>{
@@ -17241,6 +17330,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const xg = t.closest('[data-xg]'); if(xg){ const i = +xg.dataset.xg; S.xg = S.xg===i ? -1 : i; drawEx(); if(S.xg>=0) setTimeout(()=>{ const l = root.querySelector('[data-exl] .xbl'); if(l) l.scrollIntoView({block:'nearest', behavior:'smooth'}); }, 30); return; }
       const xf = t.closest('[data-exf]'); if(xf){ const n = xf.dataset.exf, i = S.ex.findIndex(x=>x.n.toLowerCase()===n.toLowerCase()), f0 = (window.pdxExBtns ? pdxExBtns() : []).concat(REF_FAV).find(f=>f[0]===n); if(i>=0) S.ex.splice(i,1); else S.ex.push({n, k:exKind(n), ep:!!(f0&&f0[2])}); drawEx(); return; }
       const rdl = t.closest('[data-rdel]'); if(rdl){ rHide([rdl.dataset.rdel]); drawRecent(); return; }
+      // 📇 19/11: επαφές/προτάσεις
+      const sgd = t.closest('[data-sgdel]'); if(sgd){ e.preventDefault(); clearTimeout(sugT); const a = sgd.dataset.sgdel; if(!confirm('Αφαίρεση από τις επαφές σου; (ΑΜΚΑ ··'+a.slice(-4)+' — οι συνταγές δεν σβήνονται)')) return; pdxRxBook.del(a).then(()=>{ const ia = root.querySelector('[data-amka]'); drawSug(ia ? ia.value : ''); }); return; }
+      const sgo = t.closest('[data-sg]'); if(sgo){ clearTimeout(sugT); const a = sgo.dataset.sg; const ia = root.querySelector('[data-amka]'); S.k=''; S.amkaQ=''; S.amka = a; lastA='';
+        const nb = sgo.querySelector('b'); const n0 = nb ? nb.textContent.replace(/^⭐\s*/,'') : ''; if(n0 && !/χωρίς όνομα/.test(n0) && window.pdxAmkaName) pdxAmkaName(a).then(x=>{ if(!x && window.pdxAmkaNameSave) pdxAmkaNameSave(a, n0); });
+        if(ia){ ia.value = a; try{ ia.blur(); }catch(e){} onAmka(); } drawSug('', false); return; }
+      const kb = t.closest('[data-kbd]'); if(kb){ const ia = root.querySelector('[data-amka]'); S.kbd = S.kbd==='text' ? 'num' : 'text'; kb.textContent = S.kbd==='text' ? '123' : 'αβγ';
+        if(ia){ ia.setAttribute('inputmode', S.kbd==='text' ? 'text' : 'numeric'); try{ ia.blur(); }catch(e){} pdxFocusNow(()=>{ try{ ia.focus(); }catch(e){} }, 60); } return; }
       if(t.closest('[data-rclr]')){ if(!confirm('Καθαρισμός της λίστας «Πρόσφατοι»; (μόνο για εσένα — οι συνταγές δεν σβήνονται)')) return; rHide(recentAmka().map(x=>x.amka)); drawRecent(); return; }
       if(t.closest('[data-tg0]')){ S.f.part = S.f.part==='0%' ? '25%' : '0%'; syncForm(); return; }
       // 13/11 14:42 (χρήστης: «από τη λίστα μετά τη συνταγή δεν δουλεύει»): η εργασία έτρεχε (✅ ··17 ×3) αλλά δεν φαινόταν τίποτα — η γραμμή είχε
