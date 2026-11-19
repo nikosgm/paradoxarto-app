@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v607';
+const APP_VER = '2026-11-19-v608';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14570,10 +14570,56 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   if(location.hash === '#pdxrev'){ window.__pdxNavHit = Date.now(); try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){} setTimeout(()=>pdxNavGo('review'), 300); }   // 18/11: μέσω pdxNavGo (αναμονή σύνδεσης/ξεκλειδώματος + navlog)
   // 📞 19/11 15:20: ρύθμιση κλήσεων για εκτίμηση — αυτόματη υποβολή (προεπιλογή) ή έγκριση από εδώ
   window.pdxConsultAuto = function(v){ try{ if(v!==undefined) localStorage.setItem('pdx.consultAuto', v?'1':'0'); return localStorage.getItem('pdx.consultAuto')!=='0'; }catch(e){ return true; } };
+  // ❓ 19/11 19:29 (χρήστης: «κάθε απορία του bot → παράθυρο επιλογής στο κινητό», με τη σειρά): το bot ΡΩΤΑ (status review + result.ask)
+  // → οθόνη επιλογής → η εργασία ξανατρέχει με την απάντηση (payload.answers[key]). 1ος τύπος: «patient» (δεν βρέθηκε ο ασθενής στη λίστα ΝΠΣ).
+  window.pdxBotAsk = async function(j){
+    const P = j.payload || {}, A = (P.result || {}).ask || {}, E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const KN = {discharge:'Εξιτήριο', order:'Παραγγελία εξετάσεων', orderprep:'Παραγγελία εξετάσεων', consult:'Κλήση για εκτίμηση', npsdx:'Διάγνωση ΝΠΣ', comorb:'Συννοσηρότητες', npsmedorder:'Φάρμακο ΝΠΣ', npsprog:'Πορεία νόσου', npsdossier:'Φάκελος ΝΠΣ', npspat:'Ασθενής ΝΠΣ', npsops:'Επεμβάσεις ΝΠΣ'};
+    if(A.type !== 'patient') return toast('❓ '+(A.q||'Ερώτηση')+' — άγνωστος τύπος ερώτησης (ενημέρωσε την εφαρμογή)');
+    try{ await (window.pdxNpsRowsNow ? pdxNpsRowsNow() : null); }catch(e){}
+    const want = String(A.want || j.name || ''), st = {q:'', busy:false};
+    const nz = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+    // ομοιότητα (όπως chSim): Levenshtein σε ολόκληρο + επώνυμο + σκελετό συμφώνων (ο χειρόγραφος/OCR μπερδεύει φωνήεντα/διπλά)
+    const lev = (x, y)=>{ const m = x.length, n = y.length, c = []; for(let k=0;k<=n;k++) c[k]=k; for(let i=1;i<=m;i++){ let pv = c[0]; c[0] = i; for(let k=1;k<=n;k++){ const t = c[k]; c[k] = Math.min(c[k]+1, c[k-1]+1, pv + (x[i-1]===y[k-1]?0:1)); pv = t; } } return c[n]; };
+    const nz2 = x=>nz(x).replace(/[^A-ZΑ-Ω ]/g,''), skel = x=>x.replace(/ΟΥ/g,'U').replace(/[ΑΕΗΙΟΥΩ]/g,'').replace(/(.)\1/g,'$1');
+    const sim = (x, y)=>{ x = nz2(x); y = nz2(y); if(!x || !y) return 0; if(x===y) return 1; const sx = x.split(' ')[0], sy = y.split(' ')[0];
+      const r1 = 1 - lev(sx, sy)/Math.max(sx.length, sy.length), r2 = 1 - lev(skel(sx), skel(sy))/Math.max(1, skel(sx).length, skel(sy).length), r3 = 1 - lev(x, y)/Math.max(x.length, y.length); return Math.max(r3, r1*0.5 + r2*0.5); };
+    const room = r=>r.room ? String(r.room).replace(/^ΘΑΛΑΜΟΣ\s*/i,'')+(r.bed && /\d/.test(r.bed) ? '-'+String(r.bed).replace(/\D+/g,'') : '') : '';
+    const cand = ()=>{ let R = []; try{ R = window.pdxNpsRowsSync ? pdxNpsRowsSync() : []; }catch(e){}
+      let L = R.filter(r=>r && String(r.name||'').trim()).map(r=>({name:String(r.name).trim(), amka:String(r.amka||''), where:'ΝΠΣ'+(room(r) ? ' · '+room(r) : ''), s:sim(want, r.name)}));
+      const q = nz(st.q); if(q) L = L.filter(o=>nz(o.name).split(' ').some(w=>w.startsWith(q.split(' ')[0])) && q.split(' ').every(w=>nz(o.name).includes(w)));
+      return L.sort((a,b)=>(b.s-a.s) || a.name.localeCompare(b.name,'el')); };
+    const row = (o, i)=>'<div data-askpick="'+i+'" style="display:flex;align-items:center;gap:10px;min-height:56px;padding:6px 16px;border-top:.5px solid rgba(60,60,67,.18);cursor:pointer"><div style="flex:1;min-width:0"><div style="font-size:16.5px;font-weight:600">'+E3(o.name)+'</div><div style="font-size:13px;color:#8E8E93">'+E3(o.where||'ΝΠΣ')+(o.amka && /^\d{11}$/.test(o.amka) ? ' · ΑΜΚΑ ··'+E3(o.amka.slice(-4)) : '')+(o.s>=0.6 ? ' · <b style="color:#0A84FF">πιθανότατα</b>' : '')+'</div></div><span style="color:#C7C7CC;font-size:20px">›</span></div>';
+    let L = [];
+    const draw = ()=>{ L = cand(); const top = st.q ? [] : L.filter(o=>o.s >= 0.45).slice(0, 5), rest = st.q ? L : L.filter(o=>!top.includes(o));
+      return '<div style="margin:12px 16px;background:#FFF4E5;border-radius:14px;padding:12px 14px"><div style="font-size:13px;color:#B26A00;font-weight:700">❓ ΤΟ BOT ΡΩΤΑ · '+E3(KN[j.kind]||j.kind)+'</div><div style="font-size:16px;margin-top:4px">Δεν βρήκα <b>«'+E3(want)+'»</b> στη λίστα ΝΠΣ. Ποιος ασθενής είναι;</div><div style="font-size:13px;color:#6D6D72;margin-top:6px">Μόλις διαλέξεις, η εργασία ξανατρέχει για αυτόν τον ασθενή. Τίποτα δεν έχει καταχωριστεί.</div></div>'
+        + '<div style="margin:0 16px 10px"><input data-askq type="search" placeholder="🔎 Αναζήτηση στη λίστα ΝΠΣ" value="'+E3(st.q)+'" autocomplete="off" style="width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:0;background:rgba(118,118,128,.12);padding:0 12px;font-size:16px"></div>'
+        + (top.length ? '<div style="margin:0 16px 4px;font-size:13px;color:#8E8E93;text-transform:uppercase">Πιο κοντινοί</div><div style="margin:0 16px 12px;background:#fff;border-radius:14px;overflow:hidden" data-askg>'+top.map(o=>row(o, L.indexOf(o))).join('')+'</div>' : '')
+        + '<div style="margin:0 16px 4px;font-size:13px;color:#8E8E93;text-transform:uppercase">'+(st.q ? 'Αποτελέσματα · '+rest.length : 'Όλη η λίστα ΝΠΣ · '+rest.length)+'</div><div style="margin:0 16px 12px;background:#fff;border-radius:14px;overflow:hidden" data-askg>'+(rest.length ? rest.map(o=>row(o, L.indexOf(o))).join('') : '<div style="padding:14px 16px;color:#8E8E93">Η λίστα ΝΠΣ δεν έχει φορτωθεί ή δεν βρέθηκε κανείς.</div>')+'</div>'
+        + '<div style="margin:0 16px 30px"><button data-askno style="width:100%;height:50px;border:0;border-radius:14px;background:#fff;color:#FF3B30;font-size:17px;font-weight:600">Να μη γίνει</button></div>'; };
+    const pg = iosPage('Ποιος ασθενής;', 'Πίσω', draw);
+    pg.el.addEventListener('input', e=>{ if(e.target.matches('[data-askq]')){ st.q = e.target.value; const pos = e.target.selectionStart; pg.redraw(); const i2 = pg.el.querySelector('[data-askq]'); if(i2){ try{ i2.focus(); i2.setSelectionRange(pos, pos); }catch(x){} } } });
+    pg.el.addEventListener('click', async e=>{
+      if(st.busy) return;
+      if(e.target.closest('[data-askno]')){ if(!confirm('Να μη γίνει η εργασία «'+(KN[j.kind]||j.kind)+'»;')) return; st.busy = true;
+        const x = await sb6.from('oncall_jobs').update({status:'cancelled', note:'❓ ακυρώθηκε από το κινητό (δεν βρέθηκε ο ασθενής)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
+        st.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'); toast('✕ Δεν θα γίνει'); pg.close(); return; }
+      const pk = e.target.closest('[data-askpick]'); if(!pk) return; const o = L[+pk.dataset.askpick]; if(!o) return;
+      if(!confirm((KN[j.kind]||j.kind)+' για:\n\n'+o.name+(o.amka && /^\d{11}$/.test(o.amka) ? '  (ΑΜΚΑ ··'+o.amka.slice(-4)+')' : '')+'\n\nΗ εργασία θα ξανατρέξει για αυτόν τον ασθενή.')) return;
+      st.busy = true; const nm = String(o.name).trim(), am = /^\d{11}$/.test(o.amka||'') ? o.amka : '';
+      const p2 = Object.assign({}, P, {answers: Object.assign({}, P.answers||{}, {pt:{name:nm, amka:am || undefined, from:want, at:Date.now()}}), notBefore: Date.now()});
+      delete p2.result; delete p2.bot; delete p2.assign; delete p2.assignAt;
+      if('name' in P) p2.name = nm; if(am && 'amka' in P) p2.amka = am; if(Array.isArray(P.names)) p2.names = P.names.map(n=>nz(n)===nz(want) ? nm : n);
+      const x = await sb6.from('oncall_jobs').update({status:'new', name:nm, name_key:nz(nm), note:'❓→ ο γιατρός διάλεξε ασθενή — ξανατρέχει', payload:p2, updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
+      st.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'+(x.error?' · '+x.error.message:''));
+      toast('✓ '+(KN[j.kind]||j.kind)+': ξανατρέχει για '+nm); pg.close(); });
+    return pg;
+  };
   window.pdxBotReview = function(id){
     if(typeof sb6==='undefined') return;
     sb6.from('oncall_jobs').select('id,name,name_key,room,kind,status,note,payload,updated_at').eq('id', id).maybeSingle().then(r=>{
       const j = r.data; if(!j) return toast('Δεν βρέθηκε η εργασία');
+      if(j.status==='review' && j.payload && j.payload.result && j.payload.result.ask) return window.pdxBotAsk(j);   // ❓ 19/11: ερώτηση του bot
       if(j.kind==='rx' || j.kind==='ref') return pdxRxReview(j);
       if(j.status!=='review'){ refreshPill(); return toast('Δεν περιμένει πλέον έγκριση — '+(ST[j.status]||j.status)+(j.note?' · '+String(j.note).split('\n')[0].slice(0,80):'')); }
       const f = (j.payload&&j.payload.result) || {};
@@ -14760,9 +14806,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
             + '<div style="margin-top:4px;font-size:15px;color:#6D6D72;text-align:center">'+'από την αποστολή'+'</div>'
             + (now ? '<div style="margin-top:8px;font-size:14px;color:#6D6D72;text-align:center;max-width:320px">'+esc(now.slice(0,140))+'</div>' : '')
             + (cur.status==='approve' ? '<div style="margin-top:14px;font-size:14px;color:#6D6D72">καταχωρίζεται — δεν διακόπτεται</div>' : '<button data-jx="'+cur.id+'" style="margin-top:14px;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:999px;padding:10px 22px;min-height:44px;font-size:16px;font-weight:600">Διακοπή</button>') + '</div>'; }
-        const row = j=>{ const p = pctOf(j.note), st = {new:'περιμένει τον υπολογιστή', seen:'παραλήφθηκε', running:'σε εξέλιξη', approve:'καταχωρίζεται', review:'👀 για έγκριση — πάτα', done:'✓ έγινε', approved:'✓ καταχωρίστηκε', failed:'⚠︎ απέτυχε', cancelled:'ακυρώθηκε', dismissed:'✓'}[j.status]||j.status;
-          return {ic:{order:'🧾',rx:'💊',ref:'📋',consult:'📞',discharge:'📄',imgget:'🩻',imgdir:'🩻',medbx:'🔬',bxscan:'🔬'}[j.kind]||'🤖', t:esc(label(j)), sub:esc(st)+(ACT.includes(j.status) ? ' · '+secs(j)+'″' : (j.updated_at ? ' · διήρκεσε '+Math.max(1, Math.round((Date.parse(j.updated_at)-Date.parse(j.created_at))/1000))+'″ · '+new Date(j.updated_at).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''))+(j.note?'<br>'+esc(clean(j.note)).slice(0,160):'')+(ACT.includes(j.status)?'<div class="pdx-jp"><i style="width:'+(p==null?Math.min(90, secs(j)*4):p)+'%"></i></div>':''), on: j.status==='review' ? "pdxBotReview("+j.id+")" : j.kind==='bxscan' ? "pdxBiopsies()" : '',
-            raw: (j.status==='review' && window.pdxBotReview ? '<button data-jrv="'+j.id+'" style="border:0;background:#1D4E80;color:#fff;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:700;flex:none;margin-right:6px">Έγκριση ›</button>' : '') + (((ACT.includes(j.status) && j.status!=='approve') || j.status==='review') ? '<button data-jx="'+j.id+'" style="border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:600;flex:none">Διακοπή</button>' : '')}; };
+        const row = j=>{ const p = pctOf(j.note), st = {new:'περιμένει τον υπολογιστή', seen:'παραλήφθηκε', running:'σε εξέλιξη', approve:'καταχωρίζεται', review:'👀 για έγκριση — πάτα', done:'✓ έγινε', approved:'✓ καταχωρίστηκε', failed:'⚠︎ απέτυχε', cancelled:'ακυρώθηκε', dismissed:'✓'}[j.status] ; const isAsk = j.status==='review' && /^❓/.test(String(j.note||'')); const st2 = isAsk ? '❓ το bot ρωτά — πάτα' : st||j.status;
+          return {ic:{order:'🧾',rx:'💊',ref:'📋',consult:'📞',discharge:'📄',imgget:'🩻',imgdir:'🩻',medbx:'🔬',bxscan:'🔬'}[j.kind]||'🤖', t:esc(label(j)), sub:esc(st2)+(ACT.includes(j.status) ? ' · '+secs(j)+'″' : (j.updated_at ? ' · διήρκεσε '+Math.max(1, Math.round((Date.parse(j.updated_at)-Date.parse(j.created_at))/1000))+'″ · '+new Date(j.updated_at).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''))+(j.note?'<br>'+esc(clean(j.note)).slice(0,160):'')+(ACT.includes(j.status)?'<div class="pdx-jp"><i style="width:'+(p==null?Math.min(90, secs(j)*4):p)+'%"></i></div>':''), on: j.status==='review' ? "pdxBotReview("+j.id+")" : j.kind==='bxscan' ? "pdxBiopsies()" : '',
+            raw: (j.status==='review' && window.pdxBotReview ? '<button data-jrv="'+j.id+'" style="border:0;background:#1D4E80;color:#fff;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:700;flex:none;margin-right:6px">'+(isAsk?'Απάντηση ›':'Έγκριση ›')+'</button>' : '') + (((ACT.includes(j.status) && j.status!=='approve') || j.status==='review') ? '<button data-jx="'+j.id+'" style="border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:999px;padding:6px 14px;min-height:44px;font-size:14px;font-weight:600;flex:none">Διακοπή</button>' : '')}; };
         return hero + (A.length ? iosGroup('Τώρα', A.map(row)) : iosGroup('', [{t:'Καμία εργασία σε εξέλιξη'}])) + (D.length ? iosGroup('Πρόσφατες', D.map(row)) : '') + '<div style="height:40px"></div>';
       });
       // ✕ διακοπή εργασίας που τρέχει/περιμένει: το bot τη σταματά στο επόμενο βήμα (ποτέ δεν καταχωρίζει μισή)
