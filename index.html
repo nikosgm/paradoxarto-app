@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v609';
+const APP_VER = '2026-11-19-v610';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14574,7 +14574,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // → οθόνη επιλογής → η εργασία ξανατρέχει με την απάντηση (payload.answers[key]). 1ος τύπος: «patient» (δεν βρέθηκε ο ασθενής στη λίστα ΝΠΣ).
   window.pdxBotAsk = async function(j){
     const P = j.payload || {}, A = (P.result || {}).ask || {}, E3 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-    const KN = {discharge:'Εξιτήριο', order:'Παραγγελία εξετάσεων', orderprep:'Παραγγελία εξετάσεων', consult:'Κλήση για εκτίμηση', npsdx:'Διάγνωση ΝΠΣ', comorb:'Συννοσηρότητες', npsmedorder:'Φάρμακο ΝΠΣ', npsprog:'Πορεία νόσου', npsdossier:'Φάκελος ΝΠΣ', npspat:'Ασθενής ΝΠΣ', npsops:'Επεμβάσεις ΝΠΣ'};
+    const KN = {rx:'Συνταγή', ref:'Παραπεμπτικό', discharge:'Εξιτήριο', order:'Παραγγελία εξετάσεων', orderprep:'Παραγγελία εξετάσεων', consult:'Κλήση για εκτίμηση', npsdx:'Διάγνωση ΝΠΣ', comorb:'Συννοσηρότητες', npsmedorder:'Φάρμακο ΝΠΣ', npsprog:'Πορεία νόσου', npsdossier:'Φάκελος ΝΠΣ', npspat:'Ασθενής ΝΠΣ', npsops:'Επεμβάσεις ΝΠΣ'};
     // ❓ γενική ερώτηση ΕΠΙΛΟΓΗΣ (π.χ. ICD): A.opts [{v,l}] · A.skip (κείμενο «παράλειψης» → v "-") · απάντηση → payload.answers[key][sub] (ή answers[key] χωρίς sub)
     if(A.type === 'choice'){
       const O = Array.isArray(A.opts) ? A.opts : [], stc = {busy:false};
@@ -14583,13 +14583,13 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         + (A.skip ? '<div style="margin:0 16px 10px"><button data-askskip style="width:100%;height:50px;border:0;border-radius:14px;background:#fff;color:#0A84FF;font-size:17px;font-weight:600">'+E3(A.skip)+'</button></div>' : '')
         + '<div style="margin:0 16px 30px"><button data-askno style="width:100%;height:50px;border:0;border-radius:14px;background:#fff;color:#FF3B30;font-size:17px;font-weight:600">Να μη γίνει</button></div>';
       const pgc = iosPage('Το bot ρωτά', 'Πίσω', drawC);
-      const answer = async (v, lbl)=>{ if(stc.busy) return; if(!confirm((lbl||v)+'\n\nΗ εργασία θα ξανατρέξει με αυτή την επιλογή.')) return; stc.busy = true;
+      const answer = async (v, lbl, delay)=>{ if(stc.busy) return; if(!confirm((lbl||v)+'\n\nΗ εργασία θα ξανατρέξει '+(+delay>0 ? 'σε '+(+delay)+'′' : 'με αυτή την επιλογή')+'.')) return; stc.busy = true;
         const ans = Object.assign({}, P.answers||{}); ans[A.key] = A.sub ? Object.assign({}, (typeof ans[A.key]==='object' && ans[A.key]) || {}, {[A.sub]: v}) : v;
-        const p2 = Object.assign({}, P, {answers: ans, notBefore: Date.now()}); delete p2.result; delete p2.bot; delete p2.assign; delete p2.assignAt;
+        const p2 = Object.assign({}, P, {answers: ans, notBefore: Date.now() + Math.max(0, +delay||0)*60000}); delete p2.result; delete p2.askPending; delete p2.bot; delete p2.assign; delete p2.assignAt;
         const x = await sb6.from('oncall_jobs').update({status:'new', note:'❓→ ο γιατρός απάντησε — ξανατρέχει', payload:p2, updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
         stc.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'+(x.error?' · '+x.error.message:'')); toast('✓ ξανατρέχει με την επιλογή σου'); pgc.close(); };
       pgc.el.addEventListener('click', async e=>{
-        const op = e.target.closest('[data-askopt]'); if(op){ const o = O[+op.dataset.askopt]; if(o) answer(String(o.v), o.l); return; }
+        const op = e.target.closest('[data-askopt]'); if(op){ const o = O[+op.dataset.askopt]; if(!o) return; if(o.cancel){ if(stc.busy || !confirm((o.l||'')+'\n\nΗ εργασία δεν θα γίνει.')) return; stc.busy = true; const x = await sb6.from('oncall_jobs').update({status:'cancelled', note:'❓ '+(o.l||'ακυρώθηκε')+' (απάντηση γιατρού)', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id'); stc.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'); toast('✕ Δεν θα γίνει'); pgc.close(); return; } answer(String(o.v), o.l, o.delay); return; }
         if(e.target.closest('[data-askskip]')) return answer('-', A.skip);
         if(e.target.closest('[data-askno]')){ if(stc.busy || !confirm('Να μη γίνει η εργασία;')) return; stc.busy = true;
           const x = await sb6.from('oncall_jobs').update({status:'cancelled', note:'❓ ακυρώθηκε από το κινητό', updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
@@ -14629,7 +14629,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(!confirm((KN[j.kind]||j.kind)+' για:\n\n'+o.name+(o.amka && /^\d{11}$/.test(o.amka) ? '  (ΑΜΚΑ ··'+o.amka.slice(-4)+')' : '')+'\n\nΗ εργασία θα ξανατρέξει για αυτόν τον ασθενή.')) return;
       st.busy = true; const nm = String(o.name).trim(), am = /^\d{11}$/.test(o.amka||'') ? o.amka : '';
       const p2 = Object.assign({}, P, {answers: Object.assign({}, P.answers||{}, {pt:{name:nm, amka:am || undefined, from:want, at:Date.now()}}), notBefore: Date.now()});
-      delete p2.result; delete p2.bot; delete p2.assign; delete p2.assignAt;
+      delete p2.result; delete p2.askPending; delete p2.bot; delete p2.assign; delete p2.assignAt;
       if('name' in P) p2.name = nm; if(am && 'amka' in P) p2.amka = am; if(Array.isArray(P.names)) p2.names = P.names.map(n=>nz(n)===nz(want) ? nm : n);
       const x = await sb6.from('oncall_jobs').update({status:'new', name:nm, name_key:nz(nm), note:'❓→ ο γιατρός διάλεξε ασθενή — ξανατρέχει', payload:p2, updated_at:new Date().toISOString()}).eq('id', j.id).eq('status','review').select('id');
       st.busy = false; if(x.error || !(x.data||[]).length) return toast('⚠ Δεν περιμένει πλέον απάντηση'+(x.error?' · '+x.error.message:''));
@@ -17293,7 +17293,8 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
         const q = await sb6.from('oncall_jobs').select('status,note').eq('id', id).maybeSingle(); const j = q.data; if(!j) return;
         const x = S.jobs.find(z=>z.id===id); if(!x) return; x.st = j.status; x.note = j.note||''; drawJobs();
         // συνεχίζει και μετά τον έλεγχο (approve → approved/failed), ώστε να φανεί «καταχωρίστηκε» εδώ
-        if(j.status==='review' && !x.revShown){ x.revShown = true; loadHist(); if(window.pdxBotReview && !document.getElementById('mobSubPop')) pdxBotReview(id); }
+        if(j.status!=='review') x.revShown = false;   // ❓ 19/11: μετά από απάντηση σε ερώτηση ξαναφτάνει σε «review» → ξανανοίγει
+        if(j.status==='review' && !x.revShown){ x.revShown = true; loadHist(); if(window.pdxBotReview && !document.getElementById('mobSubPop') && !document.getElementById('iosPg')) pdxBotReview(id); }
         if(!/^(new|seen|running|review|approve)$/.test(j.status)){ clearInterval(iv); loadHist(); }
       }, 2500);
     }
@@ -17303,7 +17304,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 🎨 18/11 18:45 (χρήστης, στιγμιότυπο: μία λέξη ανά γραμμή): το κουμπί δίπλα στο κείμενο το στρίμωχνε → κουμπιά σε δική τους γραμμή (jr)·
       // σύντομο μήνυμα: μόνο τα ουσιώδη (✅/⚠ + barcode/άυλη), όχι ολόκληρο το κείμενο του e-prescription
       const shortN = (n, st)=>{ n = String(n||''); if(st==='approved'){ const bc = (n.match(/barcode\s*(\d{6,})/)||[])[1]; return (/^⚠/.test(n) ? n.split(' — ')[0].slice(0,110) : '✅ καταχωρίστηκε') + (bc ? ' · '+bc : '') + (/άυλη/.test(n) ? ' · 📲 άυλη' : ''); } return n.replace(/\s*·\s*⏱.*$/,'').slice(0,160); };
-      box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = T[x.st]||[x.st,'']; return '<div class="med jr"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;white-space:normal;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(shortN(x.note, x.st))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again pb pb-pri" data-rev="'+x.id+'">👀 Έλεγχος</button>':'')+((x.st==='approved' || x.vc) && x.amka ? '<button class="again pb pb-ok" data-vclose="'+E(x.amka)+'" style="flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
+      box.innerHTML = S.jobs.slice(0,3).map(x=>{ const t = x.st==='review' && /^❓/.test(String(x.note||'')) ? ['❓ Το bot ρωτά — πάτα για απάντηση','w'] : (T[x.st]||[x.st,'']); return '<div class="med jr"><span class="st"><span class="d '+t[1]+'"></span></span><div class="m"><b>'+E(x.label)+'</b><span>'+E(t[0])+'</span>'+(x.note&&/failed|done|approved/.test(x.st)?'<span style="display:block;font-size:13px;white-space:normal;color:'+(x.st==='failed'?'#B42318':'#6B6B70')+'">'+E(shortN(x.note, x.st))+'</span>':'')+'</div>'+(x.st==='review'&&x.id?'<button class="again pb pb-pri" data-rev="'+x.id+'">👀 Έλεγχος</button>':'')+((x.st==='approved' || x.vc) && x.amka ? '<button class="again pb pb-ok" data-vclose="'+E(x.amka)+'" style="flex:none">'+(x.vc||'✅ Ολοκλήρωση επίσκεψης')+'</button>' : '')+'</div>'; }).join('');
       refresh();
     }
     async function loadHist(){
