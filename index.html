@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v596';
+const APP_VER = '2026-11-19-v597';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22406,7 +22406,7 @@ function histInboxOpen(){
           + '<div class="hin hcard"><div class="hc-top"><b>'+esc(r.label||('#'+r.id))+'</b><span class="hc-when">'+ago(r.created_at)+'</span></div>'
           + (sub ? '<div class="hc-sub">'+esc(sub)+'</div>' : '')
           + (old.length ? '<div class="hc-dup">+'+old.length+' παλαιότερ'+(old.length>1?'α':'ο')+' με το ίδιο όνομα · <button data-olddel="'+i+'">🗑 Σβήσε τα παλιά</button></div>' : '')
-          + '<div class="hc-act">'+acts+'<button class="hc-new" data-i="'+i+'">+ Νέος ασθενής</button></div></div></div>';
+          + '<div class="hc-act">'+acts+'<button class="hc-new" data-i="'+i+'">+ Νέος ασθενής</button><button class="hc-new" data-pick="'+i+'" style="margin-left:6px">📎 Σε ασθενή…</button></div></div></div>';
       }).join('') + '</div>';
       $('chBody').querySelectorAll('button[data-olddel]').forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); var r = list[+b.getAttribute('data-olddel')];
         (r._old||[]).forEach(function(id){ histInboxDone(id); }); var w = b.closest('.hc-dup'); if(w) w.remove(); }; });
@@ -22414,10 +22414,22 @@ function histInboxOpen(){
         b.onclick = function(){
           var r = list[+b.getAttribute('data-m')], m = b.hasAttribute('data-c') ? r._c[+b.getAttribute('data-c')] : r._m, rec = store(m.extra)[m.key];
           if(!rec){ ctx.err = 'Ο ασθενής δεν βρέθηκε πια στη λίστα.'; renderEmpty(); return; }
+          if(rec._npsTemp) delete rec._npsTemp;
           ctx = { key:m.key, isExtra:!!m.extra, h: rec.caseHist || null, edit:false, imgs:null, err:'', inboxId:r.id };
           importParsed(r.data || {});
         };
       });
+      // 📎 19/11 16:20 (χρήστης: «θέλω καθολικά να μπορώ να βάλω ένα ιστορικό σε όποιον ασθενή θέλω — κρατάς τον ασθενή που έβαλα εγώ»):
+      // λίστα ΟΛΩΝ των ασθενών (παρόμοια ονόματα πρώτα) → το ιστορικό ανοίγει για έλεγχο ΣΤΗΝ ΚΑΡΤΕΛΑ ΤΟΥ (όνομα/θέση του ασθενή μένουν)
+      $('chBody').querySelectorAll('button[data-pick]').forEach(function(b){ b.onclick = function(e){ e.stopPropagation();
+        var i = +b.getAttribute('data-pick'), r = list[i], A = chAttachList(r.label||''), seen = {}, L = A.sug.concat(A.all).filter(function(o){ if(seen[o.k]) return false; seen[o.k] = 1; return true; });
+        var w = b.closest('.hc-act'); if(!w) return;
+        w.innerHTML = '<select class="ch-in" data-pk style="width:100%"><option value="">— διάλεξε ασθενή ('+L.length+') —</option>'+L.map(function(o,j){ return '<option value="'+j+'">'+(j<A.sug.length?'❓ ':'')+esc(o.name)+' · '+esc(o.where)+'</option>'; }).join('')+'</select>';
+        var sel = w.querySelector('[data-pk]'); sel.onchange = function(){ if(sel.value==='') return; var o = L[+sel.value], rec = store(o.x)[o.k];
+          if(!rec){ ctx.err = 'Ο ασθενής δεν βρέθηκε πια στη λίστα.'; renderEmpty(); return; }
+          if(rec._npsTemp) delete rec._npsTemp;   // ασθενής μόνο της λίστας ΝΠΣ → κανονική καρτέλα (αλλιώς δεν αποθηκεύεται)
+          ctx = { key:o.k, isExtra:!!o.x, h: rec.caseHist || null, edit:false, imgs:null, err:'', inboxId:r.id }; importParsed(r.data || {}); };
+        try{ sel.focus(); }catch(e){} }; });
       $('chBody').querySelectorAll('button[data-i]').forEach(function(b){
         b.onclick = function(){ var r = list[+b.getAttribute('data-i')]; ctx.inboxId = r.id; importParsed(r.data || {}); };
       });
