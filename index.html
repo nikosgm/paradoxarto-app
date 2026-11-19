@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v595';
+const APP_VER = '2026-11-19-v596';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -22395,9 +22395,12 @@ function histInboxOpen(){
         if(m && m.level!=='ok' && sur(m.name) !== sur(r.label)) m = null;   // μόνο ίδιο επίθετο
         if(d._key){ var rk = store(String(d._key).indexOf('extra')===0)[d._key]; if(rk) m = {key:d._key, level:'ok', extra:String(d._key).indexOf('extra')===0, label:(String(d._key).indexOf('extra')===0?(rk.assignedWard||'Εκτός θαλάμου'):d._key), name:rk.name||''}; }
         var cands = Array.isArray(d._cands) ? d._cands.map(function(k){ var x = String(k).indexOf('extra')===0, rr = store(x)[k]; return rr ? {key:k, level:'q', extra:x, label:(x?(rr.assignedWard||'Εκτός θαλάμου'):k), name:rr.name||''} : null; }).filter(Boolean) : null;
+        // 📎 19/11 16:00 (χρήστης: «δεν μου εμφανίζει επιλογή να τον βάλω σε υπάρχοντα»): χωρίς ίδιο επίθετο → ασθενείς με ΠΑΡΟΜΟΙΟ όνομα (λάθος ανάγνωσης χειρογράφου)
+        if((!cands || !cands.length) && !(m && m.level!=='no') && typeof chAttachList==='function'){ var fz = chAttachList(r.label||'').sug;
+          if(fz.length) cands = fz.map(function(o){ return {key:o.k, level:'q', extra:o.x, label:o.where, name:o.name}; }); }
         list[i]._c = cands; list[i]._m = m; list[i]._old = old.map(function(j){ return list[j].id; });
         var mbtn = function(c, attr){ return '<button class="hc-go'+(c.level==='ok'?'':' q')+'" '+attr+'>'+(c.level==='ok'?'✓ ':'')+'Στον <b>'+esc(c.label)+'</b> · '+esc(c.name)+(c.level==='ok'?'':' <i>πιθανώς</i>')+'</button>'; };
-        var acts = (cands && cands.length) ? '<div class="hc-warn">⚠️ Ίδιο επίθετο σε '+cands.length+' ασθενείς — διάλεξε:</div>' + cands.map(function(c,j){ return mbtn(c, 'data-m="'+i+'" data-c="'+j+'"'); }).join('')
+        var acts = (cands && cands.length) ? '<div class="hc-warn">'+(cands.length===1 && !(m && m.level!=='no') ? '❓ Μοιάζει με:' : '⚠️ Παρόμοιο όνομα σε '+cands.length+' ασθενείς — διάλεξε:')+'</div>' + cands.map(function(c,j){ return mbtn(c, 'data-m="'+i+'" data-c="'+j+'"'); }).join('')
                  : (m && m.level!=='no') ? mbtn(m, 'data-m="'+i+'"') : '';
         return '<div class="hrow" data-r="'+i+'"><button class="hdel" data-del="'+i+'">Διαγραφή</button><button class="hx" data-del="'+i+'" title="Διαγραφή">✕</button>'
           + '<div class="hin hcard"><div class="hc-top"><b>'+esc(r.label||('#'+r.id))+'</b><span class="hc-when">'+ago(r.created_at)+'</span></div>'
