@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v601';
+const APP_VER = '2026-11-19-v602';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17219,7 +17219,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       const dl0 = t.closest('[data-dloc]'); if(dl0){ const d = (window.pdxRxDrugs ? pdxRxDrugs() : []).find(x=>x.name===dl0.dataset.dloc); if(d){ Object.assign(S.f, {name:d.name, strength:d.s, freq:d.f, days:d.d, unit:d.u, known:true}); syncForm(); } return; }   // (λίστα μένει: διαλέγεις και συσκευασία)
       const dep = t.closest('[data-dep]'); if(dep){ const res = root.querySelector('[data-mres]'), x = (res._ep||[])[+dep.dataset.dep]; if(!x) return;
         const br = brandOf(x.name), st = String(x.str||'').trim() || ((String(x.name).match(/(\d+(?:[.,]\d+)?)\s*(MG|MCG|G|ML)\b/i)||[]).slice(1,3).join('').toLowerCase().replace(',','.'));
-        if(br && !(S.f.name && RXN(x.name).indexOf(RXN(S.f.name))===0)) S.f.name = br; if(st) S.f.strength = st; S.f.perBox = window.pdxRxPackN(x.pack||x.name); S.f.bxMan = false; S.f.boxes = 0; res.innerHTML = '';
+        if(br) S.f.name = br;   // 💊 19/11 16:30 (χρήστης): το ΠΡΑΓΜΑΤΙΚΟ όνομα του e-prescription (όχι ό,τι γράφτηκε στην αναζήτηση, π.χ. «Lonal» → LONALGAL) if(st) S.f.strength = st; S.f.perBox = window.pdxRxPackN(x.pack||x.name); S.f.bxMan = false; S.f.boxes = 0; res.innerHTML = '';
         { const L = window.pdxRxLearned && pdxRxLearned(S.f.name, S.f.strength), typed = /\d\s*[xχ×]\s*\d|[xχ×]\s*\d|φορ|ημ|μερ|day/i.test(S.f.q||''); if(L && !typed){ S.f.dose = String(L.dose||'1'); S.f.freq = L.freq; S.f.days = L.days; S.f.learned = L.n; } }   // 🧠 όπως το γράφουμε συνήθως
         syncForm(); return; }
       const xd = t.closest('[data-exdel]'); if(xd){ S.ex.splice(+xd.dataset.exdel,1); drawEx(); return; }
