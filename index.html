@@ -536,7 +536,7 @@ html.pdx-mac .pb{font-size:14px;min-height:34px;padding:7px 12px;border-radius:8
       <button id="icdBtn" onclick="showIcd10()" style="background:rgba(255,255,255,.1); font-size:12px; opacity:.75;">ICD</button>
       <button id="ahfyLabsBtn" onclick="try{persistCurrent();}catch(e){} window.pdxAhfyLabsOpen && pdxAhfyLabsOpen(current)" title="Εργαστηριακά από τον Ατομικό Φάκελο Υγείας, με γραφήματα" style="background:rgba(255,255,255,.1); font-size:12px; opacity:.75;">📈 ΑΗΦΥ</button>
       <button id="comorbBtn" onclick="try{persistCurrent();}catch(e){} window.pdxComorbOpen && pdxComorbOpen(current)" title="Συννοσηρότητες ICD-10 → εξιτήριο / ιστορικό φακέλου" style="background:rgba(255,255,255,.1); font-size:12px; opacity:.75;">🩺 Συνν.</button>
-      <button id="labChartBtn" onclick="labChart()" title="Ιστορικό εργαστηριακών" style="background:rgba(255,255,255,.1); font-size:12px; opacity:.75;">📈</button>
+      <button id="labChartBtn" onclick="try{persistCurrent();}catch(e){} if(window.pdxLabsUnified && typeof current!=='undefined' && current) pdxLabsUnified(current); else labChart()" title="Εργαστηριακά (ίδια οθόνη με την ενότητα Εργαστηριακά)" style="background:rgba(255,255,255,.1); font-size:12px; opacity:.75;">📈</button>
       <button id="deleteEntryBtn" onclick="deleteCurrentEntry(this)" style="background:rgba(255,255,255,.1); font-size:12px; opacity:.75;">Διαγραφή</button>
       <button onclick="closeEntry()">Κλείσιμο</button>
     </div>
@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v612';
+const APP_VER = '2026-11-19-v613';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -11632,7 +11632,22 @@ html.pdx-night #mobSheet .pad button.ok{background:#0A84FF!important}
 html.pdx-night #qeOv .qc,html.pdx-night #mvPop button{background:#2C2C2E!important;color:#64B5FF!important;border-color:#0A84FF!important}
 html.pdx-night #qeOv .qs{border-color:#38383A!important}html.pdx-night #qeOv .qh button{background:#2C2C2E!important;color:#fff!important}
 html.pdx-night #qeOv input,html.pdx-night #qeOv textarea,html.pdx-night #qeOv select{background:#2C2C2E!important;color:#fff!important}
-html.pdx-night #chOv{color-scheme:light}
+/* 🌙 19/11 22:44 (χρήστης: «εδώ δεν έχει κρατήσει dark mode») — Ιστορικό από φωτογραφία σε σκούρο θέμα (πριν: color-scheme:light) */
+html.pdx-night #chOv{color-scheme:dark;background:#000!important;color:#fff;--border:#38383A;--muted:#8E8E93;--filled:#2C2C2E}
+html.pdx-night #chOv .ch-card,html.pdx-night #chOv .ch-chip,html.pdx-night #chOv .ch-key,html.pdx-night #chOv .ch-in,html.pdx-night #chOv .ch-btn.s,html.pdx-night #chOv .ch-pill:not(.sel),html.pdx-night #chOv .ch-bed:not(.sel):not(.occ),html.pdx-night #chOv .ch-rowbtn:not(.has):not(.pend){background:#1C1C1E!important;color:#fff;border-color:#38383A!important}
+html.pdx-night #chOv .ch-card h3,html.pdx-night #chOv .ch-med .s,html.pdx-night #chOv .ch-add,html.pdx-night #chOv .ch-pill:not(.sel),html.pdx-night #chOv .ch-btn.s{color:#64B5FF!important;border-color:#0A84FF}
+html.pdx-night #chOv .ch-warn{background:#2A2414!important;border-color:#8A6A10!important;color:#F2E6C4}
+html.pdx-night #chOv .ch-warn[style*="#EEF3FB"]{background:#14202E!important;border-color:#3A66B0!important}html.pdx-night #chOv .ch-warn[style*="#EAF4EC"]{background:#12241A!important;border-color:#2F7A4F!important}
+html.pdx-night #chOv .ch-warn b,html.pdx-night #chOv .ch-sug h3{color:#FFD66B!important}
+html.pdx-night #chOv .ch-sug{background:#2A2414!important;border-color:#8A6A10!important}
+html.pdx-night #chOv .ch-sug-row{background:#1C1C1E!important;border-color:#4A3E1C!important}
+html.pdx-night #chOv .ch-sug-row .x,html.pdx-night #chOv.ch-edit .ch-f,html.pdx-night #chOv .ch-edit .ch-f{background:#2C2C2E!important;color:#fff;outline-color:#48484A}
+html.pdx-night #chOv .ch-sug-row .r,html.pdx-night #chOv .ch-hint{color:#C9B884!important}
+html.pdx-night #chOv .ch-sug-row .t{background:#2C2C2E;color:#64B5FF}
+html.pdx-night #chOv .ch-allergy{background:#2E1414!important;color:#FF8A8A!important;border-color:#B23A3A!important}
+html.pdx-night #chOv .ch-med.stop{background:#2A2414!important}html.pdx-night #chOv .ch-med.stop .n{color:#E8C060}
+html.pdx-night #chOv .ch-bed.occ{background:#2C2C2E!important;color:#636366!important}
+html.pdx-night #chOv .ch-err{background:#2E1414!important;color:#FF8A8A!important}
 html.pdx-night #mobView [style*="background:#fff"]{background:#1C1C1E!important;color:#fff!important;border-color:#38383A!important;box-shadow:none!important}
 html.pdx-night #mobView [style*="background:#fff"] small{color:#8E8E93!important}
 html.pdx-night #mobView [style*="color:#334155"]{color:#E5E5EA!important}
@@ -19662,11 +19677,12 @@ Z99.2:C|αιμοκάθαρση
   }
   // Ένα σημείο για τα εργαστηριακά: πηγή «Νοσοκομείο» (πίνακας Medilabi) ή «ΑΗΦΥ» (γραφήματα, όλο το ιστορικό).
   // Θυμάται την τελευταία πηγή που διάλεξε ο χρήστης σε αυτή τη συσκευή.
+  // 19/11 22:41 (χρήστης: «από την καρτέλα ασθενή → εργαστηριακά με πετάει σε παλιό UI· πατάω ΑΗΦΥ και με πετάει στην αρχική· κάντα ίδια»):
+  // ΠΑΝΤΑ η ίδια οθόνη με τη γενική ενότητα (labsFullOpen) — ΧΩΡΙΣ μνήμη πηγής ανά συσκευή (το «ahfy» κολλούσε). Το ΑΗΦΥ ανοίγει ΠΑΝΩ της
+  // χωρίς labsFullClose (το κλείσιμο γύριζε την πλοήγηση στην αρχική)· «Κλείσιμο»/«🏥 Νοσοκομείο» → πίσω στα εργαστηριακά του ίδιου ασθενή.
   window.pdxLabsUnified = function(k, src){
-    // προεπιλογή: 🏥 Νοσοκομείο (Medilabi). Νέο κλειδί (pdx_lab_src2): το παλιό είχε μείνει «ahfy» αυτόματα από την παλιά προεπιλογή.
-    try{ if(src) localStorage.setItem('pdx_lab_src2', src); else src = localStorage.getItem('pdx_lab_src2') || 'hosp'; }catch(e){ src = src || 'hosp'; }
-    if(src==='hosp' && window.labsFullOpen){ box.classList.remove('on'); box.innerHTML=''; window.__ahfyOpenK=null; return labsFullOpen(k); }
-    try{ if(window.labsFullClose) labsFullClose(); }catch(e){}
+    try{ localStorage.removeItem('pdx_lab_src2'); }catch(e){}
+    if(src!=='ahfy' && window.labsFullOpen){ box.classList.remove('on'); box.innerHTML=''; window.__ahfyOpenK=null; return labsFullOpen(k); }
     return window.pdxAhfyLabsOpen(k);
   };
   window.pdxAhfyLabsOpen = function(k, reload){
@@ -21103,6 +21119,10 @@ st.textContent = [
 '.ch-allergy .l{font-size:.68em;letter-spacing:.08em;text-transform:uppercase;display:block;opacity:.8}',
 '.ch-med{display:grid;grid-template-columns:1.5fr .9fr 1fr 1.2fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);align-items:center}',
 '.ch-med:last-child{border-bottom:none}',
+'.ch-med.ed{grid-template-columns:1.5fr .9fr 1fr 1.2fr 34px}',
+'.ch-del{width:32px;height:32px;border:1px solid #E7B4B4;background:#FBEAEA;color:#B23A3A;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;padding:0;line-height:1}',
+'.ch-del.in{width:26px;height:26px;font-size:13px;vertical-align:middle;margin-left:4px}',
+'html.pdx-night .ch-del{background:#2E1414;border-color:#6B2A2A;color:#FF8A8A}',
 '.ch-med.hd{font-size:.68em;color:var(--muted);font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding-top:0}',
 '.ch-med .n{font-weight:700}',
 '.ch-med .s{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--primary)}',
@@ -23073,7 +23093,8 @@ function renderCard(){
     d.suggestions.forEach(function(sg,i){
       h += '<div class="ch-sug-row"><div class="m"><span class="t">' + esc(targetLabel(sg)) + '</span>' +
         '<div class="x" contenteditable="true" data-s="'+i+'">' + esc(sg.text) + '</div>' +
-        (nz(sg.reason) ? '<div class="r">'+esc(sg.reason)+'</div>' : '') + '</div>' +
+        (nz(sg.reason) ? '<div class="r">'+esc(sg.reason)+'</div>' : '') +
+        (sg.target==='medications' && d.medications.some(function(m){ return medKey(m.name) && medKey(m.name)===medKey(String(sg.text||'').split('|')[0]); }) ? '<div class="r" style="font-weight:700">ℹ υπάρχει ήδη στα φάρμακα — το ✓ ενημερώνει την ίδια γραμμή (δεν μπαίνει δεύτερη φορά)</div>' : '') + '</div>' +
         '<button class="ok" data-sa="'+i+'" title="Αποδοχή">✓</button><button class="no" data-sd="'+i+'" title="Διαγραφή">✕</button></div>';
     });
     h += '</div>';
@@ -23095,7 +23116,7 @@ function renderCard(){
   // Παρακλινικός έλεγχος
   if(d.workup.length || e){
     h += '<div class="ch-card"><h3>Απεικονιστικός / Παρακλινικός έλεγχος</h3>';
-    d.workup.forEach(function(w,i){ h += '<div class="ch-row"><div class="l">'+F('workup.'+i+'.label', w.label)+'</div><div class="v">'+FW('workup.'+i+'.text', w.text)+'</div></div>'; });
+    d.workup.forEach(function(w,i){ h += '<div class="ch-row"><div class="l">'+F('workup.'+i+'.label', w.label)+'</div><div class="v">'+FW('workup.'+i+'.text', w.text)+'</div>'+(e?'<button class="ch-del" data-del="workup.'+i+'" title="Διαγραφή όλης της γραμμής" aria-label="Διαγραφή">✕</button>':'')+'</div>'; });
     if(e) h += '<button class="ch-add" data-add="workup">+ γραμμή</button>';
     h += '</div>';
   }
@@ -23115,7 +23136,7 @@ function renderCard(){
   h += '<div class="ch-card"><h3>Προηγούμενα χειρουργεία / νοσηλείες</h3>';
   if(!d.past_surgeries.length && !e) h += '<p style="color:var(--muted)">Κανένα καταγεγραμμένο.</p>';
   else {
-    h += '<ul>' + d.past_surgeries.map(function(s,i){ return '<li>'+F('past_surgeries.'+i, s)+'</li>'; }).join('') + '</ul>';
+    h += '<ul>' + d.past_surgeries.map(function(s,i){ return '<li>'+F('past_surgeries.'+i, s)+(e?' <button class="ch-del in" data-del="past_surgeries.'+i+'" title="Διαγραφή γραμμής" aria-label="Διαγραφή">✕</button>':'')+'</li>'; }).join('') + '</ul>';
     if(e) h += '<button class="ch-add" data-add="past_surgeries">+ γραμμή</button>';
   }
   if(nz(d.postop_complications) || e) h += '<div class="ch-row" style="margin-top:8px"><div class="l">Μετεγχ. επιπλοκές</div><div class="v">'+F('postop_complications', d.postop_complications)+'</div></div>';
@@ -23125,14 +23146,14 @@ function renderCard(){
   h += '<div class="ch-card"><h3>Φάρμακα</h3>';
   if(!d.medications.length && !e) h += '<p style="color:var(--muted)">Δεν αναγράφονται.</p>';
   else {
-    h += '<div class="ch-med hd"><div>Φάρμακο</div><div>Δόση</div><div>Σχήμα</div><div>Σχόλιο</div></div>';
+    h += '<div class="ch-med hd'+(e?' ed':'')+'"><div>Φάρμακο</div><div>Δόση</div><div>Σχήμα</div><div>Σχόλιο</div>'+(e?'<div></div>':'')+'</div>';
     d.medications.forEach(function(m,i){
       var stop = /stop|διακοπ|σταμ/i.test(String(m.note||'')) && !e;
-      h += '<div class="ch-med'+(stop?' stop':'')+'">' +
+      h += '<div class="ch-med'+(stop?' stop':'')+(e?' ed':'')+'">' +
         '<div class="n">'+F('medications.'+i+'.name', m.name)+'</div>' +
         '<div>'+F('medications.'+i+'.dose', m.dose)+'</div>' +
         '<div class="s">'+F('medications.'+i+'.schedule', m.schedule)+'</div>' +
-        '<div>'+(stop?'<span class="ch-stop">STOP</span> '+F('medications.'+i+'.note', String(m.note||'').replace(/(^|\s)(stop|στοπ|διακοπ\S*|σταμ\S*)(?=$|[\s:;,.\-–])[\s:;,\-–]*/gi,'$1').trim()):F('medications.'+i+'.note', m.note))+'</div></div>';
+        '<div>'+(stop?'<span class="ch-stop">STOP</span> '+F('medications.'+i+'.note', String(m.note||'').replace(/(^|\s)(stop|στοπ|διακοπ\S*|σταμ\S*)(?=$|[\s:;,.\-–])[\s:;,\-–]*/gi,'$1').trim()):F('medications.'+i+'.note', m.note))+'</div>'+(e?'<button class="ch-del" data-del="medications.'+i+'" title="Διαγραφή όλης της γραμμής" aria-label="Διαγραφή φαρμάκου">✕</button>':'')+'</div>';
     });
     if(e) h += '<button class="ch-add" data-add="medications">+ φάρμακο</button>';
   }
@@ -23151,6 +23172,7 @@ function renderCard(){
   $('chBody').querySelectorAll('[data-add]').forEach(function(btn){ btn.onclick = function(){ addItem(btn.getAttribute('data-add')); }; });
   $('chBody').querySelectorAll('[data-sa]').forEach(function(btn){ btn.onclick = function(){ acceptSugg(+btn.getAttribute('data-sa')); }; });
   $('chBody').querySelectorAll('[data-sd]').forEach(function(btn){ btn.onclick = function(){ dropSugg(+btn.getAttribute('data-sd')); }; });
+  $('chBody').querySelectorAll('[data-del]').forEach(function(btn){ btn.onclick = function(){ delRow(btn.getAttribute('data-del')); }; });
   // 14/11: «στιγμιότυπο» του πρόχειρου ΟΠΩΣ εμφανίζεται (με τα κενά πεδία της φόρμας) → στο κλείσιμο, «άλλαξε;» = πραγματική διόρθωση από τον γιατρό
   if(ctx.hDraft && ctx.review && e && ctx.draftSnap == null){ try{ collectEdits(); }catch(_){} ctx.draftSnap = JSON.stringify(ctx.h.d); }
 }
@@ -23173,7 +23195,11 @@ function acceptSugg(i){
   var t = sg.target || 'systems.other';
   if(t==='workup') d.workup.push({ label: sg.label||'', text: text });
   else if(t==='past_surgeries') d.past_surgeries.push(text);
-  else if(t==='medications'){ var p = text.split('|').map(function(x){ return x.trim(); }); d.medications.push({ name:p[0]||'', dose:p[1]||'', schedule:p[2]||'', note:p[3]||'' }); }
+  else if(t==='medications'){ var p = text.split('|').map(function(x){ return x.trim(); });
+    // 19/11 22:44 (χρήστης: «το Zateven το έβαλε δύο φορές, μία κανονικά και μία από τα αβέβαια»): ίδιο φάρμακο → ενημέρωση της υπάρχουσας γραμμής, όχι δεύτερη
+    var ex = d.medications.filter(function(x){ return medKey(x.name) && medKey(x.name)===medKey(p[0]); })[0];
+    if(ex){ if(nz(p[1])) ex.dose = p[1]; if(nz(p[2])) ex.schedule = p[2]; if(nz(p[3]) && String(ex.note||'').indexOf(p[3])<0) ex.note = nz(ex.note) ? ex.note+'; '+p[3] : p[3]; }
+    else d.medications.push({ name:p[0]||'', dose:p[1]||'', schedule:p[2]||'', note:p[3]||'' }); }
   else if(t==='medication_note'){
     var m = d.medications.filter(function(x){ return String(x.name||'').toLowerCase().indexOf(String(sg.match||'').toLowerCase())>=0 && nz(sg.match); })[0];
     if(m) m.note = nz(m.note) ? (m.note+'; '+text) : text;
@@ -23184,6 +23210,12 @@ function acceptSugg(i){
     setPath(d, t, nz(cur) ? (cur+'; '+text) : text);
   }
   d.suggestions.splice(i,1);
+  renderCard();
+}
+function medKey(n){ return String(n||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-zα-ω0-9]+/g,''); }
+function delRow(path){   // 19/11 22:44 (χρήστης): διαγραφή ΟΛΗΣ της γραμμής (φάρμακο/δόση/σχήμα/σχόλιο μαζί), όχι κελί-κελί
+  collectEdits(); var a = path.split('.'), arr = ctx.h.d[a[0]], i = +a[1];
+  if(Array.isArray(arr) && i>=0 && i<arr.length) arr.splice(i,1);
   renderCard();
 }
 function dropSugg(i){
