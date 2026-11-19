@@ -1,1 +1,1 @@
-{"version": "0.21.616", "zip": "ef-bot-0.21.616.zip", "sha256": "5a9208094902323e574f1a7b1c3639da0c28a746ce255e10b9579afc69cf4aca", "notes": "npsmedsall map: μορφές όλων των κελιών ημέρας (διάγνωση ενεργής ημέρας)"}
+{"version": "0.21.617", "zip": "ef-bot-0.21.617.zip", "sha256": "e42fa6ccf1cf0a7488c1e39c27b02c2d010501ca528cb19dfa868b5e856e6821", "notes": "npsmeds map: κλάσεις/στυλ span ανά κελί ημέρας (πώς φαίνεται η ενεργή ημέρα)"}
