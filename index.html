@@ -2547,7 +2547,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-18-v590';
+const APP_VER = '2026-11-19-v591';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10529,6 +10529,9 @@ document.head.appendChild(st);
         + (sub?'<div class="pts">'+sub+'</div>':'')
         + '</div>'; }
     h += hdrChips(k, d);
+    // 🔪 19/11 06:40 (χρήστης): επιβεβαιωμένη επέμβαση από ΝΠΣ (σήμερα εντολή + γραμμένο πρακτικό = πράσινο πλαίσιο) → «Προς Χ/Ο» γίνεται Χ0 (μόνο αν είναι «Προς Χ/Ο»· ποτέ πάνω σε αριθμό)
+    try{ const o = window.pdxOpsToday && d && d.name ? pdxOpsToday(d.name) : null;
+      if(o && o.note && String(d.pod||'')==='Προς Χ/Ο'){ d.pod = '0'; d.podCustom = ''; d.podDate = todayISO(); d.ae = false; d.podAuto = 'nps:'+todayISO(); setTimeout(()=>{ try{ save(k); }catch(e){} try{ toast('🔪 Επέμβαση επιβεβαιωμένη στο ΝΠΣ → Χ0'); }catch(e){} }, 0); } }catch(e){}
     try{ if(window.pdxOpsBanner) h += pdxOpsBanner(k, d); }catch(e){}   // 🔪 14/11: επέμβαση σήμερα (ΝΠΣ) + 📝 Πρακτικό
     const TL={hct:()=>tile('Ht','hct',d.hct,d.hctPrev,LTM(d,'hct')),wbc:()=>tile('WBC','wbc',d.wbc,d.wbcPrev,LTM(d,'wbc')),crp:()=>tile('CRP','crp',d.crp,d.crpPrev,LTM(d,'crp')),cr:()=>tile('Cr','cr',d.cr,d.crPrev,LTM(d,'cr')),temp:()=>tile('Θερμ.','temp',d.temp,''),
       drainMl:()=>'',
