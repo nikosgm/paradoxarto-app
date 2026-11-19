@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v600';
+const APP_VER = '2026-11-19-v601';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15152,6 +15152,17 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxNpsRowsNow = async ()=>{ try{ if(!Array.isArray(NB.rows) || !NB.rows.length) await nbLoad(true); }catch(e){} return Array.isArray(NB.rows) ? NB.rows.slice() : []; };
   window.pdxNpsRowsSync = ()=>Array.isArray(NB.rows) ? NB.rows.slice() : [];
   window.pdxNpsTempFor = r=>{ try{ return nbTemp(r); }catch(e){ return null; } };
+  // 🩺 19/11 16:35 (έλεγχος 2: «ΑΗΦΥ · 00–03» δεν έγινε ποτέ στις νέες εισαγωγές): ο νυχτερινός κύκλος ΑΗΦΥ κάλυπτε ΜΟΝΟ το Παραδόχαρτο, και η «συμπλήρωση
+  // στοιχείων ΝΠΣ» (npsenrich: ΑΜ/ΑΜΚΑ + διαγνώσεις ΑΗΦΥ) έτρεχε μόνο 07–22 με ανοιχτή οθόνη σε κινητό. Τώρα και από το bot (κάτοχος σκυτάλης) τη νύχτα:
+  // ασθενείς της λίστας ΝΠΣ χωρίς διαγνώσεις ΑΗΦΥ → npsenrich (≤10), το πολύ 1 ανά 40′, ποτέ αν τρέχει ήδη.
+  window.pdxNpsEnrichKick = async ()=>{ try{ if(typeof sb6==='undefined') return 'χωρίς βάση'; if(!Array.isArray(NB.rows) || !NB.rows.length) { await nbLoad(true); } if(!Array.isArray(NB.rows) || !NB.rows.length) return 'χωρίς λίστα ΝΠΣ';
+      const q = await sb6.from('oncall_jobs').select('id,status,created_at').eq('kind','npsenrich').gte('created_at', new Date(Date.now()-40*60000).toISOString()).limit(5);
+      if((q.data||[]).length) return 'πρόσφατη συμπλήρωση';
+      const miss = NB.rows.filter(r=>!nbHere(r)).map(r=>r.name).filter(n=>{ const x = NB.enr[nbNz(n)]; return !x || !Array.isArray(x.dx); });
+      if(!miss.length) return 'όλοι έχουν ΑΗΦΥ';
+      await sb6.from('oncall_jobs').insert({name_key:'zzz_npsenrich', name:'ΝΠΣ: στοιχεία '+miss.length+' ασθενών (νύχτα)', room:null, kind:'npsenrich', payload:{names:miss.slice(0,10), quiet:true, night:true}, status:'new'});
+      return 'στάλθηκαν '+Math.min(10, miss.length)+'/'+miss.length; }catch(e){ return 'σφάλμα: '+(e.message||e); } };
+  window.pdxNpsEnrDx = name=>{ try{ const x = NB.enr[nbNz(name)]; return x && Array.isArray(x.dx) ? x.dx : null; }catch(e){ return null; } };
   function nbDxN(x){ try{ if(!x || !Array.isArray(x.dx) || !window.pdxComorbClassify) return 0; return pdxComorbClassify(x.dx.join('\n')).filter(i=>i.cls==='C').length; }catch(e){ return 0; } }
   function nbTemp(r){
     { const kk = Object.keys(extraPatients).find(k=>extraPatients[k] && extraPatients[k]._npsKeep && (extraPatients[k].name===r.name || (r.am && String(extraPatients[k].am||'')===String(r.am)))); if(kk) return kk; }
@@ -18683,6 +18694,7 @@ Z99.2:C|αιμοκάθαρση
         d.comorbDx = {codes: done.concat(newC.map(x=>x.code)), at: now};
         try{ window.pdxBotSend(k, 'npsdx', {codes: newC, type: '02', auto: true, quiet: true, avoid: ['bmw51w96b7zncz','bmwammethy0htb']}); /* 17/11 09:35: Παράθυρο/Εξωτερικά: ο λογαριασμός ΝΠΣ τους δεν έχει «Διάγνωση» */ sent++; saveRec(k, d); }catch(e){} }); } }catch(e){}
     if(sweepOnly) return out;
+    { const hh = new Date().getHours(); if(hh < 6 && window.pdxNpsEnrichKick) pdxNpsEnrichKick().then(t=>{ window.__npsEnrKick = {t, at: Date.now()}; }, ()=>{}); }
     allKeys().forEach(k=>{ const d = recOf(k); if(!d || !String(d.name||'').trim() || d._archived) return;
       const a = d.comorbAuto;
       if(a && (a.status==='ok' || a.status==='fail')) return;              // μία φορά ανά ασθενή· «fail» = χρειάζεται άνθρωπο
@@ -22213,7 +22225,7 @@ window.pdxAdmNight = function(){ if(typeof iosPage!=='function') return;
     const G = [['Σήμερα', st.pts.filter(p=>p.today)], ['Χθες', st.pts.filter(p=>!p.today)]];
     G.forEach(([lbl, L])=>{ if(!L.length) return; h += iosGroup(lbl+' · '+L.length, L.map((p,i)=>{ const idx = st.pts.indexOf(p);
       const dos = p.dos ? (p.dos.status==='done' ? chip(true, '📂 ΝΠΣ ✓') : /^(new|seen|running)$/.test(p.dos.status) ? chip(null, '📂 ΝΠΣ ⏳') : chip(false, '📂 ΝΠΣ ✗')) : chip(null, '📂 ΝΠΣ · απόψε');
-      const ca = p.d.comorbAuto, ahfy = ca ? (ca.status==='ok' ? chip(true, '🩺 ΑΗΦΥ ✓'+(ca.c!=null?' '+ca.c:'')) : chip(false, '🩺 ΑΗΦΥ ✗')) : chip(null, '🩺 ΑΗΦΥ · 00–03');
+      const ca = p.d.comorbAuto || (p.nps && window.pdxNpsEnrDx && pdxNpsEnrDx(p.name) ? {status:'ok', c: (window.pdxComorbClassify ? pdxComorbClassify(pdxNpsEnrDx(p.name).join('\n')).filter(i=>i.cls==='C').length : null)} : null), ahfy = ca ? (ca.status==='ok' ? chip(true, '🩺 ΑΗΦΥ ✓'+(ca.c!=null?' '+ca.c:'')) : chip(false, '🩺 ΑΗΦΥ ✗')) : chip(null, '🩺 ΑΗΦΥ · 00–03');
       const lab = p.labs ? chip(true, '🧪 ✓') : chip(null, '🧪 —');
       const miss = !(p.dos && p.dos.status==='done') || !(ca && ca.status==='ok');
       const sub = dos + ahfy + lab + (p.dos && p.dos.note && p.dos.status==='done' ? '<div style="margin-top:4px;font-size:12.5px;color:#6B7280">'+E3(String(p.dos.note).replace(/^.*?φάκελος νοσηλείας:\s*/,'').slice(0,140))+'</div>' : p.dos && p.dos.status==='failed' ? '<div style="margin-top:4px;font-size:12.5px;color:#B42318">'+E3(String(p.dos.note||'').slice(0,120))+'</div>' : '')
