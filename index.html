@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v614';
+const APP_VER = '2026-11-19-v615';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10411,7 +10411,7 @@ document.head.appendChild(st);
       pdxSurgGuess(k, d).then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
     // 💊 15/11 17:38: αντιβιώσεις νοσηλείας + από πότε (κάτω από το χειρουργείο)
     if(window.pdxAbxOf){ const ab = pdxAbxOf(d.name); if(ab && ab.length){ const dd = t=>{ const x = new Date(t); return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); };
-        c.splice(c.findIndex(x=>/class="sgx"/.test(x))+1, 0, '<span class="abx">💊 '+ab.map(a=>esc(a.nm)+(a.from?' από '+dd(a.from):'')).join(' · ')+'</span>'); }
+        c.splice(c.findIndex(x=>/class="sgx"/.test(x))+1, 0, '<span class="abx">💊 '+ab.map(a=>{ const dn = a.from ? Math.floor((new Date().setHours(12,0,0,0) - new Date(a.from).setHours(12,0,0,0))/864e5)+1 : 0; return esc(a.nm)+(a.from?' από '+dd(a.from)+(dn>0?' · '+dn+'η ημ.':''):''); }).join(' · ')+'</span>'); }
       if(!window.__abx.pts || Date.now()-window.__abx.at > 10*60000) pdxAbxLoad().then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
     // 15/11 00:14 (χρήστης: «μη μου λες τις συννοσηρότητες κάτω από το όνομα — μόνο αν πατήσω το κουμπί Συννοσηρότητες»)
     return (c.length ? '<div class="mhdr">'+c.join('')+'</div>' : '') + hdrDev(k, d);
