@@ -1,13 +1,13 @@
 {
- "version": "1.0.8",
+ "version": "1.0.9",
  "parts": [
-  "nikosct-1.0.8.zip.00",
-  "nikosct-1.0.8.zip.01",
-  "nikosct-1.0.8.zip.02",
-  "nikosct-1.0.8.zip.03",
-  "nikosct-1.0.8.zip.04",
-  "nikosct-1.0.8.zip.05"
+  "nikosct-1.0.9.zip.00",
+  "nikosct-1.0.9.zip.01",
+  "nikosct-1.0.9.zip.02",
+  "nikosct-1.0.9.zip.03",
+  "nikosct-1.0.9.zip.04",
+  "nikosct-1.0.9.zip.05"
  ],
- "sha256": "fa11a53f99be6789df978e1ecc2e0405638d47807780201ee188e8c2fdd35a26",
- "notes": "«Αρχείο Ασθενών» ως εφαρμογή (--archive)"
+ "sha256": "2e396f6cb3a422b6c09baff9c5c50e015d2be59b0cbea4ee48909655068c344a",
+ "notes": "CD: DICOMDIR (σειρά/αρχεία) · ένα άνοιγμα ανά αρχείο · διορθώσεις CD 11/11 (χωρίς stat ανά αρχείο, χωρίς φακέλους προγράμματος)"
 }

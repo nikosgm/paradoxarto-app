@@ -1639,7 +1639,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-12d';
+const CT_VER = '2026-11-19a';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 
@@ -1660,6 +1660,10 @@ const DG = { r:null, L:null,
     lines.push('Αρχεία: '+(L.total||0)+' (εικόνες '+(L.ok||0)+', άλλα '+((L.skip||0)+(r.skipNon||0))+', διπλά '+(L.dup||0)+') · '+f1(mb)+' MB · σειρές '+S.series.length);
     lines.push('Χρόνος: πρώτη εικόνα '+(L.first!=null?f1(L.first/1000)+' s':'—')+' · σύνολο '+f1(tot)+' s'+(L.end==null?' (φορτώνει ακόμα)':''));
     if(r.list) lines.push('Λίστα αρχείων (από τον δίσκο): '+f1(r.list/1000)+' s');
+    // 📀 19/11: DICOMDIR = πίνακας περιεχομένων του CD — έλεγχος ότι ο viewer ΔΕΝ βγάζει περισσότερες σειρές από όσες λέει το CD (τοπογραφήματα/άλλος προσανατολισμός μετρούν χωριστά)
+    if(r.dd){ if(r.dd.err) lines.push('DICOMDIR: υπάρχει αλλά δεν διαβάστηκε → σάρωση όλων των αρχείων (όπως πριν)');
+      else { const loc=S.series.filter(x=>x.loc).length, main=S.series.length-loc; lines.push('DICOMDIR: '+r.dd.found+'/'+r.dd.refs+' αρχεία βρέθηκαν · σειρές στο CD '+r.dd.series+' · σειρές στον viewer '+S.series.length+(loc?' (από αυτές '+loc+' τοπογράφημα)':'')+(L.end!=null && main>r.dd.series?' ⚠ ο viewer χώρισε '+(main-r.dd.series)+' σειρά/ές παραπάνω (ίδιο UID, άλλος προσανατολισμός/μέγεθος/acquisition)':'')); } }
+    else if(r.kind==='CD') lines.push('DICOMDIR: '+(r.app && r.app<'1.0.9' ? 'η εφαρμογή '+r.app+' δεν το διαβάζει (χρειάζεται 1.0.9)' : 'δεν υπάρχει στο CD'));
     if(rdMs) lines.push('Ανάγνωση από τον δίσκο: '+f1(rdKB/1024)+' MB σε '+f1(rdMs/1000)+' s = '+f1(rdKB/1024/Math.max(.001,rdMs/1000))+' MB/s · παρτίδες '+r.batches.length+(r.timeouts?' · ⚠ '+r.timeouts+' παρτίδες >60″':''));
     for(const [k,m] of Object.entries(r.modes||{})) lines.push('   τρόπος «'+k+'»: '+m.n+' αρχεία · '+fmt(m.kb/1024/Math.max(.001,m.ms/1000),2)+' MB/s');
     if(r.mode) lines.push('   → επιλέχθηκε: «'+r.mode+'»');
@@ -1688,7 +1692,7 @@ async function deskOpen(root){
   status('Ανοίγω '+root+'…'); const tl0=performance.now();
   const L = await DESK.list(root); if(!L || L.err || !L.files || !L.files.length){ status(L&&L.err ? L.err : 'Δεν βρέθηκαν εικόνες σε αυτόν τον φάκελο.', true); return; }
   S.src = L.name || root;
-  const isCD0=/^[A-Za-z]:\\?$/.test(String(root).trim()); DG.reset(isCD0?'CD':'φάκελος', L.files.length); DG.r.list=performance.now()-tl0;
+  const isCD0=/^[A-Za-z]:\\?$/.test(String(root).trim()); DG.reset(isCD0?'CD':'φάκελος', L.files.length); DG.r.list=performance.now()-tl0; DG.r.dd=L.dd||null;   // 📀 19/11: DICOMDIR (εφαρμογή ≥1.0.9)
   const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
   const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
   // 💿 11/11 (χρήστης: «κολλάει να φορτώσει CD»): CD = αργή ανάγνωση με αναζήτηση → μικρότερες παρτίδες, πρόοδος στην οθόνη,
