@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v603';
+const APP_VER = '2026-11-19-v605';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -14596,6 +14596,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
               + '<div style="font-size:13px;color:#6D6D72;margin-top:10px">Με τη 2η έγκριση το bot πατά «'+E((f.vrd.cont&&f.vrd.cont.v)||'OK')+'» στο μήνυμα.</div>'
             : '<div style="font-size:13px;color:#6D6D72;margin-top:10px">Με την έγκριση το bot πατά «Καταχώρηση» στο Medilabi.</div>')
           + '<button data-cancel style="margin-top:10px;width:100%;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:14px;height:50px;font-size:17px;font-weight:600">Ακύρωση (δεν καταχωρείται)</button>'
+        : j.kind==='consult'
+        // 📞 19/11 16:55 (χρήστης: «πιο ευανάγνωστη έγκριση — μη γράφεις πόσους χαρακτήρες είναι, ωραίο UI»)
+        ? (()=>{ const R = (P.result||{}), dw = (R.deptWant||{}).txt || P.dept || '', row2 = (l,v)=>v?'<div style="padding:10px 0;border-top:.5px solid rgba(60,60,67,.18)"><div style="font-size:12.5px;color:#8E8E93">'+E(l)+'</div><div style="font-size:16px;font-weight:600;color:#1C1C1E;margin-top:1px">'+E(v)+'</div></div>':'';
+            return '<div style="background:#E8F5EC;color:#1A7F37;border-radius:12px;padding:9px 12px;font-size:14px;font-weight:600;margin-bottom:10px">✓ Η φόρμα είναι συμπληρωμένη στον ΝΠΣ και το τμήμα επιβεβαιωμένο</div>'
+              + '<div style="background:#fff;border-radius:14px;padding:2px 14px 4px">'
+              + '<div style="padding:10px 0"><div style="font-size:12.5px;color:#8E8E93">Ειδικότητα</div><div style="font-size:17px;font-weight:700;color:#1C1C1E;margin-top:1px">'+E(P.spec||'')+'</div></div>'
+              + row2('Τμήμα', dw) + row2('Παραπέμπων', P.referrer||'') + row2('Τι ζητάμε', P.reason||'')
+              + (P.text ? '<div style="padding:10px 0;border-top:.5px solid rgba(60,60,67,.18)"><div style="font-size:12.5px;color:#8E8E93">Κλινικές πληροφορίες</div><div style="font-size:15px;color:#1C1C1E;margin-top:3px;white-space:pre-wrap;line-height:1.4">'+E(P.text)+'</div></div>' : '')
+              + '</div><div style="font-size:13px;color:#8E8E93;margin:10px 4px 0">Με την «Έγκριση» το bot ξαναελέγχει το τμήμα και πατά «Υποβολή αιτήματος».</div>'
+              + '<button data-cancel style="margin-top:12px;width:100%;border:0;background:#fff;color:#FF3B30;border-radius:14px;height:50px;font-size:17px;font-weight:600">Να μη σταλεί</button>'; })()
         : j.kind!=='discharge'
         ? '<div style="font-size:15px;white-space:pre-wrap;line-height:1.45">'+E(j.note||'')+'</div><button data-cancel style="margin-top:12px;width:100%;border:0;background:rgba(255,59,48,.12);color:#FF3B30;border-radius:14px;height:50px;font-size:17px;font-weight:600">Ακύρωση</button>'
         : '<div style="font-size:13px;color:#B26A00;background:#FFF7E6;border-radius:10px;padding:8px 10px;margin-bottom:6px">Αυτά γράφει τώρα ο φάκελος (διαβάστηκαν από τη φόρμα). Με την έγκριση ο υπολογιστής ελέγχει ξανά ότι δεν άλλαξε τίποτα.</div>'
@@ -14946,14 +14956,48 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       }, 'Συμπλήρωση στο ΝΠΣ');
     const ov = document.getElementById('mobSubPop'); if(!ov) return;
     // 📞 19/11 15:25 (χρήστης: «να βλέπω κάπου τα αιτήματα σε κάθε ασθενή»): ό,τι στείλαμε από εδώ + η λίστα του ΝΠΣ (όπως τη διάβασε το bot την τελευταία φορά)
-    (async()=>{ const box = ov.querySelector('[data-chist]'); if(!box) return; let h = '';
-      try{ const [r1, r2] = await Promise.all([sb6.from('oncall_jobs').select('id,status,note,payload,created_at').eq('kind','consult').eq('name_key',nrm(d.name)).order('id',{ascending:false}).limit(10), sb6.from('oncall_labs').select('data').eq('name_key','consultpt|'+nrm(d.name)).maybeSingle()]);
-        const J = (r1.data||[]).filter(j=>!(j.payload||{}).test), N = r2 && r2.data && r2.data.data;
-        const stc = j=>{ const n = String(j.note||''); return j.status==='review' ? '❓ για έγκριση' : /ΛΑΘΟΣ ΤΜΗΜΑ|ΔΕΙΧΝΕΙ/.test(n) ? '⚠ έλεγξε τμήμα' : /✅ Υποβλήθηκε|Υπάρχει ήδη/.test(n) ? '✅ υποβλήθηκε' : /ΔΕΝ υποβλήθηκε/.test(n) ? '✋ δεν υποβλήθηκε' : j.status==='failed' ? '✕ απέτυχε' : /^(new|seen|running|approve)$/.test(j.status) ? '⏳ σε εξέλιξη' : j.status; };
-        if(J.length) h += '<div style="font-weight:700;margin-bottom:3px">Από το Παραδόχαρτο</div>' + J.map(j=>{ const p = j.payload||{}; return '<div style="padding:4px 0;border-bottom:.5px solid rgba(60,60,67,.15);color:#1F2933">'+E(new Date(j.created_at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+' · <b>'+E(p.spec||'')+'</b> → '+E(p.dept||'')+' · '+E(stc(j))+'</div>'; }).join('');
-        if(N && (N.rows||[]).length) h += '<div style="font-weight:700;margin:8px 0 3px">Στο ΝΠΣ ('+E(new Date(N.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+')</div>' + N.rows.slice(0,12).map(r=>'<div style="padding:3px 0;border-bottom:.5px solid rgba(60,60,67,.15);color:#1F2933">'+E(r.filter(Boolean).join(' · '))+'</div>').join('');
-      }catch(e){}
-      box.innerHTML = h ? '<details'+''+' style="background:#F7F9FB;border-radius:12px;padding:8px 10px;margin-bottom:8px"><summary style="font-weight:700;color:#1D4E80">📋 Αιτήματα ασθενή</summary>'+h+'</details>' : ''; })();
+    // 📞 19/11 16:50 (χρήστης: «το Παραδόχαρτο είναι το μάτι του ΝΠΣ — μόνο τα αιτήματα του ΝΠΣ· να ανοίγω ένα αίτημα, να διαβάζω τι λέει και να το ακυρώνω»)
+    (()=>{ const box = ov.querySelector('[data-chist]'); if(!box) return; const nk = nrm(d.name);
+      const esc2 = v=>E(v), when = t=>new Date(t).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      // εργασία bot για αυτόν τον ασθενή (λίστα/ανάγνωση/ακύρωση) → αναμονή αποτελέσματος (έως 2′)
+      const run = async (payload, label)=>{ const ins = await sb6.from('oncall_jobs').insert({name_key:nk, name:d.name, room:k, kind:'consultcancel', payload:Object.assign({quiet:true}, payload), status:'new'}).select('id').single();
+        if(ins.error) throw new Error(ins.error.message); const id = ins.data.id, t0 = Date.now();
+        while(Date.now()-t0 < 120000){ await new Promise(r=>setTimeout(r, 2000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle(); const j = q && q.data;
+          if(j && /^(done|failed|approved|dismissed|cancelled)$/.test(j.status)) return j; } throw new Error('το bot δεν απάντησε σε 2′ ('+label+')'); };
+      const paint = async ()=>{ let N = null, J = [];
+        try{ const [r1, r2] = await Promise.all([sb6.from('oncall_jobs').select('id,status,note,payload,created_at').eq('kind','consult').eq('name_key',nk).in('status',['new','seen','running','review','approve']).order('id',{ascending:false}).limit(5), sb6.from('oncall_labs').select('data').eq('name_key','consultpt|'+nk).maybeSingle()]);
+          J = (r1.data||[]).filter(j=>!(j.payload||{}).test); N = r2 && r2.data && r2.data.data; }catch(e){}
+        const H = (N && N.heads) || [], rows = (N && N.rows) || [], ci = H.findIndex(h=>/αριθμ/i.test(h)), si = H.findIndex(h=>/ειδικ/i.test(h)), di = H.findIndex(h=>/ημερομ/i.test(h)), ki = H.findIndex(h=>/κατ[αά]σταση/i.test(h));
+        const chipSt = st=>{ const c = /ακυρωμ/i.test(st) ? ['#F2F2F7','#8E8E93'] : /αναμον/i.test(st) ? ['#FFF4E5','#B26A00'] : ['#E8F5EC','#1A7F37']; return '<span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:'+c[0]+';color:'+c[1]+'">'+esc2(st||'—')+'</span>'; };
+        let h = '<div style="display:flex;align-items:center;margin-bottom:6px"><div style="flex:1;font-size:13px;font-weight:700;color:#6B7280;letter-spacing:.3px">ΑΙΤΗΜΑΤΑ ΣΤΟΝ ΝΠΣ</div><button data-cref style="border:0;background:none;color:#0A84FF;font-size:14px;font-weight:600">↻ Ανανέωση</button></div>';
+        if(J.length) h += J.map(j=>'<div style="font-size:13.5px;color:#B26A00;margin-bottom:6px">⏳ '+esc2((j.payload||{}).spec||'')+' · '+(j.status==='review'?'περιμένει έγκριση':'στέλνεται')+'</div>').join('');
+        h += rows.length ? '<div style="background:#fff;border-radius:12px;overflow:hidden">'+rows.slice(0,12).map((r,i)=>{ const no = ci>=0 ? r[ci] : '', st = ki>=0 ? r[ki] : '';
+            return '<button data-creq="'+i+'" style="display:flex;width:100%;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:11px 12px;'+(i?'border-top:.5px solid rgba(60,60,67,.18)':'')+'"><div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:600;color:#1C1C1E">'+esc2(si>=0?r[si]:'')+'</div><div style="font-size:12.5px;color:#8E8E93">'+esc2(di>=0?String(r[di]).replace(/:00$/,''):'')+(no?' · #'+esc2(no):'')+'</div></div>'+chipSt(st)+'<span style="color:#C7C7CC;font-size:18px">›</span></button>'; }).join('')+'</div>'
+          + '<div style="font-size:11.5px;color:#8E8E93;margin-top:4px">ΝΠΣ · '+esc2(when(N.at))+'</div>'
+          : '<div style="font-size:14px;color:#8E8E93">'+(N ? 'Κανένα αίτημα στον ΝΠΣ.' : 'Δεν έχει διαβαστεί ακόμα — πάτα «↻ Ανανέωση».')+'</div>';
+        box.style.cssText = 'background:#F2F2F7;border-radius:14px;padding:10px 12px;margin-bottom:10px'; box.innerHTML = h;
+        const rb = box.querySelector('[data-cref]'); if(rb) rb.onclick = async ()=>{ rb.disabled = true; rb.textContent = '⏳ ΝΠΣ…'; try{ const j = await run({list:true}, 'λίστα'); if(j.status!=='done') toast('⚠ '+String(j.note||'').slice(0,120)); }catch(e){ toast('⚠ '+(e.message||e)); } paint(); };
+        box.querySelectorAll('[data-creq]').forEach(b=>b.onclick = ()=>{ const r = rows[+b.dataset.creq]; const no = ci>=0 ? String(r[ci]).trim() : ''; if(!no) return; openReq(no, r); }); };
+      // ένα αίτημα: τι γράφει (ανάγνωση από τον ΝΠΣ) + ακύρωση με αιτιολογία
+      const openReq = (no, r)=>{ const sp = si>=0 ? '' : ''; const st = (()=>{ const N = null; return ''; })();
+        const ov2 = document.createElement('div'); ov2.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;font-family:-apple-system,system-ui,sans-serif';
+        const close = ()=>ov2.remove(); ov2.onclick = e=>{ if(e.target===ov2) close(); };
+        const cancelled = r.some(c=>/ακυρωμ/i.test(String(c)));
+        ov2.innerHTML = '<div style="background:#F2F2F7;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto">'
+          + '<div style="display:flex;align-items:center;margin-bottom:10px"><div style="flex:1;font-size:19px;font-weight:700">Αίτημα #'+esc2(no)+'</div><button data-x style="border:0;background:none;color:#0A84FF;font-size:16px;font-weight:600">Κλείσιμο</button></div>'
+          + '<div data-body style="background:#fff;border-radius:12px;padding:12px;font-size:15px;color:#8E8E93">⏳ Διαβάζω το αίτημα από τον ΝΠΣ…</div>'
+          + (cancelled ? '' : '<div style="margin-top:14px;font-size:13px;font-weight:700;color:#6B7280">ΑΙΤΙΟΛΟΓΙΑ ΑΚΥΡΩΣΗΣ</div><input data-why value="Δεν χρειάζεται πλέον" style="width:100%;box-sizing:border-box;margin-top:6px;font-size:16px;padding:11px 12px;border:0;border-radius:12px;background:#fff">'
+          + '<button data-cx style="margin-top:10px;width:100%;border:0;border-radius:14px;height:50px;font-size:17px;font-weight:600;background:#fff;color:#FF3B30">Ακύρωση αιτήματος</button>') + '</div>';
+        document.body.appendChild(ov2); ov2.querySelector('[data-x]').onclick = close;
+        const body = ov2.querySelector('[data-body]');
+        run({req:no, read:true}, 'ανάγνωση').then(j=>{ const F = (j.payload && j.payload.result && j.payload.result.fields) || [];
+          body.style.color = '#1C1C1E'; body.innerHTML = F.length ? F.map((f,i)=>'<div style="'+(i?'border-top:.5px solid rgba(60,60,67,.18);':'')+'padding:8px 0"><div style="font-size:12.5px;color:#8E8E93">'+esc2(f.l)+'</div><div style="font-size:15.5px;white-space:pre-wrap">'+esc2(f.v)+'</div></div>').join('') : esc2(String(j.note||'Δεν διαβάστηκαν πεδία').slice(0,200)); },
+          e=>{ body.textContent = '⚠ '+(e.message||e); });
+        const cx = ov2.querySelector('[data-cx]'); if(cx) cx.onclick = async ()=>{ const why = (ov2.querySelector('[data-why]').value||'').trim(); if(!why){ toast('Γράψε αιτιολογία'); return; }
+          if(!confirm('Ακύρωση του αιτήματος #'+no+' στον ΝΠΣ;')) return; cx.disabled = true; cx.textContent = '⏳ Ακύρωση στον ΝΠΣ…';
+          try{ const j = await run({req:no, reason:why}, 'ακύρωση'); if(j.status==='done'){ toast('✓ Ακυρώθηκε το αίτημα #'+no); close(); await run({list:true}, 'λίστα').catch(()=>{}); paint(); } else { cx.disabled = false; cx.textContent = 'Ακύρωση αιτήματος'; alert('Δεν ακυρώθηκε: '+String(j.note||'').slice(0,240)); } }
+          catch(e){ cx.disabled = false; cx.textContent = 'Ακύρωση αιτήματος'; alert('⚠ '+(e.message||e)); } }; };
+      paint(); })();
     let edited = false;
     ov.addEventListener('change', e=>{ if(e.target.matches('[data-sp]')) ov.querySelector('[data-dp]').innerHTML = depOpts(e.target.value); });
     ov.addEventListener('input', e=>{ if(e.target.matches('[data-tx]')) edited = true; if(e.target.matches('[data-why]') && !edited) ov.querySelector('[data-tx]').value = pdxConsultText(d, e.target.value); });
