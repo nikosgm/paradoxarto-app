@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v619';
+const APP_VER = '2026-11-20-v620';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26269,8 +26269,11 @@ window.CLS_MODE='A';
     const fun = !!(p.ua && p.ua.fun);     // 17/11 18:22 (χρήστης: «τη νεφροστομία δεν θα τη γράφεις νεφροστομία, θα γράφεις ΝΦΣ»)
     const ab = t=>String(t||'').replace(/νεφροστομ\S*/gi, 'ΝΦΣ').replace(/ουροκαθετ\S*|καθετήρ\S*|foley/gi, 'ΚΘ').replace(/κυστεοστομ\S*/gi, 'ΚΣ').replace(/\s+/g, ' ').trim();
     return {t, cls, fun, note: (p.c && p.c.note) ? ab(p.c.note).slice(0, 30) : ''}; };
+  // 20/11 07:20: και με 1–2 γράμματα διαφορά (OCR σκαναρισμένου PDF: Η↔Ν, Ο↔0 κ.λπ.) — μόνο επώνυμα ≥5 γραμμάτων· πρώτα πάντα το ακριβές
+  const orLev = (a, b)=>{ if(Math.abs(a.length - b.length) > 2) return 9; let p = Array.from({length:b.length+1}, (_, j)=>j); for(let i = 1; i <= a.length; i++){ const q = [i]; for(let j = 1; j <= b.length; j++) q[j] = Math.min(p[j]+1, q[j-1]+1, p[j-1] + (a[i-1]===b[j-1] ? 0 : 1)); p = q; } return p[b.length]; };
+  const orFind = (words, w)=>{ let k = words.indexOf(w); if(k >= 0 || w.length < 5) return k; const lim = w.length >= 8 ? 2 : 1; let best = 9; words.forEach((x, i)=>{ if(x.length >= 4 && x[0]===w[0]){ const d = orLev(x, w); if(d <= lim && d < best){ best = d; k = i; } } }); return k; };
   const orPick = (list, words, used)=>{ for(let j = 0; j < list.length; j++){ if(used.has(j)) continue; const a = ORN(list[j].name).split(' '); if(!a[0]) continue;
-      const k = words.indexOf(a[0]); if(k < 0) continue; if(a[1] && !words.slice(k+1, k+4).some(w=>w[0]===a[1][0])) continue; return j; } return -1; };
+      const k = orFind(words, a[0]); if(k < 0) continue; if(a[1] && !words.slice(k+1, k+4).some(w=>w[0]===a[1][0])) continue; return j; } return -1; };
   // PDF: γραμμές από τις θέσεις κειμένου → ταίριασμα επωνύμου (+ αρχικό ονόματος)
   window.pdxOrMarksPdf = function(T, list){ if(!T || !T.length || !list || !list.length) return [];
     const it = T.slice().sort((a,b)=>a.v-b.v || a.u-b.u), lines = [];
@@ -26299,14 +26302,19 @@ window.CLS_MODE='A';
     const head = '<!doctype html><html><head><meta charset="utf-8"><title>Πρόγραμμα '+String(title||'').replace(/[<>&]/g,'')+'</title><style>@page{size:A4 landscape;margin:0}html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pg{width:297mm;height:209mm;box-sizing:border-box;padding:6mm 6mm;overflow:hidden;page-break-after:always;display:flex;align-items:flex-start;justify-content:center}.pg:last-child{page-break-after:auto}'+window.pdxOrSchedCss()+'</style></head><body>';
     const d2u = async u=>{ if(/^data:/.test(u)) return u; try{ const bl = await (await fetch(u)).blob(); return await new Promise(ok=>{ const fr = new FileReader(); fr.onload = ()=>ok(fr.result); fr.onerror = ()=>ok(''); fr.readAsDataURL(bl); }); }catch(e){ return ''; } };
     const dim = u=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>ok([im.naturalWidth, im.naturalHeight]); im.onerror = ()=>ok([1414, 1000]); im.src = u; });
-    let pages = '';
+    let pages = ''; const placed = new Set(); const mk = M=>{ M.forEach(m=>placed.add(m.p)); return M; };
     for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
       // διαθέσιμο 285×197mm· με το αριστερό περιθώριο (15%) το ύψος της σελίδας = πλάτος·0.85·h/w
       const W = Math.min(285, 197 / (0.945 * h / w));
-      pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])+'</div></div>'; }
-    if(!pages && st.o && st.o.html){ const m = window.pdxOrMarksXl(st.o.html, P);
+      pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? mk(window.pdxOrMarksPdf((f.txt||[])[i], P)) : [])+'</div></div>'; }
+    if(!pages && st.o && st.o.html){ const m = mk(window.pdxOrMarksXl(st.o.html, P));
       pages = '<div class="pg"><div style="width:285mm">'+window.pdxOrMarked('<div style="zoom:var(--z,1)">'+st.o.html+'</div>', m)+'</div></div>';
       pages += '<script>(function(){var t=document.querySelector(".pg table");if(!t)return;var b=t.parentNode,W=b.parentNode.clientWidth;b.style.setProperty("--z",Math.min(1,W/t.offsetWidth));})()<\/script>'; }
+    // 🧫 20/11 07:20: όσοι δεν εντοπίστηκαν δίπλα στο όνομα → πίνακας καλλιεργειών (ποτέ εκτύπωση χωρίς καλλιέργειες)
+    const un = P.filter(p=>!placed.has(p) && window.pdxOrMarkTxt(p)); const E4 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])), CC = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666'};
+    if(un.length) pages += '<div class="pg" style="display:block;font:14px Arial"><h2 style="margin:0 0 8px">🧫 Καλλιέργειες ούρων'+(placed.size?' — όσοι δεν εντοπίστηκαν δίπλα στο όνομα':'')+'</h2><table style="border-collapse:collapse;width:100%">'
+      + '<tr style="text-align:left;color:#555"><th>Ασθενής</th><th>Θάλαμος</th><th>Καλλιέργεια</th><th>Σημείωση</th></tr>'
+      + un.map(p=>{ const k = window.pdxOrMarkTxt(p); return '<tr style="border-top:1px solid #ddd"><td style="padding:4px 6px"><b>'+E4(p.name)+'</b></td><td>'+E4(p.room)+'</td><td style="color:'+(CC[k.cls]||'#000')+';font-weight:700">'+E4(k.t)+(k.fun?' · Μύκητες':'')+'</td><td>'+E4(k.note)+'</td></tr>'; }).join('') + '</table></div>';
     return head + pages + '</body></html>'; };
   // 🧫 πληροφορίες εκκρεμούς καλλιέργειας: πρώτα ό,τι υπάρχει στη μνήμη, μετά φρέσκια ανάγνωση από το Medilabi (μόνο αυτός ο ασθενής)
   window.pdxCultInfo = async function(pid){ pid = String(pid||'').replace(/\D/g,''); if(!pid) return; const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -26345,11 +26353,22 @@ window.CLS_MODE='A';
         x.fillStyle = '#fff'; x.strokeStyle = L[0][1]; x.lineWidth = 3; x.beginPath(); if(x.roundRect) x.roundRect(bx, by, bw, bh, 8); else x.rect(bx, by, bw, bh); x.fill(); x.stroke();
         lines.forEach(([t, col], i)=>{ x.fillStyle = col; x.fillText(t, bx + bw/2, by + 5 + lh*(i+0.5)); }); }
       return c; };
-    const pages = [];
-    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? window.pdxOrMarksPdf((f.txt||[])[i], P) : [])); }
+    const pages = [], placed = new Set(); const mk = M=>{ M.forEach(m=>placed.add(m.p)); return M; };
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? mk(window.pdxOrMarksPdf((f.txt||[])[i], P)) : [])); }
     if(!pages.length && st.o && st.o.html && typeof html2canvas!=='undefined'){ const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff'; d.innerHTML = '<style>'+window.pdxOrSchedCss()+'</style>'+st.o.html; document.body.appendChild(d);
-      try{ const cv = await html2canvas(d.querySelector('table'), {scale:1.4, backgroundColor:'#fff', logging:false}); pages.push(page(cv, window.pdxOrMarksXl(st.o.html, P))); } finally { d.remove(); } }
+      try{ const cv = await html2canvas(d.querySelector('table'), {scale:1.4, backgroundColor:'#fff', logging:false}); pages.push(page(cv, mk(window.pdxOrMarksXl(st.o.html, P)))); } finally { d.remove(); } }
     if(!pages.length) throw new Error('δεν υπάρχει πρόγραμμα (PDF ή Excel) για εξαγωγή');
+    // 🧫 20/11 07:20 (χρήστης: «να μην βγάζει το πρόγραμμα χωρίς τις καλλιέργειες»): όποιος ασθενής ΔΕΝ εντοπίστηκε πάνω στη σελίδα → πίνακας καλλιεργειών
+    // σε επιπλέον σελίδα (ποτέ PDF χωρίς καλλιέργειες)· st.unplaced = πόσοι, για ειδοποίηση
+    const un = P.filter(p=>!placed.has(p) && window.pdxOrMarkTxt(p)); st.unplaced = un.length; st.placed = placed.size;
+    for(let o = 0; o < un.length; o += 24){ const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+      x.fillStyle = '#000'; x.font = '700 30px Arial'; x.textBaseline = 'middle'; x.textAlign = 'left';
+      x.fillText('🧫 Καλλιέργειες ούρων — '+String(title||'')+(placed.size ? ' (όσοι δεν εντοπίστηκαν δίπλα στο όνομα)' : ''), M+10, M+28);
+      const cx = [M+10, M+560, M+700, M+1180], rh = 38; x.font = '700 20px Arial'; x.fillStyle = '#555'; ['Ασθενής','Θάλαμος','Καλλιέργεια','Σημείωση'].forEach((t, i)=>x.fillText(t, cx[i], M+80));
+      un.slice(o, o+24).forEach((p, r)=>{ const y = M+80+rh*(r+1), k = window.pdxOrMarkTxt(p) || {}; x.strokeStyle = '#DDD'; x.lineWidth = 1; x.beginPath(); x.moveTo(M, y - rh/2); x.lineTo(W-M, y - rh/2); x.stroke();
+        x.font = '600 21px Arial'; x.fillStyle = '#000'; x.fillText(String(p.name||'').slice(0, 40), cx[0], y); x.fillText(String(p.room||'').slice(0, 10), cx[1], y);
+        x.font = '700 21px Arial'; x.fillStyle = COL[k.cls]||'#000'; x.fillText(String(k.t||'').slice(0, 42)+(k.fun?' · Μύκητες':''), cx[2], y); x.font = '500 19px Arial'; x.fillStyle = '#333'; x.fillText(String(k.note||'').slice(0, 30), cx[3], y); });
+      pages.push(c); }
     const { jsPDF } = window.jspdf; const pdf = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
     pages.forEach((c, i)=>{ if(i) pdf.addPage('a4', 'landscape'); pdf.addImage(c.toDataURL('image/jpeg', .82), 'JPEG', 0, 0, 297, 210, undefined, 'FAST'); });
     const nm = 'Πρόγραμμα χειρουργείου '+String(title||'').replace(/[\/\\:*?"<>|]/g,'-')+'.pdf', blob = pdf.output('blob'), file = new File([blob], nm, {type:'application/pdf'});
@@ -26569,13 +26588,25 @@ window.CLS_MODE='A';
       const r = await pdxAI('ίσιωμα', {model:'claude-haiku-5-5', max_tokens:8, messages:[{role:'user', content:[{type:'image', source:{type:'base64', media_type:'image/jpeg', data}}, {type:'text', text:'Το κείμενο αυτής της σελίδας διαβάζεται κανονικά (ΟΡΘΙΟ) ή είναι γυρισμένο ανάποδα, 180° (ΑΝΑΠΟΔΑ); Απάντησε μόνο ΟΡΘΙΟ ή ΑΝΑΠΟΔΑ.'}]}]});
       const a = String((r && r.text) || '').toUpperCase(); return /ΑΝΑΠΟΔ/.test(a) ? (deg + 180) % 360 : deg; }catch(e){ return deg; } };
     window.pdxOrRotAi = orRotAi;
-    const pdfImgs = async (bytes)=>{ await new Promise((ok,no)=>{ if(window.pdfjsLib) return ok(); const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload=ok; sc.onerror=()=>no(new Error('δεν φορτώθηκε ο προβολέας PDF')); document.head.appendChild(sc); });
+    // 🔤 20/11 07:20 (χρήστης: «δεν βλέπω πουθενά το πρόγραμμα με τις καλλιέργειες στο πλάι»): το PDF με τη σφραγίδα είναι ΣΚΑΝΑΡΙΣΜΕΝΟ (εικόνα, χωρίς κείμενο) →
+    // getTextContent = κενό → κανένα όνομα → κανένα κουτάκι. Τώρα: χωρίς κείμενο → OCR (Tesseract, ελληνικά) της ίσιας σελίδας· θέσεις λέξεων 0–1 όπως το κείμενο του PDF.
+    // Μνήμη συσκευής ανά αρχείο/σελίδα (το OCR κάνει λίγα δευτερόλεπτα· δεν ξανατρέχει).
+    const orOcr = async (cv, key)=>{ const K = key ? 'pdx_or_ocr|'+key : ''; try{ if(K){ const c = JSON.parse(localStorage.getItem(K)||'null'); if(Array.isArray(c)) return c; } }catch(e){}
+      try{ if(!window.Tesseract) await new Promise((ok, no)=>{ const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; sc.onload = ok; sc.onerror = ()=>no(new Error('OCR')); document.head.appendChild(sc); });
+        const w = await Tesseract.createWorker('ell+eng'); let T = [];
+        try{ const r = await w.recognize(cv); T = ((r && r.data && r.data.words) || []).filter(x=>x.text && x.text.trim() && x.confidence > 30).map(x=>({s:x.text, u:(x.bbox.x0+x.bbox.x1)/2/cv.width, v:(x.bbox.y0+x.bbox.y1)/2/cv.height})); }
+        finally{ try{ await w.terminate(); }catch(e){} }
+        if(K && T.length){ try{ localStorage.setItem(K, JSON.stringify(T.map(t=>({s:t.s, u:+t.u.toFixed(4), v:+t.v.toFixed(4)})))); }catch(e){} }
+        return T; }catch(e){ return []; } };
+    window.pdxOrOcr = orOcr;
+    const pdfImgs = async (bytes, okey)=>{ await new Promise((ok,no)=>{ if(window.pdfjsLib) return ok(); const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload=ok; sc.onerror=()=>no(new Error('δεν φορτώθηκε ο προβολέας PDF')); document.head.appendChild(sc); });
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       const doc = await pdfjsLib.getDocument({data: bytes}).promise, out = [], txt = [];
       for(let i=1;i<=Math.min(doc.numPages, 8);i++){ const pgx = await doc.getPage(i), v0 = pgx.getViewport({scale:1}), sc = Math.min(3, 2000/Math.max(v0.width, v0.height)), v = pgx.getViewport({scale:sc});
         const c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pgx.render({canvasContext:c.getContext('2d'), viewport:v}).promise; let deg = window.pdxOrLandDeg(c); deg = await orRotAi(orRotate(c, deg), deg);   /* 19/11 14:38 (χρήστης: «ήρθε ανεστραμμένο — θέλω σε ευθεία, οριζόντιος»): ΠΑΝΤΑ οριζόντιο */ if(i===1) window.__orAuto = deg; (out.degs = out.degs || []).push(deg); out.push(deg ? orRotate(c, deg).toDataURL('image/jpeg', .85) : c.toDataURL('image/jpeg', .85));
         // 🧫 17/11: θέσεις κειμένου της σελίδας (κανονικοποιημένες 0–1, μετά την περιστροφή) → κουτάκια καλλιέργειας δίπλα σε κάθε όνομα
         let T = []; try{ const tc = await pgx.getTextContent(); T = tc.items.filter(it=>it.str && it.str.trim()).map(it=>{ const q = v0.convertToViewportPoint(it.transform[4], it.transform[5]); return {s:it.str, u:q[0]/v0.width, v:(q[1] - (it.height||0)/2)/v0.height}; }); }catch(e){}
+        if(T.length < 8){ const O = await orOcr(deg ? orRotate(c, deg) : c, okey ? okey+'|'+i+'|'+deg : ''); if(O.length > T.length){ txt.push(O); (out.ocr = out.ocr || []).push(i); continue; } }   // ήδη ίσιο → χωρίς pdxOrRotTxt
         txt.push(window.pdxOrRotTxt(T, deg)); }
       out.txt = txt; return out; };
     // 🗂 19/11 14:38 (χρήστης: «τις Πέμπτες ανεβάζουμε ΔΥΟ προγράμματα — τοπικές και κανονικό — θέλω και τα δύο· καλλιέργειες μόνο στο κανονικό·
@@ -26593,7 +26624,7 @@ window.CLS_MODE='A';
       return 'normal'; };   // «ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ»/«ΑΛΛΑΓΕΣ» (σημαία extra του bot) = μέρος του κανονικού· κρύβονται ΜΟΝΟ τα ρητά «ΕΚΤΑΚΤΑ»
     window.pdxOrKindRx = kindRx;
     const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
-      for(const f of (ix.files||[])){ window.__orAuto = 0; const pdfB = bytes.slice(f.o, f.o+f.l); let imgs = await pdfImgs(pdfB.slice()); let txt = imgs.txt || []; const degs = imgs.degs || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt, degs, extraRot:extra, pdf:pdfB, kind: await orKind(f, txt, imgs)})); }
+      for(const f of (ix.files||[])){ window.__orAuto = 0; const pdfB = bytes.slice(f.o, f.o+f.l); let imgs = await pdfImgs(pdfB.slice(), st.iso+'|'+(f.n||'')+'|'+(f.sent||'')+'|'+f.l); let txt = imgs.txt || []; const degs = imgs.degs || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt, degs, extraRot:extra, pdf:pdfB, kind: await orKind(f, txt, imgs)})); }
       // σειρά: κανονικό → τοπικές → (έκτακτα κρυφά)
       const KO = {normal:0, local:1, extra:2}; files.sort((a, b)=>(KO[a.kind]||0) - (KO[b.kind]||0)); st.m = {files}; orMarkOld(); };
     // 🗂 19/11 23:15 (χρήστης: «ανεβάσαμε ένα πρόγραμμα τοπικών και μετά άλλο — για το καθένα, κανονικό ή τοπικό, να κρατάς το ΤΕΛΕΥΤΑΙΟ μήνυμα, όχι όλα»):
@@ -26662,7 +26693,7 @@ window.CLS_MODE='A';
       if(b.dataset.or==='dir'){ st.showDir = true; return pg.redraw(); }
       if(b.dataset.or==='cult') return cultLoad(true);
       if(b.dataset.or==='print') return printCult();
-      if(b.dataset.or==='pdf'){ if(st.pdfbusy) return; st.pdfbusy = true; pg.redraw(); window.pdxOrCultPdfBest(st, lbl(st.iso)).then(f=>{ st.pdfFile = f; st.pdfSigOk = pdfSig(); window.pdxPdfPreview(f); }).catch(er=>toast('⚠ '+(er.message||er))).finally(()=>{ st.pdfbusy = false; pg.redraw(); }); return; }
+      if(b.dataset.or==='pdf'){ if(st.pdfbusy) return; st.pdfbusy = true; pg.redraw(); window.pdxOrCultPdfBest(st, lbl(st.iso)).then(f=>{ st.pdfFile = f; st.pdfSigOk = pdfSig(); window.pdxPdfPreview(f); if(st.unplaced) toast('🧫 '+st.unplaced+' ασθενείς δεν εντοπίστηκαν στο πρόγραμμα — οι καλλιέργειές τους είναι σε πίνακα στο τέλος'); }).catch(er=>toast('⚠ '+(er.message||er))).finally(()=>{ st.pdfbusy = false; pg.redraw(); }); return; }
       if(b.dataset.or==='share'){ if(st.pdfFile) window.pdxPdfPreview(st.pdfFile); return; }
       if(b.dataset.or==='xr'){ const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
         const recs = []; [typeof data!=='undefined'?data:{}, typeof extraPatients!=='undefined'?extraPatients:{}].forEach(S=>Object.keys(S||{}).forEach(k=>{ const d = S[k]; if(d && d.name) recs.push({k, d}); }));
