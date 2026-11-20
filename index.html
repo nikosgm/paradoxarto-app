@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v626';
+const APP_VER = '2026-11-20-v627';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26321,7 +26321,10 @@ window.CLS_MODE='A';
     // 📐 20/11 13:16 (χρήστης: «έχουν πολύ απόσταση, να είναι δίπλα-δίπλα»): τα κουτάκια ΚΟΛΛΗΤΑ στην αριστερή άκρη του ΠΙΝΑΚΑ (όχι της σελίδας —
     // το σκαναρισμένο έχει μεγάλο λευκό περιθώριο). Άκρη = η πιο αριστερή 1η λέξη των γραμμών ασθενών (χαμηλό εκατοστημόριο: όχι τυχαίο σημάδι)
     const xs = out.map(o=>o.x).filter(x=>x>0.02 && x<0.6).sort((a,b)=>a-b); const x0 = xs.length ? xs[Math.floor(xs.length*0.2)] : 0;
-    out.forEach(o=>{ o.x = x0 > 0.03 ? x0 - 0.004 : 0; });
+    // 📏 20/11 13:18 (χρήστης: «να μη πιάνει πολύ ύψος, φεύγει εκτός ορίων του κελιού»): ύψος γραμμής = διάμεση απόσταση διαδοχικών γραμμών κειμένου
+    const dv = []; for(let i = 1; i < lines.length; i++){ const d = lines[i].v - lines[i-1].v; if(d > 0.006 && d < 0.08) dv.push(d); } dv.sort((a,b)=>a-b);
+    const rh = dv.length ? Math.min(0.05, Math.max(0.012, dv[Math.floor(dv.length/2)])) : 0;
+    out.forEach(o=>{ o.x = x0 > 0.03 ? x0 - 0.004 : 0; o.h = rh; });
     return out; };
   // Excel (πίνακας): μέτρηση θέσης κάθε γραμμής ονόματος σε κρυφή απόδοση
   const XLM = {};
@@ -26336,6 +26339,8 @@ window.CLS_MODE='A';
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
+        if(m.h > 0){ const t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''), wq = m.x > 0 ? Math.min(14, Math.max(5, m.x*94.5 + 5.5 - .8)) : 5;
+          return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:.35cqw;top:'+(m.v*100).toFixed(2)+'%;height:'+(m.h*92).toFixed(2)+'%;transform:translateY(-50%);width:'+wq.toFixed(2)+'cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:3px;background:#fff;color:'+col+';font:700 .68cqw/1 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:0 .25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="overflow:hidden;text-overflow:ellipsis">'+E2(t1)+'</span></div>'; }
         return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:.35cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:5cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 .78cqw/1.1 Calibri,Arial,sans-serif;text-align:center;padding:.15em .2em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
       + '</div></div>'; };
   // σελίδα εκτύπωσης: κάθε σελίδα του PDF (ή ο πίνακας του Excel) μικραίνει σε Α4 οριζόντιο με τα κουτάκια αριστερά
@@ -26388,7 +26393,13 @@ window.CLS_MODE='A';
       let tw = aw, iw = tw*(1-SW), ih = iw*ih0/iw0; if(ih > ah){ ih = ah; iw = ih*iw0/ih0; tw = iw/(1-SW); }
       const ox = M + (aw - tw)/2, ix = ox + tw*SW, iy = M; x.drawImage(img, ix, iy, iw, ih);
       const bw = tw*SW - 6, fs = 13; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
-      for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue; const L = [[k.t, COL[k.cls]||'#000']]; if(k.note) L.push([k.note, '#333']); if(k.fun) L.push(['Μύκητες', '#C62828']);
+      for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue;
+        if(m.h > 0){ const rh = m.h*ih, f1 = Math.max(8, Math.min(13, rh*0.62)), bh1 = Math.max(f1 + 4, rh*0.92), col = COL[k.cls]||'#000';
+          const bw1 = m.x > 0 ? Math.max(bw, Math.min(bw*2.6, ix + m.x*iw - 6 - ox)) : bw, bx1 = m.x > 0 ? ix + m.x*iw - bw1 - 6 : ox, by1 = Math.max(iy + m.v*ih - bh1/2, yEnd + 1);
+          let t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''); x.font = '700 '+f1.toFixed(1)+'px Arial'; while(t1.length > 3 && x.measureText(t1).width > bw1 - 8) t1 = t1.slice(0, -2) + '…';
+          x.fillStyle = '#fff'; x.strokeStyle = col; x.lineWidth = 2; x.beginPath(); if(x.roundRect) x.roundRect(bx1, by1, bw1, bh1, 4); else x.rect(bx1, by1, bw1, bh1); x.fill(); x.stroke();
+          x.fillStyle = col; x.fillText(t1.replace(/……$/, '…'), bx1 + bw1/2, by1 + bh1/2 + 0.5); yEnd = by1 + bh1; continue; }
+        const L = [[k.t, COL[k.cls]||'#000']]; if(k.note) L.push([k.note, '#333']); if(k.fun) L.push(['Μύκητες', '#C62828']);
         x.font = '700 '+fs+'px Arial'; const lines = []; for(const [t, col] of L){ let cur = ''; for(const w of String(t).split(' ')){ const t2 = cur ? cur+' '+w : w; if(x.measureText(t2).width > bw - 10 && cur){ lines.push([cur, col]); cur = w; } else cur = t2; } if(cur) lines.push([cur, col]); }
         const lh = fs*1.18, bh = lines.length*lh + 10, by = Math.max(iy + m.v*ih - bh/2, yEnd + 4), bx = m.x > 0 ? Math.max(ox, ix + m.x*iw - bw - 6) : ox; yEnd = by + bh;
         x.fillStyle = '#fff'; x.strokeStyle = L[0][1]; x.lineWidth = 3; x.beginPath(); if(x.roundRect) x.roundRect(bx, by, bw, bh, 8); else x.rect(bx, by, bw, bh); x.fill(); x.stroke();
