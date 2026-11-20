@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v638';
+const APP_VER = '2026-11-20-v639';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17322,6 +17322,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(!f.name) return say('Διάλεξε ή γράψε φάρμακο');
       if(!/^[A-Za-z][A-Za-z0-9\- ]{1,40}$/.test(f.name)) return say('Γράψε το εμπορικό όνομα με λατινικά (π.χ. Ciproxin)');
       if(window.pdxEpCatHas && pdxEpCatHas(f.name, f.strength)===false) return say('«'+f.name+(f.strength?' '+f.strength:'')+'» δεν υπάρχει στο e-prescription — διάλεξε από τη λίστα «e-prescription»');
+      // 20/11 17:55 (έλεγχος «το bot καταλαβαίνει άλλα από το σύστημα»): «Algofren 400mg» — το όνομα υπάρχει, η περιεκτικότητα ΟΧΙ (μόνο 600MG/500MG supp).
+      // Πριν: περνούσε και αποτύγχανε στο e-prescription. Τώρα: δείχνει τι υπάρχει· 2ο πάτημα «Προσθήκη» = όπως είναι (π.χ. Clexane 40mg = «4000 IU/0,4ml»).
+      if(!f.ep && window.pdxEpCatHas && pdxEpCatHas(f.name, f.strength)==='str' && f._strOk !== (f.name+'|'+f.strength)){ f._strOk = f.name+'|'+f.strength;
+        let have = []; try{ have = [...new Set((pdxEpCatFind(f.name, 40)||[]).filter(x=>RXN(brandOf(x.name))===RXN(f.name)).map(x=>((String(x.name).match(/\d+(?:[.,]\d+)?\s*(?:MG|MCG|G|IU|ML|%)(?:\/\S+)?/i)||[''])[0]).replace(/\/(TAB|CAP|SUP|AMP|VIAL|SACHET|DOSE)\b.*/i,'')).filter(Boolean))].slice(0, 6); }catch(e){}
+        return say('«'+f.name+' '+f.strength+'»: αυτή η περιεκτικότητα δεν υπάρχει στο e-prescription'+(have.length?' — υπάρχουν: '+have.join(' · '):'')+'. Διάλεξε από τη λίστα, ή πάτα ξανά «Προσθήκη» αν είναι σωστό.'); }
       if(!(f.freq>=1 && f.freq<=4)) return say('Διάλεξε φορές / ημέρα');
       if(!(f.days>=1 && f.days<=30)) return say('Διάλεξε ημέρες (έως 30)');
       // 20/11: γράφτηκε χωρίς επιλογή από τη λίστα → αν στον κατάλογο υπάρχει ΜΙΑ συσκευασία με αυτό το όνομα (+ περιεκτικότητα) παίρνει το ακριβές όνομα της
