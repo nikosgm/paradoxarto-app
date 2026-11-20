@@ -2544,6 +2544,36 @@ window.pdxAbxLoad = async function(){ const A = window.__abx; if(A.busy || (A.pt
           const i = pts.findIndex(z=>nz(z.name)===nz(o.name)); if(i < 0) pts.push({name:o.name, meds:o.meds, at:o.at||0}); else if((o.at||0) > (pts[i].at||0)) pts[i] = {name:o.name, meds:o.meds, at:o.at||0}; } }catch(e){}
       A.pts = pts; A.at = Date.now(); A.busy = false; return true; } }catch(e){}
   A.busy = false; A.at = Date.now(); A.pts = A.pts || []; return false; };
+// 💊🔪 20/11 18:14 (χρήστης: «πατάω στα φάρμακα πάνω → καρτέλα με τα φάρμακα που παίρνει, από πότε, δοσολογία, και να προσθέτω· στο χειρουργείο → πρακτικό να το βλέπω/προσθέτω»)
+window.pdxPtMedsPage = function(k){ const d = (typeof data!=='undefined' && data[k]) || (typeof extraPatients!=='undefined' && extraPatients[k]); if(!d || typeof iosPage!=='function') return;
+  const E = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])), st = {busy:'', err:''};
+  const nz = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  const dd = t=>{ const m = /(\d{1,2})\/(\d{1,2})/.exec(String(t||'')); return m ? m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0') : String(t||''); };
+  const pg = iosPage('💊 Φάρμακα', '', ()=>{ const A = window.__abx || {}, P = (A.pts||[]).find(x=>nz(x.name)===nz(d.name)); let h = '<div style="margin:2px 16px 10px;font-size:17px;font-weight:700">'+E(d.name)+'</div>';
+    if(st.busy) h += '<div style="margin:6px 16px;color:#8E8E93">⏳ '+E(st.busy)+'</div>'; if(st.err) h += '<div style="margin:6px 16px;color:#FF3B30">⚠ '+E(st.err)+'</div>';
+    const M = (P && Array.isArray(P.meds)) ? P.meds.slice() : [];
+    if(!P) h += '<div style="margin:8px 16px;color:#8E8E93">'+(A.pts ? 'Δεν υπάρχει ανάγνωση φαρμάκων από τον ΝΠΣ για τον ασθενή — πάτα «Φέρε τώρα».' : 'Φορτώνει…')+'</div>';
+    const row = m=>{ const ds = (m.days||[]).slice(), f = ds[0], l = ds[ds.length-1], n = f ? Math.floor((new Date().setHours(12,0,0,0) - (()=>{ const x = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/.exec(f); if(!x) return Date.now(); const y = x[3] ? (+x[3] < 100 ? 2000 + +x[3] : +x[3]) : new Date().getFullYear(); return new Date(y, +x[2]-1, +x[1]).setHours(12,0,0,0); })())/864e5)+1 : 0;
+      const cells = (m.cells||[]).map(c=>String(c||'').trim()).filter(c=>c && !/^[✓✔xX×\-–—]$/.test(c)), dose = cells.length ? cells[cells.length-1] : '';
+      return {t:'<b>'+E(m.drug||m.subst)+'</b>'+(m.abx?' <span style="color:#B26B00;font-size:12.5px;font-weight:700">αντιβίωση</span>':''), sub:[m.drug && m.subst ? E(m.subst) : '', f ? 'από '+E(dd(f))+(n>0?' · '+n+'η ημ.':'') : '', l && l!==f ? 'τελευταία '+E(dd(l)) : '', dose ? 'δοσολογία: '+E(dose.slice(0,60)) : ''].filter(Boolean).join(' · ')}; };
+    const ab = M.filter(m=>m.abx), ot = M.filter(m=>!m.abx);
+    if(ab.length) h += iosGroup('Αντιβιώσεις · '+ab.length, ab.map(row)); if(ot.length) h += iosGroup('Λοιπά φάρμακα · '+ot.length, ot.map(row));
+    if(P && P.at) h += '<div class="ios-f">ΝΠΣ · ανάγνωση '+new Date(P.at).toLocaleString('el-GR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>';
+    h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">＋ Προσθήκη φαρμάκου στον ΝΠΣ</b>', on:"mobAct('"+String(k).replace(/'/g,"")+"','npsmed')"}, {t:'<b style="color:var(--acc,#0A84FF)">↻ Φέρε τώρα από τον ΝΠΣ</b>', on:'window.__ptMedsNow && __ptMedsNow()'}]);
+    return h + '<div style="height:40px"></div>'; });
+  window.__ptMedsNow = async ()=>{ if(st.busy) return; st.busy = 'Ο υπολογιστής του νοσοκομείου διαβάζει τη Φαρμακευτική Αγωγή…'; st.err = ''; pg.redraw();
+    try{ const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_npsmeds', name:d.name, room:null, kind:'npsmeds', payload:{name:d.name, quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
+      const id = ins.data.id, t0 = Date.now(); while(Date.now() - t0 < 240000){ await new Promise(r=>setTimeout(r, 2500)); if(!pg.el.isConnected) return; const q = await sb6.from('oncall_jobs').select('status,note').eq('id', id).maybeSingle(); const x = q.data; if(!x) continue;
+        if(x.status==='done'){ window.__abx.at = 0; await pdxAbxLoad(); st.busy = ''; pg.redraw(); return; } if(/^(failed|cancelled|dismissed)$/.test(x.status)){ st.busy = ''; st.err = x.note || 'απέτυχε'; pg.redraw(); return; } }
+      st.busy = ''; st.err = 'ο υπολογιστής δεν απάντησε σε 4′'; pg.redraw(); }catch(e){ st.busy = ''; st.err = e.message || String(e); pg.redraw(); } };
+  if(!(window.__abx && window.__abx.pts)) pdxAbxLoad().then(()=>pg.redraw()).catch(()=>{}); return pg; };
+window.pdxPtSurgPage = function(k){ const d = (typeof data!=='undefined' && data[k]) || (typeof extraPatients!=='undefined' && extraPatients[k]); if(!d || typeof iosPage!=='function') return;
+  const E = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])), kk = String(k).replace(/'/g,'');
+  iosPage('🔪 Χειρουργείο', '', ()=>{ const g = window.pdxSurgGuessCached ? pdxSurgGuessCached(k) : null, o = window.pdxOpsToday ? pdxOpsToday(d.name) : null, dn = window.pdxOpsDone ? pdxOpsDone(d.name) : null;
+    let h = '<div style="margin:2px 16px 10px;font-size:17px;font-weight:700">'+E(d.name)+'</div>';
+    h += iosGroup('Επέμβαση', [{t:'<b>'+E(d.surgery || (g && g.txt) || '—')+'</b>', sub:[g && g.src ? 'από: '+E(g.src) : '', d.pod!=null && String(d.pod)!=='' ? (/^\d+$/.test(String(d.pod)) ? 'Χ'+E(d.pod) : E(d.pod)) : '', dn ? 'επιβεβαιωμένη στον ΝΠΣ '+E(dn.d.split('-').reverse().join('/')) : '', o ? 'ΝΠΣ σήμερα: '+E(o.ord.map(x=>x.t).filter(Boolean).join(' · ')||'εντολή επέμβασης')+(o.note ? ' · ✓ πρακτικό' : ' · χωρίς πρακτικό') : ''].filter(Boolean).join(' · ')}]);
+    h += iosGroup('', [{t:'<b style="color:var(--acc,#0A84FF)">✂️ Πρακτικό — προβολή / προσθήκη</b>', on:"mobAct('"+kk+"','opnote')"}, {t:'<b style="color:var(--acc,#0A84FF)">📂 Φάκελος ΝΠΣ (εντολές, πρακτικά)</b>', on:"window.pdxDossierOpen && pdxDossierOpen("+JSON.stringify(String(d.name)).replace(/"/g,'&quot;')+","+JSON.stringify(String(d.amka||'')).replace(/"/g,'&quot;')+")"}]);
+    return h + '<div style="height:40px"></div>'; }); };
 window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null;
   const nz = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim(), w = nz(name);
   const P = A.pts.find(x=>nz(x.name)===w); if(!P || !Array.isArray(P.meds)) return [];
@@ -2554,7 +2584,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v642';
+const APP_VER = '2026-11-20-v643';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -2587,8 +2617,13 @@ function syncRemote(force){
       const val = snap.val() || {};
       const nd = val.data || {}, ne = val.extraPatients || {};
       const strip = o=>JSON.stringify(o||{});
-      if(strip(nd)===strip(data) && strip(ne)===strip(extraPatients)) return;
-      data = nd; extraPatients = ne;
+      // 🐞 20/11 18:14 (χρήστης: «σε κάποιους ασθενείς δεν πατιούνται κουμπιά» — όλοι «Εκτός θαλάμου» από τον ΝΠΣ): ο περιοδικός συγχρονισμός
+      // αντικαθιστούσε ΟΛΟ το extraPatients με του server, όπου οι προσωρινές καρτέλες ΝΠΣ δεν υπάρχουν ποτέ → η ανοιχτή καρτέλα έμενε χωρίς εγγραφή
+      // και κάθε κουμπί δεν έβρισκε τον ασθενή. Τώρα οι προσωρινές (_npsTemp) κρατιούνται.
+      const tmp = {}; Object.keys(extraPatients||{}).forEach(k=>{ const x = extraPatients[k]; if(x && x._npsTemp && !ne[k]) tmp[k] = x; });
+      const ne2 = Object.assign({}, ne, tmp);
+      if(strip(nd)===strip(data) && strip(ne2)===strip(extraPatients)) return;
+      data = nd; extraPatients = ne2;
       if(window.pdxLoadOk === false){ window.pdxLoadOk = true; try{ const eb = document.getElementById('pdxLoadErr'); if(eb) eb.remove(); }catch(e){} }
       Object.keys(data).forEach(k=>{ if(data[k] && data[k].arrival) data[k].arrival = false; });
       let mc = 0; Object.keys(extraPatients).forEach(k=>{ const n=parseInt(k.replace('extra-',''),10); if(!isNaN(n)&&n>mc) mc=n; });
@@ -10413,11 +10448,11 @@ document.head.appendChild(st);
       if(m){ const dt = new Date(+m[3], +m[2]-1, +m[1]); const n = Math.floor((new Date().setHours(0,0,0,0) - dt.getTime())/864e5)+1; t = '📅 Εισ. '+m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+(n>0?' · '+n+'η ημέρα':''); }
       if(t) c.push('<span>'+esc(t)+'</span>'); }   // 8/11: το ΑΜ φαίνεται πια δίπλα στο όνομα (πάτημα = αντιγραφή)
     // 🔪 15/11 13:22: χωρίς δικό μας χειρουργείο → ό,τι βρέθηκε στο ΝΠΣ / πρόγραμμα χειρουργείου (πρώτο, κάτω από το όνομα)
-    if(!d.surgery && window.pdxSurgGuess){ const g = pdxSurgGuessCached(k); if(g && g.txt) c.unshift('<span class="sgx" title="'+esc(g.src||'')+'">'+esc(g.txt)+'</span>'   /* 15/11 13:25 (χρήστης): χωρίς «(από πού)» — μόνο το χειρουργείο */);
+    if(!d.surgery && window.pdxSurgGuess){ const g = pdxSurgGuessCached(k); if(g && g.txt) c.unshift('<span class="sgx" style="cursor:pointer" onclick="pdxPtSurgPage(\''+esc(k)+'\')" title="'+esc(g.src||'')+'">'+esc(g.txt)+' ›</span>'   /* 15/11 13:25 (χρήστης): χωρίς «(από πού)» — μόνο το χειρουργείο */);
       pdxSurgGuess(k, d).then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
     // 💊 15/11 17:38: αντιβιώσεις νοσηλείας + από πότε (κάτω από το χειρουργείο)
     if(window.pdxAbxOf){ const ab = pdxAbxOf(d.name); if(ab && ab.length){ const dd = t=>{ const x = new Date(t); return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); };
-        c.splice(c.findIndex(x=>/class="sgx"/.test(x))+1, 0, '<span class="abx">💊 '+ab.map(a=>{ const dn = a.from ? Math.floor((new Date().setHours(12,0,0,0) - new Date(a.from).setHours(12,0,0,0))/864e5)+1 : 0; return esc(a.nm)+(a.from?' από '+dd(a.from)+(dn>0?' · '+dn+'η ημ.':''):''); }).join(' · ')+'</span>'); }
+        c.splice(c.findIndex(x=>/class="sgx"/.test(x))+1, 0, '<span class="abx" style="cursor:pointer" onclick="pdxPtMedsPage(\''+esc(k)+'\')">💊 '+ab.map(a=>{ const dn = a.from ? Math.floor((new Date().setHours(12,0,0,0) - new Date(a.from).setHours(12,0,0,0))/864e5)+1 : 0; return esc(a.nm)+(a.from?' από '+dd(a.from)+(dn>0?' · '+dn+'η ημ.':''):''); }).join(' · ')+'</span>'); }
       if(!window.__abx.pts || Date.now()-window.__abx.at > 10*60000) pdxAbxLoad().then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
     // 15/11 00:14 (χρήστης: «μη μου λες τις συννοσηρότητες κάτω από το όνομα — μόνο αν πατήσω το κουμπί Συννοσηρότητες»)
     return (c.length ? '<div class="mhdr">'+c.join('')+'</div>' : '') + hdrDev(k, d);
@@ -22190,11 +22225,20 @@ window.pdxOpNoteFromScan = function(p){
       // 🏥 νοσηλείες: κάθε μία δείχνει ό,τι έγινε μέσα στο διάστημά της
       const adm = ev.filter(e=>e.kind==='admission').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
       const inAdm = (e,a)=>{ const b = parseB(a.body), d = String(e.date||''), f = String(b.from||a.date||'').slice(0,10), t = /^\d{4}/.test(String(b.to||'')) ? String(b.to).slice(0,10) : '9999'; return d && d>=f && d<=t; };
-      if(adm.length) h += iosGroup('🏥 Νοσηλείες · '+adm.length, adm.map(a=>{ const b = parseB(a.body), k = 'a'+a.id, on = !!st.open[k];
-        const ins = ev.filter(e=>e.kind!=='admission' && e.kind!=='dx' && inAdm(e,a));
+      // 🏥 20/11 18:08 (χρήστης: «οι μιας ημέρας σε ενότητα που κάνει expand — λοιπές/ημερήσιες· τις κανονικές να τις ανοίγω, με τη ΔΙΑΓΝΩΣΗ της καθεμιάς»)
+      const aDays = a=>{ const b = parseB(a.body), f = String(b.from||a.date||'').slice(0,10), t = /^\d{4}/.test(String(b.to||'')) ? String(b.to).slice(0,10) : ''; if(!f) return 99; if(!t) return 99; return Math.round((new Date(t+'T12:00:00') - new Date(f+'T12:00:00'))/864e5); };
+      const admDx = a=>{ const D = ev.filter(e=>(e.kind==='discharge' || e.kind==='dc') && inAdm(e,a)); for(const e of D){ const bb = parseB(e.body), F = Array.isArray(bb.fields) ? bb.fields : [];
+          const f = F.find(x=>/διάγνωσ|γνωμάτευ/i.test(x.l||'') && String(x.v||'').trim()); if(f) return String(f.v).replace(/\s+/g,' ').trim(); const m = /(?:διάγνωση|γνωμάτευση)\s*[:·]\s*([^·|]{4,120})/i.exec(String(e.title||'')); if(m) return m[1].trim(); }
+        const o = ev.filter(e=>(e.kind==='surgery' || e.kind==='opnote') && inAdm(e,a))[0]; return o ? '🔪 '+String(o.title||'').replace(/^(Εντολή για επέμβαση|Πρακτικό επέμβασης)\s*:\s*/,'').slice(0, 90) : ''; };
+      const admLong = adm.filter(a=>aDays(a) >= 2), admDay = adm.filter(a=>aDays(a) < 2);
+      const admRow = a=>{ const b = parseB(a.body), k = 'a'+a.id, on = !!st.open[k];
+        const ins = ev.filter(e=>e.kind!=='admission' && e.kind!=='dx' && inAdm(e,a)), dx = admDx(a), n = aDays(a);
         const t = String(b.clinic||'').replace(/^★\s*/,''), ours = /^★/.test(String(b.clinic||''));
-        return {t:'<div data-aev="'+k+'" style="cursor:pointer"><b>'+(ours?'★ ':'')+E4(t||'Νοσηλεία')+'</b> <span style="color:var(--acc,#0A84FF)">'+(on?'▾':'▸')+'</span><div style="font-size:13.5px;color:#8E8E93">'+dmy(String(b.from||a.date||''))+' → '+(/^\d/.test(String(b.to||''))?dmy(b.to):E4(b.to||'—'))+(ins.length?' · '+ins.length+' έγγραφα':'')+'</div></div>'
-          + (on ? '<div style="margin-top:6px">'+(ins.length ? ins.map(e=>'<div style="padding:6px 0;border-top:.5px solid rgba(60,60,67,.18)"><div style="font-size:13px;color:#8E8E93">'+(KIND[e.kind]||['📝',''])[0]+' '+dmy(e.date)+'</div><div style="font-size:14.5px;font-weight:600">'+E4(e.title)+'</div>'+what(e)+'</div>').join('') : '<div style="color:#8E8E93;font-size:13.5px">Κανένα έγγραφο αυτής της νοσηλείας στη βάση ακόμα.</div>')+'</div>' : '')}; }));
+        return {t:'<div data-aev="'+k+'" style="cursor:pointer"><b>'+(ours?'★ ':'')+E4(t||'Νοσηλεία')+(n < 99 ? ' · '+(n||1)+' ημ.' : ' · σε εξέλιξη')+'</b> <span style="color:var(--acc,#0A84FF)">'+(on?'▾':'▸')+'</span><div style="font-size:13.5px;color:#8E8E93">'+dmy(String(b.from||a.date||''))+' → '+(/^\d/.test(String(b.to||''))?dmy(b.to):E4(b.to||'—'))+(ins.length?' · '+ins.length+' έγγραφα':'')+'</div>'
+          + '<div style="font-size:14px;margin-top:2px">'+(dx ? '🩺 '+E4(dx.slice(0, 140)) : '<span style="color:#8E8E93">🩺 διάγνωση: όχι ακόμα — άνοιξε για «Φέρε από ΝΠΣ»</span>')+'</div></div>'
+          + (on ? '<div style="margin-top:6px">'+(ins.length ? ins.map(e=>'<div style="padding:6px 0;border-top:.5px solid rgba(60,60,67,.18)"><div style="font-size:13px;color:#8E8E93">'+(KIND[e.kind]||['📝',''])[0]+' '+dmy(e.date)+'</div><div style="font-size:14.5px;font-weight:600">'+E4(e.title)+'</div>'+what(e)+'</div>').join('') : '<div style="color:#8E8E93;font-size:13.5px">Κανένα έγγραφο αυτής της νοσηλείας στη βάση ακόμα.</div>')+(!dx ? '<button data-adoss style="margin-top:8px;border:0;border-radius:10px;padding:8px 12px;font-weight:700;background:var(--acc,#0A84FF);color:#fff">🔎 Φέρε τα στοιχεία των νοσηλειών από τον ΝΠΣ</button>' : '')+'</div>' : '')}; };
+      if(admLong.length) h += iosGroup('🏥 Νοσηλείες · '+admLong.length, admLong.map(admRow));
+      if(admDay.length){ const on = !!st.open.dayAdm; h += iosGroup('', [{t:'<div data-aev="dayAdm" style="cursor:pointer"><b>📅 Λοιπές νοσηλείες (ημερήσιες) · '+admDay.length+'</b> <span style="color:var(--acc,#0A84FF)">'+(on?'▾':'▸')+'</span></div>'}].concat(on ? admDay.map(admRow) : [])); }
       // 📄 έγγραφα (PDF) της βάσης — π.χ. εξιτήρια που κράτησε το bot
       if((p.docs||[]).length) h += iosGroup('📄 Έγγραφα · '+p.docs.length, p.docs.map(d=>{ const k = 'd'+d.id, P = st.pdf[k]||{};
         return {t:'<div data-adoc="'+d.id+'" style="cursor:pointer"><span style="color:#8E8E93;font-size:13px">'+dmy(d.date)+'</span> <b>'+E4(d.title||'Έγγραφο')+'</b> <span style="color:var(--acc,#0A84FF)">📄</span><div style="font-size:12.5px;color:#8E8E93">'+Math.round((d.bytes||0)/1024)+' KB</div></div>'
