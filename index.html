@@ -2487,7 +2487,12 @@ window.__sgG = window.__sgG || {};
 try{ const c = JSON.parse(localStorage.getItem('pdx_sgG')||'{}'); Object.keys(c).forEach(k=>{ const v = c[k]; if(v && v.txt && Date.now()-(v.at||0) < 6*3600e3 && !window.__sgG[k]) window.__sgG[k] = Object.assign({}, v, {busy:false, at: v.at - 10*60000}); }); }catch(e){}
 const sgSave = ()=>{ clearTimeout(sgSave.t); sgSave.t = setTimeout(()=>{ try{ const o = {}; Object.keys(window.__sgG).forEach(k=>{ const v = window.__sgG[k]; if(v && v.txt) o[k] = {txt:v.txt, t:v.t||0, src:v.src||'', at:Date.now()}; }); localStorage.setItem('pdx_sgG', JSON.stringify(o)); }catch(e){} }, 800); };
 const SGQ = {n:0, q:[]}; const sgSlot = ()=>new Promise(ok=>{ if(SGQ.n < 3){ SGQ.n++; ok(); } else SGQ.q.push(ok); }); const sgFree = ()=>{ const nx = SGQ.q.shift(); if(nx) nx(); else SGQ.n--; };
-window.pdxSurgGuessCached = (k)=>window.__sgG[k] || null;
+// 🔪 20/11 21:50 (χρήστης, φωτογραφία: «Προς αλλ. Allium ΔΕ» ενώ ο ΝΠΣ έχει εντολή + ✓ πρακτικό σήμερα → «δεν έχεις βάλει Χ0 · άμεσα»):
+// η εκτίμηση «Προς …» (από πρόγραμμα/εντολή) ΠΟΤΕ δεν εμφανίζεται όταν η επέμβαση είναι επιβεβαιωμένη στον ΝΠΣ → «ΧN …»
+window.pdxSurgGuessCached = (k)=>{ const g = window.__sgG[k] || null; if(!g || !/^Προς\s/.test(String(g.txt||'')) || !window.pdxOpsDone) return g;
+  try{ const d = (typeof data!=='undefined' && data[k]) || (typeof extraPatients!=='undefined' && extraPatients[k]); const o = d && d.name ? pdxOpsDone(d.name) : null; if(!o) return g;
+    const t0 = new Date(); t0.setHours(0,0,0,0); const n = Math.max(0, Math.round((t0 - new Date(o.d+'T00:00:00'))/864e5));
+    return Object.assign({}, g, {txt:'Χ'+n+' '+String(g.txt).replace(/^Προς\s+/, ''), src:(g.src ? g.src+' · ' : '')+'επιβεβαιωμένη ΝΠΣ'}); }catch(e){ return g; } };
 window.pdxSurgGuess = async function(k, d){
   if(!d || !d.name || d.surgery) return false; const c0 = window.__sgG[k]; if(c0 && (c0.busy || Date.now()-c0.at < 10*60000)) return false;
   window.__sgG[k] = Object.assign({}, c0||{}, {busy:true, at:Date.now()});
@@ -2586,7 +2591,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v651';
+const APP_VER = '2026-11-20-v652';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15320,13 +15325,16 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   window.pdxOpsDone = (name)=>{ try{ const x = (NB.ops||{})[nbNz(name)]; if(!x) return null; const y = new Date(Date.now()-864e5), lim = y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');   // μόνο σήμερα/χθες (ποτέ παλιά επέμβαση πάνω σε νέο «Προς»)
     const ord = (x.ord||[]).filter(o=>o && o.d && o.d>=lim).sort((a,b)=>a.d<b.d?1:-1); for(const o of ord){ if((x.note||[]).some(n=>n && n.d && n.d>=o.d)) return {d:o.d}; } return null; }catch(e){ return null; } };
   // σε ΟΛΟΥΣ τους ασθενείς (όχι μόνο όταν ανοίγει η καρτέλα): «Προς …» (ποτέ πάνω σε αριθμό) → ΧN με N = μέρες από την επέμβαση (σήμερα = Χ0)
-  window.pdxOpsX0Sweep = ()=>{ try{ const T = todayISO(); [[data,false],[extraPatients,true]].forEach(([st,x])=>Object.keys(st||{}).forEach(k=>{ const d = st[k]; if(!d || !d.name || d._npsTemp) return;
-      const pod = String(d.pod||'').trim(); if(pod && !/^Προς/i.test(pod)) return; if(!pod && !d.surgery) return;
+  // 20/11 21:50: ΚΑΙ χωρίς δική μας επέμβαση/«Προς» (η επέμβαση ήταν μόνο εκτίμηση από το πρόγραμμα) ΚΑΙ οι καρτέλες ΝΠΣ εκτός θαλάμου (_npsTemp: μόνο στη μνήμη)
+  // · ξαναζωγραφίζει ΜΟΝΟ αν άλλαξε κάτι (πριν: buildGrid σε κάθε ανάγνωση ΝΠΣ = χιλιάδες αλλαγές DOM ανά λεπτό)
+  window.pdxOpsX0Sweep = ()=>{ try{ const T = todayISO(); let ch = 0; [[data,false],[extraPatients,true]].forEach(([st,x])=>Object.keys(st||{}).forEach(k=>{ const d = st[k]; if(!d || !d.name) return;
+      const pod = String(d.pod||'').trim(); if(pod && !/^Προς/i.test(pod)) return;
       const o = pdxOpsDone(d.name); if(!o) return; if(d.podAuto==='nps:'+o.d) return;
       const n = Math.max(0, Math.round((new Date(T+'T00:00:00') - new Date(o.d+'T00:00:00'))/864e5));
-      d.pod = String(n); d.podCustom = ''; d.podDate = T; d.ae = false; d.podAuto = 'nps:'+o.d;
-      try{ saveEntryToStorage(k, x, d, true); }catch(e){} try{ toast('🔪 Επέμβαση επιβεβαιωμένη στον ΝΠΣ → Χ'+n+' · '+String(d.name).split(' ')[0]); }catch(e){} }));
-    try{ buildGrid(); buildExtraList(); if(window.mobRefresh) mobRefresh(); }catch(e){} }catch(e){} };
+      d.pod = String(n); d.podCustom = ''; d.podDate = T; d.ae = false; d.podAuto = 'nps:'+o.d; ch++;
+      if(!d.surgery){ const g = window.pdxSurgGuessCached && pdxSurgGuessCached(k); if(g && g.txt) d.surgery = String(g.txt).replace(/^(Χ\d+|Προς)\s+/, ''); }
+      if(!d._npsTemp) try{ saveEntryToStorage(k, x, d, true); }catch(e){} try{ toast('🔪 Επέμβαση επιβεβαιωμένη στον ΝΠΣ → Χ'+n+' · '+String(d.name).split(' ')[0]); }catch(e){} }));
+    if(ch) try{ buildGrid(); buildExtraList(); if(window.mobRefresh) mobRefresh(); }catch(e){} }catch(e){} };
   window.pdxOpsToday = (name)=>{ try{ const x = (NB.ops||{})[nbNz(name)]; if(!x) return null; const d = new Date(), t = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     const ord = (x.ord||[]).filter(o=>o.d===t); if(!ord.length) return null; return {ord, note:(x.note||[]).some(o=>o.d===t)}; }catch(e){ return null; } };
   window.pdxOpsBanner = (k, d)=>{ const E3 = v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])), esc = E3; const o = d && d.name ? pdxOpsToday(d.name) : null; if(!o) return '';
