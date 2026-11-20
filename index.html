@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v635';
+const APP_VER = '2026-11-20-v636';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26324,7 +26324,10 @@ window.CLS_MODE='A';
       if(r && d!=null && d>10 && c && !c.none && !(c.err && !c.st)){ r.t += ' · ⚠ '+d+' ημερών'; r.old = d; } return r; }; }
   // 🧫🖨 17/11 16:29 (χρήστης: «μη βάζεις στήλες — το PDF λίγο πιο μικρό πάνω στο Α4 και τέρμα αριστερά text boxes δίπλα σε κάθε όνομα·
   // και "μύκητες" αν έχει· το ίδιο και στην προεπισκόπηση, να αλλάζει μόνο του όταν αλλάζει καλλιέργεια»)
-  const ORN = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[0-9]+/g,' ').replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
+  // 🔤 20/11 14:50 (χρήστης: «γιατί λείπουν τα μισά»): το OCR γράφει ελληνικά κεφαλαία με ΛΑΤΙΝΙΚΑ (ΚΑΡΚΑΝΗΣ→KAPKAN, ΙΩΑΝΝΗ→IQANNH, Σ→E/C) →
+  // ίδιο «δίπλωμα» και στις δύο πλευρές (λίστα + χαρτί): λατινικά-όμοια → ελληνικά, Σ/C→Ε, Ω/Q→Ο
+  const ORF = {A:'Α',B:'Β',E:'Ε',Z:'Ζ',H:'Η',I:'Ι',K:'Κ',M:'Μ',N:'Ν',O:'Ο',P:'Ρ',T:'Τ',Y:'Υ',X:'Χ',C:'Ε',Q:'Ο','Σ':'Ε','Ω':'Ο'};
+  const ORN = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[0-9]+/g,' ').replace(/[^A-ZΑ-Ω ]/g,' ').replace(/[ABEZHIKMNOPTYXCQΣΩ]/g, c=>ORF[c]).replace(/\s+/g,' ').trim();
   // περιστροφή κανονικοποιημένων θέσεων (όπως το orRotate: δεξιόστροφα)
     // 📐 20/11 13:55 (χρήστης, φωτο: «ρε τι σκατά κάνεις» — τα κουτάκια έπεσαν ΜΕΣΑ στον πίνακα): ΤΕΛΟΣ οι εκτιμήσεις από το κείμενο του OCR.
   // Το ΠΛΕΓΜΑ του πίνακα από τα pixel: αριστερό περίγραμμα = 1η ψηλή συνεχής κάθετη γραμμή από την οποία ξεκινούν ≥3 οριζόντιες γραμμές·
@@ -26359,7 +26362,9 @@ window.CLS_MODE='A';
   const orLev = (a, b)=>{ if(Math.abs(a.length - b.length) > 2) return 9; let p = Array.from({length:b.length+1}, (_, j)=>j); for(let i = 1; i <= a.length; i++){ const q = [i]; for(let j = 1; j <= b.length; j++) q[j] = Math.min(p[j]+1, q[j-1]+1, p[j-1] + (a[i-1]===b[j-1] ? 0 : 1)); p = q; } return p[b.length]; };
   const orFind = (words, w)=>{ let k = words.indexOf(w); if(k >= 0 || w.length < 5) return k; const lim = w.length >= 8 ? 2 : 1; let best = 9; words.forEach((x, i)=>{ if(x.length >= 4 && x[0]===w[0]){ const d = orLev(x, w); if(d <= lim && d < best){ best = d; k = i; } } }); return k; };
   const orPick = (list, words, used)=>{ for(let j = 0; j < list.length; j++){ if(used.has(j)) continue; const a = ORN(list[j].name).split(' '); if(!a[0]) continue;
-      const k = orFind(words, a[0]); if(k < 0) continue; if(a[1] && !words.slice(k+1, k+4).some(w=>w[0]===a[1][0])) continue; return j; } return -1; };
+      const k = orFind(words, a[0]); if(k < 0) continue;
+      const twin = list.some((q, i)=>i !== j && (()=>{ const b = ORN(q.name).split(' ')[0]||''; return b && orLev(b, a[0]) <= 2; })());   // όνομα πατρός/μικρό ελέγχεται ΜΟΝΟ αν υπάρχει παρόμοιο επώνυμο
+      if(twin && a[1] && !words.slice(k+1, k+4).some(w=>w[0]===a[1][0])) continue; return j; } return -1; };
   // PDF: γραμμές από τις θέσεις κειμένου → ταίριασμα επωνύμου (+ αρχικό ονόματος)
   window.pdxOrMarksPdf = function(T, list){ if(!T || !T.length || !list || !list.length) return [];
     const it = T.slice().sort((a,b)=>a.v-b.v || a.u-b.u), lines = [];
@@ -26372,6 +26377,23 @@ window.CLS_MODE='A';
       const rx = new RegExp('(^|[^\\d.])'+m[1]+'\\s*[-–.,_/]?\\s*'+m[2]+'(?![\\d.,/])');
       const L = lines.find(L=>!L.took && rx.test(L.it.slice().sort((a,b)=>a.u-b.u).slice(0, 2).map(x=>x.s).join(' '))); if(!L) return;
       used.add(j); L.took = 1; out.push({v: L.it.reduce((s,x)=>s+x.v, 0)/L.it.length, p, x: L.it[0].u}); });
+    // 🔢 20/11 14:50: γραμμές ασθενών = όσες έχουν 8ψήφιο αριθμό (κάτω από το όνομα — το OCR τους διαβάζει πάντα). Με «άγκυρες» τα ονόματα που βρέθηκαν και
+    // ΙΔΙΑ σειρά με το πρόγραμμα (Excel), όσες γραμμές μένουν ανάμεσα σε δύο άγκυρες παίρνουν με τη σειρά τους ασθενείς που μένουν ανάμεσα (μόνο αν η σειρά συμφωνεί).
+    try{ const isId = x=>/^[^0-9A-Za-zΑ-Ωα-ω]*\d{8}[^0-9A-Za-zΑ-Ωα-ω]*$/.test(String(x.s).trim()) && x.u < 0.65;
+      const R0 = lines.filter(L=>L.it.some(isId)).map(L=>({v:L.v, L, j:-1})).sort((a,b)=>a.v-b.v);
+      const offs = [];
+      out.forEach(o=>{ const jj = list.indexOf(o.p); let best = null; for(const r of R0){ const d = r.v - o.v; if(r.j < 0 && d >= -0.002 && d <= 0.035 && (!best || d < best.d)) best = {r, d}; } if(best){ best.r.j = jj; offs.push(best.d); } });
+      const A = R0.filter(r=>r.j >= 0); let mono = A.length >= 2; for(let i = 1; i < A.length; i++) if(A[i].j <= A[i-1].j) mono = false;
+      if(mono){ offs.sort((a,b)=>a-b); const off = offs[Math.floor(offs.length/2)] || 0.008;
+        const free = j=>j >= 0 && j < list.length && !used.has(j);
+        const put = (r, j)=>{ used.add(j); r.j = j; out.push({v: r.v - off, p: list[j], x: r.L.it.slice().sort((a,b)=>a.u-b.u)[0].u}); };
+        for(let i = 0; i <= A.length; i++){ const lo = i ? A[i-1] : null, hi = i < A.length ? A[i] : null;
+          const rows = R0.filter(r=>r.j < 0 && (!lo || r.v > lo.v) && (!hi || r.v < hi.v)); if(!rows.length) continue;
+          const js = []; for(let j = (lo ? lo.j + 1 : 0); j < (hi ? hi.j : list.length); j++) if(free(j)) js.push(j);
+          if(lo && hi){ if(js.length === rows.length) rows.forEach((r, k)=>put(r, js[k])); }
+          else if(!lo){ if(js.length >= rows.length) rows.forEach((r, k)=>put(r, js[js.length - rows.length + k])); }   // πριν την 1η άγκυρα: οι αμέσως προηγούμενοι
+          else { if(js.length >= rows.length) rows.forEach((r, k)=>put(r, js[k])); } } }   // μετά την τελευταία: οι αμέσως επόμενοι (οι τοπικές κ.λπ. μένουν στο τέλος)
+    }catch(e){}
     // 📐 20/11 13:55: θέση ΜΟΝΟ από το πλέγμα του πίνακα (pdxOrGrid)· κουτάκι κολλητά αριστερά από το περίγραμμα, στο κέντρο της γραμμής του ασθενή,
     // ύψος = 80% της γραμμής (μία σειρά κειμένου). Χωρίς πλέγμα → στο περιθώριο της σελίδας, στο ύψος του ονόματος.
     const G = T.find(t=>t.s === '__grid');
@@ -26732,10 +26754,24 @@ window.CLS_MODE='A';
             const a = String((r && r.text) || '').toUpperCase(); if(/ΕΚΤΑΚΤ/.test(a)) return 'extra'; if(/ΤΟΠΙΚ/.test(a)) return 'local'; if(/ΚΑΝΟΝΙΚ/.test(a)) return 'normal'; } } }catch(e){}
       return 'normal'; };   // «ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ»/«ΑΛΛΑΓΕΣ» (σημαία extra του bot) = μέρος του κανονικού· κρύβονται ΜΟΝΟ τα ρητά «ΕΚΤΑΚΤΑ»
     window.pdxOrKindRx = kindRx;
-    const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = await pdxCK.openBytes(new Uint8Array(sealed)); const files = [];
-      for(const f of (ix.files||[])){ window.__orAuto = 0; const pdfB = bytes.slice(f.o, f.o+f.l); let imgs = await pdfImgs(pdfB.slice(), st.iso+'|'+(f.n||'')+'|'+(f.sent||'')+'|'+f.l); let txt = imgs.txt || []; const degs = imgs.degs || []; f.auto = window.__orAuto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); } files.push(Object.assign({}, f, {imgs, txt, degs, extraRot:extra, pdf:pdfB, kind: await orKind(f, txt, imgs)})); }
+    // ⚡ 20/11 14:50 (χρήστης: «το πρόγραμμα από το Kerio κάθε φορά αργεί — γιατί δεν το κρατάμε μόνιμα;»): η καθυστέρηση ΔΕΝ ήταν το Kerio (3–8″)
+    // αλλά η επεξεργασία σε κάθε άνοιγμα (pdf.js + ίσιωμα με AI + OCR + πλέγμα για κάθε σελίδα). Τώρα: το ΕΤΟΙΜΟ αποτέλεσμα κάθε αρχείου μένει
+    // κρυπτογραφημένο στη συσκευή ΚΑΙ στον server (img-enc/orv/…) → όλες οι συσκευές το ανοίγουν αμέσως· νέο mail = επεξεργασία ΜΟΝΟ του νέου αρχείου.
+    const ORV = 'v1', ofKey = f=>ORV+'|'+st.iso+'|'+(f.n||'')+'|'+(f.sent||'')+'|'+f.l;
+    const hk = async k=>[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k)))].slice(0, 12).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const procGet = async k=>{ try{ const c = await pdxBxCache.get('orf|'+k); if(c && c.enc) return JSON.parse(new TextDecoder().decode(await pdxCK.openBytes(new Uint8Array(c.enc)))); }catch(e){}
+      try{ const dl = await sb6.storage.from('img-enc').download('orv/'+st.iso+'/'+(await hk(k))+'.bin'); if(!dl.error && dl.data){ const u8 = new Uint8Array(await dl.data.arrayBuffer()); const o = JSON.parse(new TextDecoder().decode(await pdxCK.openBytes(u8))); pdxBxCache.put('orf|'+k, {enc:u8}); return o; } }catch(e){}
+      return null; };
+    const procPut = async (k, o)=>{ try{ const u8 = await pdxCK.sealBytes(new TextEncoder().encode(JSON.stringify(o))); pdxBxCache.put('orf|'+k, {enc:u8}); await sb6.storage.from('img-enc').upload('orv/'+st.iso+'/'+(await hk(k))+'.bin', new Blob([u8]), {upsert:true}); }catch(e){} };
+    const mailSig = ix=>(ix.files||[]).map(f=>(f.n||'')+'|'+(f.sent||'')+'|'+f.l).join(',');
+    const showMail = async (idx, sealed)=>{ const ix = await pdxCK.decrypt(idx), bytes = sealed ? await pdxCK.openBytes(new Uint8Array(sealed)) : null; const files = [];
+      for(const f of (ix.files||[])){ const k = ofKey(f), pdfB = bytes ? bytes.slice(f.o, f.o+f.l) : null; let o = await procGet(k);
+        if(!o){ if(!pdfB) throw new Error('nocache'); window.__orAuto = 0; const im = await pdfImgs(pdfB.slice(), st.iso+'|'+(f.n||'')+'|'+(f.sent||'')+'|'+f.l); o = {imgs:[...im], txt:im.txt || [], degs:im.degs || [], auto:window.__orAuto || 0}; o.kind = await orKind(f, o.txt, o.imgs); procPut(k, o); }
+        let imgs = o.imgs, txt = o.txt; f.auto = o.auto || 0; const extra = rotGet(f); if(extra){ imgs = await Promise.all(imgs.map(u=>rotUrl(u, extra))); txt = txt.map(T=>window.pdxOrRotTxt(T, extra)); }
+        let kd = o.kind || 'normal'; try{ const m = localStorage.getItem(kindK(f)); if(/^(normal|local|extra)$/.test(m||'')) kd = m; }catch(e){}
+        files.push(Object.assign({}, f, {imgs, txt, degs:o.degs || [], extraRot:extra, pdf:pdfB, kind:kd})); }
       // σειρά: κανονικό → τοπικές → (έκτακτα κρυφά)
-      const KO = {normal:0, local:1, extra:2}; files.sort((a, b)=>(KO[a.kind]||0) - (KO[b.kind]||0)); st.m = {files}; orMarkOld(); };
+      const KO = {normal:0, local:1, extra:2}; files.sort((a, b)=>(KO[a.kind]||0) - (KO[b.kind]||0)); st.m = {files}; st.mSig = mailSig(ix); orMarkOld(); };
     // 🗂 19/11 23:15 (χρήστης: «ανεβάσαμε ένα πρόγραμμα τοπικών και μετά άλλο — για το καθένα, κανονικό ή τοπικό, να κρατάς το ΤΕΛΕΥΤΑΙΟ μήνυμα, όχι όλα»):
     // ανά είδος μένουν ΜΟΝΟ τα αρχεία του νεότερου μηνύματος (ίδιο «στάλθηκε»)· τα παλαιότερα κρύβονται (και από PDF/εκτύπωση) — «εμφάνιση» για έλεγχο
     // ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ/ΑΛΛΑΓΕΣ (σημαία extra του bot ή όνομα) ΠΡΟΣΤΙΘΕΤΑΙ στο κύριο, δεν το αντικαθιστά → μένει αν είναι νεότερο από το κύριο που κρατήθηκε
@@ -26745,22 +26781,31 @@ window.CLS_MODE='A';
       F.forEach(f=>{ f.old = String(f.sent || '') < (mx[f.kind || 'normal'] || ''); }); }
     const rotK = f=>'pdx_or_rot2|'+st.iso+'|'+(f.n||f.subj||''),   /* 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): παλιό ↻ (πριν το αυτόματο) ακύρωνε το αυτόματο ίσιωμα (270°+90°) → νέο κλειδί, οι παλιές τιμές αγνοούνται */ rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
     const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
-    const loadMail = async (fresh)=>{ st.merr = ''; if(typeof sb6==='undefined') return; const ck = 'or|'+st.iso;
-      try{ if(!fresh){ const c = await pdxBxCache.get(ck); if(c && c.idx && c.bin){ st.mbusy = 'Άνοιγμα…'; pg.redraw(); await showMail(c.idx, c.bin); st.mbusy=''; pg.redraw(); return; } }
-        st.m = null; st.mbusy = 'Το bot διαβάζει τα απεσταλμένα του Kerio…'; pg.redraw();
+    // ⚡ 20/11 14:50: δείχνει ΑΜΕΣΑ ό,τι υπάρχει (συσκευή → κοινό αντίγραφο server) και ΜΕΤΑ ρωτά αθόρυβα το Kerio· αλλάζει μόνο αν ήρθε νέο mail
+    const mfPath = ()=>'orv/'+st.iso+'/idx.json';
+    const loadMail = async (fresh)=>{ st.merr = ''; if(typeof sb6==='undefined') return; const ck = 'or|'+st.iso; let shownAt = 0;
+      try{
+        if(!fresh){ const c = await pdxBxCache.get(ck);
+          if(c && c.idx){ try{ st.mbusy = 'Άνοιγμα…'; pg.redraw(); await showMail(c.idx, c.bin || null); shownAt = c.at || 1; }catch(e){} st.mbusy = ''; pg.redraw(); }
+          if(!shownAt){ try{ const dl = await sb6.storage.from('img-enc').download(mfPath()); if(!dl.error && dl.data){ const m = JSON.parse(await dl.data.text()); if(m && m.idx){ st.mbusy = 'Άνοιγμα…'; pg.redraw(); await showMail(m.idx, null); shownAt = m.at || 1; pdxBxCache.put(ck, {idx:m.idx}); } } }catch(e){} st.mbusy = ''; pg.redraw(); }
+          if(shownAt && Date.now() - shownAt < 3*60000) return; }
+        if(!st.m || fresh){ if(fresh) st.m = null; st.mbusy = 'Το bot διαβάζει τα απεσταλμένα του Kerio…'; pg.redraw(); } else { st.mchk = 1; pg.redraw(); }
         const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_orpdf', name:'🗓 Πρόγραμμα από mail '+st.iso, room:null, kind:'kmail', payload:{op:'orpdf', date:st.iso, only:'bmw51nismmo82h', quiet:true}, status:'new'}).select('id').single(); if(ins.error) throw ins.error;
         const id = ins.data.id; let j = null;
         for(let i=0;i<90 && !j;i++){ await new Promise(r=>setTimeout(r, 2000)); const q = await sb6.from('oncall_jobs').select('status,note,payload').eq('id', id).maybeSingle();
-          if(q.data && /^(done|failed|cancelled|dismissed)$/.test(q.data.status)) j = q.data; else if(q.data && q.data.note){ st.mbusy = String(q.data.note).slice(0,90); pg.redraw(); } }
+          if(q.data && /^(done|failed|cancelled|dismissed)$/.test(q.data.status)) j = q.data; else if(q.data && q.data.note && st.mbusy){ st.mbusy = String(q.data.note).slice(0,90); pg.redraw(); } }
         if(!j) throw new Error('το bot δεν απάντησε σε 3′'); if(j.status!=='done') throw new Error(j.note||'απέτυχε');
         const res = j.payload.result || {};
-        if(res.none){ st.m = {none:true, seen:res.seen||[]}; }
-        else { st.mbusy = 'Αποκρυπτογράφηση…'; pg.redraw();
-          const dl = await sb6.storage.from('img-enc').download(id+'/0.bin'); if(dl.error) throw new Error(dl.error.message); const bin = await dl.data.arrayBuffer();
-          await showMail(res.idx, bin); pdxBxCache.put(ck, {idx:res.idx, bin});
+        if(res.none){ if(!st.m) st.m = {none:true, seen:res.seen||[]}; }
+        else { let same = false; try{ same = !!st.mSig && mailSig(await pdxCK.decrypt(res.idx)) === st.mSig && st.m && st.m.files; }catch(e){}
+          if(same){ pdxBxCache.get(ck).then(c=>pdxBxCache.put(ck, Object.assign({}, c || {}, {idx:res.idx}))); }
+          else { if(st.mbusy) { st.mbusy = 'Αποκρυπτογράφηση…'; pg.redraw(); }
+            const dl = await sb6.storage.from('img-enc').download(id+'/0.bin'); if(dl.error) throw new Error(dl.error.message); const bin = await dl.data.arrayBuffer();
+            await showMail(res.idx, bin); pdxBxCache.put(ck, {idx:res.idx, bin}); }
+          sb6.storage.from('img-enc').upload(mfPath(), new Blob([JSON.stringify({idx:res.idx, at:Date.now()})], {type:'application/json'}), {upsert:true}).then(()=>{},()=>{});
           sb6.storage.from('img-enc').remove([id+'/0.bin']).then(()=>{},()=>{}); sb6.from('oncall_jobs').update({status:'dismissed'}).eq('id', id).then(()=>{}); }
-      }catch(e){ st.merr = e.message || String(e); }
-      st.mbusy = ''; pg.redraw(); };
+      }catch(e){ if(!st.m) st.merr = e.message || String(e); }
+      st.mbusy = ''; st.mchk = 0; pg.redraw(); };
     const fit = ()=>{ const pv = pg.el.querySelector('.ors-pv'), pa = pv && pv.querySelector('.ors-page'); if(!pa) return;
       if(st.zoom){ pa.style.transform = ''; pv.style.height = ''; return; }
       pa.style.minHeight = Math.round(pa.offsetWidth * 210 / 297)+'px';   // αναλογία Α4 οριζόντιο
