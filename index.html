@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v641';
+const APP_VER = '2026-11-20-v642';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15233,9 +15233,15 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const L = live.data || [];
     if(!L.some(x=>x.kind==='npslist')){ await sb6.from('oncall_jobs').insert({name_key:'zzz_npslist', name:'Ασθενείς ΝΠΣ 3449', room:null, kind:'npslist', payload:{dpt:'3449', quiet:true, auto:true}, status:'new'}); return; }
     // 🔪 14/11 (χρήστης: «επεμβάσεις ΝΠΣ → τη μέρα της επέμβασης + ειδοποίηση πρακτικού»): 13:00 ανάγνωση, 20:00 ανάγνωση + 🔔 όσοι χειρουργήθηκαν σήμερα χωρίς πρακτικό
-    try{ const hh = new Date().getHours(); if(hh >= 13 && Array.isArray(NB.rows) && NB.rows.length){ const s0 = new Date(); s0.setHours(hh >= 20 ? 20 : 13, 0, 0, 0);
+    // 🔪 20/11 18:09 (χρήστης: «δεν ενημερώθηκαν τα σημερινά χειρουργεία να πάνε Χ0»): η ανάγνωση γινόταν ΜΟΝΟ 13:00 και 20:00 — τα χειρουργεία/πρακτικά
+    // μετά τις 13:00 έμεναν «Προς …» ως το βράδυ. Τώρα και 15:00/17:00/19:00, ΜΟΝΟ για όσους περιμένουν επέμβαση («Προς …» ή με επέμβαση) — 20:00 όλη η λίστα
+    try{ const hh = new Date().getHours(); if(hh >= 13 && Array.isArray(NB.rows) && NB.rows.length){ const slot = hh >= 20 ? 20 : hh >= 19 ? 19 : hh >= 17 ? 17 : hh >= 15 ? 15 : 13, s0 = new Date(); s0.setHours(slot, 0, 0, 0);
       const q = await sb6.from('oncall_jobs').select('id,status').eq('kind','npsops').gte('created_at', s0.toISOString()).limit(3);
-      if(!(q.data||[]).length){ const N = NB.rows.map(r=>r.name).slice(0,45), CH = [];   // 🔪 15/11 17:03: ΟΧΙ 31 ασθενείς σε μία εργασία (κόλλησε >240″ σε ΟΛΑ τα bots) → κομμάτια των 5
+      let N0 = NB.rows.map(r=>r.name);
+      if(slot !== 13 && slot !== 20){ const T = todayISO(), want = new Set(); [data, extraPatients].forEach(st=>Object.keys(st||{}).forEach(k=>{ const d = st[k]; if(!d || !d.name) return; const pod = String(d.pod||'').trim();
+          if((/^Προς/i.test(pod) || (!pod && d.surgery)) && d.podAuto !== 'nps:'+T) want.add(nbNz(d.name)); }));
+        N0 = N0.filter(n=>want.has(nbNz(n))); }
+      if(!(q.data||[]).length && N0.length){ const N = N0.slice(0,45), CH = [];   // 🔪 15/11 17:03: ΟΧΙ 31 ασθενείς σε μία εργασία (κόλλησε >240″ σε ΟΛΑ τα bots) → κομμάτια των 5
         // ⏳ 18/11 14:39 (χρήστης: «γιατί τα εξιτήρια περιμένουν τον υπολογιστή;» — 9 κομμάτια npsops πήραν ΚΑΙ τους 5 υπολογιστές για ~3′): το παρασκήνιο
         // πηγαίνει ΜΟΝΟ σε 2 υπολογιστές (Γωνιακός, Εξωτερικά) με σειρά — Παράθυρο/Μεσαίος/Πόρτα μένουν ελεύθεροι για εξιτήρια/συνταγές/παραγγελίες
         const BG = ['bmw51yicermfhw','bmwammethy0htb'];
