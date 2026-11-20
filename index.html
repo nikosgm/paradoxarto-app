@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v631';
+const APP_VER = '2026-11-20-v632';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26290,7 +26290,7 @@ window.CLS_MODE='A';
     const neg = /αρνητ|στε[ίι]ρ|δεν\s+αναπτ|δεν\s+απομον|no\s+growth|negative/i;
     const pos = /θετικ|positive|cfu|10\^?[45]|100\.?000|αναπτ[υύ]χθηκ|απομον[ωώ]θηκ|coli|klebs|proteus|pseudom|enteroc|staph|strept|candida|acinet|serrat|morgan|citrob|enterob|μύκητ|μυκητ/i;
     const posParts = parts.filter(x=>pos.test(x) && !/^(δεν|ουδεμ)/i.test(x) && !(neg.test(x) && !/θετικ|cfu|coli|klebs/i.test(x)));
-    if(posParts.length){ const bug = posParts.find(x=>!/^θετικ\S*$/i.test(x)) || posParts[0]; return {k:'pos', txt: bug.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').replace(/\s*\([^)]*cfu[^)]*\)/gi,'').replace(/[<>≥≤]?\s*[\d.,^]+\s*cfu(\s*\/\s*ml)?/gi,'').replace(/\s+/g,' ').trim().replace(/\b([A-Z][a-z]{2,})\s+([a-z]{3,})\b/g, (m,g,sp)=>window.pdxBugAbbr(g, sp)).slice(0,90) || 'θετική'}; }   // 18/11 08:06 (χρήστης: «μη γράφεις τα cfu») · 08:09 «και συντομογραφίες π.χ. enter. faec.»
+    if(posParts.length){ const bug = posParts.find(x=>!/^θετικ\S*$/i.test(x)) || posParts[0]; return {k:'pos', txt: bug.replace(/^(θετικ\S*|positive)\s*[:·-]?\s*/i,'').replace(/\s*\([^)]*cfu[^)]*\)/gi,'').replace(/[<>≥≤]?\s*[\d.,^]+\s*cfu(\s*\/\s*ml)?/gi,'').replace(/[,;·]?\s*[ιίΙ]διο\s+στ[εέ]λεχος[^,;·]*/gi,'').replace(/\s+/g,' ').trim().replace(/[,;·]\s*$/,'').replace(/\b([A-Z][a-z]{2,})\s+([a-z]{3,})\b/g, (m,g,sp)=>window.pdxBugAbbr(g, sp)).slice(0,90) || 'θετική'}; }   // 18/11 08:06 (χρήστης: «μη γράφεις τα cfu») · 08:09 «και συντομογραφίες π.χ. enter. faec.»
     if(parts.length && parts.some(x=>neg.test(x))) return {k:'neg'};
     return {k:'?', txt: all.slice(0,60)}; };
   // ⌛ 18/11 07:01 (χρήστης: «αν κάποια καλλιέργεια είναι πάνω από 10 ημέρες να μας το λες»): ηλικία δείγματος (ημ/νία δείγματος ή στήλης) → «⚠ N ημερών»
@@ -26342,7 +26342,12 @@ window.CLS_MODE='A';
     for(const x of it){ const L = lines.length ? lines[lines.length-1] : null; if(L && Math.abs(L.v - x.v) < 0.007){ L.it.push(x); } else lines.push({v:x.v, it:[x]}); }
     const used = new Set(), out = [];
     for(const L of lines){ const words = ORN(L.it.sort((a,b)=>a.u-b.u).map(x=>x.s).join(' ')).split(' '); const j = orPick(list, words, used); if(j < 0) continue;
-      used.add(j); out.push({v: L.it.reduce((s,x)=>s+x.v, 0)/L.it.length, p: list[j], x: L.it[0].u}); }
+      used.add(j); L.took = 1; out.push({v: L.it.reduce((s,x)=>s+x.v, 0)/L.it.length, p: list[j], x: L.it[0].u}); }
+    // 🛏 20/11 14:10 (χρήστης: «δεν έχεις βάλει σε όλους»): όποιο όνομα δεν διαβάστηκε → από τον ΘΑΛΑΜΟ (π.χ. 342-1) στην αρχή της γραμμής
+    list.forEach((p, j)=>{ if(used.has(j)) return; const m = String(p.room||'').match(/^\s*(\d{3})\s*[-–.\/ ]?\s*(\d)\s*$/); if(!m) return;
+      const rx = new RegExp('(^|[^\\d.])'+m[1]+'\\s*[-–.,_/]?\\s*'+m[2]+'(?![\\d.,/])');
+      const L = lines.find(L=>!L.took && rx.test(L.it.slice().sort((a,b)=>a.u-b.u).slice(0, 2).map(x=>x.s).join(' '))); if(!L) return;
+      used.add(j); L.took = 1; out.push({v: L.it.reduce((s,x)=>s+x.v, 0)/L.it.length, p, x: L.it[0].u}); });
     // 📐 20/11 13:55: θέση ΜΟΝΟ από το πλέγμα του πίνακα (pdxOrGrid)· κουτάκι κολλητά αριστερά από το περίγραμμα, στο κέντρο της γραμμής του ασθενή,
     // ύψος = 80% της γραμμής (μία σειρά κειμένου). Χωρίς πλέγμα → στο περιθώριο της σελίδας, στο ύψος του ονόματος.
     const G = T.find(t=>t.s === '__grid');
@@ -26365,8 +26370,8 @@ window.CLS_MODE='A';
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
-        if(m.h > 0){ const t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''), wq = m.x > 0 ? Math.min(9, Math.max(5, m.x*94.5 + 5.5 - .8)) : 5;
-          return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:'+(m.x > 0 ? '.08' : '.35')+'cqw;top:'+(m.v*100).toFixed(2)+'%;height:'+(m.h*92).toFixed(2)+'%;transform:translateY(-50%);width:'+wq.toFixed(2)+'cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:3px;background:#fff;color:'+col+';font:700 .68cqw/1 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:0 .25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="overflow:hidden;text-overflow:ellipsis">'+E2(t1)+'</span></div>'; }
+        if(m.h > 0){ const t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''), wq = m.x > 0 ? Math.min(5.2, Math.max(4, m.x*94.5 + 5.5 - .8)) : 4.6, fz = Math.max(.3, Math.min(.68, (wq - .45)/(Math.max(1, t1.length)*.53)));   /* 20/11 14:10: στενότερο· μεγάλο κείμενο → μικρότερα γράμματα */
+          return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:'+(m.x > 0 ? '.08' : '.35')+'cqw;top:'+(m.v*100).toFixed(2)+'%;height:'+(m.h*92).toFixed(2)+'%;transform:translateY(-50%);width:'+wq.toFixed(2)+'cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:3px;background:#fff;color:'+col+';font:700 '+fz.toFixed(3)+'cqw/1 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:0 .2em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="overflow:hidden;text-overflow:ellipsis">'+E2(t1)+'</span></div>'; }
         return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:.35cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:5cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 .78cqw/1.1 Calibri,Arial,sans-serif;text-align:center;padding:.15em .2em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
       + '</div></div>'; };
   // σελίδα εκτύπωσης: κάθε σελίδα του PDF (ή ο πίνακας του Excel) μικραίνει σε Α4 οριζόντιο με τα κουτάκια αριστερά
@@ -26421,8 +26426,8 @@ window.CLS_MODE='A';
       const bw = tw*SW - 6, fs = 13; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
       for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue;
         if(m.h > 0){ const rh = m.h*ih, f1 = Math.max(8, Math.min(13, rh*0.62)), bh1 = Math.max(f1 + 4, rh*0.92), col = COL[k.cls]||'#000';
-          const bw1 = m.x > 0 ? Math.max(bw, Math.min(bw*1.8, ix + m.x*iw - 4 - ox)) : bw, bx1 = m.x > 0 ? ix + m.x*iw - bw1 - 3 : ox, by1 = Math.max(iy + m.v*ih - bh1/2, yEnd + 1);
-          let t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''); x.font = '700 '+f1.toFixed(1)+'px Arial'; while(t1.length > 3 && x.measureText(t1).width > bw1 - 8) t1 = t1.slice(0, -2) + '…';
+          const bw1 = m.x > 0 ? Math.min(bw*0.95, ix + m.x*iw - 4 - ox) : bw*0.95, bx1 = m.x > 0 ? ix + m.x*iw - bw1 - 3 : ox, by1 = Math.max(iy + m.v*ih - bh1/2, yEnd + 1);
+          let t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''); let f2 = f1; x.font = '700 '+f2.toFixed(1)+'px Arial'; while(f2 > 6 && x.measureText(t1).width > bw1 - 6){ f2 -= 0.5; x.font = '700 '+f2.toFixed(1)+'px Arial'; } while(t1.length > 3 && x.measureText(t1).width > bw1 - 6) t1 = t1.slice(0, -2) + '…';
           x.fillStyle = '#fff'; x.strokeStyle = col; x.lineWidth = 2; x.beginPath(); if(x.roundRect) x.roundRect(bx1, by1, bw1, bh1, 4); else x.rect(bx1, by1, bw1, bh1); x.fill(); x.stroke();
           x.fillStyle = col; x.fillText(t1.replace(/……$/, '…'), bx1 + bw1/2, by1 + bh1/2 + 0.5); yEnd = by1 + bh1; continue; }
         const L = [[k.t, COL[k.cls]||'#000']]; if(k.note) L.push([k.note, '#333']); if(k.fun) L.push(['Μύκητες', '#C62828']);
