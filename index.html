@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v630';
+const APP_VER = '2026-11-20-v631';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26302,15 +26302,27 @@ window.CLS_MODE='A';
   // και "μύκητες" αν έχει· το ίδιο και στην προεπισκόπηση, να αλλάζει μόνο του όταν αλλάζει καλλιέργεια»)
   const ORN = t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[0-9]+/g,' ').replace(/[^A-ZΑ-Ω ]/g,' ').replace(/\s+/g,' ').trim();
   // περιστροφή κανονικοποιημένων θέσεων (όπως το orRotate: δεξιόστροφα)
-    // 📐 20/11 13:50 (χρήστης: «καθόλου καλό»): η ΑΚΡΙΒΗΣ αριστερή γραμμή του πίνακα από τα pixel — από κάθε θάλαμο («342-1») προς τα αριστερά,
-  // η 1η σκούρα κάθετη γραμμή (περίγραμμα κελιού). Διάμεσος όλων → {s:'__edge', u} στο κείμενο της σελίδας.
-  window.pdxOrEdge = (cv, T)=>{ try{ const RM = /^(\d{3}-\d|ΕΞΩΤ|ΕΚΤ)/i, R = (T||[]).filter(t=>RM.test(String(t.s).trim()) && t.u > 0.03 && t.u < 0.6); if(!R.length) return T;
-      const W = cv.width, H = cv.height, g = cv.getContext('2d'), xs = [];
-      for(const r of R.slice(0, 20)){ const x1 = Math.round(r.u*W) - 2, x0 = Math.max(0, x1 - Math.round(0.15*W)), y = Math.round(r.v*H), h = 7;
-        if(y - h < 0 || y + h >= H || x1 <= x0) continue; const d = g.getImageData(x0, y - h, x1 - x0, 2*h + 1).data, w = x1 - x0;
-        for(let x = w - 1; x >= 0; x--){ let dark = 0; for(let k = 0; k <= 2*h; k++){ const o = (k*w + x)*4; if(0.3*d[o] + 0.59*d[o+1] + 0.11*d[o+2] < 110) dark++; } if(dark >= 2*h - 1){ xs.push((x0 + x)/W); break; } } }
-      if(xs.length < Math.min(2, R.length)) return T; xs.sort((a,b)=>a-b); const e = xs[Math.floor(xs.length/2)];
-      return T.filter(t=>t.s !== '__edge').concat([{s:'__edge', u:e, v:-1}]); }catch(e){ return T; } };
+    // 📐 20/11 13:55 (χρήστης, φωτο: «ρε τι σκατά κάνεις» — τα κουτάκια έπεσαν ΜΕΣΑ στον πίνακα): ΤΕΛΟΣ οι εκτιμήσεις από το κείμενο του OCR.
+  // Το ΠΛΕΓΜΑ του πίνακα από τα pixel: αριστερό περίγραμμα = 1η ψηλή συνεχής κάθετη γραμμή από την οποία ξεκινούν ≥3 οριζόντιες γραμμές·
+  // όρια γραμμών = οι οριζόντιες γραμμές δεξιά του. «Σκούρο» σε σχέση με τη γειτονιά (σκιές/μουαρέ). Χωρίς πλέγμα → κουτάκια στο περιθώριο (όπως αρχικά).
+  window.pdxOrGrid = (cv)=>{ try{
+    const W = cv.width, H = cv.height, d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+    const Y = new Uint8Array(W*H); for(let i = 0, j = 0; i < d.length; i += 4, j++) Y[j] = 0.3*d[i] + 0.59*d[i+1] + 0.11*d[i+2];
+    // «σκούρο» σε σχέση με τη γειτονιά (16px): ανθεκτικό σε σκιές/φωτογραφία οθόνης
+    const S = 8, bw = Math.ceil(W/S), bh = Math.ceil(H/S), bg = new Float32Array(bw*bh);
+    for(let by = 0; by < bh; by++) for(let bx = 0; bx < bw; bx++){ let m = 0; for(let y = by*S; y < Math.min(H, by*S+S); y++) for(let x = bx*S; x < Math.min(W, bx*S+S); x++) if(Y[y*W+x] > m) m = Y[y*W+x]; bg[by*bw+bx] = m; }
+    const bgAt = (x, y)=>{ const bx = Math.min(bw-1, x/S|0), by = Math.min(bh-1, y/S|0); let m = 0; for(let j = -2; j <= 2; j++) for(let i = -2; i <= 2; i++){ const X = bx+i, Yy = by+j; if(X >= 0 && X < bw && Yy >= 0 && Yy < bh && bg[Yy*bw+X] > m) m = bg[Yy*bw+X]; } return m; };
+    const L = new Uint8Array(W*H); for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){ const v = Y[y*W+x]; L[y*W+x] = v < 0.62*bgAt(x, y) ? 1 : 0; }
+    const xm = Math.floor(W*0.7), minLen = H*0.12, span = Math.max(20, Math.round(W*0.05));
+    const run = (x)=>{ let best = 0, cur = 0, gap = 0, top = 0, bt = 0, bb = 0; for(let y = 0; y < H; y++){ const o = y*W; let k = 0; for(let dx = -2; dx <= 2; dx++){ const xx = x+dx; if(xx >= 0 && xx < W && L[o+xx]){ k = 1; break; } }
+        if(k){ if(!cur) top = y; cur++; gap = 0; if(cur > best){ best = cur; bt = top; bb = y; } } else if(cur && ++gap > 3){ cur = 0; gap = 0; } } return {len: best, top: bt, bot: bb}; };
+    const rows = (bx, r)=>{ const ys = []; for(let y = r.top; y <= r.bot; y++){ let n = 0; for(let x = bx + 3; x < bx + 3 + span && x < W; x++){ if(L[y*W+x] || (y > 0 && L[(y-1)*W+x]) || (y < H-1 && L[(y+1)*W+x])) n++; } if(n >= span*0.75) ys.push(y); }
+      const M = []; for(const y of ys){ if(M.length && y - M[M.length-1][1] <= 3) M[M.length-1][1] = y; else M.push([y, y]); } return M.map(([a, b])=>(a+b)/2); };
+    const cnt = new Int32Array(xm); for(let y = 0; y < H; y++){ const o = y*W; for(let x = 0; x < xm; x++) cnt[x] += L[o+x]; }
+    for(let x = 2; x < xm; x++){ if(cnt[x] < minLen) continue; const r = run(x); if(r.len < minLen) continue; const ys = rows(x, r); if(ys.length >= 3) return { x: x/W, top: r.top/H, bot: r.bot/H, ys: ys.map(y=>y/H) }; x += 3; }
+    return null;
+  }catch(e){ return null; } };
+  window.pdxOrEdge = (cv, T)=>{ const g = window.pdxOrGrid(cv); const T0 = (T||[]).filter(t=>t.s !== '__grid' && t.s !== '__edge'); return g ? T0.concat([{s:'__grid', u:g.x, v:-1, ys:g.ys, top:g.top, bot:g.bot}]) : T0; };
   window.pdxOrRotTxt = function(T, deg){ const q = ((deg % 360) + 360) % 360; if(!q || !T) return T || []; T = T.filter(t=>t.s !== '__edge');   // το περίγραμμα δεν περιστρέφεται (ξαναβρίσκεται από τους θαλάμους)
     return T.map(t=>({s:t.s, u: q===90 ? 1-t.v : q===180 ? 1-t.u : t.v, v: q===90 ? t.u : q===180 ? 1-t.v : 1-t.u})); };
   // κείμενο κουτιού: (-) · μόνο ο α/α αν εκκρεμεί · (+) μικρόβιο · + «Μύκητες»
@@ -26331,21 +26343,14 @@ window.CLS_MODE='A';
     const used = new Set(), out = [];
     for(const L of lines){ const words = ORN(L.it.sort((a,b)=>a.u-b.u).map(x=>x.s).join(' ')).split(' '); const j = orPick(list, words, used); if(j < 0) continue;
       used.add(j); out.push({v: L.it.reduce((s,x)=>s+x.v, 0)/L.it.length, p: list[j], x: L.it[0].u}); }
-    // 📐 20/11 13:45 (χρήστης, φωτο: «καθόλου καλό · το πρώτο πιάνει 3 σειρές»): κάθε γραμμή του πίνακα έχει 2 σειρές (όνομα + αριθμός) και ο ΘΑΛΑΜΟΣ
-    // («342-1») είναι στο ΚΕΝΤΡΟ της γραμμής, σε άλλο ύψος από το όνομα → (α) αριστερή άκρη πίνακα = θέση των θαλάμων, (β) κουτάκι στο ύψος του θαλάμου
-    // της ίδιας γραμμής, (γ) ύψος κουτιού = απόσταση από τους διπλανούς θαλάμους (πριν: άκρη = 1η λέξη της σειράς του ονόματος = 3η στήλη, πάνω στην ημερομηνία)
-    const ROOM = /^(\d{3}-\d|ΕΞΩΤ|ΕΞΩ|ΕΚΤ)/i;
-    const rooms = T.filter(t=>ROOM.test(String(t.s).trim()) && t.u < 0.6).sort((a,b)=>a.v-b.v);
-    let x0 = 0; const EDG = T.find(t=>t.s === '__edge');
-    if(EDG && EDG.u > 0.03){ x0 = EDG.u + 0.006; }   // ακριβές περίγραμμα από τα pixel (το −0.006 παρακάτω → κουτάκι κολλητά στη γραμμή)
-    else if(rooms.length >= 2){ const us = rooms.map(r=>r.u).sort((a,b)=>a-b); x0 = us[Math.floor(us.length*0.25)]; }
-    else { const v0 = Math.min(...out.map(o=>o.v)) - 0.03, v1 = Math.max(...out.map(o=>o.v)) + 0.03, us = T.filter(t=>t.v >= v0 && t.v <= v1 && t.u > 0.02).map(t=>t.u).sort((a,b)=>a-b); x0 = us.length ? us[Math.floor(us.length*0.03)] : 0; }
-    const rv = rooms.filter(r=>Math.abs(r.u - x0) < 0.06).map(r=>r.v);
+    // 📐 20/11 13:55: θέση ΜΟΝΟ από το πλέγμα του πίνακα (pdxOrGrid)· κουτάκι κολλητά αριστερά από το περίγραμμα, στο κέντρο της γραμμής του ασθενή,
+    // ύψος = 80% της γραμμής (μία σειρά κειμένου). Χωρίς πλέγμα → στο περιθώριο της σελίδας, στο ύψος του ονόματος.
+    const G = T.find(t=>t.s === '__grid');
     const dv = []; for(let i = 1; i < lines.length; i++){ const d = lines[i].v - lines[i-1].v; if(d > 0.006 && d < 0.08) dv.push(d); } dv.sort((a,b)=>a-b);
-    const rh0 = dv.length ? Math.min(0.05, Math.max(0.012, dv[Math.floor(dv.length/2)])) : 0;
-    out.forEach(o=>{ o.x = x0 > 0.03 ? x0 - 0.006 : 0; o.h = rh0;
-      if(rv.length){ let bi = -1, bd = 1; rv.forEach((v, i)=>{ const d = Math.abs(v - o.v); if(d < bd){ bd = d; bi = i; } });
-        if(bi >= 0 && bd < 0.035){ o.v = rv[bi]; const g = [bi > 0 ? rv[bi] - rv[bi-1] : 1, bi < rv.length-1 ? rv[bi+1] - rv[bi] : 1].filter(x=>x > 0.008 && x < 0.1); if(g.length) o.h = Math.min(...g) * 0.8; } } });
+    const rh0 = dv.length ? Math.min(0.03, Math.max(0.012, dv[Math.floor(dv.length/2)])) : 0.015;
+    out.forEach(o=>{ o.h = rh0; o.x = 0;
+      if(G && G.u > 0.02){ o.x = G.u - 0.002; const ys = (G.ys||[]).slice().sort((a,b)=>a-b); let a0 = -1, b0 = -1; for(let i = 1; i < ys.length; i++) if(ys[i-1] <= o.v && o.v < ys[i]){ a0 = ys[i-1]; b0 = ys[i]; break; }
+        if(a0 >= 0 && b0 - a0 > 0.006 && b0 - a0 < 0.12){ o.v = (a0 + b0)/2; o.h = Math.min(0.03, (b0 - a0)*0.8); } } });
     return out; };
   // Excel (πίνακας): μέτρηση θέσης κάθε γραμμής ονόματος σε κρυφή απόδοση
   const XLM = {};
@@ -26360,8 +26365,8 @@ window.CLS_MODE='A';
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
-        if(m.h > 0){ const t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''), wq = m.x > 0 ? Math.min(14, Math.max(5, m.x*94.5 + 5.5 - .8)) : 5;
-          return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:.35cqw;top:'+(m.v*100).toFixed(2)+'%;height:'+(m.h*92).toFixed(2)+'%;transform:translateY(-50%);width:'+wq.toFixed(2)+'cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:3px;background:#fff;color:'+col+';font:700 .68cqw/1 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:0 .25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="overflow:hidden;text-overflow:ellipsis">'+E2(t1)+'</span></div>'; }
+        if(m.h > 0){ const t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''), wq = m.x > 0 ? Math.min(9, Math.max(5, m.x*94.5 + 5.5 - .8)) : 5;
+          return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:'+(m.x > 0 ? '.08' : '.35')+'cqw;top:'+(m.v*100).toFixed(2)+'%;height:'+(m.h*92).toFixed(2)+'%;transform:translateY(-50%);width:'+wq.toFixed(2)+'cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:3px;background:#fff;color:'+col+';font:700 .68cqw/1 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:0 .25em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="overflow:hidden;text-overflow:ellipsis">'+E2(t1)+'</span></div>'; }
         return '<div style="position:absolute;'+(m.x > 0 ? 'right:'+((1-m.x)*100).toFixed(2)+'%' : 'right:100%')+';margin-right:.35cqw;top:'+(m.v*100).toFixed(2)+'%;transform:translateY(-50%);width:5cqw;box-sizing:border-box;border:1px solid '+col+';border-radius:4px;background:#fff;color:'+col+';font:700 .78cqw/1.1 Calibri,Arial,sans-serif;text-align:center;padding:.15em .2em;-webkit-print-color-adjust:exact;print-color-adjust:exact">'+E2(k.t)+(k.note?'<div style="color:#333;font-weight:600;font-size:.9em">'+E2(k.note)+'</div>':'')+(k.fun?'<div style="color:#C62828">Μύκητες</div>':'')+'</div>'; }).join('')
       + '</div></div>'; };
   // σελίδα εκτύπωσης: κάθε σελίδα του PDF (ή ο πίνακας του Excel) μικραίνει σε Α4 οριζόντιο με τα κουτάκια αριστερά
@@ -26416,7 +26421,7 @@ window.CLS_MODE='A';
       const bw = tw*SW - 6, fs = 13; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
       for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue;
         if(m.h > 0){ const rh = m.h*ih, f1 = Math.max(8, Math.min(13, rh*0.62)), bh1 = Math.max(f1 + 4, rh*0.92), col = COL[k.cls]||'#000';
-          const bw1 = m.x > 0 ? Math.max(bw, Math.min(bw*2.6, ix + m.x*iw - 6 - ox)) : bw, bx1 = m.x > 0 ? ix + m.x*iw - bw1 - 6 : ox, by1 = Math.max(iy + m.v*ih - bh1/2, yEnd + 1);
+          const bw1 = m.x > 0 ? Math.max(bw, Math.min(bw*1.8, ix + m.x*iw - 4 - ox)) : bw, bx1 = m.x > 0 ? ix + m.x*iw - bw1 - 3 : ox, by1 = Math.max(iy + m.v*ih - bh1/2, yEnd + 1);
           let t1 = k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : ''); x.font = '700 '+f1.toFixed(1)+'px Arial'; while(t1.length > 3 && x.measureText(t1).width > bw1 - 8) t1 = t1.slice(0, -2) + '…';
           x.fillStyle = '#fff'; x.strokeStyle = col; x.lineWidth = 2; x.beginPath(); if(x.roundRect) x.roundRect(bx1, by1, bw1, bh1, 4); else x.rect(bx1, by1, bw1, bh1); x.fill(); x.stroke();
           x.fillStyle = col; x.fillText(t1.replace(/……$/, '…'), bx1 + bw1/2, by1 + bh1/2 + 0.5); yEnd = by1 + bh1; continue; }
