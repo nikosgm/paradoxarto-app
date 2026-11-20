@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v634';
+const APP_VER = '2026-11-20-v635';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25389,6 +25389,9 @@ window.histUploadOpen = function(){
     b.querySelector('[data-no]').onclick = ()=>b.remove();
     b.querySelector('[data-ok]').onclick = async ()=>{ try{ await approve(r.id); b.remove(); toast('✓ Εγκρίθηκε: '+(r.label||'συσκευή')); await loadRows(); }catch(e){ toast('⚠ '+(e.message||e)); } };
     document.body.appendChild(b); }
+  // 🔔 20/11 14:40: ήδη ανοιχτές έμπιστες συσκευές (χωρίς ξαναφόρτωση) βλέπουν το αίτημα μέσα σε ~1′
+  setInterval(async ()=>{ try{ if(!S.key || !S.raw || document.hidden || typeof sb6==='undefined') return; await loadRows(); const u1 = await uid();
+      const pend = S.rows.filter(r=>r.kind==='device' && !r.wrapped && r.pub && r.user_id===u1 && Date.now() - Date.parse(r.created_at) < 48*3600e3); if(pend.length) ckPendBanner(pend); }catch(e){} }, 60000);
   async function requestApproval(){ if(S.me) return S.me.id; const id = await insertDevice(null); await refresh(); return id; }
   // 🔐 14/11 (χρήστης: «λείπει μια έγκριση στη συσκευή του christos»): το αίτημα έγκρισης γινόταν ΜΟΝΟ με το χέρι (Ρυθμίσεις → Κρυπτογράφηση → Αίτημα)·
   // όποιος δεν το πατούσε δεν εμφανιζόταν ποτέ στη λίστα. Τώρα: νέα συσκευή με ρόλο → αίτημα ΑΥΤΟΜΑΤΑ μία φορά, ~8″ μετά τη σύνδεση.
