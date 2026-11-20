@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v618';
+const APP_VER = '2026-11-20-v619';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -15418,6 +15418,22 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     const k = nbKey(r); mobOpen(k || nbTemp(r)); });
   window.pdxNpsCount = function(){ if(!NB.rows){ nbLoad(false); return null; } return NB.rows.length; };
   window.pdxNpsCount = ()=>{ if(Array.isArray(NB.rows)) return NB.rows.length; if(!NB.busy && !window.__npsCntAsk){ window.__npsCntAsk = 1; try{ nbLoad(false).then(()=>{ try{ if(Array.isArray(NB.rows) && typeof render==='function') render(); }catch(e){} }); }catch(e){} } return 0; };   // 14/11 21:53: πόσους έχει η λίστα ΝΠΣ (η βασική λίστα)
+  // 🏥 20/11 07:00 (χρήστης, ξανά: «η κύρια λίστα είναι του ΝΠΣ»): επιλογή ασθενών με ΚΥΡΙΑ πηγή τη λίστα ΝΠΣ (3449).
+  // Κάθε γραμμή ΝΠΣ → το κλειδί του Παραδόχαρτου αν υπάρχει (θεράπων/ΑΜΚΑ/κρεβάτι), αλλιώς 'nps:<όνομα>'. Χωριστά: όσοι είναι ΜΟΝΟ στο Παραδόχαρτο.
+  // null = δεν υπάρχει ακόμα λίστα ΝΠΣ (τότε ο καλών δείχνει το Παραδόχαρτο ΜΕ προειδοποίηση).
+  const nbKeyOf = (r, used)=>{ const t = nbNz(r.name).split(' '); let hit = null;
+    [[data||{}, false], [extraPatients||{}, true]].some(([S])=>Object.keys(S).some(k=>{ const d = S[k]; if(!d || used.has(k) || d._npsTemp || !String(d.name||'').trim()) return false;
+      let ok = !!(r.am && d.am && String(d.am)===String(r.am)); if(!ok){ const u = nbNz(d.name).split(' '); const [a, b] = u.length <= t.length ? [u, t] : [t, u]; ok = a.length && a.every((w, i)=>b[i] && (b[i]===w || (w.length>=4 && b[i].startsWith(w)) || (b[i].length>=4 && w.startsWith(b[i])))); }
+      if(ok) hit = k; return ok; })); return hit; };
+  window.pdxNpsPrimaryPts = async ()=>{ try{ if(!Array.isArray(NB.rows) || !NB.rows.length || Date.now()-NB.at > 10*60000) await nbLoad(true); }catch(e){}
+    if(!Array.isArray(NB.rows) || !NB.rows.length) return null;
+    const used = new Set(), rows = npsSort(NB.rows.slice()).map(r=>{ const x = NB.enr[nbNz(r.name)] || {}, k = nbKeyOf(r, used); if(k) used.add(k);
+      const d = k ? ((String(k).indexOf('extra')===0 ? extraPatients : data)[k] || {}) : {};
+      return {k: k || 'nps:'+r.name, name: r.name, amka: d.amka || x.amka || r.amka || '', am: d.am || x.am || r.am || '', bed: k && String(k).indexOf('extra')!==0 ? k : '', inPdx: !!k, ad: nAdmTxt(r)}; });
+    const only = []; [[data||{}], [extraPatients||{}]].forEach(([S])=>Object.keys(S).forEach(k=>{ const d = S[k]; if(d && !used.has(k) && !d._npsTemp && String(d.name||'').trim()) only.push({k, name:d.name, amka:d.amka||'', am:d.am||'', bed: String(k).indexOf('extra')===0 ? '' : k}); }));
+    return {rows, only, at: NB.listAt||0}; };
+  window.pdxNpsRec = k=>{ const name = String(k).replace(/^nps:/,''), r = (NB.rows||[]).find(z=>z.name===name) || {name}, x = NB.enr[nbNz(name)] || {};
+    return {name, am: x.am || r.am || '', amka: /^\d{11}$/.test(String(x.amka||r.amka||'')) ? String(x.amka||r.amka) : ''}; };
   window.pdxNpsBulkList = function(){ if(!NB.rows){ nbLoad(false); return []; } return nbMiss().map(r=>{ const x = NB.enr[nbNz(r.name)] || {}; return {k:'nps:'+r.name, nps:true, d:{name:r.name, am:x.am||r.am||'', amka:x.amka||r.amka||''}}; }); };
   // προσωρινή καρτέλα (δεν αποθηκεύεται) — ή μόνιμη «Εκτός θαλάμου» όταν πρέπει να κρατηθεί κάτι (εκκρεμότητα)
   window.pdxNpsKey = function(k, permanent){
@@ -21759,7 +21775,8 @@ window.pdxNpsMedsMulti = function(k){
   return pg;
 };
 window.pdxMedPackRun = function(k, items, packName){
-  const ptRec = kk=>kk==null ? null : (String(kk).indexOf('extra')===0 ? extraPatients : data)[kk];
+  // 20/11 07:00: και ασθενείς ΜΟΝΟ της λίστας ΝΠΣ ('nps:<όνομα>') — η λίστα ΝΠΣ είναι η κύρια
+  const ptRec = kk=>kk==null ? null : String(kk).indexOf('nps:')===0 ? (window.pdxNpsRec ? pdxNpsRec(kk) : {name:String(kk).slice(4)}) : (String(kk).indexOf('extra')===0 ? extraPatients : data)[kk];
   if(k!=null && !ptRec(k)) return;   // 20/11: χωρίς ασθενή (από «📦 Πακέτα») → ξεκινά με την επιλογή ασθενών ανοιχτή
   const E5 = s=>String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const nrm3 = x=>String(x||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
@@ -21769,8 +21786,17 @@ window.pdxMedPackRun = function(k, items, packName){
     return {it, drug: m ? m[1].trim() : String(it.n||''), form: m ? m[2].trim() : '', product: m ? m[3].trim() : '', skip: why, st:'', note:'', res:null, saved:false}; });
   const mkP = kk=>({k:kk, L:mkL(), busy:'', msg:''});
   const st = {doc: (ptRec(k) && TF[ptRec(k).therapist]) || docs[0] || '', busy:0, pick:k==null, T:mkL(), P:k==null ? [] : [mkP(k)]};
-  const allPts = ()=>{ const o = []; [[data,false],[extraPatients,true]].forEach(([D])=>Object.keys(D||{}).forEach(kk=>{ const r = D[kk]; if(r && String(r.name||'').trim()) o.push({k:kk, r}); }));
+  // 🏥 20/11 07:00 (χρήστης: «η κύρια λίστα είναι του ΝΠΣ»): ΠΡΩΤΑ η λίστα νοσηλευομένων ΝΠΣ, μετά (χωριστά) όσοι είναι μόνο στο Παραδόχαρτο.
+  // Πριν: ΜΟΝΟ data + extraPatients (Παραδόχαρτο) → οι ασθενείς του ΝΠΣ που δεν είχαν περαστεί δεν φαίνονταν καθόλου.
+  st.L = null; st.Lbusy = false;
+  const pdxOnly = ()=>{ const o = []; [data, extraPatients].forEach(D=>Object.keys(D||{}).forEach(kk=>{ const r = D[kk]; if(r && !r._npsTemp && String(r.name||'').trim()) o.push({k:kk, name:r.name, amka:r.amka||'', bed:String(kk).indexOf('extra')===0?'':kk}); }));
     return o.sort((a,b)=>String(a.k).localeCompare(String(b.k), 'el', {numeric:true})); };
+  const loadL = async ()=>{ if(st.Lbusy) return; st.Lbusy = true; pg && pg.redraw && pg.redraw();
+    let R = null; try{ R = window.pdxNpsPrimaryPts ? await pdxNpsPrimaryPts() : null; }catch(e){}
+    st.L = R || {rows:null, only:pdxOnly(), at:0}; st.Lbusy = false; pg.redraw(); };
+  const ptRow = (o, inP)=>{ const on = inP.has(o.k), P0 = on && st.P.find(P=>P.k===o.k), lock = P0 && P0.L.some(x=>x.saved);
+    const sub = [o.bed ? 'Κρ. '+o.bed : (String(o.k).indexOf('nps:')===0 ? 'μόνο ΝΠΣ' : 'εκτός θαλάμου'), o.ad ? 'εισ. '+o.ad : '', o.amka ? 'ΑΜΚΑ ••••'+String(o.amka).slice(-4) : ''].filter(Boolean).join(' · ');
+    return '<div data-ptog="'+E5(o.k)+'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;min-height:44px;border-bottom:1px solid #E5E7EB;cursor:pointer'+(lock?';opacity:.6':'')+'"><span style="font-size:20px">'+(on?'☑':'☐')+'</span><span style="flex:1"><b>'+E5(o.name)+'</b><br><span style="font-size:12.5px;color:#6B7280">'+E5(sub)+'</span></span></div>'; };
   const todoOf = P=>P.L.filter(x=>!x.skip);
   const BTN = (attr, bg, txt, dis)=>'<button '+attr+(dis?' disabled':'')+' style="display:block;width:calc(100% - 32px);margin:8px 16px 4px;min-height:48px;border:0;border-radius:12px;background:'+(dis?'#9CA3AF':bg)+';color:#fff;font-weight:700;font-size:15.5px">'+txt+'</button>';
   const pg = iosPage('📦 '+(packName||'Πακέτο')+' · ΝΠΣ', '', ()=>{
@@ -21782,8 +21808,12 @@ window.pdxMedPackRun = function(k, items, packName){
     const inP = new Set(st.P.map(P=>P.k));
     h += '<div class="ios-h">Ασθενείς ('+st.P.length+')</div>';
     h += '<button data-ppick '+(st.busy?'disabled':'')+' style="display:block;width:calc(100% - 32px);margin:4px 16px 6px;min-height:42px;border:1px solid #0A84FF;border-radius:12px;background:#fff;color:#0A84FF;font-weight:700;font-size:15px">'+(st.pick?'✓ Τέλος επιλογής':'☑ Επιλογή ασθενών από τη λίστα')+'</button>';
-    if(st.pick) h += '<div class="ios-g">'+allPts().map(o=>{ const on = inP.has(o.k), lock = on && st.P.find(P=>P.k===o.k).L.some(x=>x.saved);
-      return '<div data-ptog="'+E5(o.k)+'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;min-height:44px;border-bottom:1px solid #E5E7EB;cursor:pointer'+(lock?';opacity:.6':'')+'"><span style="font-size:20px">'+(on?'☑':'☐')+'</span><span style="flex:1"><b>'+E5(o.r.name)+'</b><br><span style="font-size:12.5px;color:#6B7280">'+E5(String(o.k).indexOf('extra')===0?'εκτός θαλάμου':o.k)+(o.r.amka?' · ΑΜΚΑ ••••'+E5(String(o.r.amka).slice(-4)):'')+'</span></span></div>'; }).join('')+'</div>';
+    if(st.pick){ if(!st.L){ h += '<div style="margin:8px 16px;font-size:14px;color:#6B7280">⏳ Φόρτωση λίστας νοσηλευομένων ΝΠΣ…</div>'; if(!st.Lbusy) setTimeout(loadL, 0); }
+      else { const Ls = st.L;
+        if(Ls.rows){ const hh = Ls.at ? new Date(Ls.at) : null;
+          h += '<div class="ios-h">🏥 Νοσηλευόμενοι ΝΠΣ ('+Ls.rows.length+')'+(hh?' · λίστα '+String(hh.getHours()).padStart(2,'0')+':'+String(hh.getMinutes()).padStart(2,'0'):'')+'</div><div class="ios-g">'+Ls.rows.map(o=>ptRow(o, inP)).join('')+'</div>';
+          if(Ls.only.length) h += '<div class="ios-h">Μόνο στο Παραδόχαρτο — όχι στη λίστα ΝΠΣ ('+Ls.only.length+')</div><div class="ios-g">'+Ls.only.map(o=>ptRow(o, inP)).join('')+'</div>'; }
+        else h += '<div style="margin:6px 16px;font-size:13.5px;color:#B45309">⚠ Δεν υπάρχει ακόμα λίστα ΝΠΣ — δείχνω το Παραδόχαρτο. Φέρε τη λίστα από «Ασθενείς ΝΠΣ».</div><div class="ios-g">'+Ls.only.map(o=>ptRow(o, inP)).join('')+'</div>'; } }
     // ανά ασθενή: κατάσταση φαρμάκων + Καταχώριση (μία έγκριση ΑΝΑ ασθενή)
     if(!st.P.length) h += '<div style="margin:6px 16px;font-size:14px;color:#B45309">Τσέκαρε ασθενείς από τη λίστα για να ξεκινήσει ο έλεγχος.</div>';
     st.P.forEach((P, pi)=>{ const r = ptRec(P.k) || {}, todo = todoOf(P), ok = todo.filter(x=>x.st==='ok' && !x.saved), done = todo.filter(x=>x.saved), left = todo.filter(x=>!x.saved);
@@ -21800,7 +21830,7 @@ window.pdxMedPackRun = function(k, items, packName){
     return h + '<div style="height:40px"></div>'; });
   // μία εργασία npsmedpack για έναν ασθενή (έλεγχος ή καταχώριση)
   const run = async (P, appr)=>{ const rec = ptRec(P.k); if(!rec){ P.msg = 'ο ασθενής δεν υπάρχει πια στη λίστα'; return; }
-    const isX = String(P.k).indexOf('extra')===0, sel = todoOf(P).filter(x=>!x.saved && (appr ? (x.st==='ok' && x.res && x.res.form) : x.st!=='ok'));
+    const isX = String(P.k).indexOf('extra')===0 || String(P.k).indexOf('nps:')===0, sel = todoOf(P).filter(x=>!x.saved && (appr ? (x.st==='ok' && x.res && x.res.form) : x.st!=='ok'));
     if(!sel.length) return;
     sel.forEach(x=>{ if(!appr){ x.st=''; x.note=''; x.res=null; } });
     const payload = {name:rec.name||'', amka:String(rec.amka||'').replace(/\D/g,''), doctor:nrm3(String(st.doc).trim().split(/\s+/).pop()), pack:packName||'', quiet:true,
