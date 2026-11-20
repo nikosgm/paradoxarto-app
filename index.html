@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v620';
+const APP_VER = '2026-11-20-v621';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17557,7 +17557,12 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 📲 14/11 23:01 (χρήστης: «μόλις ανεβάσω συνταγή/παραπεμπτικό, κουμπί που με πάει κατευθείαν στην έγκριση»): άνοιγμα ενός «📷 Από σάρωση» απευθείας
   window.pdxScanRxOpen = async function(x){ const p = x.payload || {};
     // 🗓 16/11: χειρόγραφο πρόχειρο προγράμματος από τη Σάρωση → πρόγραμμα χειρουργείου της ημέρας (γραφόμενης ή επόμενης εργάσιμης) με τους ασθενείς
-    if(p.mode==='ordraft'){ const o = p.ordraft || {}, m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(o.date||'').trim()); const iso = m ? (m[3].length===2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : undefined; return window.pdxOrProgOpen(iso, {rows: o.rows||[]}); }
+    if(p.mode==='ordraft'){ const o = p.ordraft || {}, m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(o.date||'').trim()); const iso = m ? (m[3].length===2?'20'+m[3]:m[3])+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : undefined;
+      // 📅 20/11 (χρήστης: «πάτησα ανέβασμα πρόχειρο, το πήρε αλλά δεν το αποθήκευσε» — ΕΙΧΕ αποθηκευτεί, στην Παρ 27/11 που διάβασε η σάρωση· ο χρήστης
+      // κοίταζε το επόμενο πρόγραμμα): ημερομηνία χαρτιού ≠ επόμενο πρόγραμμα → ερώτηση σε ποια μέρα (ποτέ σιωπηλά σε άλλη μέρα)
+      let tgt = ''; try{ const t = window.pdxOrTarget(); tgt = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); }catch(e){}
+      if(iso && tgt && iso !== tgt) return window.pdxOrDraftDate(iso, tgt).then(d=>d && window.pdxOrProgOpen(d, {rows: o.rows||[]}));
+      return window.pdxOrProgOpen(iso || undefined, {rows: o.rows||[]}); }
     if(p.mode==='opnote') return window.pdxOpNoteFromScan({src:'paradoxarto-op', patient:p.patient||{}, opnote:p.opnote||{}});
     // 🔁 18/11 18:25 (χρήστης: «έστειλα παραπεμπτικό και δεν το κατάλαβε καθόλου» — έλειπε ο κατάλογος e-prescription → ΟΛΑ «δεν βρέθηκαν» και πετιούνταν):
     // ό,τι δεν αντιστοιχίστηκε (ή όλα, αν η αντιστοίχιση δεν έτρεξε) ξαναπερνά ΤΩΡΑ από τον κατάλογο πριν ανοίξει η Συνταγογράφηση
@@ -26724,6 +26729,15 @@ window.CLS_MODE='A';
       try{ localStorage.setItem(K, String(now)); }catch(e){}
       await pdxOrSchedPut({iso, none:true, list:[], at:now});   // «ψάχνει τώρα» → οι άλλες συσκευές περιμένουν 30′
       const o = await pdxOrSchedFetch(iso); await pdxOrSchedPut(Object.assign({}, o, {at:Date.now()})); }catch(e){} finally{ orBgBusy = false; } }, 5*60000);
+  // 📅 20/11: σε ποια μέρα μπαίνει το πρόχειρο από τη σάρωση (ημερομηνία χαρτιού ή επόμενο πρόγραμμα) → Promise<iso|null>
+  window.pdxOrDraftDate = (a, b)=>new Promise(res=>{ const D = ['Κυρ','Δευ','Τρι','Τετ','Πεμ','Παρ','Σαβ'], L = x=>{ const d = new Date(x+'T12:00:00'); return D[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1); };
+    const ov = document.createElement('div'); ov.id = 'orDraftDate'; ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center';
+    const dk = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+    const bt = (v, t, sub, pri)=>'<button data-od="'+v+'" style="display:block;width:100%;min-height:52px;margin-top:8px;border:0;border-radius:14px;font-size:16.5px;font-weight:700;background:'+(pri?'#0A84FF':(dk?'#2C2C2E':'#EEF1F5'))+';color:'+(pri?'#fff':(dk?'#fff':'#111'))+'">'+t+(sub?'<br><span style="font-size:13px;font-weight:500;opacity:.8">'+sub+'</span>':'')+'</button>';
+    ov.innerHTML = '<div style="width:100%;max-width:460px;margin:0 auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0;background:'+(dk?'#1C1C1E':'#fff')+';color:'+(dk?'#fff':'#111')+'">'
+      + '<b style="font-size:18px">🗓 Σε ποιο πρόγραμμα να μπει το πρόχειρο;</b><div style="font-size:14px;opacity:.75;margin-top:4px">Η σάρωση διάβασε ημερομηνία <b>'+L(a)+'</b>.</div>'
+      + bt(b, 'Επόμενο πρόγραμμα · '+L(b), '', true) + bt(a, 'Όπως γράφει το χαρτί · '+L(a), '') + bt('', 'Ακύρωση', '') + '</div>';
+    ov.onclick = e=>{ const x = e.target.closest('[data-od]'); if(!x && e.target !== ov) return; ov.remove(); res(x ? (x.dataset.od || null) : null); }; document.body.appendChild(ov); });
   window.pdxOrProgOpen = async function(date, opts){
     const ld = src=>new Promise((ok, no)=>{ const s = document.createElement('script'); s.src = src+'?v='+encodeURIComponent(typeof APP_VER !== 'undefined' ? APP_VER : '213'); s.onload = ok; s.onerror = ()=>no(new Error('δεν φόρτωσε το '+src)); document.head.appendChild(s); });
     try{ if(!window.ORP_DATA) await ld('orprog-data.js'); if(!window.pdxOrProg) await ld('orprog.js'); if(!window.PRAKTIKA) await ld('praktika-data.js').catch(()=>{}); if(!window.pdxOpNote) await ld('praktika.js').catch(()=>{});

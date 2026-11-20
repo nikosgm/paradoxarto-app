@@ -171,6 +171,44 @@
     for (const c of ((window.ORP_DATA || {}).codes || [])) { const sc = pkHit(toks, c.d + " " + c.c + " " + c.s); if (sc >= 0) out.push({ x: { dx: "", t: UP(c.d) + " " + c.c, code: c.c, sub: c.s }, sc }); }
     // κωδικός που γράφεται ΙΔΙΟΣ με έτοιμο σετ ή με άλλον κωδικό → μία φορά
     const seen = new Set(); return out.sort((a, b) => b.sc - a.sc).filter((o) => { const k = NZ(o.x.t) + "|" + NZ(o.x.dx); if (seen.has(k) || (!o.x.dx && [...seen].some((s0) => s0.split("|")[0] === NZ(o.x.t)))) return false; seen.add(k); return true; }).slice(0, max || 40).map((o) => o.x); };
+  // 🗓 20/11 (χρήστης: «το πρόχειρο το καταλαβαίνει με πολλά λάθη — ό,τι μοιάζει με κάτι να το βάζει · ό,τι γράφουμε υπάρχει στη βάση μας ·
+  // φτιάξε αρχείο αντιστοίχισης να ανατρέχει»): (α) αρχείο or-proc-alias.json (tools/oralias.js) + μαθημένα oncall_labs «orprog|alias»
+  // (κάθε διόρθωση/✓ σε γραμμή από σάρωση) · (β) ανεκτικό ταίριασμα: η ΠΙΟ ΚΟΝΤΙΝΗ επέμβαση του καταλόγου (γράμματα/συντομογραφίες).
+  const ALIAS = { m: {}, at: 0 };
+  const aliasLoad = async () => { if (Date.now() - ALIAS.at < 60000) return ALIAS.m; ALIAS.at = Date.now(); const m = {};
+    try { const r = await fetch("or-proc-alias.json?v=" + Math.floor(Date.now() / 600000)); if (r.ok) { const j = await r.json(); for (const [k, v] of Object.entries(Object.assign({}, j.alias || {}, j.learned || {}))) m[NZ(k)] = v; } } catch (e) {}
+    try { const r = await SB().from("oncall_labs").select("data").eq("name_key", "orprog|alias").maybeSingle(); const a = (r.data && r.data.data && r.data.data.a) || {}; for (const [k, v] of Object.entries(a)) if (v && v.t) m[NZ(k)] = v.t; } catch (e) {}
+    ALIAS.m = m; return m; };
+  const aliasLearn = async (raw, t) => { const k = NZ(raw); if (!k || k.length < 2 || !t || ALIAS.m[k] === t) return; ALIAS.m[k] = t;
+    try { const r = await SB().from("oncall_labs").select("data").eq("name_key", "orprog|alias").maybeSingle(); const d = (r.data && r.data.data) || {}; d.a = d.a || {};
+      d.a[k] = { t, raw: String(raw).slice(0, 80), n: ((d.a[k] || {}).n || 0) + 1, at: Date.now() };
+      await SB().from("oncall_labs").upsert({ name_key: "orprog|alias", name: "🗓 Αντιστοιχίσεις επεμβάσεων (χαρτί → κατάλογος)", pid: null, data: d, updated_at: new Date().toISOString() }, { onConflict: "name_key" }); } catch (e) {} };
+  window.__orpAlias = ALIAS; window.__orpAliasLoad = aliasLoad;
+  const pkLev = (a, b) => { if (Math.abs(a.length - b.length) > 6) return 99; let p = Array.from({ length: b.length + 1 }, (_, j) => j); for (let i = 1; i <= a.length; i++) { const q = [i]; for (let j = 1; j <= b.length; j++) q[j] = Math.min(p[j] + 1, q[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = q; } return p[b.length]; };
+  const pkSim = (a, b) => { if (!a || !b) return 0; const sh = Math.min(a.length, b.length), lo = Math.max(a.length, b.length);
+    if (sh >= 3 && (b.indexOf(a) === 0 || a.indexOf(b) === 0) && (a.length <= b.length ? true : sh / lo >= 0.6)) return 0.92;   /* συντομογραφία του χαρτιού = αρχή λέξης του σετ (όχι το ανάποδο με μικρή λέξη, π.χ. «ΟΥΡ.») */
+    const d = pkLev(a, b); return Math.max(0, 1 - d / Math.max(a.length, b.length)); };
+  // η ΠΙΟ ΚΟΝΤΙΝΗ επέμβαση: κάθε λέξη του χαρτιού (ή η επέκτασή της, π.χ. TURB → ΔΙΟΥΡΗΘΡ+ΚΥΣΤ) με την πιο κοντινή λέξη του σετ · μέσος όρος → {x, sc 0–1}
+  const pkBest = (q) => { const toks = UP(q).split(/[^A-ZΑ-Ω0-9]+/).filter((t) => t.length >= 2 && !PKSIDE[t] && !/^\d+$/.test(t)); if (!toks.length) return null;
+    const cand = [...PK().map((x) => ({ x, h: x.t + " " + x.dx })), ...(((window.ORP_DATA || {}).codes) || []).map((c) => ({ x: { dx: "", t: UP(c.d) + " " + c.c, code: c.c, sub: c.s }, h: c.d + " " + c.s, cd: 1 }))];
+    let best = null;
+    for (const c of cand) { const W = UP(c.h).split(/[^A-ZΑ-Ω0-9]+/).filter((w) => w.length >= 2 && !/^\d+$/.test(w)).map(NZ); if (!W.length) continue;
+      let tot = 0; for (const t of toks) { const alts = PKSYN[t.replace(/\./g, "")] || [t]; tot += alts.reduce((s0, a) => s0 + Math.max(...W.map((w) => pkSim(NZ(a), w))), 0) / alts.length; }
+      const sc = tot / toks.length - (c.cd ? 0.03 : 0); if (!best || sc > best.sc) best = { x: c.x, sc }; }
+    return best; };
+  window.__orpBest = (q) => pkBest(q);
+  // γραμμή χαρτιού → σετ: αρχείο αντιστοίχισης → επιλογή του καταλόγου από τη σάρωση («χαρτί => κατάλογος») → αναζήτηση → πιο κοντινό
+  const procResolve = (pq0) => { const s0 = String(pq0 || "").trim(); if (!s0) return null; const ix = s0.indexOf("=>"); const raw = (ix >= 0 ? s0.slice(0, ix) : s0).trim(), can = ix >= 0 ? s0.slice(ix + 2).trim() : "";
+    const bySet = (t) => PK().find((y) => NZ(y.t) === NZ(t)) || null;
+    const noSide = UP(raw).split(/[^A-ZΑ-Ω0-9]+/).filter((t) => t && !PKSIDE[t]).join("");
+    const al = ALIAS.m[NZ(raw)] || ALIAS.m[noSide];
+    if (al) { const k = bySet(al) || pkFind(al, 1)[0]; if (k) return { k, raw, how: "alias", sure: true }; }
+    if (can) { const k = bySet(can) || pkFind(can, 1)[0]; if (k) { const k2 = raw ? pkFind(raw, 1)[0] : null; return { k, raw, how: "cat", sure: !!(k2 && NZ(k2.t) === NZ(k.t)) }; } }
+    if (raw) { const k = pkFind(raw, 1)[0]; if (k) return { k, raw, how: "find", sure: true }; }
+    const B = [can && pkBest(can), raw && pkBest(raw)].filter(Boolean).sort((a, b) => b.sc - a.sc)[0];
+    if (B && B.sc >= 0.5) return { k: B.x, raw, how: "fuzzy", sure: false, sc: B.sc };
+    return { k: null, raw }; };
+  window.__orpResolve = (q) => procResolve(q);
   const FULL = () => window.THERAPIST_FULL || { "Αν": "Αναστασίου", "Αδ": "Αδαμάκης", "Στρ": "Στραβοδήμος", "Φρ": "Φραγκιάδης", "Μουλ": "Μουλαβασίλης", "Λεβ": "Λεβής", "Δουρ": "Δουρούμης" };
   const surgeonOf = (t) => { const f = FULL()[t]; return f ? "κ " + UP(f) : ""; };
   const SURGEONS = () => Object.values(FULL()).map((f) => "κ " + UP(f));
@@ -285,7 +323,7 @@
       const c = e.target.closest("[data-cell]"); if (c) { const [pid, f] = c.dataset.cell.split("|"); const p = P.pts.find((x) => x.id === pid); if (p) edit(p, f); return; }
       const b = e.target.closest("button,[data-open]"); if (!b) return; const ds = b.dataset;
       if (ds.man) { addManual(ds.man); return; }
-      if (ds.wok) { const p = P.pts.find((x) => x.id === ds.wok); if (p) { delete p.warn; touch(); } return; }
+      if (ds.wok) { const p = P.pts.find((x) => x.id === ds.wok); if (p) { if (p.praw && p.t) aliasLearn(p.praw, p.t); delete p.warn; touch(); } return; }   // ✓ = σωστή αντιστοίχιση → μαθαίνεται
       if (ds.kind) { switchKind(ds.kind); return; }
       if (ds.rmp) { e.stopPropagation(); const p = P.pts.find((x) => x.id === ds.rmp); if (!p) return; clearTimeout(rmT);
         if (rmArm === ds.rmp) { removePt(p); return; } rmArm = ds.rmp; redraw(); rmT = setTimeout(() => { rmArm = ""; redraw(); }, 4000); return; }
@@ -384,8 +422,10 @@
         p.room = room; p.n = P.pts.filter((q) => q.room === room).length + 1;
         const warn = [];
         // επέμβαση: από τη φωτογραφία (υπερισχύει της συντομογραφίας του Παραδόχαρτου), αλλιώς ό,τι έφερε ο ασθενής
-        const pq = String(x.proc || "").trim();
-        if (pq) { const k = pkFind(pq, 1)[0]; if (k) { p.t = k.t; if (k.dx) { p.dx = k.dx; p.bl = k.bl || ""; p.ca = k.ca || ""; } if (k.an) p.an = k.an; } else warn.push("επέμβαση «" + pq + "» χωρίς σετ"); }
+        const pq0 = String(x.proc || "").trim(), R = procResolve(pq0), pq = R ? R.raw : "";
+        if (R && R.k) { const k = R.k; p.t = k.t; if (k.dx) { p.dx = k.dx; p.bl = k.bl || ""; p.ca = k.ca || ""; } if (k.an) p.an = k.an; p.praw = R.raw;
+          if (!R.sure) warn.push("επέμβαση «" + R.raw + "» → «" + String(k.t).replace(/\s+\d{3}\.[\d.\/ +]*$/, "") + "» (πιο κοντινή — έλεγξε)"); }
+        else if (pq0) { p.praw = pq || pq0; warn.push("επέμβαση «" + (pq || pq0) + "» χωρίς σετ"); }
         const sd = SIDES.indexOf(String(x.side || "").toUpperCase()) > 0 ? String(x.side).toUpperCase() : pkSide(pq); if (sd) p.side = sd;
         if (/^ΤΟΠ/i.test(String(x.an || ""))) p.an = "ΤΟΠΙΚΗ"; else if (/^ΓΕΝ/i.test(String(x.an || ""))) p.an = "ΓΕΝΙΚΗ";
         const bl = String(x.blood || "").replace(/\D/g, ""); if (BLOOD.indexOf(bl) > 0) p.bl = bl;
@@ -447,7 +487,7 @@
       ov.addEventListener("click", (e) => {
         const b = e.target.closest("button"); if (!b) return; const d = b.dataset;
         if (d.x !== undefined) { ov.remove(); touch(); return; }
-        if (d.pki !== undefined) { const x = pkItems[+d.pki]; const sd = pkSide((ov.querySelector("[data-pkq]") || {}).value || ""); if (x) { if (sd && SIDES.indexOf(sd) >= 0) p.side = sd; p.t = x.t; if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; if (x.dx) { p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; autoSave(); render(); } return; }
+        if (d.pki !== undefined) { const x = pkItems[+d.pki]; const sd = pkSide((ov.querySelector("[data-pkq]") || {}).value || ""); if (x) { if (sd && SIDES.indexOf(sd) >= 0) p.side = sd; p.t = x.t; if (p.praw) { aliasLearn(p.praw, x.t); if (p.warn && /επέμβαση «/.test(p.warn)) { p.warn = p.warn.split(" · ").filter((w) => !/επέμβαση «/.test(w)).join(" · "); if (p.warn === "📷" || !p.warn.replace("📷", "").trim()) delete p.warn; } } if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; if (x.dx) { p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; autoSave(); render(); } return; }
         if (d.del !== undefined) { if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "Σίγουρα; Πάτα ξανά"; b.style.background = "#FF3B30"; b.style.color = "#fff"; setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "Αφαίρεση"; b.style.background = "#FDECEC"; b.style.color = "#B42318"; } }, 4000); return; }
           ov.remove(); removePt(p); return; }
         if (d.opn !== undefined && window.pdxOpNote) { const proc = [p.t, p.t2].filter(Boolean).join(" + ") || p.dx || ""; window.pdxOpNote({ name: p.nm, proc, side: p.side || "", surg: p.opsurg || "", text: p.opnote || "", onSave: (r) => { p.opnote = r.text; p.opsurg = r.surg; dirty = true; autoSave(); render(); touch(); } }); return; }
@@ -459,7 +499,7 @@
         else if (d.ca !== undefined) p.ca = p.ca ? "" : "ΝΑΙ";
         else if (d.sg) p.surg = d.sg;
         else if (d.t2x !== undefined) { p.t2 = ""; p.side2 = ""; }
-        else if (d.pk) { pkPick((x) => { if (d.pk === "2") { p.t2 = x.t; } else { p.t = x.t; if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; autoSave(); render(); }); return; }
+        else if (d.pk) { pkPick((x) => { if (d.pk === "2") { p.t2 = x.t; } else { p.t = x.t; if (p.praw) aliasLearn(p.praw, x.t); if (x.dx) p.dx = x.dx; if (x.an) p.an = x.an; p.bl = x.bl || ""; p.ca = x.ca || ""; } dirty = true; autoSave(); render(); }); return; }
         else return;
         dirty = true; autoSave(); render();
       });
@@ -545,7 +585,7 @@
       } catch (e) { alert("⚠ " + (e.message || e)); }
     }
     // 🗓 16/11: πρόχειρο από τη Σάρωση (scanrx «ordraft») → οι γραμμές μπαίνουν μόλις φορτώσει το πρόγραμμα της ημέρας + αυτόματη αποθήκευση
-    load(P.date, P.kind).then(async () => { if (opts0 && Array.isArray(opts0.rows) && opts0.rows.length) { const res = photoApply(opts0.rows); touch(); await saveNow(); photoReport(res); } });
+    load(P.date, P.kind).then(async () => { if (opts0 && Array.isArray(opts0.rows) && opts0.rows.length) { await aliasLoad(); const res = photoApply(opts0.rows); touch(); await saveNow(); photoReport(res); } });
     return pg;
   };
 })();
