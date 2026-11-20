@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v633';
+const APP_VER = '2026-11-20-v634';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25331,7 +25331,7 @@ window.histUploadOpen = function(){
           const alt = S.rows.find(r=>r.kind==='device' && r.fp===S.fp && r.user_id===u0);
           if(alt && alt.wrapped){ try{ await useRaw(await unwrapMine(alt.wrapped)); S.me = alt; await iput('devid', alt.id); healed = true; }catch(e2){} }
           if(!healed){ if(alt){ S.me = alt; await iput('devid', alt.id); } else { await iput('devid', null); S.me = null; try{ await insertDevice(null); await loadRows(); await findMe(); }catch(e3){} }
-            S.err = 'Η συσκευή (iOS/browser) έσβησε το κλειδί της. Στάλθηκε ΑΥΤΟΜΑΤΑ νέο αίτημα: πάτα «Έγκριση» στο μήνυμα που βγαίνει σε έναν υπολογιστή της κλινικής (ή Ρυθμίσεις → Ασφάλεια → Κρυπτογράφηση), ή βάλε τον κωδικό ανάκτησης.'; healed = true; } }
+            S.err = 'Η συσκευή (iOS/browser) έσβησε το κλειδί της. Στάλθηκε ΑΥΤΟΜΑΤΑ νέο αίτημα (αποτύπωμα '+S.fp+'): πάτα «Έγκριση» στο μήνυμα που βγαίνει σε έναν υπολογιστή της κλινικής (ή Ρυθμίσεις → Ασφάλεια → Κρυπτογράφηση), ή βάλε τον κωδικό ανάκτησης.'; healed = true; } }
         if(!healed) S.err = 'Το κλειδί αυτής της συσκευής δεν ανοίγει ('+(e.message||e)+'). Ζήτα ξανά έγκριση ή χρησιμοποίησε κωδικό ανάκτησης.'; } }
       // 🔔 20/11: έμπιστη συσκευή → μήνυμα (όχι παράθυρο που μπλοκάρει) για συσκευές του ΙΔΙΟΥ λογαριασμού που περιμένουν έγκριση
       if(S.key && S.raw){ try{ const u1 = await uid(); const pend = S.rows.filter(r=>r.kind==='device' && !r.wrapped && r.pub && r.user_id===u1 && Date.now() - Date.parse(r.created_at) < 48*3600e3); if(pend.length) ckPendBanner(pend); }catch(e){} }
@@ -25419,7 +25419,7 @@ window.histUploadOpen = function(){
   window.pdxCK = {
     // χωρίς κλειδί → ξαναδοκιμάζει (πριν: μια αποτυχία στην πρώτη φόρτωση, π.χ. πριν ετοιμαστεί η σύνδεση, έμενε «κλειδωμένο» μέχρι επανεκκίνηση)
     ready: async ()=>{ if(!S.loaded || (!S.key && Date.now()-(S.at||0) > 3000)) { S.at = Date.now(); await refresh(); } return S.key; },
-    why: ()=>S.err || (!S.cfg ? 'δεν υπάρχει κλειδί κλινικής' : !S.me ? 'η συσκευή δεν είναι καταχωρισμένη ('+devLabel()+')' : !S.me.wrapped ? 'περιμένει έγκριση' : ''),
+    why: ()=>S.err || (!S.cfg ? 'δεν υπάρχει κλειδί κλινικής' : !S.me ? 'η συσκευή δεν είναι καταχωρισμένη ('+devLabel()+')' : !S.me.wrapped ? 'περιμένει έγκριση (αποτύπωμα '+(S.me.fp||S.fp||'')+') — άνοιξε το Παραδόχαρτο σε υπολογιστή ή Mac που ήδη δουλεύει και πάτα «Έγκριση» στο μήνυμα 🔐 κάτω' : ''),
     has: ()=>!!S.key, kid: ()=>S.kid, configured: ()=>!!S.cfg,
     // 🖥 10/11 23:29: το bot ονομάζει τη συσκευή του Chrome του με το όνομα του υπολογιστή (bot_names) — μόνο αν έχει ακόμη γενικό όνομα
     me: ()=>S.me ? {id:S.me.id, label:S.me.label||'', fp:S.fp||''} : null,
