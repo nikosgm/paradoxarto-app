@@ -2591,7 +2591,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v652';
+const APP_VER = '2026-11-20-v653';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25805,6 +25805,16 @@ html.pdx-night #labsFull .lm-q input{background:transparent!important;color:#fff
 html.pdx-night #labsFull .lm-tw,html.pdx-night #labsFull .lm-xbtn,html.pdx-night #labsFull .lm-xl,html.pdx-night #labsFull .lm-xr{background:#1C1C1E!important;color:#F2F2F7!important;border-color:#38383A!important}
 html.pdx-night #labsFull .lm-t th,html.pdx-night #labsFull .lm-t td{background:#1C1C1E!important;color:#E5E5EA!important;border-color:#38383A!important}
 html.pdx-night #labsFull .lm-t tr.bad td{background:#2A2210!important}
+/* 20/11 22:10 (χρήστης: «στο dark mode δεν φαίνεται η διαφορά στα χθεσινά εργαστηριακά — μπερδεύομαι»): το παραπάνω color!important έσβηνε το γκρι των
+   παλαιότερων τιμών ΚΑΙ το κόκκινο των παθολογικών → όλα λευκά. Σκοτεινό: παθολογικά κόκκινα, παλαιότερη μέρα σβηστό γκρι (λεπτά γράμματα) */
+html.pdx-night #labsFull .lm-t td.up,html.pdx-night #labsFull .lm-t td.dn{color:#FF6B5E!important;font-weight:700}
+html.pdx-night #labsFull .lm-t td.old{color:#636366!important;font-weight:400!important}
+html.pdx-night #labsFull .lm-t td.old.up,html.pdx-night #labsFull .lm-t td.old.dn{color:#8E4A44!important;font-weight:400!important}
+html.pdx-night #labsFull .lm-t td.na{color:#48484A!important}
+html.pdx-night #labsFull .lm-t td.nr{color:#8E8E93!important}
+html.pdx-night #labsFull .lm-t td.c1 small.nw,html.pdx-night #labsFull .lm-t .nw{color:#30D158!important}
+html.pdx-night #labsFull .lf-tb td.v.old{color:#636366!important}html.pdx-night #labsFull .lf-tb td.v.old.up,html.pdx-night #labsFull .lf-tb td.v.old.dn{color:#8E4A44!important}
+html.pdx-night #labsFull .lf-tb td.v.old .ov,html.pdx-night #labsFull .lf-tb td.v.old .od{color:#636366!important}
 html.pdx-night #labsFull #lfMed{background:#2A2210!important;color:#FFD98A!important;border-color:#4A3A10!important}
 /* γενικοί κανόνες: παράθυρα/κάρτες με λευκό ή ανοιχτό φόντο γραμμένο inline */
 html.pdx-night [style*="background:#fff;"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#fff\""],html.pdx-night [style*="background:#FFF;"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background: #fff"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:#ffffff"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]),html.pdx-night [style*="background:white"]:not([style*="background:var(--mp"]):not([style*="background:#B42318"]):not([style*="background:#15803D"]){background:#1C1C1E!important;color:#F2F2F7!important}
