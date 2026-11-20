@@ -2586,7 +2586,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v648';
+const APP_VER = '2026-11-20-v649';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26433,7 +26433,7 @@ window.CLS_MODE='A';
       const ys = rows(bx, r); if(ys.length >= 3) return { x: bx/W, top: r.top/H, bot: r.bot/H, ys: ys.map(y=>y/H) }; x = bx + 3; }
     return null;
   }catch(e){ return null; } };
-  window.pdxOrEdge = (cv, T)=>{ const g = window.pdxOrGrid(cv); const T0 = (T||[]).filter(t=>t.s !== '__grid' && t.s !== '__edge'); return g ? T0.concat([{s:'__grid', u:g.x, v:-1, ys:g.ys, top:g.top, bot:g.bot}]) : T0; };
+  window.pdxOrEdge = (cv, T)=>{ const g = window.pdxOrGrid(cv); const T0 = (T||[]).filter(t=>t.s !== '__grid' && t.s !== '__edge'); return g ? T0.concat([{s:'__grid', u:g.x, v:-1, ys:g.ys, top:g.top, bot:g.bot, asp: cv.height/cv.width}]) : T0; };
   window.pdxOrRotTxt = function(T, deg){ const q = ((deg % 360) + 360) % 360; if(!q || !T) return T || []; T = T.filter(t=>t.s !== '__edge');   // το περίγραμμα δεν περιστρέφεται (ξαναβρίσκεται από τους θαλάμους)
     return T.map(t=>({s:t.s, u: q===90 ? 1-t.v : q===180 ? 1-t.u : t.v, v: q===90 ? t.u : q===180 ? 1-t.v : 1-t.u})); };
   // κείμενο κουτιού: (-) · μόνο ο α/α αν εκκρεμεί · (+) μικρόβιο · + «Μύκητες»
@@ -26505,7 +26505,7 @@ window.CLS_MODE='A';
       if(G && G.u > 0.02){ o.x = G.u - 0.002; const ys = (G.ys||[]).slice().sort((a,b)=>a-b); let a0 = -1, b0 = -1; for(let i = 1; i < ys.length; i++) if(ys[i-1] <= o.v && o.v < ys[i]){ a0 = ys[i-1]; b0 = ys[i]; break; }
         if(a0 >= 0 && b0 - a0 > 0.006 && b0 - a0 < 0.12){ o.v = (a0 + b0)/2; o.h = Math.min(0.03, (b0 - a0)*0.8); } } });
     // 📊 20/11 18:23 (χρήστης: «φτιάξε κελιά τέρμα αριστερά, δίπλα στον θάλαμο, ενσωματωμένα στον πίνακα, να αντιστοιχούν σε κάθε κελί του PDF»)
-    out.grid = (G && G.u > 0.02 && (G.ys||[]).length >= 3) ? {u:G.u, ys:(G.ys||[]).slice().sort((a,b)=>a-b)} : null;
+    out.grid = (G && G.u > 0.02 && (G.ys||[]).length >= 3) ? {u:G.u, ys:(G.ys||[]).slice().sort((a,b)=>a-b), asp: G.asp || 0.707} : null;
     return out; };
   // κελιά στήλης «Καλλιέργεια»: ένα ανά γραμμή του πλέγματος του PDF· σε κάθε κελί ο ασθενής της γραμμής
   window.pdxOrCultCells = function(M){ const g = M && M.grid; if(!g) return null; const ys = g.ys, H = []; for(let i = 1; i < ys.length; i++){ const a = ys[i-1], b = ys[i]; if(b - a > 0.004 && b - a < 0.15) H.push([a, b]); } if(!H.length) return null;
@@ -26523,14 +26523,17 @@ window.CLS_MODE='A';
   const MCOL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666'};
   window.pdxOrMarked = function(inner, marks, wpx){ const E2 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const C = window.pdxOrCultCells(marks);
-    if(C){ const g = marks.grid, cw = 7.2, L = (g.u*100 - cw);   // % του πλάτους της εικόνας
-      const cells = C.map((c)=>{ const k = c.m.length ? window.pdxOrMarkTxt(c.m[0].p) : null, col = k ? (MCOL[k.cls]||'#000') : '#000', t1 = k ? k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : '') : (c.head ? 'ΚΑΛΛΙΕΡΓ.' : '');
-        let fz = Math.max(.28, Math.min(1.05, (cw*0.945 - .5)/(Math.max(1, t1.length)*.55))), two = false;
-        // 20/11 21:12 (χρήστης): ό,τι δεν χωράει → ΔΥΟ σειρές αντί για μικρά γράμματα
-        let l1 = t1, l2 = '';
-        if(fz < 0.8 && /\s/.test(t1) && t1.length > 10){ const mid = t1.length/2, sp = [...t1.matchAll(/ · |\s/g)].map(m=>[m.index, m[0].length]).sort((a,b)=>Math.abs(a[0]-mid)-Math.abs(b[0]-mid) + (b[1]-a[1])*0.01)[0];
-          l1 = t1.slice(0, sp[0] + (sp[1] > 1 ? 2 : 0)).trim(); l2 = t1.slice(sp[0] + sp[1]).trim(); fz = Math.max(.28, Math.min(.9, (cw*0.945 - .5)/(Math.max(l1.length, l2.length)*.55))); two = true; }
-        return '<div style="position:absolute;left:'+L.toFixed(2)+'%;width:'+cw+'%;top:'+(c.a*100).toFixed(3)+'%;height:'+((c.b - c.a)*100).toFixed(3)+'%;box-sizing:border-box;border:0!important;border-left:1.5px solid #000!important;border-top:1.5px solid #000!important;'+(c===C[C.length-1]?'border-bottom:1.5px solid #000!important;':'')+'background:'+(c.thin ? '#C8C8C8' : '#fff')+'!important;color:'+col+'!important;font:'+(c.head ? 700 : 800)+' '+fz.toFixed(3)+'cqw/1.05 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 .25em;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:'+(two?2:1)+';overflow:hidden;white-space:nowrap;line-height:1.1">'+(two ? E2(l1)+'<br>'+E2(l2) : E2(t1))+'</span></div>'; }).join('');
+    if(C){ const g = marks.grid, cw = Math.max(6, Math.min(9, g.u*100 + 5.5)), L = (g.u*100 - cw);   // % του πλάτους της εικόνας
+      // 20/11 21:17 (χρήστης: «γραμματοσειρά σταθερή σε όλα όσο γίνεται»): ΕΝΑ μέγεθος για όλα τα κελιά, όσο μεγαλύτερο χωράει·
+      // ό,τι δεν χωράει σε μία σειρά → 2–3 σειρές στο ΙΔΙΟ μέγεθος· μόνο αν ούτε έτσι χωράει, μικραίνει ΑΥΤΟ το κελί
+      const AV = cw*0.945 - .6, CH = .52, ASP = g.asp || 0.707, txt = c=>{ const k = c.m.length ? window.pdxOrMarkTxt(c.m[0].p) : null; return {k, t1: k ? k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : '') : (c.head ? 'ΚΑΛΛΙΕΡΓ.' : '')}; };
+      const wrap = (t, f)=>{ const W = t.split(/\s+/), L = []; let cur = ''; for(const w of W){ const nx = cur ? cur+' '+w : w; if(nx.length*CH*f <= AV || !cur) cur = nx; else { L.push(cur); cur = w; } } if(cur) L.push(cur); return L; };
+      const fits = (c, t, f)=>{ const L = wrap(t, f), hc = (c.b - c.a)*ASP*100*0.945*0.9; return L.every(l=>l.length*CH*f <= AV) && L.length*f*1.12 <= hc && L.length <= 3; };
+      let FZ = 1.1; for(const c of C){ if(c.head) continue; const {t1} = txt(c); if(!t1) continue; while(FZ > .7 && !fits(c, t1, FZ)) FZ -= .05; }
+      const cells = C.map((c)=>{ const {k, t1} = txt(c), col = k ? (MCOL[k.cls]||'#000') : '#000';
+        let fz = FZ; if(c.head){ fz = Math.min(FZ, AV/(t1.length*CH)); } else { while(fz > .3 && t1 && !fits(c, t1, fz)) fz -= .05; }
+        const LN = c.head ? [t1] : wrap(t1, fz), two = LN.length > 1, l1 = LN.join('\n'), l2 = '';
+        return '<div style="position:absolute;left:'+L.toFixed(2)+'%;width:'+cw+'%;top:'+(c.a*100).toFixed(3)+'%;height:'+((c.b - c.a)*100).toFixed(3)+'%;box-sizing:border-box;border:0!important;border-left:1.5px solid #000!important;border-top:1.5px solid #000!important;'+(c===C[C.length-1]?'border-bottom:1.5px solid #000!important;':'')+'background:'+(c.thin ? '#C8C8C8' : '#fff')+'!important;color:'+col+'!important;font:'+(c.head ? 700 : 800)+' '+fz.toFixed(3)+'cqw/1.05 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 .25em;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;white-space:nowrap;line-height:1.12">'+LN.map(E2).join('<br>')+'</span></div>'; }).join('');
       return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff!important;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner+cells+'</div></div>'; }
     return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
@@ -26595,14 +26598,21 @@ window.CLS_MODE='A';
       const ox = M + (aw - tw)/2, ix = ox + tw*SW, iy = M; x.drawImage(img, ix, iy, iw, ih);
       const bw = tw*SW - 6, fs = 13; x.textAlign = 'center'; x.textBaseline = 'middle'; let yEnd = -1e9;
       const CC = window.pdxOrCultCells(marks);
-      if(CC){ const g = marks.grid, cwp = 0.072, x0 = ix + (g.u - cwp)*iw, x1 = ix + g.u*iw;
+      if(CC){ const g = marks.grid, cwp = Math.max(0.06, Math.min(0.09, g.u + 0.03)), x0 = ix + (g.u - cwp)*iw, x1 = ix + g.u*iw;
+        // 20/11 21:17: ΕΝΑ μέγεθος γραμμάτων για όλα τα κελιά (όσο γίνεται)
+        const tOf = c=>{ const k = c.m.length ? window.pdxOrMarkTxt(c.m[0].p) : null; return k ? k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : '') : ''; };
+        const fitW = (t, f)=>{ x.font = '800 '+f.toFixed(1)+'px Arial'; return x.measureText(t).width <= x1 - x0 - 6; };
+        const sp2 = t=>{ if(!/\s/.test(t)) return null; const mid = t.length/2, i = [...t.matchAll(/\s/g)].map(m=>m.index).sort((a,b)=>Math.abs(a-mid)-Math.abs(b-mid))[0]; return [t.slice(0, i).trim(), t.slice(i).trim()]; };
+        let FC = 15; for(const c of CC){ if(c.head) continue; const t = tOf(c); if(!t) continue; const hmax = Math.min(15, (c.b - c.a)*ih*0.5); let f = hmax;
+          while(f > 9 && !fitW(t, f)){ const s2 = sp2(t); if(s2 && fitW(s2[0], f) && fitW(s2[1], f) && f*2.2 <= (c.b - c.a)*ih) break; f -= 0.5; } FC = Math.min(FC, f); }
+        FC = Math.max(9, FC);
         for(const c of CC){ const y0 = iy + c.a*ih, y1 = iy + c.b*ih; x.fillStyle = c.thin ? '#C8C8C8' : '#fff'; x.fillRect(x0, y0, x1 - x0, y1 - y0); x.strokeStyle = '#000'; x.lineWidth = 2; x.beginPath(); x.moveTo(x1, y0); x.lineTo(x0, y0); x.lineTo(x0, y1); x.lineTo(x1, y1); x.stroke();
           const k = c.m.length ? window.pdxOrMarkTxt(c.m[0].p) : null, t1 = k ? k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : '') : (c.head ? 'ΚΑΛΛΙΕΡΓ.' : ''); if(!t1) continue;
-          const f0 = Math.max(7, Math.min(15, (y1 - y0)*0.5)); let f2 = f0; x.font = '800 '+f2.toFixed(1)+'px Arial'; while(f2 > 6 && x.measureText(t1).width > x1 - x0 - 6){ f2 -= 0.5; x.font = '800 '+f2.toFixed(1)+'px Arial'; }
+          const f0 = c.head ? Math.max(7, Math.min(15, (y1 - y0)*0.5)) : Math.min(FC, Math.max(7, (y1 - y0)*0.5)); let f2 = f0; x.font = '800 '+f2.toFixed(1)+'px Arial'; while(f2 > 6 && x.measureText(t1).width > x1 - x0 - 6){ f2 -= 0.5; x.font = '800 '+f2.toFixed(1)+'px Arial'; }
           x.fillStyle = k ? (COL[k.cls]||'#000') : '#000';
           // 20/11 21:12: δεν χωράει σε μία σειρά με κανονικά γράμματα → δύο σειρές (κόψιμο στο «·» ή στο κενό πιο κοντά στη μέση)
-          if(f2 < f0*0.8 && /\s/.test(t1)){ const sp = [...t1.matchAll(/\s/g)].map(m=>m.index), mid = t1.length/2, cut = sp.sort((a,b)=>Math.abs(a-mid)-Math.abs(b-mid))[0];
-            const l1 = t1.slice(0, cut).trim(), l2 = t1.slice(cut).trim(); let f3 = Math.min(f0, (y1 - y0)*0.42); x.font = '800 '+f3.toFixed(1)+'px Arial';
+          if(f2 < f0 && /\s/.test(t1)){ const sp = [...t1.matchAll(/\s/g)].map(m=>m.index), mid = t1.length/2, cut = sp.sort((a,b)=>Math.abs(a-mid)-Math.abs(b-mid))[0];
+            const l1 = t1.slice(0, cut).trim(), l2 = t1.slice(cut).trim(); let f3 = Math.min(f0, (y1 - y0)*0.45); x.font = '800 '+f3.toFixed(1)+'px Arial';
             while(f3 > 6 && Math.max(x.measureText(l1).width, x.measureText(l2).width) > x1 - x0 - 6){ f3 -= 0.5; x.font = '800 '+f3.toFixed(1)+'px Arial'; }
             const cy = (y0 + y1)/2; x.fillText(l1, (x0 + x1)/2, cy - f3*0.55); x.fillText(l2, (x0 + x1)/2, cy + f3*0.6); }
           else x.fillText(t1, (x0 + x1)/2, (y0 + y1)/2 + 0.5); }
