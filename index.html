@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v637';
+const APP_VER = '2026-11-20-v638';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -12776,6 +12776,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   // 👤 e-prescription: ΑΠΟ ΠΟΙΟΝ λογαριασμό (dropdown πάνω στη συνταγή) — οι λογαριασμοί που έχουν μάθει τα bot
   window.pdxEpAccHtml = ()=>'<div data-epacc style="margin:0 0 10px;padding:10px 12px;background:#F2F2F7;border-radius:12px"><div style="font-size:13px;font-weight:700;color:#475569;margin-bottom:6px">👤 Λογαριασμός e-prescription</div><select data-epsel2 style="width:100%;font-size:16px;padding:10px;border:0;border-radius:10px;background:#fff"><option value="">⏳ φόρτωση λογαριασμών…</option></select></div>';
   window.pdxEpAccGet = ov=>{ const el = (ov||document).querySelector('[data-epsel2]'); const u = el ? el.value : ''; try{ localStorage.setItem('pdx_ep_user', u); }catch(e){} return u; };
+  // 20/11 17:42 (χρήστης: «αλλάζω λογαριασμό συνταγογράφησης, βάζω ΑΜΚΑ και μου τον ξαναλλάζει»): η επιλογή αποθηκευόταν ΜΟΝΟ στην αποστολή·
+  // κάθε ξανα-σχεδίαση της σελίδας (π.χ. μετά τον ΑΜΚΑ) ξαναέφτιαχνε τη λίστα με τον ΠΑΛΙΟ λογαριασμό. Τώρα: αποθήκευση ΑΜΕΣΩΣ με την αλλαγή, παντού.
+  if(!window.__epAccPersist){ window.__epAccPersist = 1; document.addEventListener('change', e=>{ const t = e.target; if(t && t.matches && t.matches('[data-epsel2]')){ try{ localStorage.setItem('pdx_ep_user', t.value||''); }catch(x){} document.querySelectorAll('[data-epsel2]').forEach(o=>{ if(o!==t && [...o.options].some(op=>op.value===t.value)) o.value = t.value; }); } }, true); }
   window.pdxEpAccFill = async function(){
     const els = [...document.querySelectorAll('[data-epsel2]:not([data-f])')]; if(!els.length) return; els.forEach(e=>e.setAttribute('data-f','1'));
     const U = new Set();
