@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v623';
+const APP_VER = '2026-11-20-v624';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17220,7 +17220,9 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       sb6.from('oncall_jobs').insert({name_key:'zzz_rxname', name:'Α.Μ.Κ.Α. ··'+a.slice(-2), room:null, kind:'rxname', payload:{amka:a, quiet:true, prep:true}, status:'new'}).select('id').single().then(async r=>{ if(!(r && r.data)) return; const id = S.prepId = r.data.id; const j = await jobWait(id, 180000).catch(()=>null); const res = j && j.payload && j.payload.result;
         if(res && S.prepA===a){ (S.ayl = S.ayl || {})[a] = !!res.ayli; if(res.name && window.pdxAmkaNameSave) pdxAmkaNameSave(a, res.name, res.ayli); if(res.ayli){ if(S.k) draw(); else paintWho(a); } } }, ()=>{}); }catch(e){} }
     async function prepOnly(){ try{ if(!S.prepId || S.prepA!==prepAmka()) return {}; const q = await sb6.from('oncall_jobs').select('status,payload,created_at').eq('id', S.prepId).maybeSingle(); const j = q && q.data;
-      if(j && j.status==='done' && j.payload && /^b[a-z0-9]{10,16}$/.test(j.payload.bot||'') && Date.now()-Date.parse(j.created_at) < 6*60000) return {only:j.payload.bot}; }catch(e){} return {}; }
+      if(j && j.status==='done' && j.payload && /^b[a-z0-9]{10,16}$/.test(j.payload.bot||'') && Date.now()-Date.parse(j.created_at) < 6*60000) return {assign:j.payload.bot, assignAt:Date.now()}; }catch(e){} return {}; }
+    // ⚡ 20/11 (χρήστης: «να δουλεύουν πολλοί ταυτόχρονα»): ο υπολογιστής που ετοίμασε τον ασθενή είναι ΠΡΟΤΙΜΗΣΗ (assign, 5″), όχι υποχρέωση (only)·
+    // αν είναι απασχολημένος (π.χ. άλλη συνταγή), μετά από 5″ την παίρνει όποιος υπολογιστής είναι ελεύθερος (πριν: περίμενε, π.χ. 97″ πίσω από άλλο παραπεμπτικό)
     function refresh(){ prepMaybe(); { const ps = root.querySelector('[data-a="packsave"]'); if(ps) ps.style.display = (S.meds.length||S.ex.length) ? '' : 'none'; }
       const d = S.k ? recOf(S.k) : null, okP = !!d || (/^\d{11}$/.test(S.amka) && window.pdxAmkaOk && pdxAmkaOk(S.amka));
       const icd = [...root.querySelectorAll('[data-icdw] [data-c].on')].map(x=>x.getAttribute('data-c').split(' ')[0]);
