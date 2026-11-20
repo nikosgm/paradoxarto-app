@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v624';
+const APP_VER = '2026-11-20-v625';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -17043,7 +17043,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       // 📇 20/11: το κουτί είναι flex column-REVERSE → η λίστα ΠΡΙΝ από τη γραμμή στο DOM = ΚΑΤΩ από το πεδίο στην οθόνη (πριν: ζωγραφιζόταν ΠΑΝΩ — «όχι από πάνω»)
       else h += '<div class="rxsugw"><div class="rxsug" data-sug></div></div><div class="r" style="display:flex;align-items:center;gap:8px"><input class="big" data-amka type="search" inputmode="'+(S.kbd==='text'?'text':'numeric')+'" maxlength="40" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="ΑΜΚΑ ή όνομα" value="'+E(S.amkaQ!=null && S.amkaQ!=='' ? S.amkaQ : S.amka)+'" style="flex:1;min-width:0"><span data-aylin style="flex:none">'+(S.amka && /^\d{11}$/.test(S.amka) ? aylB(S.amka) : '')+'</span><button type="button" class="kbd" data-kbd aria-label="Αλλαγή πληκτρολογίου">'+(S.kbd==='text'?'123':'αβγ')+'</button><button type="button" class="kbd" data-rxcon aria-label="Επαφές" title="Επαφές">📇</button></div><div class="who" data-who></div>';
       h += '</div></div>';
-      if(!d) h += '<div data-recent></div>';
+      // 🕘 20/11 (χρήστης: «να μη μου βγάζει το "Πρόσφατοι" στην ενότητα»): η λίστα ασθενών «Πρόσφατοι» δεν μπαίνει πια — οι ασθενείς είναι στις 📇 Επαφές
       // 🎨 18/11 19:10 (χρήστης: «Γ με το Α»): η ΚΑΤΑΣΤΑΣΗ (συνταγή/παραπεμπτικό/επίσκεψη) αμέσως κάτω από τον ασθενή — όχι στο τέλος της σελίδας
       h += '<div class="h" data-jobsh style="display:none">Κατάσταση</div><div class="g" data-jobs style="display:none"></div>';   // ασθενής = ΑΜΚΑ (χωρίς επιλογή από τη λίστα της κλινικής)
       // 2) Λογαριασμός
