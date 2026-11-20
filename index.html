@@ -2504,7 +2504,9 @@ window.pdxSurgGuess = async function(k, d){
       const j = (r.data||[])[0]; const D = j && j.payload && j.payload.result && j.payload.result.enc ? await pdxCK.decrypt(j.payload.result.enc) : null; const S = (D && D.sec) || {};
       const A = S.acts || {}, H = A.heads || [], di = H.findIndex(h=>/ημερομ/i.test(h)), ni = H.findIndex(h=>/πράξη|πραξη/i.test(h) && !/κωδ|εξαρτ|ακύρ|ακυρ|αιτιολ/i.test(h)), ci = H.findIndex(h=>/ακύρ|ακυρ/i.test(h));
       const done = (A.rows||[]).filter(rw=>{ const t = dmy(di>=0 ? rw[di] : rw.join(' ')); return t && t >= adm - 864e5 && (ci<0 || !/^(ναι|✓|true|x)$/i.test(String(rw[ci]||'').trim())); })
-        .map(rw=>({all: rw.join(' '), t: dmy(di>=0 ? rw[di] : rw.join(' ')), n: ni>=0 ? rw[ni] : rw.filter(x=>x && !/^\d[\d\s./:-]*$/.test(x)).sort((a,b)=>b.length-a.length)[0]})).filter(x=>x.n);
+        .map(rw=>({all: rw.join(' '), t: dmy(di>=0 ? rw[di] : rw.join(' ')), n: ni>=0 ? rw[ni] : rw.filter(x=>x && !/^\d[\d\s./:-]*$/.test(x)).sort((a,b)=>b.length-a.length)[0]})).filter(x=>x.n)
+        // 20/11 18:19 (φωτογραφία χρήστη: «X11 απεικονιστικη αναλυση με τη συνδρομη υπολογιστη και 4d αξιολογηση» σαν χειρουργείο): οι διαγνωστικές πράξεις ΔΕΝ είναι επέμβαση
+        .filter(x=>!/απεικονιστ|ανάλυσ|αναλυσ|αξιολόγησ|αξιολογησ|υπερηχ|υπέρηχ|αξονικ|μαγνητικ|ακτινογραφ|σπινθηρογραφ|triplex|doppler|ηκγ|ηλεκτροκαρδ|εκτίμηση|εκτιμηση|εξέταση|εξεταση|επίσκεψη|επισκεψη|αιμοληψ|καθετηριασμός ουροδόχου|ενδοφλέβ|ενδοφλεβ|χορήγηση|χορηγηση|μετάγγισ|μεταγγισ/i.test(String(x.n)));
       // 15/11 15:42 (χρήστης: «χωρίς το μαχαίρι, μόνο το όνομα · και η πλευρά — από τον ΝΠΣ ή από το πρόγραμμα χειρουργείου»)
       // πρόγραμμα χειρουργείου: πάντα (και για την πλευρά)
       let orH = null;
@@ -2584,7 +2586,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v643';
+const APP_VER = '2026-11-20-v645';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10423,8 +10425,7 @@ document.head.appendChild(st);
     const go = {ct:"pdxCtOpen('"+xk+"')", course:"pdxDictate('"+xk+"')", npsmed:"pdxMedOrder('"+xk+"')", scan:"pdxScanOpen()", opnote:"pdxOpNotesOpen('"+xk+"')", comorb:"pdxEFolder('"+xk+"')"};   // 🗂 15/11 10:54: Συννοσηρότητες + Χρόνια φάρμακα = «Ηλ. φάκελος»
     const cell = (ic, t, act, dot)=>'<button class="ptg-b" onclick="'+act+'"><span class="ptg-i">'+ic+(dot?'<b class="ptg-d"></b>':'')+'</span><span class="ptg-t">'+t+'</span></button>';
     // 🏥 17/11 18:29 (χρήστης: «τον πήραμε από τον ΝΠΣ, απλά του προσθέσαμε ιστορικό — γιατί εκτός θαλάμου;»): ιστορικό σε ασθενή μόνο του ΝΠΣ → μένει στη λίστα ΝΠΣ
-    let h = (d._npsTemp ? '<button onclick="pdxNpsPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>' : d._npsKeep ? '<button onclick="pdxNpsKeepPlace(\''+xk+'\')" class="ptg-add">＋ Προσθήκη σε κρεβάτι</button>'
-      : (String(xk).indexOf('extra')===0 && !d.assignedWard && window.pdxNpsInfo && pdxNpsInfo(d)) ? '<button onclick="pdxNpsKeepSet(\''+xk+'\')" class="ptg-add" style="background:#FFF4E5;color:#8A4B00">↩ Μόνο στη λίστα ΝΠΣ (όχι εκτός θαλάμου)</button>' : '');
+    let h = '';   /* 20/11 18:19 (χρήστης): «Προσθήκη σε κρεβάτι» / «Μόνο στη λίστα ΝΠΣ» ΜΟΝΟ στις ⚡ Ενέργειες */
     const warn = window.pdxLabWarn ? pdxLabWarn(d).length : 0;
     let g = '';
     PTA_ORDER.forEach(id=>{ if(!have[id]) return; const m = PTA_GRID[id]; g += cell(m[0], m[1], go[id] || "mobAct('"+xk+"','"+id+"')", id==='labs' && warn); });
@@ -10587,7 +10588,8 @@ document.head.appendChild(st);
       const P = window.pdxPtId ? pdxPtId(k, d) : {name:d.name||''};
       // 10/11 (χρήστης): πάτημα στο όνομα = αντιγραφή (χωρίς κουμπί «Αντιγραφή»)· πατρώνυμο + ΑΜ + ΑΜΚΑ στην ίδια γραμμή· ✎ = διόρθωση ονόματος
       const idB = (lbl, v)=>'<button onclick="pdxCopy(\''+esc(v)+'\',\''+lbl+'\')" style="border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:3px 9px;font-size:12.5px;color:#1F2933">'+lbl+' <b>'+esc(v)+'</b></button>';
-      h += '<div class="pth"><h1 onclick="pdxCopyPt(\''+esc(k)+'\')" title="Πάτα για αντιγραφή" style="cursor:copy">'+esc(k.indexOf('extra')===0?e.room:e.room+'-'+e.bed)+' · '+esc(P.name||d.name||'—')+'<button onclick="event.stopPropagation();mobEditName()" aria-label="Διόρθωση ονόματος" style="border:0;background:none;color:#B4BFCC;font-size:.5em;padding:0 0 0 8px;vertical-align:middle">✎</button></h1>'
+      const hl = k.indexOf('extra')===0 ? String(e.room||'').replace(/^\s*θ[αά]λαμος\s*/i,'').replace(/^εκτός θαλάμου$/i,'').trim() : e.room+'-'+e.bed;   /* 20/11 18:19 (χρήστης): «341 · όνομα» χωρίς «Θάλαμος» · εκτός θαλάμου = σκέτο όνομα */
+      h += '<div class="pth"><h1 onclick="pdxCopyPt(\''+esc(k)+'\')" title="Πάτα για αντιγραφή" style="cursor:copy">'+(hl ? esc(hl)+' · ' : '')+esc(P.name||d.name||'—')+'<button onclick="event.stopPropagation();mobEditName()" aria-label="Διόρθωση ονόματος" style="border:0;background:none;color:#B4BFCC;font-size:.5em;padding:0 0 0 8px;vertical-align:middle">✎</button></h1>'
         + '<div class="ptid" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px">'+(P.fatherGen?'<span style="font-size:13.5px;font-weight:600;color:#6B7280">ΤΟΥ '+esc(P.fatherGen)+'</span>':'')+(P.am?idB('ΑΜ', P.am):'')+(P.amka?idB('ΑΜΚΑ', P.amka):'')+'</div>'
         + (sub?'<div class="pts">'+sub+'</div>':'')
         + '</div>'; }
@@ -10912,6 +10914,11 @@ document.head.appendChild(st);
       });
       let h = '';
       if(inp || fl.length) h += '<div class="ma-h">Στοιχεία ασθενή</div><div class="ma-g">'+inp+fl.join('')+'</div>';
+      // 20/11 18:19 (χρήστης: «το Προσθήκη σε κρεβάτι να μην είναι μεγάλο κουμπί — μόνο στις Ενέργειες»)
+      { const kq = String(k).replace(/'/g,''), cl = "var o=document.getElementById('mobSubPop');if(o)o.remove();";
+        const pl = x._npsTemp ? "pdxNpsPlace('"+kq+"')" : x._npsKeep ? "pdxNpsKeepPlace('"+kq+"')" : '';
+        if(pl) sh.unshift('<button class="ma-r" onclick="'+cl+pl+'"><span>＋</span><span class="ma-tx">Προσθήκη σε κρεβάτι</span><span class="ma-c">›</span></button>');
+        else if(String(k).indexOf('extra')===0 && !x.assignedWard && window.pdxNpsInfo && pdxNpsInfo(x)) sh.push('<button class="ma-r" onclick="'+cl+"pdxNpsKeepSet('"+kq+"')"+'"><span>↩</span><span class="ma-tx">Μόνο στη λίστα ΝΠΣ (όχι εκτός θαλάμου)</span><span class="ma-c">›</span></button>'); }
       if(sh.length) h += '<div class="ma-h">Θέση στην κλινική</div><div class="ma-g">'+sh.join('')+'</div>';
       window.__pdxMenuK=k; if(window.pdxBotMenuHtml && (window.pdxIsBotUser&&window.pdxIsBotUser())) h+=pdxBotMenuHtml(null);
       ov.innerHTML='<div class="sb" style="width:100%;border-radius:14px 14px 0 0;max-height:calc(100vh - env(safe-area-inset-top,0px) - 24px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transform:'+(ov.dataset.up?'none':'translateY(100%)')+';transition:transform .25s cubic-bezier(.32,.72,0,1)">'
