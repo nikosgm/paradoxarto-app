@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v640';
+const APP_VER = '2026-11-20-v641';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -11674,7 +11674,8 @@ html.pdx-night #mobView [style*="color:#1F2933"],html.pdx-night #mobView [style*
 html.pdx-night #loginOv,html.pdx-night #csOv,html.pdx-night #pkOv,html.pdx-night #acctOv,html.pdx-night #credOv,html.pdx-night #mobSubPop,html.pdx-night [style*="background:#fff"]{color-scheme:light}
 html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv select,html.pdx-night #pkOv input,html.pdx-night #pkOv textarea,html.pdx-night #acctOv input,html.pdx-night #credOv input,html.pdx-night [style*="background:#fff"] select,html.pdx-night [style*="background:#fff"] input,html.pdx-night [style*="background:#fff"] textarea{color:#1F2933!important;-webkit-text-fill-color:#1F2933}`;
     document.head.appendChild(st);
-    const ap=on=>{ document.documentElement.classList.toggle('pdx-night',on); try{ localStorage.setItem('pdx_night',on?'1':'0'); }catch(e){} };
+    // 20/11 18:05 (χρήστης: «το σκούρο θέμα δεν το αποθηκεύει»): ο γρήγορος διακόπτης έγραφε ΜΟΝΟ «pdx_night», ενώ η «Εμφάνιση» (pdx_ap.theme) στο άνοιγμα τον ξανάγυρνούσε → αποθήκευση ΚΑΙ στα δύο
+    const ap=on=>{ document.documentElement.classList.toggle('pdx-night',on); try{ localStorage.setItem('pdx_night',on?'1':'0'); const o = JSON.parse(localStorage.getItem('pdx_ap')||'{}')||{}; if(o.theme !== (on?'dark':'light')){ o.theme = on?'dark':'light'; localStorage.setItem('pdx_ap', JSON.stringify(o)); } }catch(e){} };
     try{ if(localStorage.getItem('pdx_night')==='1') ap(true); }catch(e){}
     window.pdxNight=function(){ ap(!document.documentElement.classList.contains('pdx-night')); };
   })();
@@ -26237,7 +26238,8 @@ window.CLS_MODE='A';
     return x ? x[0] + x.slice(1).replace(/[aeiouy]/g,'').replace(/(.)\1+/g,'$1') : ''; };
   window.pdxOrSk = orSk;
   const orLabsMatch = (L, name)=>{ const N = orNm(name).split(' '), sur = N[0], fi = (N[1]||'')[0]||''; if(!sur) return null;
-    const hit = L.filter(x=>{ const P = orNm(x.name).split(' '); return P[0]===sur && (!fi || !P[1] || P[1][0]===fi); }); if(hit.length===1) return hit[0]; if(hit.length > 1) return null;
+    const hit = L.filter(x=>{ const P = orNm(x.name).split(' '); return P[0]===sur && (!fi || !P[1] || P[1][0]===fi); }); if(hit.length===1) return hit[0];
+    if(hit.length > 1){ const h1 = hit.filter(x=>orNm(x.name).split(' ')[1]===N[1]); const ids = [...new Set(h1.map(x=>String(x.pid)))]; return ids.length===1 ? h1[0] : null; }   // 20/11: ίδιο επώνυμο+αρχικό → ΟΛΟ το όνομα (ίδιος pid)
     const s0 = orSk(sur), f0 = orSk(N[1]||'')[0]||''; if(s0.length < 3) return null;
     const h2 = L.filter(x=>{ const P = orNm(x.name).split(' '); return orSk(P[0])===s0 && (!f0 || !P[1] || orSk(P[1])[0]===f0); }); if(h2.length===1) return h2[0]; if(h2.length > 1) return null;
     // 🐞 17/11 18:22 (χρήστης: «ΔΗΜ / ΝΤ και τέτοια — δεν την ταυτοποίησες»): + απόσταση 1 γράμματος στον σκελετό, + αντεστραμμένη σειρά (όνομα πρώτα)
@@ -26355,12 +26357,23 @@ window.CLS_MODE='A';
     const bgAt = (x, y)=>{ const bx = Math.min(bw-1, x/S|0), by = Math.min(bh-1, y/S|0); let m = 0; for(let j = -2; j <= 2; j++) for(let i = -2; i <= 2; i++){ const X = bx+i, Yy = by+j; if(X >= 0 && X < bw && Yy >= 0 && Yy < bh && bg[Yy*bw+X] > m) m = bg[Yy*bw+X]; } return m; };
     const L = new Uint8Array(W*H); for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){ const v = Y[y*W+x]; L[y*W+x] = v < 0.62*bgAt(x, y) ? 1 : 0; }
     const xm = Math.floor(W*0.7), minLen = H*0.12, span = Math.max(20, Math.round(W*0.05));
-    const run = (x)=>{ let best = 0, cur = 0, gap = 0, top = 0, bt = 0, bb = 0; for(let y = 0; y < H; y++){ const o = y*W; let k = 0; for(let dx = -2; dx <= 2; dx++){ const xx = x+dx; if(xx >= 0 && xx < W && L[o+xx]){ k = 1; break; } }
-        if(k){ if(!cur) top = y; cur++; gap = 0; if(cur > best){ best = cur; bt = top; bb = y; } } else if(cur && ++gap > 3){ cur = 0; gap = 0; } } return {len: best, top: bt, bot: bb}; };
-    const rows = (bx, r)=>{ const ys = []; for(let y = r.top; y <= r.bot; y++){ let n = 0; for(let x = bx + 3; x < bx + 3 + span && x < W; x++){ if(L[y*W+x] || (y > 0 && L[(y-1)*W+x]) || (y < H-1 && L[(y+1)*W+x])) n++; } if(n >= span*0.75) ys.push(y); }
+    // 20/11 18:05 (χρήστης: «δεν είναι σωστά στοιχισμένα»): η γκρι λωρίδα «ΑΙΘΟΥΣΑ 9» έκοβε το αριστερό περίγραμμα → κρατιόταν μόνο το κάτω κομμάτι του πίνακα
+    // και οι γραμμές από πάνω (Αίθουσα 10) έμεναν χωρίς πλέγμα. Τώρα: κομμάτια της ίδιας κάθετης γραμμής με κενό ≤ 6% ύψους ενώνονται.
+    // + η γραμμή ακολουθείται όταν γέρνει (σκαναρισμένο/φωτογραφημένο χαρτί: μετακίνηση λίγων pixel σε όλο το ύψος)
+    let XA = null;
+    const run = (x)=>{ const seg = []; let cur = 0, gap = 0, top = 0, cx = x; const xa = new Int32Array(H).fill(-1); for(let y = 0; y < H; y++){ const o = y*W; let k = 0;
+        for(const dx of [0, -1, 1, -2, 2]){ const xx = cx+dx; if(xx >= 0 && xx < W && L[o+xx]){ k = 1; if(Math.abs(xx - x) <= Math.max(6, H*0.012)) cx = xx; break; } }
+        xa[y] = cx; if(k){ if(!cur) top = y; cur++; gap = 0; } else if(cur && ++gap > 3){ if(cur >= 6) seg.push([top, y - gap, cur]); cur = 0; gap = 0; cx = x; } }
+      XA = xa;
+      if(cur >= 6) seg.push([top, H - 1 - gap, cur]);
+      let best = {len: 0, top: 0, bot: 0}, g = null; for(const sg of seg){ if(g && sg[0] - g.bot <= H*0.06){ g.bot = sg[1]; g.len += sg[2]; } else { g = {top: sg[0], bot: sg[1], len: sg[2]}; } if(g.len > best.len) best = Object.assign({}, g); }
+      best.xa = XA; return best; };
+    const rows = (bx0, r)=>{ const ys = []; for(let y = r.top; y <= r.bot; y++){ let n = 0; const bx = r.xa && r.xa[y] >= 0 ? r.xa[y] : bx0; for(let x = bx + 3; x < bx + 3 + span && x < W; x++){ if(L[y*W+x] || (y > 0 && L[(y-1)*W+x]) || (y < H-1 && L[(y+1)*W+x])) n++; } if(n >= span*0.75) ys.push(y); }
       const M = []; for(const y of ys){ if(M.length && y - M[M.length-1][1] <= 3) M[M.length-1][1] = y; else M.push([y, y]); } return M.map(([a, b])=>(a+b)/2); };
     const cnt = new Int32Array(xm); for(let y = 0; y < H; y++){ const o = y*W; for(let x = 0; x < xm; x++) cnt[x] += L[o+x]; }
-    for(let x = 2; x < xm; x++){ if(cnt[x] < minLen) continue; const r = run(x); if(r.len < minLen) continue; const ys = rows(x, r); if(ys.length >= 3) return { x: x/W, top: r.top/H, bot: r.bot/H, ys: ys.map(y=>y/H) }; x += 3; }
+    for(let x = 2; x < xm; x++){ if(cnt[x] < minLen) continue; let r = run(x), bx = x; if(r.len < minLen) continue;
+      for(let x2 = x + 1; x2 <= Math.min(xm - 1, x + Math.max(8, Math.round(W*0.012))); x2++){ const r2 = run(x2); if(r2.len > r.len){ r = r2; bx = x2; } }   // πάχος/κλίση γραμμής: η στήλη με το ΜΕΓΑΛΥΤΕΡΟ συνεχές κομμάτι
+      const ys = rows(bx, r); if(ys.length >= 3) return { x: bx/W, top: r.top/H, bot: r.bot/H, ys: ys.map(y=>y/H) }; x = bx + 3; }
     return null;
   }catch(e){ return null; } };
   window.pdxOrEdge = (cv, T)=>{ const g = window.pdxOrGrid(cv); const T0 = (T||[]).filter(t=>t.s !== '__grid' && t.s !== '__edge'); return g ? T0.concat([{s:'__grid', u:g.x, v:-1, ys:g.ys, top:g.top, bot:g.bot}]) : T0; };
@@ -26395,13 +26408,18 @@ window.CLS_MODE='A';
     // 🔢 20/11 14:50: γραμμές ασθενών = όσες έχουν 8ψήφιο αριθμό (κάτω από το όνομα — το OCR τους διαβάζει πάντα). Με «άγκυρες» τα ονόματα που βρέθηκαν και
     // ΙΔΙΑ σειρά με το πρόγραμμα (Excel), όσες γραμμές μένουν ανάμεσα σε δύο άγκυρες παίρνουν με τη σειρά τους ασθενείς που μένουν ανάμεσα (μόνο αν η σειρά συμφωνεί).
     try{ const isId = x=>/^[^0-9A-Za-zΑ-Ωα-ω]*\d{8}[^0-9A-Za-zΑ-Ωα-ω]*$/.test(String(x.s).trim()) && x.u < 0.65;
-      const R0 = lines.filter(L=>L.it.some(isId)).map(L=>({v:L.v, L, j:-1})).sort((a,b)=>a.v-b.v);
+      // 20/11 18:00 (χρήστης: «πάλι λείπουν κάποιες»): + ημ. εισαγωγής (20/11/2026 ή «2011172026» όπως τη διαβάζει το OCR) — κάθε γραμμή ασθενή έχει μία·
+      // γραμμές του ΙΔΙΟΥ ασθενή (ημερομηνία στη μέση, αριθμός από κάτω) ενώνονται σε μία
+      const isDt = x=>{ const t = String(x.s).trim(); return x.u < 0.45 && (/^\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}$/.test(t) || /^[^0-9A-Za-zΑ-Ωα-ω]*\d{8,10}[^0-9A-Za-zΑ-Ωα-ω]*$/.test(t) && /20\d\d\W*$/.test(t)); };
+      const R1 = lines.filter(L=>L.it.some(x=>isId(x) || isDt(x))).sort((a,b)=>a.v-b.v), R0 = [];
+      for(const L of R1){ const last = R0[R0.length-1]; if(last && L.v - last.vLast < 0.02 && !(last.hasId && L.it.some(isId) && !L.it.some(isDt))) { last.vLast = L.v; if(L.it.some(isId)) last.hasId = 1; continue; }
+        R0.push({v:L.v, vLast:L.v, L, j:-1, hasId: L.it.some(isId) ? 1 : 0}); }
       const offs = [];
       out.forEach(o=>{ const jj = list.indexOf(o.p); let best = null; for(const r of R0){ const d = r.v - o.v; if(r.j < 0 && d >= -0.002 && d <= 0.035 && (!best || d < best.d)) best = {r, d}; } if(best){ best.r.j = jj; offs.push(best.d); } });
       const A = R0.filter(r=>r.j >= 0); let mono = A.length >= 2; for(let i = 1; i < A.length; i++) if(A[i].j <= A[i-1].j) mono = false;
       if(mono){ offs.sort((a,b)=>a-b); const off = offs[Math.floor(offs.length/2)] || 0.008;
         const free = j=>j >= 0 && j < list.length && !used.has(j);
-        const put = (r, j)=>{ used.add(j); r.j = j; out.push({v: r.v - off, p: list[j], x: r.L.it.slice().sort((a,b)=>a.u-b.u)[0].u}); };
+        const put = (r, j)=>{ used.add(j); r.j = j; out.push({v: T.some(t=>t.s==='__grid') ? r.v : r.v - off, p: list[j], x: r.L.it.slice().sort((a,b)=>a.u-b.u)[0].u}); };
         for(let i = 0; i <= A.length; i++){ const lo = i ? A[i-1] : null, hi = i < A.length ? A[i] : null;
           const rows = R0.filter(r=>r.j < 0 && (!lo || r.v > lo.v) && (!hi || r.v < hi.v)); if(!rows.length) continue;
           const js = []; for(let j = (lo ? lo.j + 1 : 0); j < (hi ? hi.j : list.length); j++) if(free(j)) js.push(j);
@@ -26409,6 +26427,11 @@ window.CLS_MODE='A';
           else if(!lo){ if(js.length >= rows.length) rows.forEach((r, k)=>put(r, js[js.length - rows.length + k])); }   // πριν την 1η άγκυρα: οι αμέσως προηγούμενοι
           else { if(js.length >= rows.length) rows.forEach((r, k)=>put(r, js[k])); } } }   // μετά την τελευταία: οι αμέσως επόμενοι (οι τοπικές κ.λπ. μένουν στο τέλος)
     }catch(e){}
+    // 🔎 20/11 18:00 (δικλίδα): όταν μένουν ασθενείς χωρίς κουτάκι → ανώνυμη καταγραφή (ΜΟΝΟ σχήματα: γράμματα→a, ψηφία→d) για να φαίνεται τι διάβασε το OCR
+    try{ const miss = list.length - out.length; if(miss > 0 && window.sb6 !== undefined && typeof sb6 !== 'undefined'){ const key = list.length+'|'+lines.length+'|'+out.length; if(window.__orDiagK !== key){ window.__orDiagK = key;
+        const sh = t=>String(t).replace(/[A-Za-zΑ-Ωα-ωΆ-ώ]/g, 'a').replace(/\d/g, 'd').replace(/a{3,}/g, 'aaa').slice(0, 14);
+        const D = {at:Date.now(), ver:(typeof APP_VER!=='undefined'?APP_VER:''), list:list.length, placed:out.length, lines:lines.slice(0, 80).map(L=>[+L.v.toFixed(3), +(L.it.slice().sort((a,b)=>a.u-b.u)[0].u).toFixed(2), L.it.slice().sort((a,b)=>a.u-b.u).slice(0, 6).map(x=>sh(x.s)).join(' ')])};
+        sb6.from('oncall_labs').upsert({name_key:'diag|orcult', name:'διάγνωση κουτιών καλλιέργειας (ανώνυμη)', pid:null, data:D, updated_at:new Date().toISOString()}, {onConflict:'name_key'}).then(()=>{}, ()=>{}); } } }catch(e){}
     // 📐 20/11 13:55: θέση ΜΟΝΟ από το πλέγμα του πίνακα (pdxOrGrid)· κουτάκι κολλητά αριστερά από το περίγραμμα, στο κέντρο της γραμμής του ασθενή,
     // ύψος = 80% της γραμμής (μία σειρά κειμένου). Χωρίς πλέγμα → στο περιθώριο της σελίδας, στο ύψος του ονόματος.
     const G = T.find(t=>t.s === '__grid');
@@ -26441,7 +26464,7 @@ window.CLS_MODE='A';
     const d2u = async u=>{ if(/^data:/.test(u)) return u; try{ const bl = await (await fetch(u)).blob(); return await new Promise(ok=>{ const fr = new FileReader(); fr.onload = ()=>ok(fr.result); fr.onerror = ()=>ok(''); fr.readAsDataURL(bl); }); }catch(e){ return ''; } };
     const dim = u=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>ok([im.naturalWidth, im.naturalHeight]); im.onerror = ()=>ok([1414, 1000]); im.src = u; });
     let pages = ''; const placed = new Set(); const mk = M=>{ M.forEach(m=>placed.add(m.p)); return M; };
-    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ if(await window.pdxImgBlank(f.imgs[i])) continue; const u = await d2u(f.imgs[i]); if(!u) continue; const [w, h] = await dim(u);
       // διαθέσιμο 285×197mm· με το αριστερό περιθώριο (15%) το ύψος της σελίδας = πλάτος·0.85·h/w
       const W = Math.min(285, 197 / (0.945 * h / w));
       pages += '<div class="pg"><div style="width:'+W.toFixed(1)+'mm">'+window.pdxOrMarked('<img src="'+u+'" style="display:block;width:100%">', f.kind==='normal' || !f.kind ? mk(window.pdxOrMarksPdf((f.txt||[])[i], P)) : [])+'</div></div>'; }
@@ -26450,7 +26473,7 @@ window.CLS_MODE='A';
       pages += '<script>(function(){var t=document.querySelector(".pg table");if(!t)return;var b=t.parentNode,W=b.parentNode.clientWidth;b.style.setProperty("--z",Math.min(1,W/t.offsetWidth));})()<\/script>'; }
     // 🧫 20/11 07:20: όσοι δεν εντοπίστηκαν δίπλα στο όνομα → πίνακας καλλιεργειών (ποτέ εκτύπωση χωρίς καλλιέργειες)
     const un = P.filter(p=>!placed.has(p) && window.pdxOrMarkTxt(p)); const E4 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])), CC = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666'};
-    if(un.length) pages += '<div class="pg" style="display:block;font:14px Arial"><h2 style="margin:0 0 8px">🧫 Καλλιέργειες ούρων'+(placed.size?' — όσοι δεν εντοπίστηκαν δίπλα στο όνομα':'')+'</h2><table style="border-collapse:collapse;width:100%">'
+    st.unplaced = un.length; if(false && un.length) pages += '<div class="pg" style="display:block;font:14px Arial"><h2 style="margin:0 0 8px">🧫 Καλλιέργειες ούρων'+(placed.size?' — όσοι δεν εντοπίστηκαν δίπλα στο όνομα':'')+'</h2><table style="border-collapse:collapse;width:100%">'
       + '<tr style="text-align:left;color:#555"><th>Ασθενής</th><th>Θάλαμος</th><th>Καλλιέργεια</th><th>Σημείωση</th></tr>'
       + un.map(p=>{ const k = window.pdxOrMarkTxt(p); return '<tr style="border-top:1px solid #ddd"><td style="padding:4px 6px"><b>'+E4(p.name)+'</b></td><td>'+E4(p.room)+'</td><td style="color:'+(CC[k.cls]||'#000')+';font-weight:700">'+E4(k.t)+(k.fun?' · Μύκητες':'')+'</td><td>'+E4(k.note)+'</td></tr>'; }).join('') + '</table></div>';
     return head + pages + '</body></html>'; };
@@ -26477,6 +26500,12 @@ window.CLS_MODE='A';
   document.addEventListener('click', e=>{ const t = e.target.closest && e.target.closest('[data-cpend]'); if(t){ e.stopPropagation(); window.pdxCultInfo(t.dataset.cpend); } }, true);
   // 📤 17/11 16:58 (χρήστης: «εξαγωγή → προεπισκόπηση στο iPhone με κουμπί share: print / save to files / send»): PDF Α4 οριζόντιο,
   // κάθε σελίδα = εικόνα του προγράμματος μικρότερη δεξιά + κουτάκια καλλιέργειας αριστερά (ζωγραφισμένα, ίδια με την προεπισκόπηση)
+  // 📄 20/11 17:58 (χρήστης: «να μην υπάρχουν κενές σελίδες»): λευκή σελίδα σκαναρίσματος (σχεδόν καθόλου μελάνι) → παραλείπεται παντού
+  const BLK = new Map();
+  window.pdxImgBlank = u=>{ if(!u) return Promise.resolve(true); const k = String(u).length+'|'+String(u).slice(-64); if(BLK.has(k)) return BLK.get(k);
+    const p = new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ try{ const w = 240, h = Math.max(1, Math.round(w*im.naturalHeight/im.naturalWidth)), c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
+        const d = x.getImageData(0, 0, w, h).data; let n = 0; for(let i = 0; i < d.length; i += 4){ if(d[i]*.3 + d[i+1]*.59 + d[i+2]*.11 < 150) n++; } ok(n / (w*h) < 0.004); }catch(e){ ok(false); } }; im.onerror = ()=>ok(false); im.src = u; });
+    BLK.set(k, p); return p; };
   window.pdxOrCultPdf = async function(st, title){ const P = (st.cu && st.cu.list) || [], W = 1600, H = 1131, M = 30, SW = 0.06;
     const ld = u=>new Promise((ok, no)=>{ const im = new Image(); im.onload = ()=>ok(im); im.onerror = ()=>no(new Error('εικόνα')); im.src = u; });
     const COL = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#666666'};
@@ -26498,14 +26527,14 @@ window.CLS_MODE='A';
         lines.forEach(([t, col], i)=>{ x.fillStyle = col; x.fillText(t, bx + bw/2, by + 5 + lh*(i+0.5)); }); }
       return c; };
     const pages = [], placed = new Set(); const mk = M=>{ M.forEach(m=>placed.add(m.p)); return M; };
-    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? mk(window.pdxOrMarksPdf((f.txt||[])[i], P)) : [])); }
+    for(const f of ((st.m && st.m.files) || []).filter(f=>f.kind!=='extra' && !f.old)) for(let i = 0; i < (f.imgs||[]).length; i++){ if(await window.pdxImgBlank(f.imgs[i])) continue; const im = await ld(f.imgs[i]); pages.push(page(im, f.kind==='normal' || !f.kind ? mk(window.pdxOrMarksPdf((f.txt||[])[i], P)) : [])); }
     if(!pages.length && st.o && st.o.html && typeof html2canvas!=='undefined'){ const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff'; d.innerHTML = '<style>'+window.pdxOrSchedCss()+'</style>'+st.o.html; document.body.appendChild(d);
       try{ const cv = await html2canvas(d.querySelector('table'), {scale:1.4, backgroundColor:'#fff', logging:false}); pages.push(page(cv, mk(window.pdxOrMarksXl(st.o.html, P)))); } finally { d.remove(); } }
     if(!pages.length) throw new Error('δεν υπάρχει πρόγραμμα (PDF ή Excel) για εξαγωγή');
     // 🧫 20/11 07:20 (χρήστης: «να μην βγάζει το πρόγραμμα χωρίς τις καλλιέργειες»): όποιος ασθενής ΔΕΝ εντοπίστηκε πάνω στη σελίδα → πίνακας καλλιεργειών
     // σε επιπλέον σελίδα (ποτέ PDF χωρίς καλλιέργειες)· st.unplaced = πόσοι, για ειδοποίηση
     const un = P.filter(p=>!placed.has(p) && window.pdxOrMarkTxt(p)); st.unplaced = un.length; st.placed = placed.size;
-    for(let o = 0; o < un.length; o += 24){ const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+    for(let o = 0; o < 0 && o < un.length; o += 24){ const c = document.createElement('canvas');   /* 20/11 17:58 (χρήστης): ΟΧΙ ξεχωριστή σελίδα καλλιεργειών */ c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
       x.fillStyle = '#000'; x.font = '700 30px Arial'; x.textBaseline = 'middle'; x.textAlign = 'left';
       x.fillText('🧫 Καλλιέργειες ούρων — '+String(title||'')+(placed.size ? ' (όσοι δεν εντοπίστηκαν δίπλα στο όνομα)' : ''), M+10, M+28);
       const cx = [M+10, M+560, M+700, M+1180], rh = 38; x.font = '700 20px Arial'; x.fillStyle = '#555'; ['Ασθενής','Θάλαμος','Καλλιέργεια','Σημείωση'].forEach((t, i)=>x.fillText(t, cx[i], M+80));
@@ -26607,7 +26636,7 @@ window.CLS_MODE='A';
     function cultHtml(){ const P = (st.cu && st.cu.list) || []; let h2 = '<div class="ios-h" style="margin-top:18px">🧫 Καλλιέργειες ούρων · γενική ούρων</div>';
       if(!P.length && !st.cubusy) return h2 + iosGroup('', [{t: st.cuerr ? '<span style="color:#FF3B30">⚠ '+esc(st.cuerr)+'</span>' : 'Δεν βρέθηκαν ασθενείς στο πρόγραμμα της ημέρας.'}]);
       const col = {ok:'#1F8A4C', pend:'#B26B00', pos:'#C62828', mut:'#8E8E93'};
-      h2 += iosGroup(st.cubusy ? '⏳ '+st.cubusy : (st.cuAt ? 'ενημέρωση '+new Date(st.cuAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''), P.map(p=>{ const c = window.pdxCultTxt(p.c), u = p.ua;
+      h2 += iosGroup(st.cubusy ? '⏳ '+st.cubusy : st.cuml ? '🔎 Medilabi: αναζήτηση '+st.cuml+' ασθενών που δεν ταυτοποιήθηκαν…' : (st.cuAt ? 'ενημέρωση '+new Date(st.cuAt).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'}) : ''), P.map(p=>{ const c = window.pdxCultTxt(p.c), u = p.ua;
         return {t:'<b>'+esc(p.name)+'</b>'+(p.room?' <span style="color:#8E8E93;font-size:13px">'+esc(p.room)+'</span>':''),
           sub: (p.c || !st.cubusy ? '<div style="color:'+(col[c.cls]||'inherit')+';font-weight:600">🧫 '+(p.c && p.c.isNew ? '<span style="background:#0A84FF;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;margin-right:4px">🆕 νέα</span>' : '')+(p.pid ? esc(c.t)+(p.c && p.c.note ? ' · 📝 '+esc(p.c.note) : '') : '<span style="color:#C62828">⚠ ΔΕΝ ταυτοποιήθηκε στο Medilabi (όνομα) — έλεγξε χειροκίνητα· ΔΕΝ σημαίνει ότι δεν έχει καλλιέργεια</span>')+'</div>' : '<div style="color:#8E8E93">🧫 …</div>')
             + (u ? '<div style="margin-top:2px">🔬 '+(u.fun?'<b style="color:#C62828">🍄 Μύκητες '+esc(u.fun)+'</b> · ':'')+esc(u.txt)+(u.d?' <span style="color:#8E8E93">('+esc(u.d)+')</span>':'')+'</div>' : (p.pid ? '<div style="color:#8E8E93">🔬 χωρίς γενική ούρων</div>' : ''))};
@@ -26664,7 +26693,15 @@ window.CLS_MODE='A';
     async function cultLocalGet(){ try{ const e = localStorage.getItem(CUK+st.iso); if(!e) return null; return await pdxCK.decrypt(JSON.parse(e)); }catch(x){ return null; } }
     async function cultLocalPut(o){ try{ localStorage.setItem(CUK+st.iso, JSON.stringify(await pdxCK.encrypt(o))); }catch(x){} }
     (async ()=>{ if(st.cu) return; const L0 = await cultLocalGet(); if(L0 && L0.list && !st.cu){ st.cu = {list:L0.list}; st.cuAt = L0.at||0; pg.redraw(); } })();
-    async function cultLoad(force){ if(st.cubusy) return; if(!st.cu){ const L0 = await cultLocalGet(); if(L0 && L0.list && !st.cu){ st.cu = {list:L0.list}; st.cuAt = L0.at||0; pg.redraw(); } } const sched = st.o && st.o.pts ? st.o : await pdxOrSchedGet(st.iso).catch(()=>null);
+    // 🔎 20/11 18:00 (χρήστης: «λες δεν ταυτοποιήθηκε ενώ υπάρχει — εγώ τη βρίσκω»): «?» = κανένα εργαστηριακό του ασθενή στο Παραδόχαρτο (π.χ. εισαγωγή χθες)
+    // → αυτόματη αναζήτηση στο Medilabi ΜΕ ΤΟ ΟΝΟΜΑ (όπως με το χέρι)· μόλις έρθει → ξανά ταίριασμα + καλλιέργειες. Μία φορά / 30′ ανά ημέρα προγράμματος.
+    async function cultFindMissing(list){ try{ const miss = list.filter(x=>!x.pid).map(x=>x.name).filter(Boolean); if(!miss.length) return;
+        const k = 'pdx_orcult_ml|'+st.iso, last = +(localStorage.getItem(k)||0); if(Date.now() - last < 30*60000) return; localStorage.setItem(k, String(Date.now()));
+        const ins = await sb6.from('oncall_jobs').insert({name_key:'zzz_medlabs', name:'🧪 Καλλιέργειες: αναζήτηση '+miss.length+' ασθενών', room:null, kind:'medlabs', payload:{only:miss, quiet:true}, status:'new'}).select('id').single(); if(ins.error) return;
+        st.cuml = miss.length; pg.redraw(); const id = ins.data.id, t0 = Date.now(); let j = null;
+        while(Date.now() - t0 < 240000){ await new Promise(r=>setTimeout(r, 4000)); const q = await sb6.from('oncall_jobs').select('status').eq('id', id).maybeSingle(); j = q.data; if(j && /^(done|failed|dismissed|cancelled)$/.test(j.status)) break; }
+        st.cuml = 0; if(j && j.status==='done' && document.body.contains(pg.el)){ for(let i = 0; i < 60 && st.cubusy; i++) await new Promise(r=>setTimeout(r, 2000)); await cultLoad(false, true); } else pg.redraw(); }catch(e){ st.cuml = 0; } }
+    async function cultLoad(force, onlyNew){ if(st.cubusy) return; if(!st.cu){ const L0 = await cultLocalGet(); if(L0 && L0.list && !st.cu){ st.cu = {list:L0.list}; st.cuAt = L0.at||0; pg.redraw(); } } const sched = st.o && st.o.pts ? st.o : await pdxOrSchedGet(st.iso).catch(()=>null);
       const pts = ((sched && sched.pts) || []).filter(p=>p && p.name); if(!pts.length){ st.cu = {list:[]}; pg.redraw(); return; }
       st.cubusy = 'Εργαστηριακά της κλινικής…'; pg.redraw();
       let L = []; try{ const r = await sb6.from('oncall_labs').select('name,pid,data').not('pid','is',null).not('name_key','like','ahfy|%').not('name_key','like','efbot|%'); L = r.data || []; }catch(e){}
@@ -26679,10 +26716,12 @@ window.CLS_MODE='A';
       // 🐞 18/11 08:01 (χρήστης: «πάλι δείχνει δες»): παλιές αποθηκευμένες καλλιέργειες (χωρίς γραμμές αποτελέσματος «rx») ΠΑΤΟΥΣΑΝ πάνω στις νέες
       // (σύγκριση c.at που δεν υπήρχε → 0>=0). Τώρα: ό,τι δεν έχει rx = ΠΑΛΙΟ → δεν χρησιμοποιείται για αποτέλεσμα και ξαναδιαβάζεται.
       const fresh = c=>!!(c && (Array.isArray(c.rx) || c.none));
-      list.forEach(x=>{ if(x.c && !fresh(x.c) && x.c.st!=='pend') x.c = null; });
+      list.forEach(x=>{ if(x.c && !fresh(x.c) && x.c.st!=='pend' && !(onlyNew && st.cuReq && st.cuReq.has(x.pid))) x.c = null; });
       let need = pids.filter(pid=>{ const x = list.find(y=>y.pid===pid); return force || !x || !fresh(x.c); });
       try{ const PC = await window.pdxPtCultGet(); if(PC && PC.by){ list.forEach(x=>{ const c = x.pid && PC.by[x.pid]; if(c && fresh(c) && (!fresh(x.c) || (c.at||PC.at||0) >= (x.c.at||0))){ x.c = Object.assign({}, c, {at:c.at||PC.at||0}); } });
           if(!force && Date.now() - PC.at < 2*3600e3) need = pids.filter(pid=>{ const x = list.find(y=>y.pid===pid); return !x || !fresh(x.c); }); if(need.length < pids.length){ st.cuAt = Math.max(st.cuAt||0, PC.at); pg.redraw(); } } }catch(e){}
+      cultFindMissing(list);
+      st.cuReq = st.cuReq || new Set(); if(onlyNew) need = need.filter(pid=>!st.cuReq.has(pid)); need.forEach(pid=>st.cuReq.add(pid));   // 2η ανάγνωση (μετά την αναζήτηση Medilabi): ΜΟΝΟ οι νέοι
       if(!pids.length || !need.length){ if(pids.length){ cultLocalPut({at:st.cuAt||Date.now(), list}); } st.cubusy = ''; pg.redraw(); return; }
       st.cubusy = 'Καλλιέργειες από το Medilabi ('+need.length+')…'; pg.redraw();
       try{ const ins = await sb6.from('oncall_jobs').insert({kind:'orcult', name:'🧫 Καλλιέργειες χειρουργείου', name_key:'zzz_orcult', status:'new', payload:{pids:need, quiet:true}}).select('id').single(); if(ins.error) throw new Error(ins.error.message);
@@ -26772,7 +26811,7 @@ window.CLS_MODE='A';
     // ⚡ 20/11 14:50 (χρήστης: «το πρόγραμμα από το Kerio κάθε φορά αργεί — γιατί δεν το κρατάμε μόνιμα;»): η καθυστέρηση ΔΕΝ ήταν το Kerio (3–8″)
     // αλλά η επεξεργασία σε κάθε άνοιγμα (pdf.js + ίσιωμα με AI + OCR + πλέγμα για κάθε σελίδα). Τώρα: το ΕΤΟΙΜΟ αποτέλεσμα κάθε αρχείου μένει
     // κρυπτογραφημένο στη συσκευή ΚΑΙ στον server (img-enc/orv/…) → όλες οι συσκευές το ανοίγουν αμέσως· νέο mail = επεξεργασία ΜΟΝΟ του νέου αρχείου.
-    const ORV = 'v1', ofKey = f=>ORV+'|'+st.iso+'|'+(f.n||'')+'|'+(f.sent||'')+'|'+f.l;
+    const ORV = 'v2', ofKey = f=>ORV+'|'+st.iso+'|'+(f.n||'')+'|'+(f.sent||'')+'|'+f.l;
     const hk = async k=>[...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k)))].slice(0, 12).map(b=>b.toString(16).padStart(2,'0')).join('');
     const procGet = async k=>{ try{ const c = await pdxBxCache.get('orf|'+k); if(c && c.enc) return JSON.parse(new TextDecoder().decode(await pdxCK.openBytes(new Uint8Array(c.enc)))); }catch(e){}
       try{ const dl = await sb6.storage.from('img-enc').download('orv/'+st.iso+'/'+(await hk(k))+'.bin'); if(!dl.error && dl.data){ const u8 = new Uint8Array(await dl.data.arrayBuffer()); const o = JSON.parse(new TextDecoder().decode(await pdxCK.openBytes(u8))); pdxBxCache.put('orf|'+k, {enc:u8}); return o; } }catch(e){}
