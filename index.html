@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v639';
+const APP_VER = '2026-11-20-v640';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26370,7 +26370,8 @@ window.CLS_MODE='A';
   window.pdxOrMarkTxt = function(p){ if(!p) return null; let t = '', cls = 'mut';
     if(!p.pid){ t = '?'; cls = 'pend'; } else if(!p.c) t = '…'; else { const c = window.pdxCultTxt(p.c); cls = c.cls; t = c.pendPos ? String(p.c.aa||'εκκρ.')+' · προηγ.(+)' : c.cls==='pend' ? String(p.c.aa||'εκκρ.') : c.unclear ? '? δες' : c.t.replace(/\s*·\s*⚠ \d+ ημερών$/, '').replace(/\s*·\s*\d{1,2}\/\d{1,2}$/, ''); if(c.old) t += '⌛'; }   // ⌛ = καλλιέργεια >10 ημερών
     const fun = !!(p.ua && p.ua.fun);     // 17/11 18:22 (χρήστης: «τη νεφροστομία δεν θα τη γράφεις νεφροστομία, θα γράφεις ΝΦΣ»)
-    const ab = t=>String(t||'').replace(/νεφροστομ\S*/gi, 'ΝΦΣ').replace(/ουροκαθετ\S*|καθετήρ\S*|foley/gi, 'ΚΘ').replace(/κυστεοστομ\S*/gi, 'ΚΣ').replace(/\s+/g, ' ').trim();
+    const ab = t=>String(t||'').replace(/ο[υύ]ρα\s+(?:απ[οό]|εκ)\s+(?:τη[νς]?\s+|το[νυ]?\s+)?/gi, '')   /* 20/11 17:56 (χρήστης): «ούρα από νεφροστομία» → σκέτο «ΝΦΣ» + πλευρά */
+      .replace(/νεφροστομ\S*/gi, 'ΝΦΣ').replace(/ουροκαθετ\S*|καθετήρ\S*|foley/gi, 'ΚΘ').replace(/κυστεοστομ\S*/gi, 'ΚΣ').replace(/\s+/g, ' ').trim();
     return {t, cls, fun, note: (p.c && p.c.note) ? ab(p.c.note).slice(0, 30) : ''}; };
   // 20/11 07:20: και με 1–2 γράμματα διαφορά (OCR σκαναρισμένου PDF: Η↔Ν, Ο↔0 κ.λπ.) — μόνο επώνυμα ≥5 γραμμάτων· πρώτα πάντα το ακριβές
   const orLev = (a, b)=>{ if(Math.abs(a.length - b.length) > 2) return 9; let p = Array.from({length:b.length+1}, (_, j)=>j); for(let i = 1; i <= a.length; i++){ const q = [i]; for(let j = 1; j <= b.length; j++) q[j] = Math.min(p[j]+1, q[j-1]+1, p[j-1] + (a[i-1]===b[j-1] ? 0 : 1)); p = q; } return p[b.length]; };
