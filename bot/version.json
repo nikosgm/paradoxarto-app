@@ -1,1 +1,1 @@
-{"version": "0.21.627", "zip": "ef-bot-0.21.627.zip", "sha256": "89442b1aebc1c14beccf1d9b3e22cdfd3cbab6d401dffd22789a9f81bc68f703", "notes": "η ενημέρωση περιμένει να τελειώσει η εργασία που τρέχει"}
+{"version": "0.21.628", "zip": "ef-bot-0.21.628.zip", "sha256": "8fc4661612fc04c5869633628facaf8c03153206630d8ceb631f11a5cbe84a6b", "notes": "e-prescription: φάρμακο που δεν βρίσκεται με όλο το όνομα (π.χ. Zidrolin mod) → αναζήτηση με λιγότερες λέξεις"}
