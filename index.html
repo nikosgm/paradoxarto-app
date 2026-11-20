@@ -2586,7 +2586,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v649';
+const APP_VER = '2026-11-20-v650';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25836,6 +25836,26 @@ html.pdx-night [style*="border:1.5px solid var(--mp,#1D4E80)"]:not([style*="back
     setTimeout(()=>{ const after = String(window.openKey||'') + '|' + (mv.querySelector('.pth h1')||{}).textContent; if(after===before) send('dead', {at:new Date().toISOString(), card:(card.getAttribute('onclick')||'').slice(0,80), over:overlays(), active:document.activeElement?desc(document.activeElement):'', v:typeof APP_VER!=='undefined'?APP_VER:'', w:innerWidth+'x'+innerHeight}); }, 900);
   }, true);
   window.addEventListener('error', ev=>{ send('err', {at:new Date().toISOString(), msg:String(ev.message||'').slice(0,200), src:String(ev.filename||'').slice(-40)+':'+ev.lineno, v:typeof APP_VER!=='undefined'?APP_VER:''}); });
+  // 20/11 21:20 (χρήστης: «σε πολλούς ασθενείς δεν πατιούνται τα κουμπιά» — στη δοκιμή δουλεύουν): καταγραφή ΚΑΘΕ πατήματος σε κουμπί της καρτέλας
+  // που δεν έκανε τίποτα: (α) έφτασε το click; (β) τι βρίσκεται κάτω από το δάχτυλο; (γ) υπάρχει η εγγραφή του ασθενή; (δ) σφάλμα; — και μήνυμα στον χρήστη
+  window.addEventListener('unhandledrejection', ev=>{ const r = ev.reason||{}; send('rej', {at:new Date().toISOString(), msg:String(r.message||r).slice(0,200), st:String(r.stack||'').slice(0,400), v:typeof APP_VER!=='undefined'?APP_VER:''}); });
+  let TD = null, MUT = 0, LERR = '';
+  try{ new MutationObserver(m=>{ MUT += m.length; }).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['class','style']}); }catch(x){}
+  window.addEventListener('error', ev=>{ LERR = String(ev.message||'').slice(0,160); });
+  const BTN = '#mobView button, #mobView [onclick], #mobView .ptr';
+  document.addEventListener('pointerup', e=>{ if(!e.isTrusted) return; const mv = document.getElementById('mobView'); if(!mv || getComputedStyle(mv).display==='none' || !mv.contains(e.target)) return;
+    const u = document.elementFromPoint(e.clientX, e.clientY); const bt = u && u.closest && u.closest(BTN); if(!bt) return;
+    TD = {el:bt, clicked:false, m0:MUT, e0:LERR, x:e.clientX, y:e.clientY, t:Date.now(), top:u};
+    const me = TD; setTimeout(()=>{ if(TD!==me) return; TD = null; const quiet = MUT - me.m0 <= 1;
+      if(me.clicked && !quiet) return;
+      const oc = (me.el.getAttribute('onclick')||'').slice(0,90), ok = String(window.openKey||'');
+      const DD = (typeof data!=='undefined' && data) || {}, EE = (typeof extraPatients!=='undefined' && extraPatients) || {}, rec = DD[ok] || EE[ok];
+      const kk = (oc.match(/'([^']+)'/)||[])[1]||'', recB = DD[kk] || EE[kk];
+      send('deadbtn', {at:new Date().toISOString(), clicked:me.clicked, mut:MUT-me.m0, btn:desc(me.el).slice(0,90), txt:String(me.el.textContent||'').trim().slice(0,30), oc, top:desc(me.top).slice(0,90),
+        openKey:ok.replace(/[^\w-]/g,'').slice(0,30), keyArg:kk.replace(/[^\w-]/g,'').slice(0,30), rec:!!rec, recB:!!recB, tmp:!!(rec&&rec._npsTemp), keep:!!(rec&&rec._npsKeep), err:LERR!==me.e0?LERR:'', over:overlays(), v:typeof APP_VER!=='undefined'?APP_VER:''});
+      try{ if(window.toast) toast(me.clicked ? '⚠ Το κουμπί πατήθηκε αλλά δεν άνοιξε τίποτα — καταγράφηκε για διόρθωση' : '⚠ Το πάτημα δεν έφτασε στο κουμπί — καταγράφηκε για διόρθωση'); }catch(x){}
+    }, 1400); }, true);
+  document.addEventListener('click', e=>{ if(TD && e.isTrusted && (TD.el===e.target || TD.el.contains(e.target))) TD.clicked = true; }, true);
 })();
 </script>
 <style id="clsA">/* 7/11: κλασικός πίνακας — εμφάνιση «Α · Καθαρό» (επιλογή χρήστη). Μόνο οθόνη υπολογιστή· η εκτύπωση δεν αλλάζει. */
