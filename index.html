@@ -2586,7 +2586,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v647';
+const APP_VER = '2026-11-20-v648';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26525,8 +26525,12 @@ window.CLS_MODE='A';
     const C = window.pdxOrCultCells(marks);
     if(C){ const g = marks.grid, cw = 7.2, L = (g.u*100 - cw);   // % του πλάτους της εικόνας
       const cells = C.map((c)=>{ const k = c.m.length ? window.pdxOrMarkTxt(c.m[0].p) : null, col = k ? (MCOL[k.cls]||'#000') : '#000', t1 = k ? k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : '') : (c.head ? 'ΚΑΛΛΙΕΡΓ.' : '');
-        const fz = Math.max(.28, Math.min(1.05, (cw*0.945 - .5)/(Math.max(1, t1.length)*.55)));
-        return '<div style="position:absolute;left:'+L.toFixed(2)+'%;width:'+cw+'%;top:'+(c.a*100).toFixed(3)+'%;height:'+((c.b - c.a)*100).toFixed(3)+'%;box-sizing:border-box;border:0!important;border-left:1.5px solid #000!important;border-top:1.5px solid #000!important;'+(c===C[C.length-1]?'border-bottom:1.5px solid #000!important;':'')+'background:'+(c.thin ? '#C8C8C8' : '#fff')+'!important;color:'+col+'!important;font:'+(c.head ? 700 : 800)+' '+fz.toFixed(3)+'cqw/1.05 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 .25em;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'">'+E2(t1)+'</div>'; }).join('');
+        let fz = Math.max(.28, Math.min(1.05, (cw*0.945 - .5)/(Math.max(1, t1.length)*.55))), two = false;
+        // 20/11 21:12 (χρήστης): ό,τι δεν χωράει → ΔΥΟ σειρές αντί για μικρά γράμματα
+        let l1 = t1, l2 = '';
+        if(fz < 0.8 && /\s/.test(t1) && t1.length > 10){ const mid = t1.length/2, sp = [...t1.matchAll(/ · |\s/g)].map(m=>[m.index, m[0].length]).sort((a,b)=>Math.abs(a[0]-mid)-Math.abs(b[0]-mid) + (b[1]-a[1])*0.01)[0];
+          l1 = t1.slice(0, sp[0] + (sp[1] > 1 ? 2 : 0)).trim(); l2 = t1.slice(sp[0] + sp[1]).trim(); fz = Math.max(.28, Math.min(.9, (cw*0.945 - .5)/(Math.max(l1.length, l2.length)*.55))); two = true; }
+        return '<div style="position:absolute;left:'+L.toFixed(2)+'%;width:'+cw+'%;top:'+(c.a*100).toFixed(3)+'%;height:'+((c.b - c.a)*100).toFixed(3)+'%;box-sizing:border-box;border:0!important;border-left:1.5px solid #000!important;border-top:1.5px solid #000!important;'+(c===C[C.length-1]?'border-bottom:1.5px solid #000!important;':'')+'background:'+(c.thin ? '#C8C8C8' : '#fff')+'!important;color:'+col+'!important;font:'+(c.head ? 700 : 800)+' '+fz.toFixed(3)+'cqw/1.05 Calibri,Arial,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 .25em;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact" title="'+E2(t1)+'"><span style="display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:'+(two?2:1)+';overflow:hidden;white-space:nowrap;line-height:1.1">'+(two ? E2(l1)+'<br>'+E2(l2) : E2(t1))+'</span></div>'; }).join('');
       return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff!important;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner+cells+'</div></div>'; }
     return '<div style="container-type:inline-size;padding-left:5.5%;background:#fff;box-sizing:border-box'+(wpx?';width:'+Math.round(wpx/0.945)+'px':'')+'"><div style="position:relative">'+inner
       + (marks||[]).map(m=>{ const k = window.pdxOrMarkTxt(m.p); if(!k) return ''; const col = MCOL[k.cls]||'#000';
@@ -26594,8 +26598,14 @@ window.CLS_MODE='A';
       if(CC){ const g = marks.grid, cwp = 0.072, x0 = ix + (g.u - cwp)*iw, x1 = ix + g.u*iw;
         for(const c of CC){ const y0 = iy + c.a*ih, y1 = iy + c.b*ih; x.fillStyle = c.thin ? '#C8C8C8' : '#fff'; x.fillRect(x0, y0, x1 - x0, y1 - y0); x.strokeStyle = '#000'; x.lineWidth = 2; x.beginPath(); x.moveTo(x1, y0); x.lineTo(x0, y0); x.lineTo(x0, y1); x.lineTo(x1, y1); x.stroke();
           const k = c.m.length ? window.pdxOrMarkTxt(c.m[0].p) : null, t1 = k ? k.t + (k.note ? ' · '+k.note : '') + (k.fun ? ' · Μύκητες' : '') : (c.head ? 'ΚΑΛΛΙΕΡΓ.' : ''); if(!t1) continue;
-          let f2 = Math.max(7, Math.min(15, (y1 - y0)*0.5)); x.font = '800 '+f2.toFixed(1)+'px Arial'; while(f2 > 6 && x.measureText(t1).width > x1 - x0 - 6){ f2 -= 0.5; x.font = '800 '+f2.toFixed(1)+'px Arial'; }
-          x.fillStyle = k ? (COL[k.cls]||'#000') : '#000'; x.fillText(t1, (x0 + x1)/2, (y0 + y1)/2 + 0.5); }
+          const f0 = Math.max(7, Math.min(15, (y1 - y0)*0.5)); let f2 = f0; x.font = '800 '+f2.toFixed(1)+'px Arial'; while(f2 > 6 && x.measureText(t1).width > x1 - x0 - 6){ f2 -= 0.5; x.font = '800 '+f2.toFixed(1)+'px Arial'; }
+          x.fillStyle = k ? (COL[k.cls]||'#000') : '#000';
+          // 20/11 21:12: δεν χωράει σε μία σειρά με κανονικά γράμματα → δύο σειρές (κόψιμο στο «·» ή στο κενό πιο κοντά στη μέση)
+          if(f2 < f0*0.8 && /\s/.test(t1)){ const sp = [...t1.matchAll(/\s/g)].map(m=>m.index), mid = t1.length/2, cut = sp.sort((a,b)=>Math.abs(a-mid)-Math.abs(b-mid))[0];
+            const l1 = t1.slice(0, cut).trim(), l2 = t1.slice(cut).trim(); let f3 = Math.min(f0, (y1 - y0)*0.42); x.font = '800 '+f3.toFixed(1)+'px Arial';
+            while(f3 > 6 && Math.max(x.measureText(l1).width, x.measureText(l2).width) > x1 - x0 - 6){ f3 -= 0.5; x.font = '800 '+f3.toFixed(1)+'px Arial'; }
+            const cy = (y0 + y1)/2; x.fillText(l1, (x0 + x1)/2, cy - f3*0.55); x.fillText(l2, (x0 + x1)/2, cy + f3*0.6); }
+          else x.fillText(t1, (x0 + x1)/2, (y0 + y1)/2 + 0.5); }
         return c; }
       for(const m of marks.slice().sort((a,b)=>a.v-b.v)){ const k = window.pdxOrMarkTxt(m.p); if(!k) continue;
         if(m.h > 0){ const rh = m.h*ih, f1 = Math.max(8, Math.min(13, rh*0.62)), bh1 = Math.max(f1 + 4, rh*0.92), col = COL[k.cls]||'#000';
