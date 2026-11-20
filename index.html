@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v632';
+const APP_VER = '2026-11-20-v633';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -25266,10 +25266,15 @@ window.histUploadOpen = function(){
   // ---- αποθήκη συσκευής (ίδια βάση με το Evorad, ώστε ένα ζεύγος κλειδιών ανά συσκευή) ----
   let dbp = null;
   const db = ()=>dbp||(dbp=new Promise((res,rej)=>{ const r=indexedDB.open('pdx-devkey',1); r.onupgradeneeded=()=>r.result.createObjectStore('k'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }));
-  const iget = async k=>{ const d=await db(); return new Promise(r=>{ const q=d.transaction('k').objectStore('k').get(k); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); };
+  // 🔐 20/11 14:15 (χρήστης, iPhone: «Το κλειδί αυτής της συσκευής δεν ανοίγει (OperationError)»): το iOS κόβει την IndexedDB όταν η εφαρμογή γυρίζει
+  // από το παρασκήνιο· η ανάγνωση έδινε null → pair() έφτιαχνε ΝΕΟ ζεύγος και ΣΚΕΠΑΖΕ το παλιό. Τώρα: σφάλμα ≠ «δεν υπάρχει» → νέα σύνδεση + 3 προσπάθειες.
+  const iget = async k=>{ for(let i = 0; i < 4; i++){ try{ const d = await db(); return await new Promise((r, j)=>{ const q = d.transaction('k').objectStore('k').get(k); q.onsuccess = ()=>r(q.result); q.onerror = ()=>j(q.error || new Error('idb')); }); }
+      catch(e){ dbp = null; await new Promise(r=>setTimeout(r, 250*(i+1))); } } throw new Error('η αποθήκη της συσκευής δεν απαντά — ξαναδοκίμασε'); };
   const iput = async (k,v)=>{ const d=await db(); return new Promise(r=>{ const t=d.transaction('k','readwrite'); t.objectStore('k').put(v,k); t.oncomplete=()=>r(true); t.onerror=()=>r(false); }); };
   async function pair(){
     let kp = await iget('rsa'); if(kp && kp.privateKey) return kp;
+    if(kp !== undefined && kp !== null) throw new Error('άγνωστο κλειδί συσκευής');
+    kp = await iget('rsa'); if(kp && kp.privateKey) return kp;   // δεύτερος έλεγχος πριν από νέο ζεύγος (ποτέ σκέπασμα υπάρχοντος)
     kp = await crypto.subtle.generateKey({name:'RSA-OAEP', modulusLength:3072, publicExponent:new Uint8Array([1,0,1]), hash:'SHA-256'}, false, ['encrypt','decrypt']);
     await iput('rsa', kp); return kp;
   }
@@ -25319,7 +25324,17 @@ window.histUploadOpen = function(){
     S.err = '';
     try{
       await loadCfg(); await loadRows(); await findMe();
-      if(S.cfg && !S.key && S.me && S.me.wrapped){ try{ await useRaw(await unwrapMine(S.me.wrapped)); }catch(e){ S.err = 'Το κλειδί αυτής της συσκευής δεν ανοίγει ('+(e.message||e)+'). Ζήτα ξανά έγκριση ή χρησιμοποίησε κωδικό ανάκτησης.'; } }
+      if(S.cfg && !S.key && S.me && S.me.wrapped){ try{ await useRaw(await unwrapMine(S.me.wrapped)); }catch(e){
+        // 🔐 20/11: το ιδιωτικό κλειδί της συσκευής άλλαξε (π.χ. το iOS καθάρισε την αποθήκη) → άλλη εγγραφή με το ΤΩΡΙΝΟ αποτύπωμα ή ΑΥΤΟΜΑΤΟ νέο αίτημα έγκρισης
+        let healed = false; const u0 = await uid();
+        if(S.fp && S.me.fp && S.fp !== S.me.fp){
+          const alt = S.rows.find(r=>r.kind==='device' && r.fp===S.fp && r.user_id===u0);
+          if(alt && alt.wrapped){ try{ await useRaw(await unwrapMine(alt.wrapped)); S.me = alt; await iput('devid', alt.id); healed = true; }catch(e2){} }
+          if(!healed){ if(alt){ S.me = alt; await iput('devid', alt.id); } else { await iput('devid', null); S.me = null; try{ await insertDevice(null); await loadRows(); await findMe(); }catch(e3){} }
+            S.err = 'Η συσκευή (iOS/browser) έσβησε το κλειδί της. Στάλθηκε ΑΥΤΟΜΑΤΑ νέο αίτημα: πάτα «Έγκριση» στο μήνυμα που βγαίνει σε έναν υπολογιστή της κλινικής (ή Ρυθμίσεις → Ασφάλεια → Κρυπτογράφηση), ή βάλε τον κωδικό ανάκτησης.'; healed = true; } }
+        if(!healed) S.err = 'Το κλειδί αυτής της συσκευής δεν ανοίγει ('+(e.message||e)+'). Ζήτα ξανά έγκριση ή χρησιμοποίησε κωδικό ανάκτησης.'; } }
+      // 🔔 20/11: έμπιστη συσκευή → μήνυμα (όχι παράθυρο που μπλοκάρει) για συσκευές του ΙΔΙΟΥ λογαριασμού που περιμένουν έγκριση
+      if(S.key && S.raw){ try{ const u1 = await uid(); const pend = S.rows.filter(r=>r.kind==='device' && !r.wrapped && r.pub && r.user_id===u1 && Date.now() - Date.parse(r.created_at) < 48*3600e3); if(pend.length) ckPendBanner(pend); }catch(e){} }
       if(S.me && S.key){ const now = new Date().toISOString(); if(!S.me.last_seen || Date.now()-Date.parse(S.me.last_seen) > 6*3600e3){ sb6.from('oncall_keys').update({last_seen:now}).eq('id', S.me.id).then(()=>{}, ()=>{}); S.me.last_seen = now; } }
     }catch(e){ S.err = 'Σφάλμα: '+(e.message||e); }
     S.loaded = true; return S;
@@ -25368,6 +25383,12 @@ window.histUploadOpen = function(){
     let botMsg = ''; try{ await wrapForBot(); botMsg = 'ok'; }catch(e){ botMsg = e.message||String(e); }
     await refresh(); return {code, botMsg};
   }
+  function ckPendBanner(pend){ if(document.getElementById('ckpend')) return; const r = pend[pend.length-1], E = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const b = document.createElement('div'); b.id = 'ckpend'; b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:99980;max-width:min(520px,94vw);background:#1C1C1E;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.3);font:14px -apple-system,system-ui,sans-serif;display:flex;gap:10px;align-items:center';
+    b.innerHTML = '<div style="flex:1">🔐 <b>'+E(r.label||'Συσκευή')+'</b> ζητά το κλειδί της κλινικής<div style="opacity:.7;font-size:12px">αποτύπωμα '+E(r.fp||'')+' · '+new Date(r.created_at).toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'})+'</div></div><button data-ok style="border:0;background:#34C759;color:#fff;border-radius:10px;padding:8px 12px;font-weight:700">Έγκριση</button><button data-no style="border:0;background:transparent;color:#aaa;font-size:18px">✕</button>';
+    b.querySelector('[data-no]').onclick = ()=>b.remove();
+    b.querySelector('[data-ok]').onclick = async ()=>{ try{ await approve(r.id); b.remove(); toast('✓ Εγκρίθηκε: '+(r.label||'συσκευή')); await loadRows(); }catch(e){ toast('⚠ '+(e.message||e)); } };
+    document.body.appendChild(b); }
   async function requestApproval(){ if(S.me) return S.me.id; const id = await insertDevice(null); await refresh(); return id; }
   // 🔐 14/11 (χρήστης: «λείπει μια έγκριση στη συσκευή του christos»): το αίτημα έγκρισης γινόταν ΜΟΝΟ με το χέρι (Ρυθμίσεις → Κρυπτογράφηση → Αίτημα)·
   // όποιος δεν το πατούσε δεν εμφανιζόταν ποτέ στη λίστα. Τώρα: νέα συσκευή με ρόλο → αίτημα ΑΥΤΟΜΑΤΑ μία φορά, ~8″ μετά τη σύνδεση.
