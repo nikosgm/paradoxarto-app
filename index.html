@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-19-v615';
+const APP_VER = '2026-11-20-v616';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26320,7 +26320,9 @@ window.CLS_MODE='A';
     const bytes = await out.save(), nm = 'Πρόγραμμα χειρουργείου '+String(title||'').replace(/[\/\\:*?"<>|]/g,'-')+'.pdf';
     return new File([bytes], nm, {type:'application/pdf'}); };
   // καλύτερο διαθέσιμο: διανυσματικό με σφραγίδα (PDF του mail) → αλλιώς το παλιό (εικόνα/Excel)
-  window.pdxOrCultPdfBest = async function(st, title){ try{ const f = await window.pdxOrCultPdfVec(st, title); if(f) return f; }catch(e){ console.warn('pdf vec', e); } return window.pdxOrCultPdf(st, title); };
+  // 20/11 06:45 (χρήστης: «δεν μου βγάζει τις καλλιέργειες πάνω στο PDF — αν δεν γίνεται, όπως πριν»): ΞΑΝΑ ο παλιός τρόπος (σελίδα ως εικόνα + κουτάκια)·
+  // το διανυσματικό (pdxOrCultPdfVec) μένει διαθέσιμο αλλά ΔΕΝ χρησιμοποιείται μέχρι να βρεθεί γιατί δεν έβγαζε κουτάκια στα πραγματικά PDF του mail
+  window.pdxOrCultPdfBest = async function(st, title){ return window.pdxOrCultPdf(st, title); };
   // 👁 19/11 23:15 (χρήστης: «όταν πατάω εξαγωγή PDF να ανοίγει η ΠΡΟΕΠΙΣΚΟΠΗΣΗ και μετά να πατάω εκτύπωση, να βλέπω πώς βγαίνει»):
   // σελίδες του ΙΔΙΟΥ αρχείου (pdf.js) σε δική μας σελίδα· «🖨 Εκτύπωση / Κοινοποίηση» = φύλλο του iPhone (πάτημα χρήστη → επιτρέπεται)
   window.pdxPdfPreview = async function(file){ const E3 = x=>String(x==null?'':x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
