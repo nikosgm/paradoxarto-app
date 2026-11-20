@@ -380,12 +380,23 @@ async function aiScan(id, khex){
     const r = await fetch(F, { method:'POST', headers:H, signal: ac.signal, body: JSON.stringify({ scan: { id, k: khex, token: tok.get() } }) }); clearTimeout(to);
     const j = await r.json().catch(()=>null);
     if(j && (j.ok || (j.ok === false && j.msg))) return j;
+    // 🔁 20/11 07:18 (χρήστης: «ανέβασα πρόχειρο πρόγραμμα και μου έβγαλε δεν διαβάστηκε»): η 1η ανάγνωση ΤΕΛΕΙΩΣΕ στον server (#8701 → πρόχειρο 13 ασθενών)
+    // αλλά το κινητό έχασε την απάντηση → η επανάληψη πήρε 409 «ήδη διαβάστηκε» → ψεύτικη αποτυχία. Τώρα: 409 → κατάσταση της σάρωσης (scan_q_status):
+    // done → ✅ με το αποτέλεσμα · scanwork → περιμένει · scanq (απέτυχε και ελευθερώθηκε) → κανονική επανάληψη
+    if(r.status === 409) return await scanSettle(id, khex);
     // 14/11 14:11 (χρήστης: «με πέταξε στη συζήτηση Claude — θέλω με το που ανεβάζω να τελειώνει εκεί»): AI ανοιχτό → ΠΟΤΕ αυτόματα στη συζήτηση·
     // σφάλμα → 1 αυτόματη επανάληψη, μετά μήνυμα με «Ξανά» (η σάρωση μένει διαθέσιμη)
     if(j && j.off) return null;
     return { fail: true, error: (j && j.error) || ('HTTP ' + r.status) };
   }catch(e){ return { fail: true, error: String((e && e.message) || e) }; }
 }
+async function scanSettle(id, khex){
+  const MODE = {rx:'rx', ref:'ref', opnote:'opnote', ordraft:'ordraft'};
+  for(let i = 0; i < 50; i++){ let q = null; try{ q = await rpc('scan_q_status', { p_token: tok.get(), p_id: id }); }catch(e){}
+    if(q && q.status === 'done') return { ok: true, settled: true, doc_type: MODE[q.mode] || 'history', rxid: q.rxid ? String(q.rxid) : '' };
+    if(q && q.status === 'scanq') return await aiScan(id, khex);
+    await new Promise(r=>setTimeout(r, 3000)); }
+  return { fail: true, error: 'η ανάγνωση αργεί — δείτε στην εφαρμογή («Νέα από σάρωση»)' }; }
 // 📚 17/11 18:13 (χρήστης: «με το που κάνω σάρωση να την παίρνει στη μνήμη και να μπορώ να κάνω απευθείας κι άλλη — να ανεβαίνουν πολλές μαζί»):
 // όρθια σάρωση με ανοιχτό AI → μπαίνει σε ΟΥΡΑ (στιγμιότυπο στη μνήμη), η κάμερα μένει ανοιχτή για την επόμενη· ανέβασμα+ανάγνωση στο παρασκήνιο
 // μία-μία· πάνω στην οθόνη «📤 2 ανεβαίνουν · ✅ 3» (πάτημα = λίστα με αποτελέσματα / ↻ για όσα απέτυχαν). Πρόγραμμα (οριζόντια) / χωρίς AI → όπως πριν.
