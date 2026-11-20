@@ -10448,7 +10448,7 @@ document.head.appendChild(st);
       if(m){ const dt = new Date(+m[3], +m[2]-1, +m[1]); const n = Math.floor((new Date().setHours(0,0,0,0) - dt.getTime())/864e5)+1; t = '📅 Εισ. '+m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+(n>0?' · '+n+'η ημέρα':''); }
       if(t) c.push('<span>'+esc(t)+'</span>'); }   // 8/11: το ΑΜ φαίνεται πια δίπλα στο όνομα (πάτημα = αντιγραφή)
     // 🔪 15/11 13:22: χωρίς δικό μας χειρουργείο → ό,τι βρέθηκε στο ΝΠΣ / πρόγραμμα χειρουργείου (πρώτο, κάτω από το όνομα)
-    if(!d.surgery && window.pdxSurgGuess){ const g = pdxSurgGuessCached(k); if(g && g.txt) c.unshift('<span class="sgx" style="cursor:pointer" onclick="pdxPtSurgPage(\''+esc(k)+'\')" title="'+esc(g.src||'')+'">'+esc(g.txt)+' ›</span>'   /* 15/11 13:25 (χρήστης): χωρίς «(από πού)» — μόνο το χειρουργείο */);
+    if(!d.surgery && window.pdxSurgGuess){ const g = pdxSurgGuessCached(k); if(g && g.txt) c.unshift('<span class="sgx" style="cursor:pointer" onclick="pdxPtSurgPage(\''+esc(k)+'\')" title="'+esc(g.src||'')+'">'+esc(g.txt)+'</span>'   /* 15/11 13:25 (χρήστης): χωρίς «(από πού)» — μόνο το χειρουργείο */);
       pdxSurgGuess(k, d).then(ch=>{ if(ch && openKey===k) render(); }).catch(()=>{}); }
     // 💊 15/11 17:38: αντιβιώσεις νοσηλείας + από πότε (κάτω από το χειρουργείο)
     if(window.pdxAbxOf){ const ab = pdxAbxOf(d.name); if(ab && ab.length){ const dd = t=>{ const x = new Date(t); return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0'); };
