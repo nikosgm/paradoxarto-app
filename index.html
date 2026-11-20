@@ -2586,7 +2586,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v650';
+const APP_VER = '2026-11-20-v651';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -10402,7 +10402,7 @@ document.head.appendChild(st);
     function persist(){ if(!k) return; const d2=rec(k); if(!d2) return; d2.calc=Object.assign({},c); save(k); }
     document.body.appendChild(ov); draw();
   };
-  let rfQ=0; window.mobRefresh=function(){ if(rfQ) return; rfQ=requestAnimationFrame(()=>{ rfQ=0; try{ render(); }catch(e){} }); };
+  let rfQ=0; window.mobRefresh=function(){ if(rfQ) return; rfQ=requestAnimationFrame(()=>{ rfQ=0; try{ renderBg(); }catch(e){} }); };
   
   // θέση scroll της καρτέλας ασθενή: κρατιέται όταν πας σε Εκκρ./Ιστορικό και γυρνάς πίσω
   window.mobSaveScroll=function(k){ try{ if(openKey===k && !window.__tp) window.__dret={k:k, y:view.scrollTop, t:Date.now()}; }catch(e){} };
@@ -10690,6 +10690,17 @@ document.head.appendChild(st);
     h += body + '</div>';
     return h + '<div style="height:96px"></div>' + tabs();
   }
+  // 🐞 20/11 21:40 (χρήστης: «πατάω κουμπιά και δεν βγάζει τίποτα σε κάποιους ασθενείς» · diag|deadbtn: δάχτυλο ΠΑΝΩ στο κουμπί, click ΔΕΝ ήρθε, 4080 αλλαγές DOM σε 1,4″):
+  // ο συγχρονισμός/realtime/χρονόμετρα → buildGrid → render() ξανάγραφε ΟΛΟ το #mobView ανάμεσα στο άγγιγμα και το σήκωμα του δαχτύλου → το κουμπί
+  // αντικαθίστατο και ο browser ΔΕΝ έστελνε click. Τώρα: όσο κρατάς πατημένο (μέχρι να φτάσει το click, έως 0,7″ μετά το σήκωμα) οι render του ΠΑΡΑΣΚΗΝΙΟΥ περιμένουν.
+  let tapArm = 0, tapUp = 0, bgQ = 0;
+  const tapBusy = ()=>{ if(!tapArm) return false; const n = Date.now(); if(n - tapArm > 6000 || (tapUp && n - tapUp > 700)){ tapArm = 0; return false; } return true; };
+  document.addEventListener('pointerdown', ()=>{ tapArm = Date.now(); tapUp = 0; }, true);   // ΟΛΗ η οθόνη (και ο κλασικός πίνακας του υπολογιστή ξαναχτίζεται από το buildGrid)
+  document.addEventListener('pointerup', ()=>{ if(tapArm) tapUp = Date.now(); }, true);
+  document.addEventListener('pointercancel', ()=>{ tapArm = 0; }, true);
+  document.addEventListener('click', ()=>{ tapArm = 0; }, true);   // το click έφτασε → ό,τι render κάνει το ίδιο το κουμπί τρέχει αμέσως
+  function renderBg(){ if(tapBusy()){ window.__pdxRenderDefer = (window.__pdxRenderDefer||0) + 1; if(!bgQ) bgQ = setTimeout(function again(){ if(tapBusy()){ bgQ = setTimeout(again, 100); return; } bgQ = 0; try{ render(); }catch(e){ console.error(e); } }, 100); return; } render(); }
+  window.pdxTapBusy = tapBusy;
   function render(){
     const lk = document.getElementById('lockOverlay');
     const locked = !lk || lk.style.display!=='none';
@@ -11947,10 +11958,11 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
   try{ if(!isPhone() && localStorage.getItem('pdx_desk') !== '0'){ deskMode = true; window.__pdxDesk = true; } }catch(e){}
   btn.onclick = ()=>{ forceFull=false; render(); };
   window.buildMobileView = render;
-  window.addEventListener('resize', render);
-  window.addEventListener('orientationchange', render);
+  window.addEventListener('resize', renderBg);
+  window.addEventListener('orientationchange', renderBg);
   const bg = window.buildGrid;
-  window.buildGrid = function(){ const r = bg.apply(this, arguments); try{ render(); }catch(e){ console.error(e); } return r; };
+  let bgGQ = 0; window.buildGrid = function(){ if(tapBusy()){ window.__pdxRenderDefer = (window.__pdxRenderDefer||0) + 1; const self = this, args = arguments; if(!bgGQ) bgGQ = setTimeout(function again(){ if(tapBusy()){ bgGQ = setTimeout(again, 100); return; } bgGQ = 0; try{ window.buildGrid.apply(self, args); }catch(e){ console.error(e); } }, 100); return; }
+    const r = bg.apply(this, arguments); try{ renderBg(); }catch(e){ console.error(e); } return r; };   // 20/11 21:40: ούτε ο πίνακας ξαναχτίζεται κάτω από το δάχτυλο
   const cl = window.checkLockCode;
   window.checkLockCode = function(){ const r = cl.apply(this, arguments); try{ render(); }catch(e){} return r; };
   try{ render(); }catch(e){}
@@ -25848,11 +25860,11 @@ html.pdx-night [style*="border:1.5px solid var(--mp,#1D4E80)"]:not([style*="back
     TD = {el:bt, clicked:false, m0:MUT, e0:LERR, x:e.clientX, y:e.clientY, t:Date.now(), top:u};
     const me = TD; setTimeout(()=>{ if(TD!==me) return; TD = null; const quiet = MUT - me.m0 <= 1;
       if(me.clicked && !quiet) return;
-      const oc = (me.el.getAttribute('onclick')||'').slice(0,90), ok = String(window.openKey||'');
+      const oc = (me.el.getAttribute('onclick')||'').slice(0,90), ok = String((window.__pdxNavState && window.__pdxNavState().openKey) || window.openKey || '');
       const DD = (typeof data!=='undefined' && data) || {}, EE = (typeof extraPatients!=='undefined' && extraPatients) || {}, rec = DD[ok] || EE[ok];
       const kk = (oc.match(/'([^']+)'/)||[])[1]||'', recB = DD[kk] || EE[kk];
       send('deadbtn', {at:new Date().toISOString(), clicked:me.clicked, mut:MUT-me.m0, btn:desc(me.el).slice(0,90), txt:String(me.el.textContent||'').trim().slice(0,30), oc, top:desc(me.top).slice(0,90),
-        openKey:ok.replace(/[^\w-]/g,'').slice(0,30), keyArg:kk.replace(/[^\w-]/g,'').slice(0,30), rec:!!rec, recB:!!recB, tmp:!!(rec&&rec._npsTemp), keep:!!(rec&&rec._npsKeep), err:LERR!==me.e0?LERR:'', over:overlays(), v:typeof APP_VER!=='undefined'?APP_VER:''});
+        openKey:ok.replace(/[^\w-]/g,'').slice(0,30), keyArg:kk.replace(/[^\w-]/g,'').slice(0,30), rec:!!rec, recB:!!recB, tmp:!!(rec&&rec._npsTemp), keep:!!(rec&&rec._npsKeep), err:LERR!==me.e0?LERR:'', def:window.__pdxRenderDefer||0, conn:me.el.isConnected, over:overlays(), v:typeof APP_VER!=='undefined'?APP_VER:''});
       try{ if(window.toast) toast(me.clicked ? '⚠ Το κουμπί πατήθηκε αλλά δεν άνοιξε τίποτα — καταγράφηκε για διόρθωση' : '⚠ Το πάτημα δεν έφτασε στο κουμπί — καταγράφηκε για διόρθωση'); }catch(x){}
     }, 1400); }, true);
   document.addEventListener('click', e=>{ if(TD && e.isTrusted && (TD.el===e.target || TD.el.contains(e.target))) TD.clicked = true; }, true);
