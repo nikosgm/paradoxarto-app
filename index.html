@@ -2554,7 +2554,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v627';
+const APP_VER = '2026-11-20-v628';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -8754,14 +8754,18 @@ document.head.appendChild(st);
     return pdxDbCall('POST', '/api/events', {rows:[{patient:{name:nm, amka:String(rec.amka||'').replace(/\D/g,'')}, date:day, kind:'dcnote', title:surg||'Εξιτήριο', body:{text:String(text), surg, by:pdxDcBy()}, src:'paradoxarto', ext_id:'dcnote|'+nk+'|'+day}]}).catch(()=>null); };
   // 🫧 14/11: χάπι της κάτω μπάρας — μετακινείται στο ενεργό κουμπί (θυμάται την προηγούμενη θέση για να «γλιστρήσει»)
   (function(){ let last = null, raf = 0;
-    const place = ()=>{ raf = 0; const bar = document.querySelector('#mobView .nv-tb') || document.querySelector('#mobView .mtabs'); if(!bar) return; const on = bar.querySelector(':scope > button.on, :scope > span.on'); bar.classList.add('pill');
+    const place = ()=>{ raf = 0; const bar = document.querySelector('#mobView .nv-tb') || document.querySelector('#mobView .mtabs'); if(!bar) return; const on = bar.querySelector(':scope > button.on, :scope > span.on'); if(!bar.classList.contains('pill')) bar.classList.add('pill');
       if(!on || !on.offsetWidth){ bar.style.setProperty('--po','0'); return; }
       const br = bar.getBoundingClientRect(), r = on.getBoundingClientRect(), nv = bar.classList.contains('nv-tb'), padX = nv ? 10 : 0, w = nv ? Math.max(r.width + 2*padX, 64) : r.width;
       const v = {x: Math.max(4, r.left - br.left + (r.width - w)/2), y: nv ? Math.max(4, (br.height - Math.min(br.height - 8, 54))/2) : r.top - br.top, w, h: nv ? Math.min(br.height - 8, 54) : r.height};
       if(bar.__pp !== 1 && last){ bar.classList.add('np'); bar.style.setProperty('--px', last.x+'px'); bar.style.setProperty('--pw', last.w+'px'); bar.style.setProperty('--py', v.y+'px'); bar.style.setProperty('--ph', v.h+'px'); bar.style.setProperty('--po','1'); void bar.offsetWidth; bar.classList.remove('np'); }
       bar.__pp = 1; bar.style.setProperty('--px', v.x+'px'); bar.style.setProperty('--pw', v.w+'px'); bar.style.setProperty('--py', v.y+'px'); bar.style.setProperty('--ph', v.h+'px'); bar.style.setProperty('--po','1'); last = v; };
     const go = ()=>{ if(!raf) raf = requestAnimationFrame(place); };
-    const start = ()=>{ const mv = document.getElementById('mobView'); if(!mv){ setTimeout(start, 800); return; } new MutationObserver(go).observe(mv, {childList:true, subtree:true, attributes:true, attributeFilter:['class']}); addEventListener('resize', go); go(); };
+    // 🐞 20/11 13:20 (χρήστης: «τρεμοπαίζει, αναβοσβήνει» — υπολογιστής): το place() έκανε classList.add('pill') ΚΑΘΕ φορά → ο browser το μετρά ως αλλαγή
+    // κλάσης (ακόμα κι αν υπήρχε) → ο παρατηρητής ξανακαλούσε το place() → ατέρμονος βρόχος ~60/″ (372 αλλαγές σε 6″). Τώρα: αγνοούνται οι αλλαγές της ίδιας της μπάρας.
+    const own = e=>e && e.classList && (e.classList.contains('nv-tb') || e.classList.contains('mtabs'));
+    const onMut = L=>{ for(const m of L) if(!(m.type === 'attributes' && own(m.target))){ go(); return; } };
+    const start = ()=>{ const mv = document.getElementById('mobView'); if(!mv){ setTimeout(start, 800); return; } new MutationObserver(onMut).observe(mv, {childList:true, subtree:true, attributes:true, attributeFilter:['class']}); addEventListener('resize', go); go(); };
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start(); window.pdxTabPill = go; })();
   window.pdxDbCall = function(method, path, body){
     return new Promise((ok, no)=>{ pdxDbQ.push({method:String(method||'GET').toUpperCase(), path, body, ok, no});
