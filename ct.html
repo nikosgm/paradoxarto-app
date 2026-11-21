@@ -1639,7 +1639,7 @@ async function* walkDir(dh){ for await (const [n,h] of dh.entries()){ if(h.kind=
 
 /* ================= Εφαρμογή υπολογιστή (Electron): ανάγνωση κατευθείαν από δίσκο/CD/δίκτυο — 7/11 ================= */
 const DESK = window.nikosDesktop || null;
-const CT_VER = '2026-11-19a';
+const CT_VER = '2026-11-21a';
 // 8/11: η εφαρμογή υπολογιστή μένει ανοιχτή μέρες → με κάθε εντολή από το κινητό ελέγχει αν υπάρχει νεότερη σελίδα και ξαναφορτώνει (κρατά την εντολή)
 async function ctStale(){ try{ if(!DESK || location.protocol==='file:') return false; const t = await (await fetch('/ct?app=desktop&chk='+Date.now(), {cache:'no-store'})).text(); const m = /const CT_VER = '([^']+)'/.exec(t); return !!(m && m[1] !== CT_VER); }catch(e){ return false; } }
 
@@ -1656,6 +1656,7 @@ const DG = { r:null, L:null,
     const rdKB = (r.batches||[]).reduce((a,b)=>a+b[2],0), rdMs=(r.batches||[]).reduce((a,b)=>a+b[1],0);
     const lines=[], f1=x=>fmt(x,1), ms=x=>Math.round(x)+' ms';
     lines.push('🩺 Διάγνωση φόρτωσης — '+(r.kind||'?')+' · viewer '+(r.v||'')+(r.app?' · εφαρμογή '+r.app:''));
+    if(r.how || r.stopped) lines.push('Άνοιγμα από: '+(r.how||'?')+(r.stopped?' · ⚠ προηγούμενη φόρτωση σταμάτησε ('+r.stopped+') — δεν διαβάζονται 2 μαζί':''));
     lines.push('Υπολογιστής: '+(r.hw||'?')+' πυρήνες · '+(r.mem?r.mem+' GB':'? GB')+' · '+(r.wk||WK.N)+' workers · μνήμη για έτοιμες τομές '+(r.budget||'?')+' MB');
     lines.push('Αρχεία: '+(L.total||0)+' (εικόνες '+(L.ok||0)+', άλλα '+((L.skip||0)+(r.skipNon||0))+', διπλά '+(L.dup||0)+') · '+f1(mb)+' MB · σειρές '+S.series.length);
     lines.push('Χρόνος: πρώτη εικόνα '+(L.first!=null?f1(L.first/1000)+' s':'—')+' · σύνολο '+f1(tot)+' s'+(L.end==null?' (φορτώνει ακόμα)':''));
@@ -1687,46 +1688,61 @@ const DG = { r:null, L:null,
     d.querySelector('[data-ok]').onclick=()=>d.remove(); d.querySelector('[data-cp]').onclick=()=>{ try{ navigator.clipboard.writeText(t); d.querySelector('[data-cp]').textContent='✓ αντιγράφηκε'; }catch(e){} };
     document.body.appendChild(d); }
 };
-async function deskOpen(root){
+// 💿 21/11 08:26 (χρήστης: «πάλι αργεί να φορτώσει το CD ενώ με RadiAnt φορτώνει γρήγορα» · 🩺: «CD» ΚΑΙ τρόπος «24 μαζί», 1,1 MB/s, 0 αναλυμένα σε 51″):
+// ΔΥΟ φορτώσεις του ίδιου CD ταυτόχρονα — η 1η (άνοιγμα «E:\DICOM» ως φάκελος → 24 μαζί) ΔΕΝ σταματούσε όταν πατήθηκε «💿 CD» → ο δίσκος «χτυπούσε».
+// Τώρα: (1) κάθε νέα φόρτωση ΣΤΑΜΑΤΑ την ανάγνωση της προηγούμενης · (2) 2ο πάτημα για το ΙΔΙΟ ενώ φορτώνει → αγνοείται
+// (3) CD = ο ΔΙΣΚΟΣ είναι μονάδα CD/DVD (DESK.cd, μία φορά) — και υποφάκελοι/DICOMDIR του, όχι μόνο «E:\»
+const DSK = { gen:0, cur:null, cdL:null, stopped:0, inflight:null };   // inflight: η παρτίδα που διαβάζεται τώρα — η νέα φόρτωση την περιμένει
+async function cdLetters(){ if(DSK.cdL) return DSK.cdL; try{ const r = DESK.cd ? await DESK.cd() : null; DSK.cdL = ((r&&r.drives)||[]).map(x=>String(x.d||'').charAt(0).toUpperCase()).filter(Boolean); }catch(e){ DSK.cdL = []; } return DSK.cdL; }
+async function deskOpen(root, how){
   if(!DESK || !root) return;
+  const R = String(root).trim();
+  if(DSK.cur && !DSK.cur.done && DSK.cur.root.toLowerCase()===R.toLowerCase()){ status('Φορτώνει ήδη — περίμενε…'); return; }
+  if(DSK.cur && !DSK.cur.done) DSK.stopped++;
+  const my = ++DSK.gen, cur = DSK.cur = { root:R, done:false };
   status('Ανοίγω '+root+'…'); const tl0=performance.now();
-  const L = await DESK.list(root); if(!L || L.err || !L.files || !L.files.length){ status(L&&L.err ? L.err : 'Δεν βρέθηκαν εικόνες σε αυτόν τον φάκελο.', true); return; }
+  const [L, cdl] = await Promise.all([DESK.list(root), /^[A-Za-z]:/.test(R) ? cdLetters() : Promise.resolve([])]);
+  if(my!==DSK.gen) return;
+  if(!L || L.err || !L.files || !L.files.length){ cur.done = true; status(L&&L.err ? L.err : 'Δεν βρέθηκαν εικόνες σε αυτόν τον φάκελο.', true); return; }
   S.src = L.name || root;
-  const isCD0=/^[A-Za-z]:\\?$/.test(String(root).trim()); DG.reset(isCD0?'CD':'φάκελος', L.files.length); DG.r.list=performance.now()-tl0; DG.r.dd=L.dd||null;   // 📀 19/11: DICOMDIR (εφαρμογή ≥1.0.9)
+  const onCD = /^[A-Za-z]:\\?$/.test(R) || (/^[A-Za-z]:/.test(R) && cdl.includes(R.charAt(0).toUpperCase()));
+  const isCD0=onCD; DG.reset(isCD0?'CD':'φάκελος', L.files.length); DG.r.list=performance.now()-tl0; DG.r.dd=L.dd||null; DG.r.how=how||''; DG.r.stopped=DSK.stopped; DSK.stopped=0;   // 📀 19/11: DICOMDIR (εφαρμογή ≥1.0.9)
   const st={done:false, buf:[], waiters:[], take(){ const b=this.buf; this.buf=[]; return b; }, wait(){ return new Promise(r=>this.waiters.push(r)); }};
   const wake=()=>{ const w=st.waiters; st.waiters=[]; w.forEach(r=>r()); };
   // 💿 11/11 (χρήστης: «κολλάει να φορτώσει CD»): CD = αργή ανάγνωση με αναζήτηση → μικρότερες παρτίδες, πρόοδος στην οθόνη,
   // και ΜΟΝΟ αρχεία DICOM (σήμα «DICM» ή αρχή με ετικέτα 0002/0008) — τα αρχεία του προγράμματος προβολής του CD δεν «κολλάνε» τον αναλυτή
-  const isCD=/^[A-Za-z]:\\?$/.test(String(root).trim()), isDcm=b=>{ try{ const u=b instanceof Uint8Array?b:new Uint8Array(b.buffer||b, b.byteOffset||0, Math.min(b.byteLength||0,140)); if(u.length>=132 && u[128]===68&&u[129]===73&&u[130]===67&&u[131]===77) return true; return u.length>=8 && (u[0]===2||u[0]===8) && u[1]===0 && u[3]===0; }catch(e){ return true; } };
+  const isCD=onCD, isDcm=b=>{ try{ const u=b instanceof Uint8Array?b:new Uint8Array(b.buffer||b, b.byteOffset||0, Math.min(b.byteLength||0,140)); if(u.length>=132 && u[128]===68&&u[129]===73&&u[130]===67&&u[131]===77) return true; return u.length>=8 && (u[0]===2||u[0]===8) && u[1]===0 && u[3]===0; }catch(e){ return true; } };
   // 🩺 12/11: στο CD δοκιμάζονται ΜΟΝΑ ΤΟΥΣ 3 τρόποι ανάγνωσης στα πρώτα αρχεία (ένα-ένα με τη σειρά / 4 μαζί / 8 μαζί — ο οπτικός δίσκος
   // «χτυπά» με πολλές ταυτόχρονες αναζητήσεις) και τα υπόλοιπα διαβάζονται με τον πιο γρήγορο· όλα καταγράφονται στο 🩺
   const MODES = isCD ? [['ένα-ένα',1,1],['4 μαζί',4,4],['8 μαζί',8,8]] : [['24 μαζί',24,24]];
   const readPart = async (paths, conc)=>{ if(conc>=paths.length) return DESK.read(paths); const out=[]; for(let k=0;k<paths.length;k+=conc){ const r=await DESK.read(paths.slice(k,k+conc)); out.push(...(r||[])); } return out; };
   (async ()=>{ const F=L.files; let n=0, sk=0, i=0, ti=0; const TRY=isCD?16:0;
-    while(i<F.length){
+    try{ if(DSK.inflight) await DSK.inflight; }catch(e){}
+    while(i<F.length && my===DSK.gen){
       let md; if(isCD && ti<MODES.length*2){ md=MODES[ti%MODES.length]; ti++; } else { if(!DG.r.mode){ const best=Object.entries(DG.r.modes).filter(([,m])=>m.ms>0).sort((a,b)=>b[1].kb/b[1].ms-a[1].kb/a[1].ms)[0]; DG.r.mode=best?best[0]:MODES[MODES.length-1][0]; } md=MODES.find(m=>m[0]===DG.r.mode)||MODES[MODES.length-1]; }
       const B=isCD&&ti<=MODES.length*2&&!DG.r.mode?Math.max(TRY/2,md[1]):Math.max(md[1],isCD?8:24), paths=F.slice(i,i+B).map(x=>x.p); i+=B;
-      const tb=performance.now(); const part=await Promise.race([readPart(paths, md[2]), new Promise(r=>setTimeout(()=>r(null), 60000))]).catch(()=>[]);
+      const tb=performance.now(); const rp=readPart(paths, md[2]); DSK.inflight=rp.catch(()=>{}); const part=await Promise.race([rp, new Promise(r=>setTimeout(()=>r(null), 60000))]).catch(()=>[]);
       if(part===null){ DG.r.timeouts++; status('Το CD αργεί πολύ στα αρχεία '+(i-B+1)+'–'+i+' — συνεχίζω με τα επόμενα…'); continue; }
       let by=0; for(const x of (part||[])){ if(x && x.err) DG.r.err++; if(x && x.skip) DG.r.skipNon++; if(x && x.b) by+=x.b.byteLength||x.b.length||0; }
       DG.batch(paths.length, performance.now()-tb, by, md[0]);
       for(const x of (part||[])) if(x && x.b){ if(!isDcm(x.b)){ sk++; continue; } n++; st.buf.push(new File([x.b], (x.p.split(/[\\/]/).pop()||'f'), {type:'application/dicom'})); }
       if(isCD || F.length>400) status('Διαβάζω '+(isCD?'το CD':'τον φάκελο')+'… '+Math.min(F.length,i)+'/'+F.length+' αρχεία'+(sk?' ('+sk+' όχι εικόνες)':''));
       wake(); }
-    st.done=true; wake(); })();
+    st.done=true; if(my===DSK.gen) cur.done=true; wake(); })();
   if(await ingest([], st)) verifyPatient();
+  if(my===DSK.gen) cur.done=true;
 }
 if(DESK){
   try{ document.title='Νίκος CT Viewer'; $('instBtn').hidden=true; $('back').style.display='none'; const h=document.querySelector('header h1'); if(h) h.style.display='none'; }catch(e){}   // 8/11: όνομα εφαρμογής + ασθενή μόνο στη μπάρα τίτλου των Windows
   // «Φάκελος» → παράθυρο επιλογής φακέλου των Windows, ανάγνωση κατευθείαν από τον δίσκο (πιο γρήγορα)
-  $('pickDir').onclick=async ()=>{ const p=await DESK.pick(); if(p) deskOpen(p); };
+  $('pickDir').onclick=async ()=>{ const p=await DESK.pick(); if(p) deskOpen(p, 'φάκελος'); };
   // 8/11 (εντολή χρήστη): χωρίς «Κλινική»· κουμπί «💿 CD» → κατευθείαν η αξονική από τον δίσκο της μονάδας CD
   try{ $('srvBtn').style.display='none'; }catch(e){}
   if(DESK.cd){ const cb=document.createElement('button'); cb.className='ib primary'; cb.id='cdBtn'; cb.title='Άνοιγμα της αξονικής από το CD/DVD'; cb.innerHTML='💿<span>CD</span>'; $('pickDir').parentNode.insertBefore(cb, $('pickDir'));
     cb.onclick=async ()=>{ status('Ψάχνω CD…'); const r=await DESK.cd().catch(e=>({err:e.message, drives:[]})); const D=(r.drives||[]).filter(x=>x.has);
       if(!D.length){ status((r.drives||[]).length ? 'Η μονάδα CD είναι άδεια — βάλε τον δίσκο και ξαναπάτα «CD».' : 'Δεν βρέθηκε μονάδα CD/DVD σε αυτόν τον υπολογιστή'+(r.err?' ('+r.err+')':'')+'.', true); return; }
-      deskOpen(D[0].d); }; }
-  DESK.info().then(i=>{ if(i && i.open) deskOpen(i.open); }).catch(()=>{});
+      deskOpen(D[0].d, 'κουμπί CD'); }; }
+  DESK.info().then(i=>{ if(i && i.open) deskOpen(i.open, 'άνοιγμα εφαρμογής'); }).catch(()=>{});
 }
 
 /* ================= 3D με vtk.js (όπως OHIF / 3D Slicer) — 7/11 ================= */
