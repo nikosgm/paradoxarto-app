@@ -2591,7 +2591,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-21-v655';
+const APP_VER = '2026-11-21-v656';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -26835,7 +26835,8 @@ window.CLS_MODE='A';
       const KL = {normal:'🗓 Κανονικό πρόγραμμα', local:'💉 Τοπικές', extra:'➕ Έκτακτα'};
       const nEx = st.m && st.m.files ? st.m.files.filter(f=>f.kind==='extra').length : 0;
       if(nEx) h += '<div class="ios-f" style="margin-top:6px;opacity:.75;font-size:14px">➕ Έκτακτα: '+nEx+' — δεν εμφανίζονται (δεν αλλάζουν το κανονικό) <button data-orex="1" style="border:0;background:none;color:#0A84FF;font-size:14px;padding:0 4px">'+(st.showEx?'απόκρυψη':'εμφάνιση')+'</button></div>';
-      const nOld = st.m && st.m.files ? st.m.files.filter(f=>f.old && f.kind!=='extra').length : 0;
+      const nOld = st.m && st.m.files ? st.m.files.filter(f=>f.old && !f.stale && f.kind!=='extra').length : 0, nSt = st.m && st.m.files ? st.m.files.filter(f=>f.stale && f.kind!=='extra').length : 0;
+      if(nSt) h += '<div class="ios-f" style="margin-top:6px;opacity:.75;font-size:14px">🗓 Άλλης ημέρας: '+nSt+' — δεν εμφανίζονται (π.χ. τοπικές της προηγούμενης εργάσιμης) <button data-orold="1" style="border:0;background:none;color:#0A84FF;font-size:14px;padding:0 4px">'+(st.showOld?'απόκρυψη':'εμφάνιση')+'</button></div>';
       if(nOld) h += '<div class="ios-f" style="margin-top:6px;opacity:.75;font-size:14px">🕘 Παλαιότερα μηνύματα: '+nOld+' — κρατιέται μόνο το τελευταίο ανά είδος <button data-orold="1" style="border:0;background:none;color:#0A84FF;font-size:14px;padding:0 4px">'+(st.showOld?'απόκρυψη':'εμφάνιση')+'</button></div>';
       if(st.m && st.m.files) st.m.files.forEach((f,i)=>{ if(f.kind==='extra' && !st.showEx) return; if(f.old && !st.showOld) return; h += '<div class="ios-f" style="margin-top:8px"><button data-orkind="'+i+'" style="border:1px solid #C7C7CC;background:#F2F2F7;border-radius:10px;font-size:14px;padding:2px 8px;margin-right:6px">'+(KL[f.kind]||KL.normal)+' ▾</button><b>'+esc(f.subj || f.n)+'</b> · στάλθηκε '+esc(String(f.sent||'').replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2}).*/, '$3/$2 $4:$5'))+' <button data-orrot="'+i+'" style="border:0;background:none;color:#0A84FF;font-size:15px;padding:0 6px" aria-label="Περιστροφή">↻</button></div>'
         // 🤏 17/11 16:58 (χρήστης: «zoom με τα δύο δάχτυλα στην προεπισκόπηση»): pinch → πλάτος ×1–5 (μένει μετά τις ανανεώσεις)· πάτημα = ×1 ↔ ×2.2
@@ -27054,7 +27055,21 @@ window.CLS_MODE='A';
     function orMarkOld(){ const F = (st.m && st.m.files) || [], mx = {}, N = t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
       const supp = f=>!!f.extra || /ΣΥΜΠΛΗΡ|ΑΛΛΑΓ/.test(N((f.subj||'')+' '+(f.n||'')));
       F.forEach(f=>{ if(supp(f)) return; const kd = f.kind || 'normal', t = String(f.sent || ''); if(!mx[kd] || t > mx[kd]) mx[kd] = t; });
-      F.forEach(f=>{ f.old = String(f.sent || '') < (mx[f.kind || 'normal'] || ''); }); }
+      F.forEach(f=>{ f.old = String(f.sent || '') < (mx[f.kind || 'normal'] || ''); f.stale = false; });
+      // 🗓 21/11 08:31 (χρήστης: «έχεις κρατημένο το πρόγραμμα τοπικών της Παρασκευής στης Δευτέρας — να φεύγει»): το «τελευταίο ανά είδος» κρατούσε
+      // τοπικές ΑΛΛΗΣ ημέρας (20.11, στάλθηκε 19/11) στο πρόγραμμα της 23/11. Κρύβεται (όπως τα παλαιότερα) ό,τι είναι για ΑΛΛΗ ημέρα:
+      //  1) ημερομηνία στο θέμα/όνομα αρχείου ≠ ημέρα (όλα τα είδη)  2) ΜΟΝΟ τοπικές: η μεγαλύτερη ημερομηνία στο κείμενο < ημέρα (δεν έχουν ημ. εισαγωγής)
+      //  3) καμία ημερομηνία → στάλθηκε πριν από την προηγούμενη εργάσιμη. Ποτέ με ημερομηνίες εισαγωγής του κανονικού (είναι πάντα παλαιότερες).
+      const isoN = String(st.iso).replace(/-/g,''), Y = +String(st.iso).slice(0,4);
+      const pw = (()=>{ const d = new Date(st.iso+'T12:00:00'); do{ d.setDate(d.getDate()-1); }while(d.getDay()===0 || d.getDay()===6); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); })();
+      const dates = t=>{ const out = []; String(t||'').replace(/(?:^|[^\d])(\d{1,2})\s?[.\/-]\s?(\d{1,2})(?:\s?[.\/-]\s?(\d{4}|\d{2}))?(?!\d)/g, (m0, d, mo, y)=>{ d = +d; mo = +mo; let yy = y ? +y : Y; if(yy < 100) yy += 2000;
+        if(d>=1 && d<=31 && mo>=1 && mo<=12 && yy>=Y-1 && yy<=Y+1) out.push(yy+String(mo).padStart(2,'0')+String(d).padStart(2,'0')); return m0; }); return out; };
+      F.forEach(f=>{ if(f.kind==='extra') return; let why = '';
+        const sd = dates((f.subj||'')+' '+String(f.n||'').replace(/\.(pdf|xlsx?|docx?|jpe?g|png)$/i,'').replace(/\(\d+\)/g,''));
+        if(sd.length){ if(!sd.includes(isoN)) why = 'subj'; }
+        else if((f.kind||'normal')==='local'){ const td = dates(((f.txt||[])[0]||[]).map(x=>x && x.s).join(' ')); if(td.length){ if(td.sort().pop() < isoN) why = 'txt'; } else if(String(f.sent||'').slice(0,8) && String(f.sent).slice(0,8) < pw) why = 'sent'; }
+        else if(String(f.sent||'').slice(0,8) && String(f.sent).slice(0,8) < pw) why = 'sent';
+        if(why && !f.old){ f.old = true; f.stale = why; } }); }
     const rotK = f=>'pdx_or_rot2|'+st.iso+'|'+(f.n||f.subj||''),   /* 15/11 00:54 (χρήστης: «δεν ίσιωσε πάλι»): παλιό ↻ (πριν το αυτόματο) ακύρωνε το αυτόματο ίσιωμα (270°+90°) → νέο κλειδί, οι παλιές τιμές αγνοούνται */ rotGet = f=>{ try{ return +localStorage.getItem(rotK(f)) || 0; }catch(e){ return 0; } };
     const rotUrl = (u, deg)=>new Promise(ok=>{ const im = new Image(); im.onload = ()=>{ const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight; c.getContext('2d').drawImage(im, 0, 0); ok(orRotate(c, deg).toDataURL('image/jpeg', .85)); }; im.onerror = ()=>ok(u); im.src = u; });
     // ⚡ 20/11 14:50: δείχνει ΑΜΕΣΑ ό,τι υπάρχει (συσκευή → κοινό αντίγραφο server) και ΜΕΤΑ ρωτά αθόρυβα το Kerio· αλλάζει μόνο αν ήρθε νέο mail
