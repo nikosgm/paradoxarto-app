@@ -2591,7 +2591,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-21-v654';
+const APP_VER = '2026-11-21-v655';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13662,7 +13662,10 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     });
     pg.el.addEventListener('submit', e=>{ const f = e.target.closest('[data-fq]'); if(!f) return; e.preventDefault(); try{ f.q.blur(); }catch(x){} find(f.q.value); });
     // ===== 📝 21/11 Επεξεργασία Word → φάκελος κλινικής (bot «fssave»: ανοιχτό στο Word / άλλαξε μετά το άνοιγμα → ΔΕΝ γράφει· αντίγραφο πριν) =====
-    const isDocx = o=> !!(o && o.kind==='docx' && o.it && /\.docx$/i.test(o.name) && o.it.ri!=null && o.it.rel);
+    // 🔒 21/11 04:40: τα κουμπιά επεξεργασίας φαίνονται ΜΟΝΟ όταν τρέχει bot ≥ 0.21.634 (fssave) — αλλιώς η αποθήκευση θα περίμενε 4′ για τίποτα
+    let docWOk = false; const vGE = (a, b)=>{ const x = String(a||'').split('.').map(Number), y = String(b).split('.').map(Number); for(let i=0;i<3;i++){ if((x[i]||0)!==(y[i]||0)) return (x[i]||0) > (y[i]||0); } return true; };
+    sb6.from('oncall_labs').select('updated_at,data').like('name_key','efbot|hb|%').then(q=>{ docWOk = ((q && q.data)||[]).some(r=>Date.now()-Date.parse(r.updated_at) < 600000 && r.data && vGE(r.data.v, '0.21.634')); if(docWOk && st.open) pg.redraw(); }, ()=>{});
+    const isDocx = o=> !!(docWOk && o && o.kind==='docx' && o.it && /\.docx$/i.test(o.name) && o.it.ri!=null && o.it.rel);
     const bkDate = id=>{ const m = /^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)/.exec(String(id||'')); return m ? m[3]+'/'+m[2]+'/'+m[1]+' '+m[4]+':'+m[5] : String(id||''); };
     const whoMe = ()=> String(window.authName||'').replace(/@paradoxarto\.app$/,'') || 'κινητό';
     const ldJs = src=>new Promise((ok,no)=>{ const sc = document.createElement('script'); sc.src = src+'?v='+encodeURIComponent(typeof APP_VER!=='undefined'?APP_VER:''); sc.onload = ok; sc.onerror = ()=>no(new Error('δεν φόρτωσε ο επεξεργαστής (δίκτυο)')); document.head.appendChild(sc); });
