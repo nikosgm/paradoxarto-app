@@ -2591,7 +2591,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-20-v653';
+const APP_VER = '2026-11-21-v654';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
@@ -13445,7 +13445,7 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
     // εντολή στο bot → αποκρυπτογραφημένο αποτέλεσμα.
     // jobRaw: μία εντολή ανά (kind+payload) — αν τρέχει ήδη ίδια, περιμένει αυτή (όχι διπλές). Σκληρό όριο: fsls/fsfind 60″, imgget 15′.
     // Στο όριο η εντολή σημειώνεται «dismissed» (να μην την τρέξει το bot αργότερα) και το σφάλμα έχει .timeout.
-    const JOB_MS = kind=> kind==='imgget' ? 15*60000 : 60000;
+    const JOB_MS = kind=> kind==='imgget' ? 15*60000 : kind==='fssave' ? 4*60000 : 60000;
     function jobRaw(kind, payload, onStatus){
       const ik = kind+'|'+JSON.stringify(payload||{});
       if(PF_MEM.inflight[ik]){ PF_MEM.inflight[ik].joined++; return PF_MEM.inflight[ik].p; }
@@ -13619,11 +13619,18 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       if(st.wait) return h + spin(st.wait);
       if(st.open){ const o = st.open;
         h += '<div class="ios-h" style="margin-top:14px">'+E(o.name)+'</div>';
+        // 📝 21/11 (χρήστης: «τροποποιώ Word από το αρχείο κλινικής → άμεσα και στον φάκελο της κλινικής στο δίκτυο» · «το 3» · «ΟΛΟΙ»)
+        if(isDocx(o)){
+          if(o.wmsg) h += '<div class="pf-stale" style="color:'+(o.wok?'#34C759':'#FF3B30')+';font-weight:600;font-size:14px">'+E(o.wmsg)+'</div>';
+          h += '<div class="pf-act"><button class="p" data-dedit>✏️ Επεξεργασία εδώ</button><button class="s" data-dup>⬆ Ανέβασμα αλλαγμένου (από το Word)</button></div>'
+            + '<div class="ios-f" style="margin:-2px 20px 0">Αποθηκεύεται αμέσως στον φάκελο της κλινικής. Πριν από κάθε αλλαγή κρατιέται αντίγραφο. Για το Word: «Άνοιγμα με…» → Word → αποθήκευση στα Αρχεία → «⬆ Ανέβασμα».</div>';
+          if(o.bk && o.bk.length) h += iosGroup('Προηγούμενες εκδόσεις · πάτα για επαναφορά', o.bk.map((x,i)=>({ic:'🕘', t:E(bkDate(x.id)), sub:E((x.who?'πριν από αλλαγή: '+x.who+' · ':'')+fmtS(x.size)), on:'void 0', data:'data-dres="'+i+'"'})));
+        }
         if(o.kind==='img') h += '<div class="pf-prev"><img src="'+o.url+'" alt=""></div>';
         else if(/^(pdf|docx|xls|txt|pptx|old|rtf)$/.test(o.kind)) h += o.html ? '<div class="pf-doc pf-'+o.kind+'">'+o.html+'</div>' : (o.perr ? iosGroup('', [{t:'<span style="color:#FF3B30">'+E(o.perr)+'</span>'}]) : '<div class="ios-g" style="margin-top:16px"><div class="pdx-load"><span class="pdx-spin"></span><b>Άνοιγμα εγγράφου…</b>'+(o.prog?'<small>'+E(o.prog)+'</small>':'')+'</div></div>');
         else if(o.kind==='vid') h += '<div class="pf-prev"><video src="'+o.url+'" controls playsinline style="width:100%"></video></div>';
         else h += iosGroup('', [{ic:icOf(o.name), t:E(o.name), sub:fmtS(o.blob.size)+' · πάτα «Άνοιγμα με…» για Word / Excel / Αρχεία'}]);
-        return h + '<div class="pf-act"><button class="p" data-share>Άνοιγμα με… (Word, Αρχεία, Αποθήκευση)</button></div>';
+        return h + '<div class="pf-act"><button class="'+(isDocx(o)?'s':'p')+'" data-share>Άνοιγμα με… (Word, Αρχεία, Αποθήκευση)</button>'+(isDocx(o)?'<button class="s" data-dbk>🕘 Προηγούμενες εκδόσεις</button>':'')+'</div>';
       }
       if(st.hits){
         const H = st.hits.hits||[]; H.forEach((x,i)=>rows[i]=x);
@@ -13654,10 +13661,69 @@ html.pdx-night #loginOv input,html.pdx-night #csOv input,html.pdx-night #csOv se
       return h + '<div style="height:40px"></div>';
     });
     pg.el.addEventListener('submit', e=>{ const f = e.target.closest('[data-fq]'); if(!f) return; e.preventDefault(); try{ f.q.blur(); }catch(x){} find(f.q.value); });
+    // ===== 📝 21/11 Επεξεργασία Word → φάκελος κλινικής (bot «fssave»: ανοιχτό στο Word / άλλαξε μετά το άνοιγμα → ΔΕΝ γράφει· αντίγραφο πριν) =====
+    const isDocx = o=> !!(o && o.kind==='docx' && o.it && /\.docx$/i.test(o.name) && o.it.ri!=null && o.it.rel);
+    const bkDate = id=>{ const m = /^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)/.exec(String(id||'')); return m ? m[3]+'/'+m[2]+'/'+m[1]+' '+m[4]+':'+m[5] : String(id||''); };
+    const whoMe = ()=> String(window.authName||'').replace(/@paradoxarto\.app$/,'') || 'κινητό';
+    const ldJs = src=>new Promise((ok,no)=>{ const sc = document.createElement('script'); sc.src = src+'?v='+encodeURIComponent(typeof APP_VER!=='undefined'?APP_VER:''); sc.onload = ok; sc.onerror = ()=>no(new Error('δεν φόρτωσε ο επεξεργαστής (δίκτυο)')); document.head.appendChild(sc); });
+    const newName = o=>{ const d = new Date(); return o.name.replace(/\.docx$/i,'')+' (αλλαγές '+whoMe().replace(/[\\/:*?"<>|]/g,' ')+' '+String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+').docx'; };
+    async function docWrite(o, bytes, ex){
+      const it = o.it, pl = {ri:it.ri, rel:it.rel, base:{size:it.size, t:it.t}, who:whoMe()};
+      if(ex && ex.op==='restore') Object.assign(pl, {op:'restore', id:ex.id});
+      else { const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+        const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', u8))).map(x=>x.toString(16).padStart(2,'0')).join('');
+        const path = 'docw/'+(crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(36).slice(2))+'.bin';
+        const up = await sb6.storage.from('img-enc').upload(path, new Blob([await pdxCK.sealBytes(u8)], {type:'application/octet-stream'}), {upsert:true, contentType:'application/octet-stream'});
+        if(up.error) throw new Error('ανέβασμα: '+up.error.message);
+        Object.assign(pl, {path, len:u8.length, sha}, ex && ex.asNew ? {asNew:ex.asNew} : {}); }
+      const r = await jobRaw('fssave', pl);
+      if(!r.ok){ const e = new Error(r.locked ? 'Το αρχείο είναι ανοιχτό στο Word σε υπολογιστή της κλινικής — κλείσ\' το εκεί και ξαναπάτα «Αποθήκευση»' : r.conflict ? 'Το αρχείο άλλαξε στο δίκτυο (από άλλον) αφού το άνοιξες' : (r.err||'δεν αποθηκεύτηκε')); e.locked = !!r.locked; e.conflict = !!r.conflict; throw e; }
+      if(!r.asNew){   // η νέα μορφή είναι πλέον αυτή του δικτύου
+        for(const k of Array.from(PF_MEM.files.keys())) if(k.indexOf(it.ri+'|'+it.rel+'|')===0) PF_MEM.files.delete(k);
+        it.size = r.size; it.t = r.t;
+        const par = String(it.rel).split('\\').slice(0,-1).join('\\'); delete cache[it.ri+'|'+par]; pfSave();
+        if(bytes){ try{ URL.revokeObjectURL(o.url); }catch(e){} o.blob = new Blob([bytes], {type:MIME.docx}); o.url = URL.createObjectURL(o.blob); o.html = ''; o.perr = ''; pfRender(o); }
+      } else { const par = String(it.rel).split('\\').slice(0,-1).join('\\'); delete cache[it.ri+'|'+par]; pfSave(); }
+      return r; }
+    async function docConflict(o, bytes){
+      if(!bytes) return; if(!confirm('Το «'+o.name+'» άλλαξε στο δίκτυο αφού το άνοιξες.\n\nΝα μπουν οι δικές σου αλλαγές ως ΝΕΟ αρχείο δίπλα του (τίποτα δεν χάνεται);')) return;
+      try{ const r = await docWrite(o, bytes, {asNew:newName(o)}); o.wmsg = '✓ Οι αλλαγές σου μπήκαν ως νέο αρχείο «'+r.name+'» στον ίδιο φάκελο'; o.wok = true; }
+      catch(e){ o.wmsg = '⚠ '+(e.message||e); o.wok = false; } pg.redraw(); }
+    async function docEdit(o){
+      try{ if(!window.pdxDocEdit) await ldJs('docedit.js');
+        await pdxDocEdit.open({name:o.name, bytes:await o.blob.arrayBuffer(),
+          onSave: async bytes=>{ const r = await docWrite(o, bytes); o.wmsg = '✓ Αποθηκεύτηκε στον φάκελο της κλινικής'; o.wok = true; return {msg:'✓ Αποθηκεύτηκε στον φάκελο της κλινικής (αντίγραφο του προηγούμενου: '+bkDate(r.bk)+')'}; },
+          onConflict: bytes=>docConflict(o, bytes), onClose: ()=>pg.redraw()}); }
+      catch(e){ o.wmsg = '⚠ Δεν άνοιξε για επεξεργασία: '+(e.message||e); o.wok = false; pg.redraw(); } }
+    function docUpload(o){
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      inp.onchange = async ()=>{ const f = inp.files && inp.files[0]; if(!f) return;
+        if(!/\.docx$/i.test(f.name)){ o.wmsg = '⚠ Διάλεξε αρχείο Word .docx'; o.wok = false; return pg.redraw(); }
+        const u8 = new Uint8Array(await f.arrayBuffer());
+        try{ if(!window.pdxDocEdit) await ldJs('docedit.js'); await pdxDocEdit.parse(u8.slice()); }catch(e){ o.wmsg = '⚠ Το αρχείο δεν είναι έγκυρο Word: '+(e.message||e); o.wok = false; return pg.redraw(); }
+        if(!confirm('Να ΑΝΤΙΚΑΤΑΣΤΑΘΕΙ το «'+o.name+'» στον φάκελο της κλινικής με το «'+f.name+'» ('+fmtS(u8.length)+');\n\nΚρατιέται αντίγραφο του σημερινού — επαναφορά από «🕘 Προηγούμενες εκδόσεις».')) return;
+        o.wmsg = 'Αποθήκευση στον φάκελο της κλινικής…'; o.wok = true; pg.redraw();
+        try{ const r = await docWrite(o, u8); o.wmsg = '✓ Αποθηκεύτηκε στον φάκελο της κλινικής (αντίγραφο του προηγούμενου: '+bkDate(r.bk)+')'; o.wok = true; o.bk = null; }
+        catch(e){ if(e.conflict) return docConflict(o, u8); o.wmsg = '⚠ '+(e.message||e); o.wok = false; }
+        pg.redraw(); };
+      inp.click(); }
+    function docBackups(o){ o.wmsg = 'Φέρνω τις προηγούμενες εκδόσεις…'; o.wok = true; pg.redraw();
+      jobRaw('fssave', {ri:o.it.ri, rel:o.it.rel, op:'bk'}).then(r=>{ o.bk = r.list||[]; o.wmsg = o.bk.length ? '' : 'Δεν υπάρχουν ακόμα προηγούμενες εκδόσεις (κρατιούνται σε κάθε αποθήκευση από την εφαρμογή)'; o.wok = true; pg.redraw(); },
+        e=>{ o.wmsg = '⚠ '+(e.message||e); o.wok = false; pg.redraw(); }); }
+    async function docRestore(o, x){
+      if(!confirm('Επαναφορά της έκδοσης '+bkDate(x.id)+' στον φάκελο της κλινικής;\n\nΗ σημερινή μορφή κρατιέται κι αυτή ως αντίγραφο.')) return;
+      o.wmsg = 'Επαναφορά…'; o.wok = true; pg.redraw();
+      try{ await docWrite(o, null, {op:'restore', id:x.id}); const it = o.it; st.open = null; await openItem(it); if(st.open){ st.open.wmsg = '✓ Επαναφέρθηκε η έκδοση '+bkDate(x.id); st.open.wok = true; } }
+      catch(e){ o.wmsg = '⚠ '+(e.message||e); o.wok = false; } pg.redraw(); }
     pg.el.addEventListener('click', e=>{
       const t = e.target; let b;
       if(t.closest('[data-cancel]')){ cancelWait(); return; }
       if(st.wait) return;
+      if(st.open && isDocx(st.open)){
+        if(t.closest('[data-dedit]')){ docEdit(st.open); return; }
+        if(t.closest('[data-dup]')){ docUpload(st.open); return; }
+        if(t.closest('[data-dbk]')){ docBackups(st.open); return; }
+        if((b = t.closest('[data-dres]'))){ const x = (st.open.bk||[])[+b.getAttribute('data-dres')]; if(x) docRestore(st.open, x); return; } }
       if(t.closest('[data-retry]')){ const r = st.retry; st.err=''; st.retry=null; if(r) r(); else pg.redraw(); return; }
       if((b = t.closest('[data-fi]'))){ const it = rows[+b.getAttribute('data-fi')]; if(it) openItem(it); return; }
       if((b = t.closest('[data-cr]'))){ go(st.path.slice(0, +b.getAttribute('data-cr')+1)); return; }
