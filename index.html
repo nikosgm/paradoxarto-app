@@ -432,6 +432,7 @@ html.pdx-mac .pb{font-size:14px;min-height:34px;padding:7px 12px;border-radius:8
     <div id="loginForm">
             <input id="lgEmail" type="text" autocapitalize="none" autocorrect="off" placeholder="Όνομα χρήστη" autocomplete="username" style="width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1.5px solid #bbb;border-radius:10px;margin-bottom:8px">
       <input id="lgPw" type="password" placeholder="Κωδικός" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1.5px solid #bbb;border-radius:10px;margin-bottom:12px">
+      <input id="lgInv" type="text" autocapitalize="characters" autocorrect="off" autocomplete="off" placeholder="Κωδικός πρόσκλησης κλινικής (π.χ. AB12-CD34)" style="display:none;width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1.5px solid var(--primary);border-radius:10px;margin-bottom:12px">
       <button type="button" onclick="doLogin(false)" style="width:100%;padding:14px;font-size:16px;font-weight:700;border:0;border-radius:12px;background:var(--primary);color:#fff;cursor:pointer">Είσοδος</button>
       <button type="button" onclick="doLogin(true)" style="width:100%;margin-top:8px;padding:12px;font-size:14px;border:1.5px solid var(--primary);border-radius:12px;background:#fff;color:var(--primary);cursor:pointer">Νέος χρήστης – Αίτηση πρόσβασης</button>
       <p id="loginMsg" style="font-size:12px;margin-top:12px;min-height:16px"></p>
@@ -1388,9 +1389,12 @@ async function doLogin(signup){
   _lg('Μια στιγμή…');
   let r;
   // Νέος χρήστης: ΜΟΝΟ όνομα χρήστη — λογαριασμός χωρίς email (συνάρτηση pdx-signup, κανένα μήνυμα επιβεβαίωσης)
+  // 🚨 21/11 (περιστατικό: 9 ψεύτικοι λογαριασμοί · χρήστης: «με κωδικό πρόσκλησης»): η εγγραφή θέλει τον κωδικό της κλινικής (τον δίνει ο admin από «👥 Χρήστες»)
   if(signup){
+    const iv = document.getElementById('lgInv'); const inv = iv ? iv.value.trim() : '';
+    if(!inv){ if(iv){ iv.style.display = ''; iv.focus(); } _lg('Για νέο λογαριασμό: γράψε τον κωδικό πρόσκλησης της κλινικής (τον δίνει ο διαχειριστής) και ξαναπάτα «Νέος χρήστης».', true); return; }
     try{
-      const fr = await fetch(SB6_URL + '/functions/v1/pdx-signup', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:name, password:pw, full_name:name})});
+      const fr = await fetch(SB6_URL + '/functions/v1/pdx-signup', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:name, password:pw, full_name:name, invite:inv})});
       const fj = await fr.json().catch(()=>({}));
       if(!fr.ok || !fj.ok){ _lg(fj.error || ('Σφάλμα '+fr.status), true); return; }
     }catch(e){ _lg('Χωρίς σύνδεση: '+(e.message||e), true); return; }
@@ -1615,7 +1619,7 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
   const E = s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const ROLE = {resident:'Ειδικευόμενος', attending:'Επιμελητής', admin:'Διαχειριστής', pending:'Σε αναμονή', viewer:'Απορρίφθηκε'};   // «viewer» + ανενεργός = απορριφθείσα αίτηση (η βάση δεν έχει άλλη τιμή)
   const uname = p=> (p.full_name && p.full_name.trim()) || String(p.email||'').replace(/@paradoxarto\.app$/,'');
-  let rows = [], err = '', myId = '', hs = {emails:[]};
+  let rows = [], err = '', myId = '', hs = {emails:[]}, inv = '';   // inv: κωδικός πρόσκλησης κλινικής (21/11 · μόνο admin)
   async function load(){
     err = '';
     // ✍ ποιοι λογαριασμοί Claude έχουν ήδη πρόσβαση στη σελίδα ανεβάσματος ιστορικού (το σημειώνει ο διαχειριστής)
@@ -1667,8 +1671,12 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
     const roleSel = p=>'<select data-role="'+E(p.user_id)+'" style="font-size:14px;padding:7px;border:1.5px solid #CBD5E1;border-radius:10px">'+['resident','attending','admin'].map(r=>'<option value="'+r+'"'+(p.role===r?' selected':'')+'>'+ROLE[r]+'</option>').join('')+'</select>';
     ov.innerHTML = '<div style="background:#fff;color:#1F2933;width:100%;max-width:640px;border-radius:22px;padding:16px 18px;max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
       + '<div style="display:flex;align-items:center;gap:8px"><b style="font-size:20px;flex:1">👥 Χρήστες</b><button data-x style="border:0;background:#EEF2F6;border-radius:12px;padding:8px 14px;font-size:15px;cursor:pointer">Κλείσιμο</button></div>'
-      + '<div style="font-size:13.5px;color:#475569;margin:6px 0 4px;line-height:1.45">Κάθε ειδικευόμενος φτιάχνει μόνος του λογαριασμό από την οθόνη σύνδεσης («Νέος χρήστης – Αίτηση πρόσβασης») και εμφανίζεται εδώ για έγκριση. Τους θαλάμους του τους διαλέγει ο ίδιος (🛏 Οι θάλαμοί μου).</div>'
+      + '<div style="font-size:13.5px;color:#475569;margin:6px 0 4px;line-height:1.45">Κάθε ειδικευόμενος φτιάχνει μόνος του λογαριασμό από την οθόνη σύνδεσης («Νέος χρήστης – Αίτηση πρόσβασης», με τον κωδικό πρόσκλησης παρακάτω) και εμφανίζεται εδώ για έγκριση. Τους θαλάμους του τους διαλέγει ο ίδιος (🛏 Οι θάλαμοί μου).</div>'
       + (err ? '<div style="color:#B42318;margin:8px 0">'+E(err)+'</div>' : '')
+      + '<div style="margin:10px 0;padding:12px;border:1.5px solid #CBD5E1;border-radius:14px;background:#F8FAFC"><div style="font-size:12.5px;letter-spacing:.06em;color:#1D4E80;font-weight:800">🔑 ΚΩΔΙΚΟΣ ΠΡΟΣΚΛΗΣΗΣ</div>'
+      +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px"><b style="font-size:22px;letter-spacing:.12em;font-family:ui-monospace,Menlo,monospace">'+E(inv||'—')+'</b><span style="flex:1"></span>'
+      +   '<button data-icopy style="border:0;background:#1D4E80;color:#fff;border-radius:10px;padding:8px 12px;font-size:13.5px;font-weight:800;cursor:pointer">Αντιγραφή</button><button data-inew style="border:1.5px solid #CBD5E1;background:#fff;color:#1D4E80;border-radius:10px;padding:8px 12px;font-size:13.5px;font-weight:800;cursor:pointer">Νέος κωδικός</button></div>'
+      +   '<div style="font-size:12.5px;color:#64748B;margin-top:6px;line-height:1.4">Χωρίς αυτόν δεν γίνεται νέος λογαριασμός. Δώσ\' τον μόνο σε συναδέλφους της κλινικής· αν διαρρεύσει, πάτα «Νέος κωδικός» (ο παλιός παύει αμέσως).</div></div>'
       + histBox(act)
       + '<h4 style="margin:14px 0 2px;font-size:12.5px;letter-spacing:.06em;color:#B45309">ΠΕΡΙΜΕΝΟΥΝ ΕΓΚΡΙΣΗ · '+pend.length+'</h4>'
       + (pend.length ? pend.map(p=>row(p, B('✓ Ειδικευόμενος','ok_resident',p.user_id,true)+B('✓ Επιμελητής','ok_attending',p.user_id)+B('✕ Απόρριψη','reject',p.user_id))).join('') : '<div style="font-size:14px;color:#64748B;padding:6px 0">Καμία αίτηση.</div>')
@@ -1687,6 +1695,10 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
     ov.addEventListener('click', async e=>{
       if(e.target===ov || e.target.closest('[data-x]')){ ov.remove(); ov = null; return; }
       if(e.target.closest('[data-hopen]')){ window.open(window.HIST_UPLOAD_URL, '_blank'); return; }
+      const ic = e.target.closest('[data-icopy]');
+      if(ic){ const t = 'Παραδόχαρτο — νέος λογαριασμός: «Νέος χρήστης – Αίτηση πρόσβασης» με κωδικό πρόσκλησης '+inv; try{ await navigator.clipboard.writeText(t); ic.textContent = '✓ Αντιγράφηκε'; }catch(er){ prompt('Αντέγραψε:', t); } return; }
+      if(e.target.closest('[data-inew]')){ if(!confirm('Νέος κωδικός πρόσκλησης; Ο παλιός παύει να ισχύει αμέσως (όσοι έχουν ήδη λογαριασμό δεν επηρεάζονται).')) return;
+        const r = await sb6.rpc('oncall_invite_rotate'); if(r.error){ alert('Δεν άλλαξε: '+r.error.message); return; } inv = r.data || inv; draw(); return; }
       const hc = e.target.closest('[data-hcopy]');
       if(hc){ const list = rows.filter(p=>p.active && lc(p.claude_email) && hs.emails.indexOf(lc(p.claude_email))<0).map(p=>lc(p.claude_email)).join(', ');
         try{ await navigator.clipboard.writeText(list); hc.textContent='✓ Αντιγράφηκαν'; }catch(er){ prompt('Αντέγραψε τα email:', list); } return; }
@@ -1703,7 +1715,7 @@ window.pdxMine = {rooms:[], xhide:[], on:false, uid:''};
       if(a==='on') return upd(id, {active:true, role:(p && ['resident','attending','admin'].indexOf(p.role)>=0) ? p.role : 'resident'});
     });
     ov.addEventListener('change', e=>{ const s = e.target.closest('[data-role]'); if(s){ const p=rows.find(x=>x.user_id===s.dataset.role); if(confirm('Αλλαγή ρόλου του «'+(p?uname(p):'')+'» σε «'+ROLE[s.value]+'»;')) upd(s.dataset.role, {role:s.value}); else draw(); } });
-    await load(); draw();
+    await load(); try{ const r = await sb6.rpc('oncall_invite_get'); if(!r.error) inv = r.data || ''; }catch(e){} draw();
   };
   // στη σύνδεση του διαχειριστή: φαίνεται ο σύνδεσμος και πόσοι περιμένουν
   window.pdxUsersInit = function(){
@@ -2591,7 +2603,7 @@ window.pdxAbxOf = function(name){ const A = window.__abx; if(!A.pts) return null
     .filter(x=>x.nm && (!x.last || x.last >= yest))
     .filter((x,i,L)=>L.findIndex(z=>z.nm===x.nm)===i); };
 window.pdxFocusNow = function(fn, ms){ try{ fn(); }catch(e){} setTimeout(()=>{ try{ const a = document.activeElement; if(!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) fn(); }catch(e){} }, ms||60); };
-const APP_VER = '2026-11-21-v656';
+const APP_VER = '2026-11-21-v657';
 // 9/11 (χρήστης): «Ø», «-», «όχι», «ουδεμία», «καμία», «NKDA» = ΧΩΡΙΣ αλλεργία → όχι κόκκινη ένδειξη
 window.pdxAlReal = function(v){ const t = String(v==null?'':v).trim(); if(!t) return ''; const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[.\s]+/g,' ').trim();
   return /^(ø|Ø|∅|0|-+|–|—|\/|x|οχι|ουδεμια|ουδεμιας|καμια|κανενα|δεν|δεν εχει|δεν αναφερει|αγνωστη|αγνωστο|αρνητικο|αρν|nkda|nka|no|none|neg|negative|nil)$/i.test(n) || /^(ø|∅)$/i.test(t) ? '' : t; };
